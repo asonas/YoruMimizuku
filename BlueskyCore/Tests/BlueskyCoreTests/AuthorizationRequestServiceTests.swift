@@ -79,4 +79,35 @@ final class AuthorizationRequestServiceTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    func testAuthorizationURLAppendsClientIDAndRequestURI() throws {
+        let url = try AuthorizationRequestService.authorizationURL(
+            metadata: metadata(par: "https://bsky.social/oauth/par"),
+            config: .hoshidukiyo,
+            requestURI: "urn:ietf:params:oauth:request_uri:abc"
+        )
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        XCTAssertEqual(components?.scheme, "https")
+        XCTAssertEqual(components?.host, "bsky.social")
+        XCTAssertEqual(components?.path, "/oauth/authorize")
+        let items = Dictionary(
+            uniqueKeysWithValues: (components?.queryItems ?? []).map { ($0.name, $0.value) }
+        )
+        XCTAssertEqual(items["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(items["request_uri"], "urn:ietf:params:oauth:request_uri:abc")
+    }
+
+    func testAuthorizationURLThrowsOnMalformedEndpoint() {
+        let bad = metadata(par: nil) // authorization_endpoint is still valid here
+        // Force a malformed endpoint by decoding a metadata with an empty endpoint.
+        _ = bad
+        let json = ##"{"issuer":"x","authorization_endpoint":"","token_endpoint":"t"}"##
+        // swiftlint:disable:next force_try
+        let empty = try! JSONDecoder().decode(AuthorizationServerMetadata.self, from: Data(json.utf8))
+        XCTAssertThrowsError(
+            try AuthorizationRequestService.authorizationURL(
+                metadata: empty, config: .hoshidukiyo, requestURI: "urn:abc"
+            )
+        )
+    }
 }
