@@ -11,6 +11,11 @@ public struct PersistedAccount: Codable, Equatable, Sendable {
     public var accessToken: String
     public var refreshToken: String?
     public var scope: String?
+    /// The DPoP P-256 private key as raw bytes. Security boundary note: this key
+    /// is serialized into the same JSON blob as the tokens and that whole blob is
+    /// written to a single Keychain item, so the private key never leaves
+    /// Keychain protection. It is held as `Data` (not a CryptoKit type) so this
+    /// layer stays platform-agnostic.
     public var dpopPrivateKeyRaw: Data
 
     public init(
