@@ -24,6 +24,11 @@ struct MainWindowView: View {
                 accountHandle: accountHandle,
                 onOpenSettings: { showSettings = true }
             )
+            // A crisp 1px rule on the trailing edge sets the rail firmly apart from
+            // the content pane, mirroring cmux's hard sidebar/content boundary.
+            .overlay(alignment: .trailing) {
+                Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
+            }
             .navigationSplitViewColumnWidth(min: 210, ideal: 232, max: 320)
         } detail: {
             detail
@@ -72,39 +77,19 @@ struct MainWindowView: View {
 
     private var homeFeed: some View {
         VStack(spacing: 0) {
-            DetailHeader("ホーム", systemImage: "house.fill") {
-                HStack(spacing: 8) {
-                    densityMenu
-                    ChromeIconButton(
-                        systemImage: "arrow.clockwise", help: "タイムラインを更新",
-                        disabled: model.state.isLoading
-                    ) { Task { await model.load() } }
-                }
+            DetailHeader {
+                ChromeIconButton(
+                    systemImage: "arrow.clockwise", help: "タイムラインを更新",
+                    disabled: model.state.isLoading
+                ) { Task { await model.load() } }
             }
             timeline
         }
         .background(theme.canvas)
+        // Extend the header to the window's top edge; the hidden title bar otherwise
+        // leaves a reserved safe-area band above it.
+        .ignoresSafeArea(.container, edges: .top)
         .task { if case .idle = model.state { await model.load() } }
-    }
-
-    private var densityMenu: some View {
-        Menu {
-            Picker("表示密度", selection: $displaySettings.density) {
-                Label("コンパクト", systemImage: "list.bullet").tag(DisplayDensity.compact)
-                Label("ゆとり", systemImage: "rectangle.grid.1x2").tag(DisplayDensity.comfortable)
-            }
-        } label: {
-            Image(systemName: displaySettings.density == .compact ? "list.bullet" : "rectangle.grid.1x2")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(theme.secondaryText)
-                .frame(width: 30, height: 26)
-                .background(theme.surfaceElevated.opacity(0.6))
-                .clipShape(RoundedRectangle(cornerRadius: 7))
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help("表示密度")
     }
 
     private var timeline: some View {
@@ -184,7 +169,7 @@ struct MainWindowView: View {
 
     private var notificationsPlaceholder: some View {
         VStack(spacing: 0) {
-            DetailHeader("通知", systemImage: "bell.fill") { EmptyView() }
+            DetailHeader { EmptyView() }
             VStack(spacing: 10) {
                 Image(systemName: "bell.slash")
                     .font(.system(size: 28))
@@ -195,5 +180,6 @@ struct MainWindowView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(theme.canvas)
+        .ignoresSafeArea(.container, edges: .top)
     }
 }

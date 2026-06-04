@@ -11,6 +11,7 @@ struct HoshidukiyoApp: App {
             RootView()
                 .modifier(DebugPerfOverlay())
         }
-        .defaultSize(width: 420, height: 720)
+        .defaultSize(width: 940, height: 720)
+        .windowStyle(.hiddenTitleBar)
     }
 }

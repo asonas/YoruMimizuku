@@ -16,13 +16,20 @@ final class ConversationTab: Identifiable {
     let id = UUID()
     /// The anchored post's URI; used to de-duplicate tabs for the same post.
     let anchorID: String
-    /// Short label for the sidebar (the anchored author's handle).
+    /// Sidebar title: the anchored author's display name (falls back to handle).
     let title: String
+    /// `@handle` shown as the row's monospaced meta line.
+    let handle: String
+    /// A one/two-line snippet of the anchored post body, shown under the title.
+    let subtitle: String
     let model: ThreadViewModel
 
     init(anchor: PostDisplay, model: ThreadViewModel) {
         self.anchorID = anchor.id
-        self.title = "@\(anchor.authorHandle)"
+        let trimmedName = anchor.authorDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.title = trimmedName.isEmpty ? "@\(anchor.authorHandle)" : trimmedName
+        self.handle = "@\(anchor.authorHandle)"
+        self.subtitle = anchor.body.trimmingCharacters(in: .whitespacesAndNewlines)
         self.model = model
     }
 }

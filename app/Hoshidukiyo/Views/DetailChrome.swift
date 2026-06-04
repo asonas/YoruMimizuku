@@ -5,11 +5,14 @@ import SwiftUI
 /// three panes visually consistent with one definition.
 struct DetailHeader<Trailing: View>: View {
     @EnvironmentObject private var theme: ThemeStore
-    private let title: String
-    private let systemImage: String
+    private let title: String?
+    private let systemImage: String?
     private let trailing: () -> Trailing
 
-    init(_ title: String, systemImage: String, @ViewBuilder trailing: @escaping () -> Trailing) {
+    /// `title`/`systemImage` are optional: the home and notifications panes omit them
+    /// (the selected sidebar tab already names the pane), leaving a slim toolbar that
+    /// holds only its trailing controls. The conversation pane still passes a title.
+    init(_ title: String? = nil, systemImage: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
         self.title = title
         self.systemImage = systemImage
         self.trailing = trailing
@@ -17,14 +20,18 @@ struct DetailHeader<Trailing: View>: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(theme.accent)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(theme.primaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(theme.accent)
+            }
+            if let title {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(theme.primaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
             Spacer(minLength: 8)
             trailing()
         }

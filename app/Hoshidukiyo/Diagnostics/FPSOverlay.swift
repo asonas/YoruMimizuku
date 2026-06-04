@@ -102,7 +102,7 @@ struct FPSOverlayView: View {
 struct DebugPerfOverlay: ViewModifier {
     func body(content: Content) -> some View {
         #if DEBUG
-        content.overlay(alignment: .topLeading) {
+        content.overlay(alignment: .bottomTrailing) {
             FPSOverlayView().padding(8)
         }
         #else
