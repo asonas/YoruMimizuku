@@ -19,7 +19,9 @@ struct PostRowView: View {
     /// can open the conversation.
     var onReplyTap: (PostDisplay) -> Void = { _ in }
 
+    @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
+
     private let timeFormatter = RelativeTimeFormatter()
 
     private var relativeTime: String {
@@ -47,7 +49,7 @@ struct PostRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, density == .compact ? 6 : 11)
         .padding(.horizontal, density == .compact ? 12 : 16)
-        .background(isHovered ? Theme.rowHover : .clear)
+        .background(isHovered ? theme.rowHover : .clear)
         .animation(.easeOut(duration: 0.12), value: isHovered)
         .onHover { isHovered = $0 }
     }
@@ -55,7 +57,7 @@ struct PostRowView: View {
     private func contextHeader(_ text: String) -> some View {
         Label(text, systemImage: "arrow.2.squarepath")
             .font(density == .compact ? .caption2 : .caption)
-            .foregroundStyle(Theme.tertiaryText)
+            .foregroundStyle(theme.tertiaryText)
             .labelStyle(.titleAndIcon)
             .lineLimit(1)
     }
@@ -67,7 +69,7 @@ struct PostRowView: View {
             Label("@\(parent.authorHandle) への返信", systemImage: "arrowshape.turn.up.left")
                 .font(density == .compact ? .caption2 : .caption)
                 .fontWeight(.medium)
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(theme.accent)
                 .lineLimit(1)
         }
         .buttonStyle(.plain)
@@ -79,12 +81,12 @@ struct PostRowView: View {
             if let image = phase.image {
                 image.resizable().scaledToFill()
             } else {
-                Theme.avatarPlaceholder
+                theme.avatarPlaceholder
             }
         }
         .frame(width: avatarSize, height: avatarSize)
         .clipShape(Circle())
-        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+        .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
     }
 
     @ViewBuilder
@@ -93,7 +95,7 @@ struct PostRowView: View {
             authorLine
             Text(post.body)
                 .font(density == .compact ? .callout : .body)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(theme.primaryText)
                 .lineSpacing(density == .compact ? 1 : 2)
                 .fixedSize(horizontal: false, vertical: true)
             if !post.images.isEmpty {
@@ -125,18 +127,18 @@ struct PostRowView: View {
             if let loaded = phase.image {
                 loaded.resizable().scaledToFill()
             } else if phase.error != nil {
-                Theme.surface.overlay(
-                    Image(systemName: "photo").foregroundStyle(Theme.secondaryText)
+                theme.surface.overlay(
+                    Image(systemName: "photo").foregroundStyle(theme.secondaryText)
                 )
             } else {
-                Theme.surface.overlay(ProgressView().controlSize(.small))
+                theme.surface.overlay(ProgressView().controlSize(.small))
             }
         }
         .frame(maxWidth: .infinity)
         .frame(height: single ? 240 : 140)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.hairline, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel(image.alt.isEmpty ? "画像" : image.alt)
         .onTapGesture {
@@ -148,17 +150,17 @@ struct PostRowView: View {
         HStack(spacing: density == .compact ? 5 : 6) {
             Text(post.authorDisplayName)
                 .font(density == .compact ? .caption : .subheadline).fontWeight(.semibold)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
             Text("@\(post.authorHandle)")
                 .font(density == .compact ? .caption2 : .caption)
-                .foregroundStyle(Theme.tertiaryText)
+                .foregroundStyle(theme.tertiaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 4)
             Text(relativeTime)
                 .font(density == .compact ? .caption2 : .caption)
-                .foregroundStyle(Theme.tertiaryText)
+                .foregroundStyle(theme.tertiaryText)
                 .monospacedDigit()
         }
     }
@@ -170,7 +172,7 @@ struct PostRowView: View {
             Label("\(post.likeCount)", systemImage: "heart")
         }
         .font(.caption)
-        .foregroundStyle(Theme.tertiaryText)
+        .foregroundStyle(theme.tertiaryText)
         .labelStyle(.titleAndIcon)
         .monospacedDigit()
         .padding(.top, 3)

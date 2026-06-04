@@ -4,17 +4,18 @@ import HoshidukiyoKit
 /// The login screen: handle input and a sign-in button bound to `LoginViewModel`.
 struct LoginView: View {
     @ObservedObject var model: LoginViewModel
+    @EnvironmentObject private var theme: ThemeStore
     var onAuthenticated: (String) -> Void
 
     var body: some View {
         VStack(spacing: 18) {
             VStack(spacing: 6) {
-                Text("✦").font(.system(size: 30)).foregroundStyle(Theme.star)
+                Text("✦").font(.system(size: 30)).foregroundStyle(theme.star)
                 Text("星月夜")
                     .font(.system(size: 34, weight: .semibold, design: .serif))
-                    .foregroundStyle(Theme.primaryText)
+                    .foregroundStyle(theme.primaryText)
                 Text("Bluesky にログイン")
-                    .font(.callout).foregroundStyle(Theme.secondaryText)
+                    .font(.callout).foregroundStyle(theme.secondaryText)
             }
             .padding(.bottom, 8)
 
@@ -36,7 +37,7 @@ struct LoginView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .tint(Theme.accent)
+            .tint(theme.accent)
             .disabled(!model.canSubmit)
 
             if case let .failed(message) = model.state {
@@ -45,6 +46,6 @@ struct LoginView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.canvas)
+        .background(theme.canvas)
     }
 }

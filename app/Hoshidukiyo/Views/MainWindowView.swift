@@ -7,22 +7,24 @@ import HoshidukiyoKit
 /// actually works today — the home feed.
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
+    @EnvironmentObject private var theme: ThemeStore
     var accountHandle: String
 
     @State private var density: DisplayDensity = .default
     @State private var lightboxURL: URL?
     /// The reply whose conversation is shown in the inspector; nil hides it.
     @State private var threadAnchor: PostDisplay?
+    @State private var showSettings = false
 
     private let now = Date()
 
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(Theme.divider)
+            Divider().overlay(theme.divider)
             timeline
         }
-        .background(Theme.canvas)
+        .background(theme.canvas)
         .inspector(isPresented: inspectorPresented) {
             if let anchor = threadAnchor {
                 ThreadInspectorView(
@@ -41,6 +43,9 @@ struct MainWindowView: View {
             }
         }
         .task { await model.load() }
+        .sheet(isPresented: $showSettings) {
+            SettingsView().environmentObject(theme)
+        }
     }
 
     private var inspectorPresented: Binding<Bool> {
@@ -59,13 +64,14 @@ struct MainWindowView: View {
             Spacer(minLength: 12)
             refreshButton
             densityMenu
+            settingsButton
             accountChip
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
-        .background(Theme.surface.opacity(0.55))
+        .background(theme.surface.opacity(0.55))
         .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.hairline).frame(height: 1)
+            Rectangle().fill(theme.hairline).frame(height: 1)
         }
     }
 
@@ -73,15 +79,15 @@ struct MainWindowView: View {
         HStack(spacing: 7) {
             Text("✦")
                 .font(.system(size: 16))
-                .foregroundStyle(Theme.star)
+                .foregroundStyle(theme.star)
             VStack(alignment: .leading, spacing: -2) {
                 Text("星月夜")
                     .font(.system(size: 19, weight: .semibold, design: .serif))
-                    .foregroundStyle(Theme.primaryText)
+                    .foregroundStyle(theme.primaryText)
                 Text("HOSHIDUKIYO")
                     .font(.system(size: 8, weight: .medium, design: .serif))
                     .tracking(2.5)
-                    .foregroundStyle(Theme.tertiaryText)
+                    .foregroundStyle(theme.tertiaryText)
             }
         }
     }
@@ -89,10 +95,10 @@ struct MainWindowView: View {
     private var sourcePill: some View {
         Label("ホーム", systemImage: "house.fill")
             .font(.caption.weight(.medium))
-            .foregroundStyle(Theme.accent)
+            .foregroundStyle(theme.accent)
             .padding(.horizontal, 11)
             .padding(.vertical, 5)
-            .background(Theme.accent.opacity(0.14))
+            .background(theme.accent.opacity(0.14))
             .clipShape(Capsule())
     }
 
@@ -102,9 +108,9 @@ struct MainWindowView: View {
         } label: {
             Image(systemName: "arrow.clockwise")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(theme.secondaryText)
                 .frame(width: 30, height: 26)
-                .background(Theme.surfaceElevated.opacity(0.6))
+                .background(theme.surfaceElevated.opacity(0.6))
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
@@ -121,9 +127,9 @@ struct MainWindowView: View {
         } label: {
             Image(systemName: density == .compact ? "list.bullet" : "rectangle.grid.1x2")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(theme.secondaryText)
                 .frame(width: 30, height: 26)
-                .background(Theme.surfaceElevated.opacity(0.6))
+                .background(theme.surfaceElevated.opacity(0.6))
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
         .menuStyle(.borderlessButton)
@@ -132,23 +138,38 @@ struct MainWindowView: View {
         .help("表示密度")
     }
 
+    private var settingsButton: some View {
+        Button {
+            showSettings = true
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(theme.secondaryText)
+                .frame(width: 30, height: 26)
+                .background(theme.surfaceElevated.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .help("配色設定")
+    }
+
     private var accountChip: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(Theme.accent)
+                .fill(theme.accent)
                 .frame(width: 18, height: 18)
-                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+                .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
             Text("@\(accountHandle)")
                 .font(.caption.weight(.medium))
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(theme.secondaryText)
                 .lineLimit(1)
             Image(systemName: "chevron.down")
                 .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(Theme.tertiaryText)
+                .foregroundStyle(theme.tertiaryText)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Theme.surfaceElevated.opacity(0.6))
+        .background(theme.surfaceElevated.opacity(0.6))
         .clipShape(Capsule())
     }
 
@@ -179,7 +200,7 @@ struct MainWindowView: View {
                     onImageTap: { lightboxURL = $0 },
                     onReplyTap: { _ in openConversation(for: post) }
                 )
-                Divider().overlay(Theme.divider)
+                Divider().overlay(theme.divider)
             }
         }
     }
@@ -193,7 +214,7 @@ struct MainWindowView: View {
             ProgressView().controlSize(.regular)
             Text("夜空を眺めています…")
                 .font(.callout)
-                .foregroundStyle(Theme.tertiaryText)
+                .foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
@@ -203,16 +224,16 @@ struct MainWindowView: View {
         VStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 26))
-                .foregroundStyle(Theme.star)
+                .foregroundStyle(theme.star)
             Text("タイムラインの読み込みに失敗しました")
-                .font(.callout).foregroundStyle(Theme.secondaryText)
+                .font(.callout).foregroundStyle(theme.secondaryText)
             Text(message)
-                .font(.caption).foregroundStyle(Theme.tertiaryText)
+                .font(.caption).foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
             Button("再試行") { Task { await model.load() } }
                 .buttonStyle(.borderedProminent)
-                .tint(Theme.accent)
+                .tint(theme.accent)
                 .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
@@ -223,9 +244,9 @@ struct MainWindowView: View {
         VStack(spacing: 10) {
             Image(systemName: "moon.stars")
                 .font(.system(size: 28))
-                .foregroundStyle(Theme.tertiaryText)
+                .foregroundStyle(theme.tertiaryText)
             Text("まだ投稿がありません")
-                .font(.callout).foregroundStyle(Theme.tertiaryText)
+                .font(.callout).foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)

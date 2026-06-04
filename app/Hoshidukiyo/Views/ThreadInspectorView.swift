@@ -10,6 +10,8 @@ struct ThreadInspectorView: View {
     var onClose: () -> Void
     var onImageTap: (URL) -> Void = { _ in }
 
+    @EnvironmentObject private var theme: ThemeStore
+
     /// Parent first, the tapped reply last. Falls back to just the anchor when
     /// the parent could not be resolved (deleted / blocked).
     private var thread: [PostDisplay] {
@@ -22,7 +24,7 @@ struct ThreadInspectorView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            Divider().overlay(Theme.divider)
+            Divider().overlay(theme.divider)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(thread.enumerated()), id: \.element.id) { index, post in
@@ -36,12 +38,12 @@ struct ThreadInspectorView: View {
                         if index < thread.count - 1 {
                             connector
                         }
-                        Divider().overlay(Theme.divider)
+                        Divider().overlay(theme.divider)
                     }
                 }
             }
         }
-        .background(Theme.canvas)
+        .background(theme.canvas)
         .background(
             Button("", action: onClose)
                 .keyboardShortcut(.cancelAction)
@@ -52,15 +54,15 @@ struct ThreadInspectorView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Image(systemName: "bubble.left.and.bubble.right")
-                .foregroundStyle(Theme.accent)
+                .foregroundStyle(theme.accent)
             Text("会話")
                 .font(.headline)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(theme.primaryText)
             Spacer()
             Button(action: onClose) {
                 Image(systemName: "xmark")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(theme.secondaryText)
                     .padding(6)
             }
             .buttonStyle(.plain)
@@ -74,7 +76,7 @@ struct ThreadInspectorView: View {
     private var connector: some View {
         HStack {
             Rectangle()
-                .fill(Theme.divider)
+                .fill(theme.divider)
                 .frame(width: 2, height: 16)
                 .padding(.leading, 16 + 21) // row inset + half avatar
             Spacer()

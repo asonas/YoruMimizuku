@@ -8,6 +8,7 @@ struct RootView: View {
     @State private var currentDID: String?
     @StateObject private var loginModel: LoginViewModel
     @StateObject private var timelineModel: TimelineViewModel
+    @StateObject private var themeStore = ThemeStore()
 
     private let accountManager: AccountManager
 
@@ -36,6 +37,7 @@ struct RootView: View {
                 }
             }
         }
+        .environmentObject(themeStore)
     }
 
     /// Handle of the current account for the account chip; falls back to the DID.
