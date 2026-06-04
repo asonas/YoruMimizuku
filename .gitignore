@@ -5,3 +5,4 @@ DerivedData/
 *.xcodeproj
 .swiftpm/
 app/Hoshidukiyo/Info.plist
+build/
