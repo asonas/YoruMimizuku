@@ -6,4 +6,6 @@ public enum OAuthError: Error, Equatable {
     case malformedDocument(String)
     case pdsNotFound(did: String)
     case unsupportedDIDMethod(String)
+    case pushedAuthorizationRequestNotSupported(issuer: String)
+    case authorizationRequestFailed(status: Int)
 }
