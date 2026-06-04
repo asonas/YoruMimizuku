@@ -29,7 +29,11 @@ public struct AuthorizationRequestService: Sendable {
         guard response.statusCode == 200 || response.statusCode == 201 else {
             throw OAuthError.authorizationRequestFailed(status: response.statusCode)
         }
-        return try JSONDecoder().decode(PushedAuthorizationResponse.self, from: response.body)
+        do {
+            return try JSONDecoder().decode(PushedAuthorizationResponse.self, from: response.body)
+        } catch {
+            throw OAuthError.malformedDocument("invalid PAR response")
+        }
     }
 
     /// Build the browser authorization URL: the server's authorization endpoint

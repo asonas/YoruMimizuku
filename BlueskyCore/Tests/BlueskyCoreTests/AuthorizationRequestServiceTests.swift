@@ -80,6 +80,21 @@ final class AuthorizationRequestServiceTests: XCTestCase {
         }
     }
 
+    func testPushThrowsMalformedDocumentOnUndecodableSuccessBody() async {
+        let (service, _) = makeService(response: HTTPResponse(statusCode: 201, body: Data("not json".utf8)))
+        do {
+            _ = try await service.push(
+                metadata: metadata(par: "https://bsky.social/oauth/par"),
+                request: sampleRequest()
+            )
+            XCTFail("expected error")
+        } catch let error as OAuthError {
+            XCTAssertEqual(error, .malformedDocument("invalid PAR response"))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
     func testAuthorizationURLAppendsClientIDAndRequestURI() throws {
         let url = try AuthorizationRequestService.authorizationURL(
             metadata: metadata(par: "https://bsky.social/oauth/par"),
@@ -98,9 +113,6 @@ final class AuthorizationRequestServiceTests: XCTestCase {
     }
 
     func testAuthorizationURLThrowsOnMalformedEndpoint() {
-        let bad = metadata(par: nil) // authorization_endpoint is still valid here
-        // Force a malformed endpoint by decoding a metadata with an empty endpoint.
-        _ = bad
         let json = ##"{"issuer":"x","authorization_endpoint":"","token_endpoint":"t"}"##
         // swiftlint:disable:next force_try
         let empty = try! JSONDecoder().decode(AuthorizationServerMetadata.self, from: Data(json.utf8))
@@ -108,6 +120,8 @@ final class AuthorizationRequestServiceTests: XCTestCase {
             try AuthorizationRequestService.authorizationURL(
                 metadata: empty, config: .hoshidukiyo, requestURI: "urn:abc"
             )
-        )
+        ) { error in
+            XCTAssertEqual(error as? OAuthError, .malformedDocument("invalid authorization_endpoint: "))
+        }
     }
 }
