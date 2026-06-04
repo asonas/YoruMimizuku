@@ -4,39 +4,39 @@ import HoshidukiyoKit
 /// One timeline row, rendered compact (Yorufukurou-tight) or comfortable
 /// (avatars + action counts) per `DisplayDensity`. Avatars sit in a fixed-width
 /// leading column so every row's text aligns; the repost/reply context is a
-/// header indented to that same text column.
+/// header indented to that same text column. The whole row lifts gently on hover.
 struct PostRowView: View {
     let post: PostDisplay
     let density: DisplayDensity
     let now: Date
+    /// Whether to show the "reply to @handle" affordance. Hidden inside the
+    /// conversation inspector, where the parent is already on screen.
+    var showReplyMarker: Bool = true
     /// Called with the full-size URL when a thumbnail is tapped, so the host can
     /// present the lightbox.
     var onImageTap: (URL) -> Void = { _ in }
     /// Called with the parent post when the reply marker is tapped, so the host
-    /// can open it in a new pane.
+    /// can open the conversation.
     var onReplyTap: (PostDisplay) -> Void = { _ in }
 
+    @State private var isHovered = false
     private let timeFormatter = RelativeTimeFormatter()
 
     private var relativeTime: String {
         timeFormatter.string(for: post.createdAt, now: now)
     }
 
-    private var avatarSize: CGFloat { density == .compact ? 22 : 40 }
-    private var columnSpacing: CGFloat { density == .compact ? 8 : 10 }
+    private var avatarSize: CGFloat { density == .compact ? 24 : 42 }
+    private var columnSpacing: CGFloat { density == .compact ? 8 : 11 }
+    private var leadingInset: CGFloat { avatarSize + columnSpacing }
 
     var body: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 1 : 3) {
             if let context = post.contextLabel {
-                Text(context)
-                    .font(density == .compact ? .caption2 : .caption)
-                    .foregroundStyle(Theme.secondaryText)
-                    .lineLimit(1)
-                    .padding(.leading, avatarSize + columnSpacing)
+                contextHeader(context).padding(.leading, leadingInset)
             }
-            if let parent = post.replyParent?.post {
-                replyMarker(parent: parent)
-                    .padding(.leading, avatarSize + columnSpacing)
+            if showReplyMarker, let parent = post.replyParent?.post {
+                replyMarker(parent: parent).padding(.leading, leadingInset)
             }
             HStack(alignment: .top, spacing: columnSpacing) {
                 avatar
@@ -45,8 +45,19 @@ struct PostRowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, density == .compact ? 5 : 9)
-        .padding(.horizontal, density == .compact ? 10 : 12)
+        .padding(.vertical, density == .compact ? 6 : 11)
+        .padding(.horizontal, density == .compact ? 12 : 16)
+        .background(isHovered ? Theme.rowHover : .clear)
+        .animation(.easeOut(duration: 0.12), value: isHovered)
+        .onHover { isHovered = $0 }
+    }
+
+    private func contextHeader(_ text: String) -> some View {
+        Label(text, systemImage: "arrow.2.squarepath")
+            .font(density == .compact ? .caption2 : .caption)
+            .foregroundStyle(Theme.tertiaryText)
+            .labelStyle(.titleAndIcon)
+            .lineLimit(1)
     }
 
     private func replyMarker(parent: PostDisplay) -> some View {
@@ -55,11 +66,12 @@ struct PostRowView: View {
         } label: {
             Label("@\(parent.authorHandle) への返信", systemImage: "arrowshape.turn.up.left")
                 .font(density == .compact ? .caption2 : .caption)
+                .fontWeight(.medium)
                 .foregroundStyle(Theme.accent)
                 .lineLimit(1)
         }
         .buttonStyle(.plain)
-        .help("リプライ元の投稿を開く")
+        .help("会話を開く")
     }
 
     private var avatar: some View {
@@ -72,18 +84,20 @@ struct PostRowView: View {
         }
         .frame(width: avatarSize, height: avatarSize)
         .clipShape(Circle())
+        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
     }
 
     @ViewBuilder
     private var content: some View {
-        VStack(alignment: .leading, spacing: density == .compact ? 1 : 3) {
+        VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
             Text(post.body)
                 .font(density == .compact ? .callout : .body)
                 .foregroundStyle(Theme.primaryText)
+                .lineSpacing(density == .compact ? 1 : 2)
                 .fixedSize(horizontal: false, vertical: true)
             if !post.images.isEmpty {
-                imageGrid.padding(.top, 2)
+                imageGrid.padding(.top, 3)
             }
             if density == .comfortable {
                 actionBar
@@ -95,14 +109,14 @@ struct PostRowView: View {
     private var imageGrid: some View {
         let columns = post.images.count == 1 ? 1 : 2
         LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: columns),
-            spacing: 4
+            columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: columns),
+            spacing: 5
         ) {
             ForEach(post.images) { image in
                 thumbnail(image)
             }
         }
-        .frame(maxWidth: density == .compact ? 320 : 420, alignment: .leading)
+        .frame(maxWidth: density == .compact ? 320 : 440, alignment: .leading)
     }
 
     private func thumbnail(_ image: PostImage) -> some View {
@@ -119,10 +133,11 @@ struct PostRowView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: single ? 220 : 130)
+        .frame(height: single ? 240 : 140)
         .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .contentShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.hairline, lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel(image.alt.isEmpty ? "画像" : image.alt)
         .onTapGesture {
             if let url = image.fullsizeURL { onImageTap(url) }
@@ -130,28 +145,34 @@ struct PostRowView: View {
     }
 
     private var authorLine: some View {
-        HStack(spacing: density == .compact ? 4 : 5) {
+        HStack(spacing: density == .compact ? 5 : 6) {
             Text(post.authorDisplayName)
-                .font(density == .compact ? .caption : .subheadline).bold()
+                .font(density == .compact ? .caption : .subheadline).fontWeight(.semibold)
                 .foregroundStyle(Theme.primaryText)
                 .lineLimit(1)
-            Text("@\(post.authorHandle) · \(relativeTime)")
-                .font(density == .compact ? .caption2 : .subheadline)
-                .foregroundStyle(Theme.secondaryText)
+            Text("@\(post.authorHandle)")
+                .font(density == .compact ? .caption2 : .caption)
+                .foregroundStyle(Theme.tertiaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            Spacer(minLength: 4)
+            Text(relativeTime)
+                .font(density == .compact ? .caption2 : .caption)
+                .foregroundStyle(Theme.tertiaryText)
+                .monospacedDigit()
         }
     }
 
     private var actionBar: some View {
-        HStack(spacing: 22) {
-            Label("\(post.replyCount)", systemImage: "arrowshape.turn.up.left")
+        HStack(spacing: 26) {
+            Label("\(post.replyCount)", systemImage: "bubble.left")
             Label("\(post.repostCount)", systemImage: "arrow.2.squarepath")
             Label("\(post.likeCount)", systemImage: "heart")
         }
         .font(.caption)
-        .foregroundStyle(Theme.secondaryText)
+        .foregroundStyle(Theme.tertiaryText)
         .labelStyle(.titleAndIcon)
-        .padding(.top, 2)
+        .monospacedDigit()
+        .padding(.top, 3)
     }
 }

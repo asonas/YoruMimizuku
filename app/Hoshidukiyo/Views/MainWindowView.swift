@@ -1,163 +1,233 @@
 import SwiftUI
 import HoshidukiyoKit
 
-/// The single-column main window: account chip, top tab bar, the live home
-/// timeline, and a bottom composer placeholder.
+/// The main window: a refined "Nocturne" header, the live home timeline, and a
+/// trailing conversation inspector for reply threads. Mock multi-tab navigation
+/// and the placeholder composer were removed in favor of the one source that
+/// actually works today — the home feed.
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
     var accountHandle: String
 
     @State private var density: DisplayDensity = .default
-    @State private var selectedTab = "Home"
     @State private var lightboxURL: URL?
-    /// Reply-parent panes opened to the right of the timeline, forming a chain.
-    @State private var detailPanes: [PostDisplay] = []
+    /// The reply whose conversation is shown in the inspector; nil hides it.
+    @State private var threadAnchor: PostDisplay?
 
     private let now = Date()
-    private let tabs = ["Home", "通知", "tech list", "検索"]
 
     var body: some View {
-        ZStack {
-            HStack(spacing: 0) {
-                timelinePane
-                    .frame(maxWidth: .infinity)
-                ForEach(detailPanes.indices, id: \.self) { index in
-                    Divider().overlay(Theme.divider)
-                    PostDetailPaneView(
-                        post: detailPanes[index],
-                        density: density,
-                        now: now,
-                        onClose: { closePanes(from: index) },
-                        onImageTap: { lightboxURL = $0 },
-                        onReplyTap: { openParent($0, after: index) }
-                    )
-                    .frame(width: 360)
-                }
+        VStack(spacing: 0) {
+            header
+            Divider().overlay(Theme.divider)
+            timeline
+        }
+        .background(Theme.canvas)
+        .inspector(isPresented: inspectorPresented) {
+            if let anchor = threadAnchor {
+                ThreadInspectorView(
+                    anchor: anchor,
+                    now: now,
+                    onClose: { threadAnchor = nil },
+                    onImageTap: { lightboxURL = $0 }
+                )
+                .inspectorColumnWidth(min: 320, ideal: 380, max: 560)
             }
-            .background(Theme.background)
-
+        }
+        .frame(minWidth: 520, minHeight: 600)
+        .overlay {
             if let lightboxURL {
                 ImageLightboxView(url: lightboxURL) { self.lightboxURL = nil }
             }
         }
-        .frame(minWidth: 420, minHeight: 480)
         .task { await model.load() }
     }
 
-    private var timelinePane: some View {
-        VStack(spacing: 0) {
+    private var inspectorPresented: Binding<Bool> {
+        Binding(
+            get: { threadAnchor != nil },
+            set: { if !$0 { threadAnchor = nil } }
+        )
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(spacing: 14) {
+            wordmark
+            sourcePill
+            Spacer(minLength: 12)
+            refreshButton
+            densityMenu
             accountChip
-            tabBar
-            Divider().overlay(Theme.divider)
-            timeline
-            composer
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(Theme.surface.opacity(0.55))
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.hairline).frame(height: 1)
         }
     }
 
-    /// Open `parent` in a new pane just after pane `index` (use -1 for the
-    /// timeline), dropping any panes further down the chain.
-    private func openParent(_ parent: PostDisplay, after index: Int) {
-        var panes = Array(detailPanes.prefix(index + 1))
-        panes.append(parent)
-        detailPanes = panes
+    private var wordmark: some View {
+        HStack(spacing: 7) {
+            Text("✦")
+                .font(.system(size: 16))
+                .foregroundStyle(Theme.star)
+            VStack(alignment: .leading, spacing: -2) {
+                Text("星月夜")
+                    .font(.system(size: 19, weight: .semibold, design: .serif))
+                    .foregroundStyle(Theme.primaryText)
+                Text("HOSHIDUKIYO")
+                    .font(.system(size: 8, weight: .medium, design: .serif))
+                    .tracking(2.5)
+                    .foregroundStyle(Theme.tertiaryText)
+            }
+        }
     }
 
-    /// Close the pane at `index` and every pane to its right.
-    private func closePanes(from index: Int) {
-        detailPanes = Array(detailPanes.prefix(index))
+    private var sourcePill: some View {
+        Label("ホーム", systemImage: "house.fill")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(Theme.accent)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 5)
+            .background(Theme.accent.opacity(0.14))
+            .clipShape(Capsule())
+    }
+
+    private var refreshButton: some View {
+        Button {
+            Task { await model.load() }
+        } label: {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 30, height: 26)
+                .background(Theme.surfaceElevated.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .buttonStyle(.plain)
+        .disabled(model.state.isLoading)
+        .help("タイムラインを更新")
+    }
+
+    private var densityMenu: some View {
+        Menu {
+            Picker("表示密度", selection: $density) {
+                Label("コンパクト", systemImage: "list.bullet").tag(DisplayDensity.compact)
+                Label("ゆとり", systemImage: "rectangle.grid.1x2").tag(DisplayDensity.comfortable)
+            }
+        } label: {
+            Image(systemName: density == .compact ? "list.bullet" : "rectangle.grid.1x2")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.secondaryText)
+                .frame(width: 30, height: 26)
+                .background(Theme.surfaceElevated.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("表示密度")
     }
 
     private var accountChip: some View {
-        HStack {
-            Spacer()
-            HStack(spacing: 5) {
-                Circle().fill(Theme.accent).frame(width: 16, height: 16)
-                Text("@\(accountHandle)").font(.caption).foregroundStyle(Theme.secondaryText)
-                Image(systemName: "chevron.down").font(.caption2).foregroundStyle(Theme.secondaryText)
-            }
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Theme.accent)
+                .frame(width: 18, height: 18)
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
+            Text("@\(accountHandle)")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Theme.secondaryText)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Theme.tertiaryText)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Theme.surface)
+        .background(Theme.surfaceElevated.opacity(0.6))
+        .clipShape(Capsule())
     }
 
-    private var tabBar: some View {
-        HStack(spacing: 4) {
-            ForEach(tabs, id: \.self) { tab in
-                Text(tab)
-                    .font(.callout)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 5)
-                    .background(selectedTab == tab ? Theme.accent : Color.clear)
-                    .foregroundStyle(selectedTab == tab ? .white : Theme.secondaryText)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .onTapGesture { selectedTab = tab }
-            }
-            Spacer()
-            Picker("表示密度", selection: $density) {
-                Text("コンパクト").tag(DisplayDensity.compact)
-                Text("ゆとり").tag(DisplayDensity.comfortable)
-            }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .frame(width: 120)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(Theme.surface)
-    }
+    // MARK: - Timeline
 
     private var timeline: some View {
         ScrollView {
             switch model.state {
             case .idle, .loading:
-                ProgressView().controlSize(.small).padding(40)
+                loadingState
             case let .failed(message):
-                VStack(spacing: 8) {
-                    Text("タイムラインの読み込みに失敗しました")
-                        .font(.callout).foregroundStyle(Theme.secondaryText)
-                    Text(message).font(.caption).foregroundStyle(.red)
-                        .frame(maxWidth: 320)
-                }
-                .padding(40)
+                failedState(message)
             case let .loaded(posts):
                 if posts.isEmpty {
-                    Text("まだ投稿がありません")
-                        .font(.callout).foregroundStyle(Theme.secondaryText).padding(40)
+                    emptyState
                 } else {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(posts) { post in
-                            PostRowView(
-                                post: post, density: density, now: now,
-                                onImageTap: { lightboxURL = $0 },
-                                onReplyTap: { openParent($0, after: -1) }
-                            )
-                            Divider().overlay(Theme.divider)
-                        }
-                    }
+                    postList(posts)
                 }
             }
         }
     }
 
-    private var composer: some View {
-        HStack(spacing: 8) {
-            Text("いまどうしてる?")
-                .font(.callout)
-                .foregroundStyle(Theme.secondaryText)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 6)
-                .background(Theme.background)
-                .clipShape(RoundedRectangle(cornerRadius: 7))
-            Text("Post")
-                .font(.callout).bold()
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Theme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 7))
+    private func postList(_ posts: [PostDisplay]) -> some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(posts) { post in
+                PostRowView(
+                    post: post, density: density, now: now,
+                    onImageTap: { lightboxURL = $0 },
+                    onReplyTap: { _ in openConversation(for: post) }
+                )
+                Divider().overlay(Theme.divider)
+            }
         }
-        .padding(8)
-        .background(Theme.surface)
+    }
+
+    private func openConversation(for post: PostDisplay) {
+        threadAnchor = post
+    }
+
+    private var loadingState: some View {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.regular)
+            Text("夜空を眺めています…")
+                .font(.callout)
+                .foregroundStyle(Theme.tertiaryText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+    }
+
+    private func failedState(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 26))
+                .foregroundStyle(Theme.star)
+            Text("タイムラインの読み込みに失敗しました")
+                .font(.callout).foregroundStyle(Theme.secondaryText)
+            Text(message)
+                .font(.caption).foregroundStyle(Theme.tertiaryText)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 320)
+            Button("再試行") { Task { await model.load() } }
+                .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "moon.stars")
+                .font(.system(size: 28))
+                .foregroundStyle(Theme.tertiaryText)
+            Text("まだ投稿がありません")
+                .font(.callout).foregroundStyle(Theme.tertiaryText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
     }
 }

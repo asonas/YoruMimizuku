@@ -16,6 +16,12 @@ public final class TimelineViewModel: ObservableObject {
         case loading
         case loaded([PostDisplay])
         case failed(String)
+
+        /// True while a load is in flight, used to disable the refresh control.
+        public var isLoading: Bool {
+            if case .loading = self { return true }
+            return false
+        }
     }
 
     @Published public private(set) var state: State = .idle

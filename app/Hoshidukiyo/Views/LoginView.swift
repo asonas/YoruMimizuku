@@ -7,9 +7,16 @@ struct LoginView: View {
     var onAuthenticated: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Hoshidukiyo").font(.title).bold().foregroundStyle(Theme.primaryText)
-            Text("Bluesky にログイン").font(.callout).foregroundStyle(Theme.secondaryText)
+        VStack(spacing: 18) {
+            VStack(spacing: 6) {
+                Text("✦").font(.system(size: 30)).foregroundStyle(Theme.star)
+                Text("星月夜")
+                    .font(.system(size: 34, weight: .semibold, design: .serif))
+                    .foregroundStyle(Theme.primaryText)
+                Text("Bluesky にログイン")
+                    .font(.callout).foregroundStyle(Theme.secondaryText)
+            }
+            .padding(.bottom, 8)
 
             TextField("handle (例: alice.bsky.social)", text: $model.handle)
                 .textFieldStyle(.roundedBorder)
@@ -29,6 +36,7 @@ struct LoginView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
+            .tint(Theme.accent)
             .disabled(!model.canSubmit)
 
             if case let .failed(message) = model.state {
@@ -37,6 +45,6 @@ struct LoginView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .background(Theme.canvas)
     }
 }
