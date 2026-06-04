@@ -1,15 +1,17 @@
 import SwiftUI
 import HoshidukiyoKit
 
-/// The single-column main window: account chip, top tab bar, mock timeline,
-/// and a bottom composer placeholder. Density toggle is added in the next step.
+/// The single-column main window: account chip, top tab bar, the live home
+/// timeline, and a bottom composer placeholder.
 struct MainWindowView: View {
+    @ObservedObject var model: TimelineViewModel
+    var accountHandle: String
+
     @State private var density: DisplayDensity = .default
     @State private var selectedTab = "Home"
 
     private let now = Date()
     private let tabs = ["Home", "通知", "tech list", "検索"]
-    private var posts: [PostDisplay] { PostDisplay.samples(now: now) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,6 +23,7 @@ struct MainWindowView: View {
         }
         .background(Theme.background)
         .frame(minWidth: 360, minHeight: 480)
+        .task { await model.load() }
     }
 
     private var accountChip: some View {
@@ -28,7 +31,7 @@ struct MainWindowView: View {
             Spacer()
             HStack(spacing: 5) {
                 Circle().fill(Theme.accent).frame(width: 16, height: 16)
-                Text("@asonas.bsky.social").font(.caption).foregroundStyle(Theme.secondaryText)
+                Text("@\(accountHandle)").font(.caption).foregroundStyle(Theme.secondaryText)
                 Image(systemName: "chevron.down").font(.caption2).foregroundStyle(Theme.secondaryText)
             }
         }
@@ -65,10 +68,28 @@ struct MainWindowView: View {
 
     private var timeline: some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                ForEach(posts) { post in
-                    PostRowView(post: post, density: density, now: now)
-                    Divider().overlay(Theme.divider)
+            switch model.state {
+            case .idle, .loading:
+                ProgressView().controlSize(.small).padding(40)
+            case let .failed(message):
+                VStack(spacing: 8) {
+                    Text("タイムラインの読み込みに失敗しました")
+                        .font(.callout).foregroundStyle(Theme.secondaryText)
+                    Text(message).font(.caption).foregroundStyle(.red)
+                        .frame(maxWidth: 320)
+                }
+                .padding(40)
+            case let .loaded(posts):
+                if posts.isEmpty {
+                    Text("まだ投稿がありません")
+                        .font(.callout).foregroundStyle(Theme.secondaryText).padding(40)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(posts) { post in
+                            PostRowView(post: post, density: density, now: now)
+                            Divider().overlay(Theme.divider)
+                        }
+                    }
                 }
             }
         }

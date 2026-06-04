@@ -57,4 +57,37 @@ final class AccountManagerTests: XCTestCase {
     func testCurrentIsNilWhenNoAccounts() throws {
         XCTAssertNil(try makeManager().current())
     }
+
+    func testUpdateTokensReplacesTokensAndPreservesOtherFields() throws {
+        let manager = makeManager()
+        _ = try manager.add(
+            loginResult: loginResult(did: "did:plc:a"),
+            handle: "alice.bsky.social",
+            dpopPrivateKeyRaw: Data([0x09])
+        )
+
+        let updated = try manager.updateTokens(
+            did: "did:plc:a", accessToken: "atk2", refreshToken: "rtk2", scope: "atproto"
+        )
+
+        XCTAssertEqual(updated.accessToken, "atk2")
+        let current = try manager.current()
+        XCTAssertEqual(current?.accessToken, "atk2")
+        XCTAssertEqual(current?.refreshToken, "rtk2")
+        XCTAssertEqual(current?.scope, "atproto")
+        // Untouched fields survive the update.
+        XCTAssertEqual(current?.handle, "alice.bsky.social")
+        XCTAssertEqual(current?.dpopPrivateKeyRaw, Data([0x09]))
+        // No duplicate index entry was created.
+        XCTAssertEqual(try manager.allDIDs(), ["did:plc:a"])
+    }
+
+    func testUpdateTokensThrowsForUnknownAccount() {
+        let manager = makeManager()
+        XCTAssertThrowsError(
+            try manager.updateTokens(did: "did:plc:missing", accessToken: "x", refreshToken: nil, scope: nil)
+        ) { error in
+            XCTAssertEqual(error as? AccountError, .unknownAccount("did:plc:missing"))
+        }
+    }
 }

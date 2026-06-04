@@ -25,6 +25,26 @@ public struct AccountManager: Sendable {
         return account
     }
 
+    /// Replace the stored tokens for an account (e.g. after a `refresh_token`
+    /// renewal), preserving everything else. Throws `unknownAccount` if the DID
+    /// is not stored.
+    @discardableResult
+    public func updateTokens(
+        did: String,
+        accessToken: String,
+        refreshToken: String?,
+        scope: String?
+    ) throws -> PersistedAccount {
+        guard var account = try store.account(did: did) else {
+            throw AccountError.unknownAccount(did)
+        }
+        account.accessToken = accessToken
+        account.refreshToken = refreshToken
+        account.scope = scope
+        try store.save(account)
+        return account
+    }
+
     /// The current account, or nil if none is selected.
     public func current() throws -> PersistedAccount? {
         guard let did = try store.index().currentDID else { return nil }

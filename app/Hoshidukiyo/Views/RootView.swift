@@ -7,6 +7,7 @@ import HoshidukiyoKit
 struct RootView: View {
     @State private var currentDID: String?
     @StateObject private var loginModel: LoginViewModel
+    @StateObject private var timelineModel: TimelineViewModel
 
     private let accountManager: AccountManager
 
@@ -17,6 +18,9 @@ struct RootView: View {
         _loginModel = StateObject(
             wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager))
         )
+        _timelineModel = StateObject(
+            wrappedValue: TimelineViewModel(loader: LiveTimelineLoader(accountManager: manager))
+        )
         // current() returns PersistedAccount?; try? wraps it again, so flatten first.
         let existing = (try? manager.current()) ?? nil
         _currentDID = State(initialValue: existing?.did)
@@ -25,12 +29,18 @@ struct RootView: View {
     var body: some View {
         Group {
             if currentDID != nil {
-                MainWindowView()
+                MainWindowView(model: timelineModel, accountHandle: currentHandle)
             } else {
                 LoginView(model: loginModel) { did in
                     currentDID = did
                 }
             }
         }
+    }
+
+    /// Handle of the current account for the account chip; falls back to the DID.
+    private var currentHandle: String {
+        let account = (try? accountManager.current()) ?? nil
+        return account?.handle ?? account?.did ?? ""
     }
 }
