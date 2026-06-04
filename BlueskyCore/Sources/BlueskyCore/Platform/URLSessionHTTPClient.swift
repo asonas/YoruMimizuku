@@ -19,7 +19,7 @@ public struct URLSessionHTTPClient: HTTPClient {
         let (data, response) = try await session.data(for: urlRequest)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw XRPCError.requestFailed(status: -1, body: nil)
+            throw HTTPClientError.nonHTTPResponse
         }
 
         var headers: [String: String] = [:]

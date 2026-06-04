@@ -36,3 +36,9 @@ public struct HTTPResponse: Sendable, Equatable {
 public protocol HTTPClient: Sendable {
     func send(_ request: HTTPRequest) async throws -> HTTPResponse
 }
+
+/// Errors originating from the transport layer itself (below XRPC).
+public enum HTTPClientError: Error, Equatable {
+    /// The URL loading system returned a response that was not an HTTP response.
+    case nonHTTPResponse
+}
