@@ -13,6 +13,14 @@ public struct OAuthClientConfig: Equatable, Sendable {
         self.scope = scope
     }
 
+    /// The custom URL scheme used for the OAuth redirect (the part of
+    /// `redirectURI` before the first colon). `ASWebAuthenticationSession`
+    /// needs this scheme to detect the callback.
+    public var callbackScheme: String {
+        guard let colon = redirectURI.firstIndex(of: ":") else { return redirectURI }
+        return String(redirectURI[..<colon])
+    }
+
     /// Production configuration for Hoshidukiyo. Must stay in sync with
     /// `https://ason.as/hoshidukiyo/client-metadata.json`.
     public static let hoshidukiyo = OAuthClientConfig(
