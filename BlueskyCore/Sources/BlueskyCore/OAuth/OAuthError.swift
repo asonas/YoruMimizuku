@@ -9,4 +9,7 @@ public enum OAuthError: Error, Equatable {
     case pushedAuthorizationRequestNotSupported(issuer: String)
     case authorizationRequestFailed(status: Int)
     case tokenRequestFailed(status: Int)
+    case authorizationDenied(error: String, description: String?)
+    case missingAuthorizationCode
+    case stateMismatch
 }
