@@ -5,10 +5,12 @@ import HoshidukiyoKit
 /// timeline, and a bottom composer placeholder.
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
+    @EnvironmentObject private var theme: ThemeStore
     var accountHandle: String
 
     @State private var density: DisplayDensity = .default
     @State private var selectedTab = "Home"
+    @State private var showSettings = false
 
     private let now = Date()
     private let tabs = ["Home", "通知", "tech list", "検索"]
@@ -17,27 +19,36 @@ struct MainWindowView: View {
         VStack(spacing: 0) {
             accountChip
             tabBar
-            Divider().overlay(Theme.divider)
+            Divider().overlay(theme.divider)
             timeline
             composer
         }
-        .background(Theme.background)
+        .background(theme.background)
         .frame(minWidth: 360, minHeight: 480)
         .task { await model.load() }
+        .sheet(isPresented: $showSettings) {
+            SettingsView().environmentObject(theme)
+        }
     }
 
     private var accountChip: some View {
         HStack {
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape").font(.callout).foregroundStyle(theme.secondaryText)
+            }
+            .buttonStyle(.plain)
             Spacer()
             HStack(spacing: 5) {
-                Circle().fill(Theme.accent).frame(width: 16, height: 16)
-                Text("@\(accountHandle)").font(.caption).foregroundStyle(Theme.secondaryText)
-                Image(systemName: "chevron.down").font(.caption2).foregroundStyle(Theme.secondaryText)
+                Circle().fill(theme.accent).frame(width: 16, height: 16)
+                Text("@\(accountHandle)").font(.caption).foregroundStyle(theme.secondaryText)
+                Image(systemName: "chevron.down").font(.caption2).foregroundStyle(theme.secondaryText)
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Theme.surface)
+        .background(theme.surface)
     }
 
     private var tabBar: some View {
@@ -47,8 +58,8 @@ struct MainWindowView: View {
                     .font(.callout)
                     .padding(.horizontal, 11)
                     .padding(.vertical, 5)
-                    .background(selectedTab == tab ? Theme.accent : Color.clear)
-                    .foregroundStyle(selectedTab == tab ? .white : Theme.secondaryText)
+                    .background(selectedTab == tab ? theme.accent : Color.clear)
+                    .foregroundStyle(selectedTab == tab ? .white : theme.secondaryText)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .onTapGesture { selectedTab = tab }
             }
@@ -63,7 +74,7 @@ struct MainWindowView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
-        .background(Theme.surface)
+        .background(theme.surface)
     }
 
     private var timeline: some View {
@@ -74,7 +85,7 @@ struct MainWindowView: View {
             case let .failed(message):
                 VStack(spacing: 8) {
                     Text("タイムラインの読み込みに失敗しました")
-                        .font(.callout).foregroundStyle(Theme.secondaryText)
+                        .font(.callout).foregroundStyle(theme.secondaryText)
                     Text(message).font(.caption).foregroundStyle(.red)
                         .frame(maxWidth: 320)
                 }
@@ -82,12 +93,12 @@ struct MainWindowView: View {
             case let .loaded(posts):
                 if posts.isEmpty {
                     Text("まだ投稿がありません")
-                        .font(.callout).foregroundStyle(Theme.secondaryText).padding(40)
+                        .font(.callout).foregroundStyle(theme.secondaryText).padding(40)
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(posts) { post in
                             PostRowView(post: post, density: density, now: now)
-                            Divider().overlay(Theme.divider)
+                            Divider().overlay(theme.divider)
                         }
                     }
                 }
@@ -99,20 +110,20 @@ struct MainWindowView: View {
         HStack(spacing: 8) {
             Text("いまどうしてる?")
                 .font(.callout)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(theme.secondaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 6)
-                .background(Theme.background)
+                .background(theme.background)
                 .clipShape(RoundedRectangle(cornerRadius: 7))
             Text("Post")
                 .font(.callout).bold()
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12).padding(.vertical, 6)
-                .background(Theme.accent)
+                .background(theme.accent)
                 .clipShape(RoundedRectangle(cornerRadius: 7))
         }
         .padding(8)
-        .background(Theme.surface)
+        .background(theme.surface)
     }
 }

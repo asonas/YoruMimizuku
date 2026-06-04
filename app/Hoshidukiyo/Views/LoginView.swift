@@ -4,12 +4,13 @@ import HoshidukiyoKit
 /// The login screen: handle input and a sign-in button bound to `LoginViewModel`.
 struct LoginView: View {
     @ObservedObject var model: LoginViewModel
+    @EnvironmentObject private var theme: ThemeStore
     var onAuthenticated: (String) -> Void
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Hoshidukiyo").font(.title).bold().foregroundStyle(Theme.primaryText)
-            Text("Bluesky にログイン").font(.callout).foregroundStyle(Theme.secondaryText)
+            Text("Hoshidukiyo").font(.title).bold().foregroundStyle(theme.primaryText)
+            Text("Bluesky にログイン").font(.callout).foregroundStyle(theme.secondaryText)
 
             TextField("handle (例: alice.bsky.social)", text: $model.handle)
                 .textFieldStyle(.roundedBorder)
@@ -37,6 +38,6 @@ struct LoginView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.background)
+        .background(theme.background)
     }
 }

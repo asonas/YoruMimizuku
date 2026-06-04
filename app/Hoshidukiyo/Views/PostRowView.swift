@@ -10,6 +10,8 @@ struct PostRowView: View {
     let density: DisplayDensity
     let now: Date
 
+    @EnvironmentObject private var theme: ThemeStore
+
     private let timeFormatter = RelativeTimeFormatter()
 
     private var relativeTime: String {
@@ -24,7 +26,7 @@ struct PostRowView: View {
             if let context = post.contextLabel {
                 Text(context)
                     .font(density == .compact ? .caption2 : .caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .foregroundStyle(theme.secondaryText)
                     .lineLimit(1)
                     .padding(.leading, avatarSize + columnSpacing)
             }
@@ -44,7 +46,7 @@ struct PostRowView: View {
             if let image = phase.image {
                 image.resizable().scaledToFill()
             } else {
-                Theme.avatarPlaceholder
+                theme.avatarPlaceholder
             }
         }
         .frame(width: avatarSize, height: avatarSize)
@@ -57,7 +59,7 @@ struct PostRowView: View {
             authorLine
             Text(post.body)
                 .font(density == .compact ? .callout : .body)
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(theme.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
             if density == .comfortable {
                 actionBar
@@ -69,11 +71,11 @@ struct PostRowView: View {
         HStack(spacing: density == .compact ? 4 : 5) {
             Text(post.authorDisplayName)
                 .font(density == .compact ? .caption : .subheadline).bold()
-                .foregroundStyle(Theme.primaryText)
+                .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
             Text("@\(post.authorHandle) · \(relativeTime)")
                 .font(density == .compact ? .caption2 : .subheadline)
-                .foregroundStyle(Theme.secondaryText)
+                .foregroundStyle(theme.secondaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
@@ -86,7 +88,7 @@ struct PostRowView: View {
             Label("\(post.likeCount)", systemImage: "heart")
         }
         .font(.caption)
-        .foregroundStyle(Theme.secondaryText)
+        .foregroundStyle(theme.secondaryText)
         .labelStyle(.titleAndIcon)
         .padding(.top, 2)
     }
