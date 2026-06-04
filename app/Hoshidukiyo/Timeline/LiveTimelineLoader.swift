@@ -1,12 +1,12 @@
 import Foundation
 import os
-import CryptoKit
 import BlueskyCore
 import HoshidukiyoKit
 
-/// Live `TimelineLoading`: restores the current account's DPoP key, wires the real
-/// `TimelineService`, fetches the home timeline, persists any refreshed tokens, and
-/// maps the feed into `PostDisplay` rows.
+/// Live `TimelineLoading`: wires the real `TimelineService` through a
+/// `LiveServiceContext`, fetches a page of the home timeline (passing the cursor
+/// for infinite scroll), persists any refreshed tokens, and maps the feed into
+/// `PostDisplay` rows.
 struct LiveTimelineLoader: TimelineLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
@@ -16,47 +16,28 @@ struct LiveTimelineLoader: TimelineLoading {
         self.config = config
     }
 
-    enum LoaderError: Error { case noCurrentAccount, invalidIssuer }
-
-    func loadLatest() async throws -> [PostDisplay] {
-        guard let account = try accountManager.current() else {
-            throw LoaderError.noCurrentAccount
-        }
-        guard let issuer = URL(string: account.issuer) else {
-            throw LoaderError.invalidIssuer
-        }
-
-        let key = try P256.Signing.PrivateKey(rawRepresentation: account.dpopPrivateKeyRaw)
-        let crypto = CryptoKitDPoPProvider(privateKey: key)
-        let http = URLSessionHTTPClient()
-        let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: crypto))
+    func loadPage(cursor: String?) async throws -> TimelinePage {
+        let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = TimelineService(
-            sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
         )
 
         let signposter = PerfSignpost.timeline
-
         let fetchInterval = signposter.beginInterval("Fetch timeline")
         let result = try await service.getTimeline(
-            pds: account.pds,
-            issuer: issuer,
-            accessToken: account.accessToken,
-            refreshToken: account.refreshToken
+            pds: context.account.pds,
+            issuer: context.issuer,
+            accessToken: context.account.accessToken,
+            refreshToken: context.account.refreshToken,
+            cursor: cursor
         )
         signposter.endInterval("Fetch timeline", fetchInterval, "\(result.response.feed.count) items")
 
-        if let refreshed = result.refreshed {
-            try accountManager.updateTokens(
-                did: account.did,
-                accessToken: refreshed.accessToken,
-                refreshToken: refreshed.refreshToken ?? account.refreshToken,
-                scope: refreshed.scope ?? account.scope
-            )
-        }
+        try context.persist(result.refreshed)
 
         let mapInterval = signposter.beginInterval("Map feed")
         let posts = result.response.feed.map(PostDisplay.init)
         signposter.endInterval("Map feed", mapInterval, "\(posts.count) posts")
-        return posts
+        return TimelinePage(posts: posts, cursor: result.response.cursor)
     }
 }
