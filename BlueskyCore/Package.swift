@@ -8,10 +8,13 @@ let package = Package(
         .iOS(.v17)
     ],
     products: [
-        .library(name: "BlueskyCore", targets: ["BlueskyCore"])
+        .library(name: "BlueskyCore", targets: ["BlueskyCore"]),
+        .library(name: "HoshidukiyoKit", targets: ["HoshidukiyoKit"])
     ],
     targets: [
         .target(name: "BlueskyCore"),
-        .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore"])
+        .target(name: "HoshidukiyoKit", dependencies: ["BlueskyCore"]),
+        .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore"]),
+        .testTarget(name: "HoshidukiyoKitTests", dependencies: ["HoshidukiyoKit"])
     ]
 )
