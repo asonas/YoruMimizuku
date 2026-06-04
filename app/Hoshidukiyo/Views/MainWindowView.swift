@@ -50,6 +50,13 @@ struct MainWindowView: View {
                     .onTapGesture { selectedTab = tab }
             }
             Spacer()
+            Picker("表示密度", selection: $density) {
+                Text("コンパクト").tag(DisplayDensity.compact)
+                Text("ゆとり").tag(DisplayDensity.comfortable)
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .frame(width: 120)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
