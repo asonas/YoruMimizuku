@@ -26,7 +26,22 @@ final class TimelineResponseTests: XCTestCase {
             "replyCount": 1,
             "repostCount": 2,
             "likeCount": 3,
-            "indexedAt": "2026-06-04T12:00:01.000Z"
+            "indexedAt": "2026-06-04T12:00:01.000Z",
+            "embed": {
+              "$type": "app.bsky.embed.images#view",
+              "images": [
+                {
+                  "thumb": "https://cdn.example/thumb1.jpg",
+                  "fullsize": "https://cdn.example/full1.jpg",
+                  "alt": "a cat"
+                },
+                {
+                  "thumb": "https://cdn.example/thumb2.jpg",
+                  "fullsize": "https://cdn.example/full2.jpg",
+                  "alt": ""
+                }
+              ]
+            }
           }
         },
         {
@@ -80,6 +95,95 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertEqual(item.post.replyCount, 1)
         XCTAssertEqual(item.post.repostCount, 2)
         XCTAssertEqual(item.post.likeCount, 3)
+    }
+
+    func testDecodesImageEmbed() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        let images = try XCTUnwrap(response.feed[0].post.embed?.images)
+
+        XCTAssertEqual(images.count, 2)
+        XCTAssertEqual(images[0].thumb, "https://cdn.example/thumb1.jpg")
+        XCTAssertEqual(images[0].fullsize, "https://cdn.example/full1.jpg")
+        XCTAssertEqual(images[0].alt, "a cat")
+        XCTAssertEqual(images[1].alt, "")
+    }
+
+    func testPostWithoutEmbedHasNilEmbed() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        XCTAssertNil(response.feed[1].post.embed)
+    }
+
+    func testDecodesReplyParent() throws {
+        let json = Data(##"""
+        {
+          "post": {
+            "uri": "at://did:plc:alice/app.bsky.feed.post/reply",
+            "cid": "cid",
+            "author": { "did": "did:plc:alice", "handle": "alice.bsky.social" },
+            "record": { "$type": "app.bsky.feed.post", "text": "agreed!", "createdAt": "2026-06-04T12:00:00Z" },
+            "indexedAt": "2026-06-04T12:00:01Z"
+          },
+          "reply": {
+            "root": {
+              "$type": "app.bsky.feed.defs#postView",
+              "uri": "at://did:plc:bob/app.bsky.feed.post/root",
+              "cid": "cidroot",
+              "author": { "did": "did:plc:bob", "handle": "bob.bsky.social" },
+              "record": { "$type": "app.bsky.feed.post", "text": "root", "createdAt": "2026-06-04T11:00:00Z" },
+              "indexedAt": "2026-06-04T11:00:01Z"
+            },
+            "parent": {
+              "$type": "app.bsky.feed.defs#postView",
+              "uri": "at://did:plc:bob/app.bsky.feed.post/parent",
+              "cid": "cidparent",
+              "author": { "did": "did:plc:bob", "handle": "bob.bsky.social", "displayName": "Bob" },
+              "record": { "$type": "app.bsky.feed.post", "text": "original question", "createdAt": "2026-06-04T11:30:00Z" },
+              "indexedAt": "2026-06-04T11:30:01Z"
+            }
+          }
+        }
+        """##.utf8)
+        let item = try JSONDecoder().decode(FeedViewPost.self, from: json)
+
+        XCTAssertEqual(item.reply?.parent?.author.handle, "bob.bsky.social")
+        XCTAssertEqual(item.reply?.parent?.record.text, "original question")
+    }
+
+    func testReplyWithNotFoundParentDecodesToNilParent() throws {
+        let json = Data(##"""
+        {
+          "post": {
+            "uri": "at://did:plc:alice/app.bsky.feed.post/reply",
+            "cid": "cid",
+            "author": { "did": "did:plc:alice", "handle": "alice.bsky.social" },
+            "record": { "$type": "app.bsky.feed.post", "text": "reply", "createdAt": "2026-06-04T12:00:00Z" },
+            "indexedAt": "2026-06-04T12:00:01Z"
+          },
+          "reply": {
+            "parent": { "$type": "app.bsky.feed.defs#notFoundPost", "uri": "at://x", "notFound": true }
+          }
+        }
+        """##.utf8)
+        let item = try JSONDecoder().decode(FeedViewPost.self, from: json)
+
+        XCTAssertNotNil(item.reply)
+        XCTAssertNil(item.reply?.parent)
+    }
+
+    func testNonImageEmbedDecodesToEmptyImages() throws {
+        // A record embed (different shape) must not break decoding; images is empty.
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:x/app.bsky.feed.post/x",
+          "cid": "cid",
+          "author": { "did": "did:plc:x", "handle": "x.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "quote", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "embed": { "$type": "app.bsky.embed.record#view", "record": { "uri": "at://did:plc:y/app.bsky.feed.post/y" } }
+        }
+        """##.utf8)
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+        XCTAssertEqual(post.embed?.images, [])
     }
 
     func testDecodesRepostReasonAndOptionalAuthorFields() throws {

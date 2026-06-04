@@ -9,11 +9,42 @@ struct MainWindowView: View {
 
     @State private var density: DisplayDensity = .default
     @State private var selectedTab = "Home"
+    @State private var lightboxURL: URL?
+    /// Reply-parent panes opened to the right of the timeline, forming a chain.
+    @State private var detailPanes: [PostDisplay] = []
 
     private let now = Date()
     private let tabs = ["Home", "通知", "tech list", "検索"]
 
     var body: some View {
+        ZStack {
+            HStack(spacing: 0) {
+                timelinePane
+                    .frame(maxWidth: .infinity)
+                ForEach(detailPanes.indices, id: \.self) { index in
+                    Divider().overlay(Theme.divider)
+                    PostDetailPaneView(
+                        post: detailPanes[index],
+                        density: density,
+                        now: now,
+                        onClose: { closePanes(from: index) },
+                        onImageTap: { lightboxURL = $0 },
+                        onReplyTap: { openParent($0, after: index) }
+                    )
+                    .frame(width: 360)
+                }
+            }
+            .background(Theme.background)
+
+            if let lightboxURL {
+                ImageLightboxView(url: lightboxURL) { self.lightboxURL = nil }
+            }
+        }
+        .frame(minWidth: 420, minHeight: 480)
+        .task { await model.load() }
+    }
+
+    private var timelinePane: some View {
         VStack(spacing: 0) {
             accountChip
             tabBar
@@ -21,9 +52,19 @@ struct MainWindowView: View {
             timeline
             composer
         }
-        .background(Theme.background)
-        .frame(minWidth: 360, minHeight: 480)
-        .task { await model.load() }
+    }
+
+    /// Open `parent` in a new pane just after pane `index` (use -1 for the
+    /// timeline), dropping any panes further down the chain.
+    private func openParent(_ parent: PostDisplay, after index: Int) {
+        var panes = Array(detailPanes.prefix(index + 1))
+        panes.append(parent)
+        detailPanes = panes
+    }
+
+    /// Close the pane at `index` and every pane to its right.
+    private func closePanes(from index: Int) {
+        detailPanes = Array(detailPanes.prefix(index))
     }
 
     private var accountChip: some View {
@@ -86,7 +127,11 @@ struct MainWindowView: View {
                 } else {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(posts) { post in
-                            PostRowView(post: post, density: density, now: now)
+                            PostRowView(
+                                post: post, density: density, now: now,
+                                onImageTap: { lightboxURL = $0 },
+                                onReplyTap: { openParent($0, after: -1) }
+                            )
                             Divider().overlay(Theme.divider)
                         }
                     }

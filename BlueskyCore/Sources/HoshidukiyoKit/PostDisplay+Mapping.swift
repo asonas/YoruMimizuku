@@ -11,6 +11,18 @@ extension PostDisplay {
         let contextLabel = feedViewPost.reason.map { reason in
             "Reposted by \(reason.by.displayName ?? reason.by.handle)"
         }
+        let images = (post.embed?.images ?? []).map { image in
+            PostImage(
+                thumbURL: URL(string: image.thumb),
+                fullsizeURL: URL(string: image.fullsize),
+                alt: image.alt
+            )
+        }
+        // The parent is mapped on its own (no nested reason/reply); the timeline
+        // only carries the immediate parent, deeper ancestry needs a thread fetch.
+        let replyParent = feedViewPost.reply?.parent.map { parent in
+            ReplyParent(PostDisplay(FeedViewPost(post: parent)))
+        }
         self.init(
             id: post.uri,
             authorDisplayName: author.displayName ?? author.handle,
@@ -19,6 +31,8 @@ extension PostDisplay {
             body: post.record.text,
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),
             contextLabel: contextLabel,
+            images: images,
+            replyParent: replyParent,
             replyCount: post.replyCount ?? 0,
             repostCount: post.repostCount ?? 0,
             likeCount: post.likeCount ?? 0

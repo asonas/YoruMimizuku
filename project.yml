@@ -2,7 +2,7 @@ name: Hoshidukiyo
 options:
   bundleIdPrefix: as.ason
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"
   createIntermediateGroups: true
 packages:
   BlueskyCore:
@@ -33,7 +33,7 @@ targets:
       path: app/Hoshidukiyo/Info.plist
       properties:
         CFBundleDisplayName: Hoshidukiyo
-        LSMinimumSystemVersion: "14.0"
+        LSMinimumSystemVersion: "26.0"
         CFBundleURLTypes:
           - CFBundleURLName: as.ason.Hoshidukiyo
             CFBundleURLSchemes:
