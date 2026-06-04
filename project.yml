@@ -26,6 +26,8 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         ENABLE_HARDENED_RUNTIME: YES
+        DEVELOPMENT_TEAM: QYP65434UW
+        CODE_SIGN_STYLE: Automatic
     info:
       path: app/Hoshidukiyo/Info.plist
       properties:
