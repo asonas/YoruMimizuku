@@ -8,4 +8,10 @@ final class RandomBytesGeneratorTests: XCTestCase {
         XCTAssertEqual(generator.bytes(32).count, 32)
         XCTAssertEqual(generator.bytes(0).count, 0)
     }
+
+    func testSecGeneratorProducesDifferentBytesAcrossCalls() {
+        let generator = SecRandomBytesGenerator()
+        // 32 random bytes colliding across two calls is cryptographically negligible.
+        XCTAssertNotEqual(generator.bytes(32), generator.bytes(32))
+    }
 }

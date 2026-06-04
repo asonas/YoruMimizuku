@@ -8,9 +8,10 @@ public protocol RandomBytesGenerator: Sendable {
     func bytes(_ count: Int) -> Data
 }
 
-/// Apple implementation backed by `SecRandomCopyBytes`. Falls back to an empty
-/// buffer only if the OS RNG fails, which in practice does not happen on Apple
-/// platforms.
+/// Apple implementation backed by `SecRandomCopyBytes`. Traps via precondition
+/// if the OS RNG fails, which in practice does not happen on Apple platforms.
+/// Failing fast avoids producing empty or predictable PKCE verifiers and OAuth
+/// state from a silent empty-buffer fallback.
 public struct SecRandomBytesGenerator: RandomBytesGenerator {
     public init() {}
 
@@ -18,7 +19,7 @@ public struct SecRandomBytesGenerator: RandomBytesGenerator {
         guard count > 0 else { return Data() }
         var buffer = [UInt8](repeating: 0, count: count)
         let status = SecRandomCopyBytes(kSecRandomDefault, count, &buffer)
-        guard status == errSecSuccess else { return Data() }
+        precondition(status == errSecSuccess, "SecRandomCopyBytes failed with status \(status)")
         return Data(buffer)
     }
 }
