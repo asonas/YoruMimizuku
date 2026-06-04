@@ -18,7 +18,10 @@ public struct TokenService: Sendable {
         config: OAuthClientConfig,
         grant: TokenGrant
     ) async throws -> TokenResponse {
-        guard let url = URL(string: metadata.tokenEndpoint) else {
+        guard !metadata.tokenEndpoint.isEmpty,
+              let components = URLComponents(string: metadata.tokenEndpoint),
+              components.scheme != nil, components.host != nil,
+              let url = components.url else {
             throw OAuthError.malformedDocument("invalid token_endpoint: \(metadata.tokenEndpoint)")
         }
         let body = FormURLEncoder.encode(grant.formParameters(config: config))
