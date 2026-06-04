@@ -33,7 +33,7 @@ final class ThreadServiceTests: XCTestCase {
 
     private func makeService(http: HTTPClient) -> ThreadService {
         let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: FakeDPoPCryptoProvider()))
-        return ThreadService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .hoshidukiyo)
+        return ThreadService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .yoruMimizuku)
     }
 
     func testGetPostThreadSendsAuthorizedGetWithUriAndDecodes() async throws {

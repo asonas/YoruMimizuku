@@ -1,6 +1,6 @@
 {
-  "client_id": "https://ason.as/hoshidukiyo/client-metadata.json",
-  "client_name": "Hoshidukiyo",
+  "client_id": "https://ason.as/yorumimizuku/client-metadata.json",
+  "client_name": "YoruMimizuku",
   "application_type": "native",
   "dpop_bound_access_tokens": true,
   "grant_types": ["authorization_code", "refresh_token"],

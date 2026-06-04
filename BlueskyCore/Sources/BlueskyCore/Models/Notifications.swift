@@ -38,7 +38,7 @@ public enum NotificationReason: Equatable, Sendable {
 }
 
 /// One notification (`app.bsky.notification.listNotifications#notification`). Only
-/// the fields Hoshidukiyo renders are modeled. `reasonSubject` is the post the
+/// the fields YoruMimizuku renders are modeled. `reasonSubject` is the post the
 /// reaction targets (absent for follows); `record` carries text for reply/mention/
 /// quote and is otherwise text-less.
 public struct BskyNotification: Decodable, Equatable, Sendable {

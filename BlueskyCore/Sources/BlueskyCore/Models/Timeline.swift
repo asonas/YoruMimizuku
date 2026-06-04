@@ -1,7 +1,7 @@
 import Foundation
 
 /// Response of `app.bsky.feed.getTimeline`: a page of feed items plus an optional
-/// pagination cursor. Only the fields Hoshidukiyo currently renders are modeled;
+/// pagination cursor. Only the fields YoruMimizuku currently renders are modeled;
 /// unknown keys in the JSON are ignored by `Decodable`.
 public struct TimelineResponse: Decodable, Equatable, Sendable {
     public let feed: [FeedViewPost]

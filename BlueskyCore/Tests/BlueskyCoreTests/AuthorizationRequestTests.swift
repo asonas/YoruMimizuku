@@ -15,7 +15,7 @@ final class AuthorizationRequestTests: XCTestCase {
     func testFormParametersContainAllRequiredOAuthFields() {
         let pkce = PKCE(codeVerifier: "verifier", codeChallenge: "challenge")
         let request = AuthorizationRequest(
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             pkce: pkce,
             state: "state-123",
             loginHint: "alice.bsky.social"
@@ -23,7 +23,7 @@ final class AuthorizationRequestTests: XCTestCase {
         let params = Dictionary(uniqueKeysWithValues: request.formParameters())
 
         XCTAssertEqual(params["response_type"], "code")
-        XCTAssertEqual(params["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(params["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
         XCTAssertEqual(params["redirect_uri"], "as.ason:/callback")
         XCTAssertEqual(params["scope"], "atproto transition:generic")
         XCTAssertEqual(params["state"], "state-123")
@@ -34,7 +34,7 @@ final class AuthorizationRequestTests: XCTestCase {
 
     func testFormParametersOmitLoginHintWhenNil() {
         let pkce = PKCE(codeVerifier: "v", codeChallenge: "c")
-        let request = AuthorizationRequest(config: .hoshidukiyo, pkce: pkce, state: "s", loginHint: nil)
+        let request = AuthorizationRequest(config: .yoruMimizuku, pkce: pkce, state: "s", loginHint: nil)
         let params = Dictionary(uniqueKeysWithValues: request.formParameters())
         XCTAssertNil(params["login_hint"])
     }

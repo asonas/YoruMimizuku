@@ -25,7 +25,7 @@ final class NotificationsServiceTests: XCTestCase {
 
     private func makeService(http: HTTPClient) -> NotificationsService {
         let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: FakeDPoPCryptoProvider()))
-        return NotificationsService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .hoshidukiyo)
+        return NotificationsService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .yoruMimizuku)
     }
 
     func testListNotificationsSendsAuthorizedGetAndDecodes() async throws {

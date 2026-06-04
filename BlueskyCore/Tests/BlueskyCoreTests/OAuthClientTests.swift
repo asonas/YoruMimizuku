@@ -48,7 +48,7 @@ final class OAuthClientTests: XCTestCase {
             browser: browser,
             random: StubRandomBytesGenerator(),
             sha256: { $0 },
-            config: .hoshidukiyo
+            config: .yoruMimizuku
         )
     }
 

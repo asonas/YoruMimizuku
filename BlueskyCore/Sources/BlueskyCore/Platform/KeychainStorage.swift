@@ -6,7 +6,7 @@ import Security
 public struct KeychainStorage: SecureStorage {
     private let service: String
 
-    /// `service` namespaces all items (use the app bundle id, e.g. "as.ason.Hoshidukiyo").
+    /// `service` namespaces all items (use the app bundle id, e.g. "as.ason.YoruMimizuku").
     public init(service: String) {
         self.service = service
     }

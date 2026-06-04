@@ -21,10 +21,10 @@ public struct OAuthClientConfig: Equatable, Sendable {
         return String(redirectURI[..<colon])
     }
 
-    /// Production configuration for Hoshidukiyo. Must stay in sync with
-    /// `https://ason.as/hoshidukiyo/client-metadata.json`.
-    public static let hoshidukiyo = OAuthClientConfig(
-        clientID: "https://ason.as/hoshidukiyo/client-metadata.json",
+    /// Production configuration for YoruMimizuku. Must stay in sync with
+    /// `https://ason.as/yorumimizuku/client-metadata.json`.
+    public static let yoruMimizuku = OAuthClientConfig(
+        clientID: "https://ason.as/yorumimizuku/client-metadata.json",
         redirectURI: "as.ason:/callback",
         scope: "atproto transition:generic"
     )

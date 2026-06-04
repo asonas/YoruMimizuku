@@ -23,7 +23,7 @@ final class AuthorizationRequestServiceTests: XCTestCase {
 
     private func sampleRequest() -> AuthorizationRequest {
         AuthorizationRequest(
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             pkce: PKCE(codeVerifier: "v", codeChallenge: "c"),
             state: "state-1",
             loginHint: "alice.bsky.social"
@@ -98,7 +98,7 @@ final class AuthorizationRequestServiceTests: XCTestCase {
     func testAuthorizationURLAppendsClientIDAndRequestURI() throws {
         let url = try AuthorizationRequestService.authorizationURL(
             metadata: metadata(par: "https://bsky.social/oauth/par"),
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             requestURI: "urn:ietf:params:oauth:request_uri:abc"
         )
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -108,7 +108,7 @@ final class AuthorizationRequestServiceTests: XCTestCase {
         let items = Dictionary(
             uniqueKeysWithValues: (components?.queryItems ?? []).map { ($0.name, $0.value) }
         )
-        XCTAssertEqual(items["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(items["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
         XCTAssertEqual(items["request_uri"], "urn:ietf:params:oauth:request_uri:abc")
     }
 
@@ -118,7 +118,7 @@ final class AuthorizationRequestServiceTests: XCTestCase {
         let empty = try! JSONDecoder().decode(AuthorizationServerMetadata.self, from: Data(json.utf8))
         XCTAssertThrowsError(
             try AuthorizationRequestService.authorizationURL(
-                metadata: empty, config: .hoshidukiyo, requestURI: "urn:abc"
+                metadata: empty, config: .yoruMimizuku, requestURI: "urn:abc"
             )
         ) { error in
             XCTAssertEqual(error as? OAuthError, .malformedDocument("invalid authorization_endpoint: "))

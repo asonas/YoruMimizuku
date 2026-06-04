@@ -22,7 +22,7 @@ final class ProfileServiceTests: XCTestCase {
 
     private func makeService(http: HTTPClient) -> ProfileService {
         let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: FakeDPoPCryptoProvider()))
-        return ProfileService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .hoshidukiyo)
+        return ProfileService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .yoruMimizuku)
     }
 
     func testGetProfileSendsAuthorizedGetWithActorAndDecodes() async throws {

@@ -9,12 +9,12 @@ let package = Package(
     ],
     products: [
         .library(name: "BlueskyCore", targets: ["BlueskyCore"]),
-        .library(name: "HoshidukiyoKit", targets: ["HoshidukiyoKit"])
+        .library(name: "YoruMimizukuKit", targets: ["YoruMimizukuKit"])
     ],
     targets: [
         .target(name: "BlueskyCore"),
-        .target(name: "HoshidukiyoKit", dependencies: ["BlueskyCore"]),
+        .target(name: "YoruMimizukuKit", dependencies: ["BlueskyCore"]),
         .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore"]),
-        .testTarget(name: "HoshidukiyoKitTests", dependencies: ["HoshidukiyoKit"])
+        .testTarget(name: "YoruMimizukuKitTests", dependencies: ["YoruMimizukuKit"])
     ]
 )

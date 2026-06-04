@@ -23,7 +23,7 @@ final class TimelineServiceTests: XCTestCase {
 
     private func makeService(http: HTTPClient) -> TimelineService {
         let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: FakeDPoPCryptoProvider()))
-        return TimelineService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .hoshidukiyo)
+        return TimelineService(sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: .yoruMimizuku)
     }
 
     func testGetTimelineSendsAuthorizedGetAndDecodes() async throws {

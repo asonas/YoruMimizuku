@@ -29,7 +29,7 @@ final class TokenServiceTests: XCTestCase {
 
         let result = try await service.requestToken(
             metadata: metadata(),
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             grant: .authorizationCode(code: "auth-code", codeVerifier: "v")
         )
 
@@ -52,7 +52,7 @@ final class TokenServiceTests: XCTestCase {
         do {
             _ = try await service.requestToken(
                 metadata: metadata(),
-                config: .hoshidukiyo,
+                config: .yoruMimizuku,
                 grant: .refresh(refreshToken: "rtk")
             )
             XCTFail("expected error")
@@ -71,7 +71,7 @@ final class TokenServiceTests: XCTestCase {
         do {
             _ = try await service.requestToken(
                 metadata: badMetadata,
-                config: .hoshidukiyo,
+                config: .yoruMimizuku,
                 grant: .refresh(refreshToken: "rtk")
             )
             XCTFail("expected error")
@@ -87,7 +87,7 @@ final class TokenServiceTests: XCTestCase {
         do {
             _ = try await service.requestToken(
                 metadata: metadata(),
-                config: .hoshidukiyo,
+                config: .yoruMimizuku,
                 grant: .refresh(refreshToken: "rtk")
             )
             XCTFail("expected error")

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Fetches an actor's profile (`app.bsky.actor.getProfile`) from the account's PDS
-/// over a DPoP-bound channel. Hoshidukiyo uses it to resolve the signed-in user's
+/// over a DPoP-bound channel. YoruMimizuku uses it to resolve the signed-in user's
 /// avatar for the sidebar. Mirrors `TimelineService`'s auth handling: the
 /// `use_dpop_nonce` retry lives in the sender, and an expired access token (401
 /// that is not a nonce challenge) is refreshed via `refresh_token` and retried
