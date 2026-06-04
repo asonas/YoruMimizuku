@@ -1,0 +1,44 @@
+name: Hoshidukiyo
+options:
+  bundleIdPrefix: as.ason
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  BlueskyCore:
+    path: BlueskyCore
+targets:
+  Hoshidukiyo:
+    type: application
+    platform: macOS
+    sources:
+      - app/Hoshidukiyo
+    dependencies:
+      - package: BlueskyCore
+        product: BlueskyCore
+      - package: BlueskyCore
+        product: HoshidukiyoKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: as.ason.Hoshidukiyo
+        PRODUCT_NAME: Hoshidukiyo
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        ENABLE_HARDENED_RUNTIME: YES
+    info:
+      path: app/Hoshidukiyo/Info.plist
+      properties:
+        CFBundleDisplayName: Hoshidukiyo
+        LSMinimumSystemVersion: "14.0"
+        CFBundleURLTypes:
+          - CFBundleURLName: as.ason.Hoshidukiyo
+            CFBundleURLSchemes:
+              - as.ason
+schemes:
+  Hoshidukiyo:
+    build:
+      targets:
+        Hoshidukiyo: all
+    run:
+      config: Debug
