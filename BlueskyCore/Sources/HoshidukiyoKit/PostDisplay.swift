@@ -7,6 +7,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let id: String
     public let authorDisplayName: String
     public let authorHandle: String
+    public let avatarURL: URL?
     public let body: String
     public let createdAt: Date
     public let contextLabel: String?
@@ -18,6 +19,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         id: String,
         authorDisplayName: String,
         authorHandle: String,
+        avatarURL: URL? = nil,
         body: String,
         createdAt: Date,
         contextLabel: String? = nil,
@@ -28,6 +30,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.id = id
         self.authorDisplayName = authorDisplayName
         self.authorHandle = authorHandle
+        self.avatarURL = avatarURL
         self.body = body
         self.createdAt = createdAt
         self.contextLabel = contextLabel

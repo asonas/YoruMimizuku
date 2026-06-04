@@ -84,7 +84,7 @@ struct MainWindowView: View {
                     Text("まだ投稿がありません")
                         .font(.callout).foregroundStyle(Theme.secondaryText).padding(40)
                 } else {
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(posts) { post in
                             PostRowView(post: post, density: density, now: now)
                             Divider().overlay(Theme.divider)

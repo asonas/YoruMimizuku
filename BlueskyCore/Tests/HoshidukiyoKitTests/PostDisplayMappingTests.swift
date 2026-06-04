@@ -7,6 +7,7 @@ final class PostDisplayMappingTests: XCTestCase {
         uri: String = "at://did:plc:alice/app.bsky.feed.post/aaa",
         handle: String = "alice.bsky.social",
         displayName: String? = "Alice",
+        avatar: String? = nil,
         text: String = "hello",
         createdAt: String = "2026-06-04T12:00:00.000Z",
         replyCount: Int? = nil,
@@ -16,7 +17,7 @@ final class PostDisplayMappingTests: XCTestCase {
         PostView(
             uri: uri,
             cid: "cid",
-            author: ProfileViewBasic(did: "did:plc:alice", handle: handle, displayName: displayName, avatar: nil),
+            author: ProfileViewBasic(did: "did:plc:alice", handle: handle, displayName: displayName, avatar: avatar),
             record: PostRecord(text: text, createdAt: createdAt),
             replyCount: replyCount,
             repostCount: repostCount,
@@ -46,9 +47,18 @@ final class PostDisplayMappingTests: XCTestCase {
         let display = PostDisplay(item)
 
         XCTAssertEqual(display.authorDisplayName, "alice.bsky.social")
+        XCTAssertNil(display.avatarURL)
         XCTAssertEqual(display.replyCount, 0)
         XCTAssertEqual(display.repostCount, 0)
         XCTAssertEqual(display.likeCount, 0)
+    }
+
+    func testMapsAvatarURL() {
+        let item = FeedViewPost(post: post(avatar: "https://cdn.example/alice.jpg"))
+
+        let display = PostDisplay(item)
+
+        XCTAssertEqual(display.avatarURL, URL(string: "https://cdn.example/alice.jpg"))
     }
 
     func testRepostReasonBecomesContextLabel() {

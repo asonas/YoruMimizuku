@@ -15,6 +15,7 @@ extension PostDisplay {
             id: post.uri,
             authorDisplayName: author.displayName ?? author.handle,
             authorHandle: author.handle,
+            avatarURL: author.avatar.flatMap(URL.init(string:)),
             body: post.record.text,
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),
             contextLabel: contextLabel,
