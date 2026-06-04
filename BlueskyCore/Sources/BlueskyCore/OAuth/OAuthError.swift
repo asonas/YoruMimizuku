@@ -8,4 +8,5 @@ public enum OAuthError: Error, Equatable {
     case unsupportedDIDMethod(String)
     case pushedAuthorizationRequestNotSupported(issuer: String)
     case authorizationRequestFailed(status: Int)
+    case tokenRequestFailed(status: Int)
 }
