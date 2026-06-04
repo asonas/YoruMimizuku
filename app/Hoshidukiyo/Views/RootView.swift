@@ -8,7 +8,9 @@ struct RootView: View {
     @State private var currentDID: String?
     @StateObject private var loginModel: LoginViewModel
     @StateObject private var timelineModel: TimelineViewModel
+    @StateObject private var workspace: WorkspaceModel
     @StateObject private var themeStore = ThemeStore()
+    @StateObject private var displaySettings = DisplaySettingsStore()
 
     private let accountManager: AccountManager
 
@@ -22,6 +24,11 @@ struct RootView: View {
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(loader: LiveTimelineLoader(accountManager: manager))
         )
+        _workspace = StateObject(
+            wrappedValue: WorkspaceModel { uri in
+                ThreadViewModel(loader: LiveThreadLoader(accountManager: manager), uri: uri)
+            }
+        )
         // current() returns PersistedAccount?; try? wraps it again, so flatten first.
         let existing = (try? manager.current()) ?? nil
         _currentDID = State(initialValue: existing?.did)
@@ -30,7 +37,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if currentDID != nil {
-                MainWindowView(model: timelineModel, accountHandle: currentHandle)
+                MainWindowView(model: timelineModel, workspace: workspace, accountHandle: currentHandle)
             } else {
                 LoginView(model: loginModel) { did in
                     currentDID = did
@@ -38,6 +45,7 @@ struct RootView: View {
             }
         }
         .environmentObject(themeStore)
+        .environmentObject(displaySettings)
     }
 
     /// Handle of the current account for the account chip; falls back to the DID.

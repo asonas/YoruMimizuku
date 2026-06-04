@@ -77,8 +77,8 @@ struct PostRowView: View {
     }
 
     private var avatar: some View {
-        AsyncImage(url: post.avatarURL) { phase in
-            if let image = phase.image {
+        RemoteImage(url: post.avatarURL, maxPointSize: avatarSize) { phase in
+            if case let .success(image) = phase {
                 image.resizable().scaledToFill()
             } else {
                 theme.avatarPlaceholder
@@ -123,14 +123,15 @@ struct PostRowView: View {
 
     private func thumbnail(_ image: PostImage) -> some View {
         let single = post.images.count == 1
-        return AsyncImage(url: image.thumbURL) { phase in
-            if let loaded = phase.image {
+        return RemoteImage(url: image.thumbURL, maxPointSize: single ? 440 : 220) { phase in
+            switch phase {
+            case .success(let loaded):
                 loaded.resizable().scaledToFill()
-            } else if phase.error != nil {
+            case .failure:
                 theme.surface.overlay(
                     Image(systemName: "photo").foregroundStyle(theme.secondaryText)
                 )
-            } else {
+            case .empty:
                 theme.surface.overlay(ProgressView().controlSize(.small))
             }
         }

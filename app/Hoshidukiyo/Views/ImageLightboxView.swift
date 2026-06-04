@@ -13,13 +13,14 @@ struct ImageLightboxView: View {
                 .ignoresSafeArea()
                 .onTapGesture { onClose() }
 
-            AsyncImage(url: url) { phase in
-                if let image = phase.image {
+            RemoteImage(url: url, maxPointSize: 1600) { phase in
+                switch phase {
+                case .success(let image):
                     image.resizable().scaledToFit()
-                } else if phase.error != nil {
+                case .failure:
                     Label("画像を読み込めませんでした", systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.white)
-                } else {
+                case .empty:
                     ProgressView().controlSize(.large).tint(.white)
                 }
             }

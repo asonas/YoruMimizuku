@@ -1,13 +1,12 @@
 import Foundation
-import os
 import CryptoKit
 import BlueskyCore
 import HoshidukiyoKit
 
-/// Live `TimelineLoading`: restores the current account's DPoP key, wires the real
-/// `TimelineService`, fetches the home timeline, persists any refreshed tokens, and
-/// maps the feed into `PostDisplay` rows.
-struct LiveTimelineLoader: TimelineLoading {
+/// Live `ThreadLoading`: restores the current account's DPoP key, wires the real
+/// `ThreadService`, fetches a post's thread, persists any refreshed tokens, and
+/// maps the focused post (with its immediate parent) into a `PostDisplay`.
+struct LiveThreadLoader: ThreadLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
 
@@ -18,7 +17,7 @@ struct LiveTimelineLoader: TimelineLoading {
 
     enum LoaderError: Error { case noCurrentAccount, invalidIssuer }
 
-    func loadLatest() async throws -> [PostDisplay] {
+    func loadThread(uri: String) async throws -> PostDisplay {
         guard let account = try accountManager.current() else {
             throw LoaderError.noCurrentAccount
         }
@@ -30,20 +29,17 @@ struct LiveTimelineLoader: TimelineLoading {
         let crypto = CryptoKitDPoPProvider(privateKey: key)
         let http = URLSessionHTTPClient()
         let sender = DPoPRequestSender(http: http, proofBuilder: DPoPProofBuilder(crypto: crypto))
-        let service = TimelineService(
+        let service = ThreadService(
             sender: sender, metadataResolver: OAuthMetadataResolver(http: http), config: config
         )
 
-        let signposter = PerfSignpost.timeline
-
-        let fetchInterval = signposter.beginInterval("Fetch timeline")
-        let result = try await service.getTimeline(
+        let result = try await service.getPostThread(
             pds: account.pds,
             issuer: issuer,
             accessToken: account.accessToken,
-            refreshToken: account.refreshToken
+            refreshToken: account.refreshToken,
+            uri: uri
         )
-        signposter.endInterval("Fetch timeline", fetchInterval, "\(result.response.feed.count) items")
 
         if let refreshed = result.refreshed {
             try accountManager.updateTokens(
@@ -54,9 +50,6 @@ struct LiveTimelineLoader: TimelineLoading {
             )
         }
 
-        let mapInterval = signposter.beginInterval("Map feed")
-        let posts = result.response.feed.map(PostDisplay.init)
-        signposter.endInterval("Map feed", mapInterval, "\(posts.count) posts")
-        return posts
+        return PostDisplay(result.response.thread)
     }
 }

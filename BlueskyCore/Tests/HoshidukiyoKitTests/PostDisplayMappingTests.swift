@@ -111,6 +111,34 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertNil(display.replyParent)
     }
 
+    func testMapsThreadViewPostWithParent() {
+        let parent = post(
+            uri: "at://did:plc:alice/app.bsky.feed.post/root",
+            handle: "alice.bsky.social",
+            displayName: "Alice",
+            text: "起点の投稿"
+        )
+        let focus = post(
+            uri: "at://did:plc:bob/app.bsky.feed.post/reply",
+            handle: "bob.bsky.social",
+            displayName: "Bob",
+            text: "返信"
+        )
+
+        let display = PostDisplay(ThreadViewPost(post: focus, parentPost: parent))
+
+        XCTAssertEqual(display.id, "at://did:plc:bob/app.bsky.feed.post/reply")
+        XCTAssertEqual(display.body, "返信")
+        XCTAssertEqual(display.replyParent?.post.authorHandle, "alice.bsky.social")
+        XCTAssertEqual(display.replyParent?.post.body, "起点の投稿")
+    }
+
+    func testMapsThreadViewPostWithoutParent() {
+        let focus = post(uri: "at://did:plc:alice/app.bsky.feed.post/root", text: "起点")
+        let display = PostDisplay(ThreadViewPost(post: focus, parentPost: nil))
+        XCTAssertNil(display.replyParent)
+    }
+
     func testRepostReasonBecomesContextLabel() {
         let reason = ReasonRepost(
             by: ProfileViewBasic(did: "did:plc:bob", handle: "bob.bsky.social", displayName: "Bob", avatar: nil),

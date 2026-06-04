@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Loads a page of timeline rows as UI-ready `PostDisplay` values. The app
 /// provides the live implementation (authenticated XRPC + mapping); tests inject
@@ -39,13 +40,19 @@ public final class TimelineViewModel: ObservableObject {
     }
 
     /// Load the latest timeline page, moving through loading -> loaded/failed.
+    /// Wrapped in a signposted interval so the end-to-end load time (network +
+    /// decode + mapping) is visible in Instruments.
     public func load() async {
+        let signposter = PerfSignpost.timeline
+        let interval = signposter.beginInterval("Timeline load")
         state = .loading
         do {
             let posts = try await loader.loadLatest()
             state = .loaded(posts)
+            signposter.endInterval("Timeline load", interval, "loaded \(posts.count) posts")
         } catch {
             state = .failed(String(describing: error))
+            signposter.endInterval("Timeline load", interval, "failed")
         }
     }
 }
