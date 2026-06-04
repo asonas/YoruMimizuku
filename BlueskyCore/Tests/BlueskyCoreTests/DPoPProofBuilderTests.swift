@@ -58,4 +58,24 @@ final class DPoPProofBuilderTests: XCTestCase {
         // The third segment is base64url(signature bytes from the provider).
         XCTAssertEqual(Base64URL.decode(String(segments[2])), Data([0xAA, 0xBB, 0xCC, 0xDD]))
     }
+
+    func test_makeProof_includesAthFromAccessTokenAndNonce() throws {
+        let builder = makeBuilder()
+
+        let proof = try builder.makeProof(
+            method: .post,
+            url: URL(string: "https://bsky.social/xrpc/com.atproto.repo.createRecord")!,
+            accessToken: "access-token-123",
+            nonce: "server-nonce-xyz"
+        )
+
+        let segments = proof.split(separator: ".")
+        let claims = try decode(segments[1], as: DecodedClaims.self)
+
+        XCTAssertEqual(claims.htm, "POST")
+        XCTAssertEqual(claims.htu, "https://bsky.social/xrpc/com.atproto.repo.createRecord")
+        // ath == base64url(provider.sha256(token)); the fake digest is fixed bytes.
+        XCTAssertEqual(claims.ath, Base64URL.encode(Data([0x01, 0x02, 0x03, 0x04])))
+        XCTAssertEqual(claims.nonce, "server-nonce-xyz")
+    }
 }
