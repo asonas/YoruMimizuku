@@ -35,6 +35,9 @@ public struct OAuthDiscovery: Sendable {
             throw OAuthError.malformedDocument("invalid authorization server issuer: \(issuer)")
         }
         let metadata = try await metadataResolver.authorizationServer(issuer: issuerURL)
+        guard metadata.issuer == issuer else {
+            throw OAuthError.malformedDocument("issuer mismatch: expected \(issuer), got \(metadata.issuer)")
+        }
         return Result(
             did: did,
             pds: pds,

@@ -33,6 +33,25 @@ final class OAuthDiscoveryTests: XCTestCase {
         XCTAssertEqual(result.metadata.pushedAuthorizationRequestEndpoint, "https://bsky.social/oauth/par")
     }
 
+    func test_discover_throwsOnIssuerMismatch() async {
+        let http = RoutingHTTPClient.json([
+            (url: "https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=h", body: #"{"did":"did:plc:abc123"}"#),
+            (url: "https://plc.directory/did:plc:abc123", body: ##"{"id":"did:plc:abc123","service":[{"id":"#atproto_pds","type":"AtprotoPersonalDataServer","serviceEndpoint":"https://pds.example.com"}]}"##),
+            (url: "https://pds.example.com/.well-known/oauth-protected-resource", body: #"{"resource":"https://pds.example.com","authorization_servers":["https://bsky.social"]}"#),
+            // Metadata claims a DIFFERENT issuer than the URL it was fetched from.
+            (url: "https://bsky.social/.well-known/oauth-authorization-server", body: #"{"issuer":"https://evil.example","authorization_endpoint":"https://evil.example/oauth/authorize","token_endpoint":"https://evil.example/oauth/token"}"#)
+        ])
+        let discovery = OAuthDiscovery(http: http)
+        do {
+            _ = try await discovery.discover(account: "h")
+            XCTFail("expected malformedDocument for issuer mismatch")
+        } catch let error as OAuthError {
+            XCTAssertEqual(error, .malformedDocument("issuer mismatch: expected https://bsky.social, got https://evil.example"))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
     func test_discover_throwsWhenNoAuthorizationServerListed() async {
         let http = RoutingHTTPClient.json([
             (url: "https://bsky.social/xrpc/com.atproto.identity.resolveHandle?handle=h", body: #"{"did":"did:plc:abc123"}"#),
