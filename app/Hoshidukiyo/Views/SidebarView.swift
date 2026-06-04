@@ -12,6 +12,7 @@ struct SidebarView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
     var accountHandle: String
+    var accountAvatarURL: URL?
     var onOpenSettings: () -> Void
 
     var body: some View {
@@ -79,10 +80,7 @@ struct SidebarView: View {
 
     private var accountFooter: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(theme.accent)
-                .frame(width: 20, height: 20)
-                .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+            accountAvatar
             Text("@\(accountHandle)")
                 .font(.caption.weight(.medium))
                 .foregroundStyle(theme.secondaryText)
@@ -96,6 +94,21 @@ struct SidebarView: View {
         .overlay(alignment: .top) {
             Rectangle().fill(theme.hairline).frame(height: 1)
         }
+    }
+
+    /// The signed-in account's avatar; falls back to a placeholder fill while the
+    /// profile is still loading or has no avatar.
+    private var accountAvatar: some View {
+        RemoteImage(url: accountAvatarURL, maxPointSize: 20) { phase in
+            if case let .success(image) = phase {
+                image.resizable().scaledToFill()
+            } else {
+                theme.avatarPlaceholder
+            }
+        }
+        .frame(width: 20, height: 20)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
     }
 }
 

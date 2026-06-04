@@ -3,18 +3,25 @@ import HoshidukiyoKit
 
 /// The main window: a cmux-style vertical tab rail (home, notifications, and
 /// closable conversation tabs) on the left, with the selected tab's content on
-/// the right. Replaces the earlier trailing inspector, which broke at narrow
-/// widths. The lightbox and settings sheet float above everything.
+/// the right. The home feed auto-refreshes and loads older posts on scroll; j/k
+/// move the focused post and Cmd-Shift-J/K cycle the tabs. The lightbox and
+/// settings sheet float above everything.
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
+    @ObservedObject var notifications: NotificationsViewModel
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     var accountHandle: String
+    var accountAvatarURL: URL?
 
     @State private var lightboxURL: URL?
     @State private var showSettings = false
+    /// The id of the post j/k navigation currently highlights.
+    @State private var focusedPostID: String?
 
+    /// How often the home feed pulls fresh posts while it is on screen.
+    private let refreshInterval: Duration = .seconds(30)
     private let now = Date()
 
     var body: some View {
@@ -22,6 +29,7 @@ struct MainWindowView: View {
             SidebarView(
                 workspace: workspace,
                 accountHandle: accountHandle,
+                accountAvatarURL: accountAvatarURL,
                 onOpenSettings: { showSettings = true }
             )
             // A crisp 1px rule on the trailing edge sets the rail firmly apart from
@@ -35,6 +43,8 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 600, minHeight: 540)
+        // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
+        .background { tabShortcuts }
         .overlay {
             if let lightboxURL {
                 ImageLightboxView(url: lightboxURL) { self.lightboxURL = nil }
@@ -55,7 +65,7 @@ struct MainWindowView: View {
         case .home:
             homeFeed
         case .notifications:
-            notificationsPlaceholder
+            NotificationsView(model: notifications, now: now)
         case let .conversation(id):
             if let tab = workspace.conversation(id: id) {
                 ConversationView(
@@ -77,34 +87,37 @@ struct MainWindowView: View {
 
     private var homeFeed: some View {
         VStack(spacing: 0) {
-            DetailHeader {
-                ChromeIconButton(
-                    systemImage: "arrow.clockwise", help: "タイムラインを更新",
-                    disabled: model.state.isLoading
-                ) { Task { await model.load() } }
-            }
+            DetailHeader { EmptyView() }
             timeline
         }
         .background(theme.canvas)
         // Extend the header to the window's top edge; the hidden title bar otherwise
         // leaves a reserved safe-area band above it.
         .ignoresSafeArea(.container, edges: .top)
-        .task { if case .idle = model.state { await model.load() } }
+        // j/k move the focused post; only meaningful on the home feed.
+        .background { postNavShortcuts }
+        .task { await runHomeFeed() }
     }
 
     private var timeline: some View {
-        ScrollView {
-            switch model.state {
-            case .idle, .loading:
-                loadingState
-            case let .failed(message):
-                failedState(message)
-            case let .loaded(posts):
-                if posts.isEmpty {
-                    emptyState
-                } else {
-                    postList(posts)
+        ScrollViewReader { proxy in
+            ScrollView {
+                switch model.state {
+                case .idle, .loading:
+                    loadingState
+                case let .failed(message):
+                    failedState(message)
+                case let .loaded(posts):
+                    if posts.isEmpty {
+                        emptyState
+                    } else {
+                        postList(posts)
+                    }
                 }
+            }
+            .onChange(of: focusedPostID) { _, id in
+                guard let id else { return }
+                withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) }
             }
         }
     }
@@ -117,9 +130,34 @@ struct MainWindowView: View {
                     onImageTap: { lightboxURL = $0 },
                     onReplyTap: { _ in workspace.openConversation(post) }
                 )
+                .background(post.id == focusedPostID ? theme.rowHover : .clear)
+                .overlay(alignment: .leading) {
+                    if post.id == focusedPostID {
+                        Rectangle().fill(theme.accent).frame(width: 3)
+                    }
+                }
+                .id(post.id)
+                .onAppear {
+                    // Reaching the last row pulls the next older page (infinite scroll).
+                    if post.id == posts.last?.id {
+                        Task { await model.loadMore() }
+                    }
+                }
                 Divider().overlay(theme.divider)
             }
+            if model.isLoadingMore {
+                loadMoreFooter
+            }
         }
+    }
+
+    private var loadMoreFooter: some View {
+        HStack {
+            Spacer()
+            ProgressView().controlSize(.small)
+            Spacer()
+        }
+        .padding(.vertical, 14)
     }
 
     private var loadingState: some View {
@@ -165,21 +203,62 @@ struct MainWindowView: View {
         .padding(.top, 80)
     }
 
-    // MARK: - Notifications (placeholder)
+    // MARK: - Home lifecycle
 
-    private var notificationsPlaceholder: some View {
-        VStack(spacing: 0) {
-            DetailHeader { EmptyView() }
-            VStack(spacing: 10) {
-                Image(systemName: "bell.slash")
-                    .font(.system(size: 28))
-                    .foregroundStyle(theme.tertiaryText)
-                Text("通知はまだ準備中です")
-                    .font(.callout).foregroundStyle(theme.tertiaryText)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    /// Load the feed once, then refresh it on an interval for as long as the home
+    /// tab stays on screen. SwiftUI cancels this task on disappear, stopping the
+    /// timer; returning re-runs it (the initial load is skipped once loaded).
+    private func runHomeFeed() async {
+        if case .idle = model.state { await model.load() }
+        if focusedPostID == nil { focusedPostID = model.posts.first?.id }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: refreshInterval)
+            if Task.isCancelled { break }
+            await model.refresh()
         }
-        .background(theme.canvas)
-        .ignoresSafeArea(.container, edges: .top)
+    }
+
+    /// Move the focused post by `offset` rows, clamping at the ends, and pull more
+    /// posts when focus reaches the tail.
+    private func focusAdjacentPost(_ offset: Int) {
+        let posts = model.posts
+        guard !posts.isEmpty else { return }
+        if let id = focusedPostID, let index = posts.firstIndex(where: { $0.id == id }) {
+            let target = max(0, min(posts.count - 1, index + offset))
+            focusedPostID = posts[target].id
+        } else {
+            focusedPostID = posts.first?.id
+        }
+        if focusedPostID == posts.last?.id {
+            Task { await model.loadMore() }
+        }
+    }
+
+    // MARK: - Keyboard shortcuts
+
+    /// Zero-size, invisible buttons whose key equivalents drive tab cycling. Hosted
+    /// in a `.background` so they register window-wide without occupying layout.
+    private var tabShortcuts: some View {
+        ZStack {
+            Button("") { workspace.selectNextTab() }
+                .keyboardShortcut("j", modifiers: [.command, .shift])
+            Button("") { workspace.selectPreviousTab() }
+                .keyboardShortcut("k", modifiers: [.command, .shift])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
+    private var postNavShortcuts: some View {
+        ZStack {
+            Button("") { focusAdjacentPost(1) }
+                .keyboardShortcut("j", modifiers: [])
+            Button("") { focusAdjacentPost(-1) }
+                .keyboardShortcut("k", modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 }
