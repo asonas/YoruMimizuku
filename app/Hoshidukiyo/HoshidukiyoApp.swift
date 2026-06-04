@@ -4,7 +4,7 @@ import SwiftUI
 struct HoshidukiyoApp: App {
     var body: some Scene {
         WindowGroup {
-            MainWindowView()
+            RootView()
         }
         .defaultSize(width: 420, height: 720)
     }
