@@ -36,6 +36,25 @@ public struct XRPCClient: Sendable {
         return try decode(response)
     }
 
+    public func post<Body: Encodable, Response: Decodable>(
+        _ nsid: String,
+        body: Body
+    ) async throws -> Response {
+        let url = baseURL.appendingPathComponent("xrpc/\(nsid)")
+        let payload = try encoder.encode(body)
+        let request = HTTPRequest(
+            url: url,
+            method: .post,
+            headers: [
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            ],
+            body: payload
+        )
+        let response = try await http.send(request)
+        return try decode(response)
+    }
+
     private func decode<Response: Decodable>(_ response: HTTPResponse) throws -> Response {
         guard (200..<300).contains(response.statusCode) else {
             let errorBody = try? decoder.decode(XRPCErrorResponse.self, from: response.body)
