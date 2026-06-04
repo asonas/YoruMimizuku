@@ -27,4 +27,30 @@ final class XRPCClientTests: XCTestCase {
         )
         XCTAssertEqual(fake.sentRequests.first?.method, .get)
     }
+
+    func test_get_throwsRequestFailedOnNon2xxWithDecodedBody() async throws {
+        let fake = FakeHTTPClient(
+            response: HTTPResponse(
+                statusCode: 400,
+                body: Data(#"{"error":"InvalidRequest","message":"bad handle"}"#.utf8)
+            )
+        )
+        let client = XRPCClient(baseURL: URL(string: "https://bsky.social")!, http: fake)
+
+        do {
+            let _: ResolveHandleResponse = try await client.get(
+                "com.atproto.identity.resolveHandle",
+                parameters: ["handle": "nope"]
+            )
+            XCTFail("expected XRPCError.requestFailed")
+        } catch let error as XRPCError {
+            XCTAssertEqual(
+                error,
+                .requestFailed(
+                    status: 400,
+                    body: XRPCErrorResponse(error: "InvalidRequest", message: "bad handle")
+                )
+            )
+        }
+    }
 }
