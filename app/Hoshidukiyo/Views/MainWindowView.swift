@@ -1,0 +1,90 @@
+import SwiftUI
+import HoshidukiyoKit
+
+/// The single-column main window: account chip, top tab bar, mock timeline,
+/// and a bottom composer placeholder. Density toggle is added in the next step.
+struct MainWindowView: View {
+    @State private var density: DisplayDensity = .default
+    @State private var selectedTab = "Home"
+
+    private let now = Date()
+    private let tabs = ["Home", "通知", "tech list", "検索"]
+    private var posts: [PostDisplay] { PostDisplay.samples(now: now) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            accountChip
+            tabBar
+            Divider().overlay(Theme.divider)
+            timeline
+            composer
+        }
+        .background(Theme.background)
+        .frame(minWidth: 360, minHeight: 480)
+    }
+
+    private var accountChip: some View {
+        HStack {
+            Spacer()
+            HStack(spacing: 5) {
+                Circle().fill(Theme.accent).frame(width: 16, height: 16)
+                Text("@asonas.bsky.social").font(.caption).foregroundStyle(Theme.secondaryText)
+                Image(systemName: "chevron.down").font(.caption2).foregroundStyle(Theme.secondaryText)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Theme.surface)
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 4) {
+            ForEach(tabs, id: \.self) { tab in
+                Text(tab)
+                    .font(.callout)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 5)
+                    .background(selectedTab == tab ? Theme.accent : Color.clear)
+                    .foregroundStyle(selectedTab == tab ? .white : Theme.secondaryText)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .onTapGesture { selectedTab = tab }
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Theme.surface)
+    }
+
+    private var timeline: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(posts) { post in
+                    PostRowView(post: post, density: density, now: now)
+                    Divider().overlay(Theme.divider)
+                }
+            }
+        }
+    }
+
+    private var composer: some View {
+        HStack(spacing: 8) {
+            Text("いまどうしてる?")
+                .font(.callout)
+                .foregroundStyle(Theme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(Theme.background)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+            Text("Post")
+                .font(.callout).bold()
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        }
+        .padding(8)
+        .background(Theme.surface)
+    }
+}
