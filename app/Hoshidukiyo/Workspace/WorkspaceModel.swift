@@ -79,4 +79,25 @@ final class WorkspaceModel: ObservableObject {
     func conversation(id: UUID) -> ConversationTab? {
         conversations.first { $0.id == id }
     }
+
+    /// All tabs in display order: the two pinned tabs followed by the open
+    /// conversations. Drives the Cmd-Shift-J/K cycling shortcuts.
+    var orderedTabs: [WorkspaceTab] {
+        [.home, .notifications] + conversations.map { .conversation($0.id) }
+    }
+
+    /// Select the next tab in display order, wrapping past the last back to home.
+    func selectNextTab() { cycleSelection(by: 1) }
+
+    /// Select the previous tab in display order, wrapping past home to the last.
+    func selectPreviousTab() { cycleSelection(by: -1) }
+
+    private func cycleSelection(by offset: Int) {
+        let tabs = orderedTabs
+        guard let index = tabs.firstIndex(of: selection) else {
+            selection = .home
+            return
+        }
+        selection = tabs[(index + offset + tabs.count) % tabs.count]
+    }
 }
