@@ -118,7 +118,9 @@ struct ConversationView: View {
             Rectangle().fill(theme.accent).frame(width: 3)
             PostRowView(
                 post: focus, density: displaySettings.density, now: now,
-                showReplyMarker: false, onImageTap: onImageTap
+                showReplyMarker: false, onImageTap: onImageTap,
+                onLike: { Task { await model.toggleLike(focus) } },
+                onRepost: { Task { await model.toggleRepost(focus) } }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         }

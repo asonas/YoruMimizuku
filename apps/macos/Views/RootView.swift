@@ -28,14 +28,21 @@ struct RootView: View {
             wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager))
         )
         _timelineModel = StateObject(
-            wrappedValue: TimelineViewModel(loader: LiveTimelineLoader(accountManager: manager), tracer: OSSignpostTracing.timeline)
+            wrappedValue: TimelineViewModel(
+                loader: LiveTimelineLoader(accountManager: manager),
+                interactor: LivePostInteractor(accountManager: manager),
+                tracer: OSSignpostTracing.timeline
+            )
         )
         _notificationsModel = StateObject(
             wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: manager))
         )
         _workspace = StateObject(
             wrappedValue: WorkspaceModel { uri in
-                ThreadViewModel(loader: LiveThreadLoader(accountManager: manager), uri: uri)
+                ThreadViewModel(
+                    loader: LiveThreadLoader(accountManager: manager), uri: uri,
+                    interactor: LivePostInteractor(accountManager: manager)
+                )
             }
         )
         // current() returns PersistedAccount?; try? wraps it again, so flatten first.

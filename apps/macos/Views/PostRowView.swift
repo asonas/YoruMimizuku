@@ -19,6 +19,15 @@ struct PostRowView: View {
     /// Called with the parent post when the reply marker is tapped, so the host
     /// can open the conversation.
     var onReplyTap: (PostDisplay) -> Void = { _ in }
+    /// Called when this row is activated (action tapped or image opened) so the
+    /// host can move keyboard focus (j/k) to it.
+    var onSelect: () -> Void = {}
+    /// Called when the like action is tapped (toggles the viewer's like).
+    var onLike: () -> Void = {}
+    /// Called when "リポスト" is chosen from the repost menu (toggles the repost).
+    var onRepost: () -> Void = {}
+    /// Called when "引用" is chosen from the repost menu (opens the quote composer).
+    var onQuote: () -> Void = {}
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
@@ -159,6 +168,7 @@ struct PostRowView: View {
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel(image.alt.isEmpty ? "画像" : image.alt)
         .onTapGesture {
+            onSelect()
             let urls = post.images.compactMap(\.fullsizeURL)
             guard let url = image.fullsizeURL, let index = urls.firstIndex(of: url) else { return }
             onImageTap(urls, index)
@@ -186,14 +196,58 @@ struct PostRowView: View {
 
     private var actionBar: some View {
         HStack(spacing: 26) {
-            Label("\(post.replyCount)", systemImage: "bubble.left")
-            Label("\(post.repostCount)", systemImage: "arrow.2.squarepath")
-            Label("\(post.likeCount)", systemImage: "heart")
+            Button {
+                onSelect()
+                onReplyTap(post)
+            } label: {
+                actionLabel("\(post.replyCount)", systemImage: "bubble.left")
+            }
+            .help("会話を開く")
+
+            Menu {
+                Button {
+                    onSelect()
+                    onRepost()
+                } label: {
+                    Label(post.isReposted ? "リポストを取り消す" : "リポスト", systemImage: "arrow.2.squarepath")
+                }
+                Button {
+                    onSelect()
+                    onQuote()
+                } label: {
+                    Label("引用", systemImage: "quote.bubble")
+                }
+            } label: {
+                actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
+                            active: post.isReposted, activeColor: theme.accent)
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
+
+            Button {
+                onSelect()
+                onLike()
+            } label: {
+                actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart",
+                            active: post.isLiked, activeColor: theme.star)
+            }
+            .help(post.isLiked ? "いいねを取り消す" : "いいね")
         }
         .font(.app(.caption))
-        .foregroundStyle(theme.tertiaryText)
         .labelStyle(.titleAndIcon)
         .monospacedDigit()
+        .buttonStyle(.plain)
         .padding(.top, 3)
+    }
+
+    /// One action-bar label: tinted `activeColor` when the viewer has acted on the
+    /// post (liked / reposted), otherwise the muted tertiary text color.
+    private func actionLabel(
+        _ text: String, systemImage: String, active: Bool = false, activeColor: Color? = nil
+    ) -> some View {
+        Label(text, systemImage: systemImage)
+            .foregroundStyle(active ? (activeColor ?? theme.accent) : theme.tertiaryText)
     }
 }

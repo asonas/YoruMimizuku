@@ -153,9 +153,19 @@ struct MainWindowView: View {
             ForEach(posts) { post in
                 PostRowView(
                     post: post, density: displaySettings.density, now: now,
-                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onReplyTap: { _ in workspace.openConversation(post) }
+                    onImageTap: { urls, index in
+                        focusedPostID = post.id
+                        lightbox = ImageGallery(urls: urls, index: index)
+                    },
+                    onReplyTap: { _ in workspace.openConversation(post) },
+                    onSelect: { focusedPostID = post.id },
+                    onLike: { Task { await model.toggleLike(post) } },
+                    onRepost: { Task { await model.toggleRepost(post) } }
                 )
+                // Clicking anywhere on the row's open area moves j/k focus here, so
+                // navigation resumes from the post the user just clicked.
+                .contentShape(Rectangle())
+                .onTapGesture { focusedPostID = post.id }
                 .background(post.id == focusedPostID ? theme.rowHover : .clear)
                 .overlay(alignment: .leading) {
                     if post.id == focusedPostID {
