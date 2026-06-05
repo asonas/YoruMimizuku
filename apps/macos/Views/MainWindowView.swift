@@ -71,6 +71,16 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 600, minHeight: 540)
+        // Tapping a hashtag in any post body opens a filter tab for that tag
+        // instead of launching the browser; all other links fall through to the
+        // system handler.
+        .environment(\.openURL, OpenURLAction { url in
+            if let tag = RichText.hashtag(from: url) {
+                workspace.openHashtagFilter(tag: tag)
+                return .handled
+            }
+            return .systemAction
+        })
     }
 
     @ViewBuilder

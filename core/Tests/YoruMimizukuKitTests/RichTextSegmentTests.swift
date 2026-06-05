@@ -83,4 +83,21 @@ final class RichTextSegmentTests: XCTestCase {
         XCTAssertEqual(segments.map(\.kind), [.text])
         XCTAssertEqual(segments.map(\.text), ["abc"])
     }
+
+    func testHashtagFromURLExtractsTag() {
+        let url = URL(string: "https://bsky.app/hashtag/swift")!
+        XCTAssertEqual(RichText.hashtag(from: url), "swift")
+    }
+
+    func testHashtagFromURLDecodesMultibyteTag() {
+        // The tag-building side percent-encodes; the reverse must decode it.
+        let encoded = "猫".addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+        let url = URL(string: "https://bsky.app/hashtag/\(encoded)")!
+        XCTAssertEqual(RichText.hashtag(from: url), "猫")
+    }
+
+    func testHashtagFromNonHashtagURLIsNil() {
+        XCTAssertNil(RichText.hashtag(from: URL(string: "https://bsky.app/profile/did:plc:bob")!))
+        XCTAssertNil(RichText.hashtag(from: URL(string: "https://example.com/page")!))
+    }
 }

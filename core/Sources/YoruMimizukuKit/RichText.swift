@@ -68,6 +68,17 @@ public enum RichText {
         return segments
     }
 
+    /// Reverse of the hashtag URL built in `feature(_:)`: pulls the tag back out of
+    /// a `https://bsky.app/hashtag/<tag>` URL (percent-decoded), or nil for any
+    /// other URL. Lets the UI route hashtag taps to a filter tab instead of the
+    /// browser.
+    public static func hashtag(from url: URL) -> String? {
+        guard url.host == "bsky.app" else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 2, parts[0] == "hashtag", !parts[1].isEmpty else { return nil }
+        return parts[1]
+    }
+
     private static func feature(_ feature: FacetFeature) -> (kind: RichTextSegment.Kind, url: URL?)? {
         switch feature {
         case .link(let uri):

@@ -89,6 +89,47 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertNil(persistence.state.selectedAnchorID)
     }
 
+    func testOpenHashtagFilterCreatesAndSelectsFilterTab() {
+        let model = makeModel(persistence: FakePersistence())
+
+        model.openHashtagFilter(tag: "swift")
+
+        XCTAssertEqual(model.filters.count, 1)
+        let tab = model.filters[0]
+        XCTAssertEqual(tab.filter.terms.map(\.kind), [.hashtag])
+        XCTAssertEqual(tab.filter.terms.first?.value, "swift")
+        XCTAssertEqual(model.selection, .filter(tab.id))
+    }
+
+    func testOpenHashtagFilterStripsLeadingHash() {
+        let model = makeModel(persistence: FakePersistence())
+
+        model.openHashtagFilter(tag: "#swift")
+
+        XCTAssertEqual(model.filters.first?.filter.terms.first?.value, "swift")
+    }
+
+    func testOpenHashtagFilterReusesExistingTab() {
+        let model = makeModel(persistence: FakePersistence())
+        model.openHashtagFilter(tag: "swift")
+        let firstID = model.filters[0].id
+        model.selection = .home
+
+        model.openHashtagFilter(tag: "swift")
+
+        XCTAssertEqual(model.filters.count, 1)
+        XCTAssertEqual(model.selection, .filter(firstID))
+    }
+
+    func testOpenHashtagFilterIgnoresBlankTag() {
+        let model = makeModel(persistence: FakePersistence())
+
+        model.openHashtagFilter(tag: "#")
+
+        XCTAssertTrue(model.filters.isEmpty)
+        XCTAssertEqual(model.selection, .home)
+    }
+
     func testRestoreThenReopenRoundTrips() {
         // Simulate a relaunch: persist with one model, restore with a fresh one
         // backed by the same store.

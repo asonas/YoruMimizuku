@@ -192,6 +192,26 @@ public final class WorkspaceModel: ObservableObject {
         }
     }
 
+    /// Open (or re-select) a filter tab for a single hashtag, used when the viewer
+    /// taps a hashtag in a post body. A leading `#` is stripped; a blank tag is a
+    /// no-op. If a filter tab is already exactly this one hashtag it is re-selected
+    /// rather than duplicated.
+    public func openHashtagFilter(tag: String) {
+        let clean = (tag.hasPrefix("#") ? String(tag.dropFirst()) : tag)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+
+        if let existing = filters.first(where: { tab in
+            tab.filter.terms.count == 1
+                && tab.filter.terms[0].kind == .hashtag
+                && tab.filter.terms[0].fragment == "#" + clean
+        }) {
+            selection = .filter(existing.id)
+            return
+        }
+        addFilter(name: "#\(clean)", terms: [FilterTerm(kind: .hashtag, value: clean)], combinator: .and)
+    }
+
     public func filter(id: UUID) -> FilterTab? { filters.first { $0.id == id } }
 
     /// The backing `SavedFilter` for an id (for the editor); nil if absent.
