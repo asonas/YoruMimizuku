@@ -25,8 +25,10 @@ This is a personal, experimental project with two motivations behind it.
 
 - **Bluesky (AT Protocol) is supported today.** Login (OAuth), timelines, posting,
   notifications, conversations, and image attachments work.
-- **macOS is the current target.** iOS, and eventually Windows and Android, are in view but
-  not yet built.
+- **macOS and Windows are both supported.** macOS is a SwiftUI app; Windows is a
+  WinUI 3 (C#/.NET 8) app that reuses the same Swift core through a C ABI DLL bridge
+  (see `apps/windows`). The Windows app builds, runs self-contained, and signs in via
+  OAuth end to end. iOS and Android are in view but not yet built.
 
 This is early, evolving software. Expect rough edges.
 
@@ -38,8 +40,14 @@ The code is split into three layers so the core stays portable:
   token management. No direct Apple-framework dependencies, so it can be reused on other
   platforms.
 - **`YoruMimizukuKit`** — view models and display logic, depending on `BlueskyCore`.
+- **`PlatformApple` / `PlatformWindows`** — the OS-specific adapters (secure storage,
+  random bytes, logging) behind the core's port protocols: Keychain / `SecRandom` /
+  `os.signpost` on Apple, DPAPI / `BCryptGenRandom` on Windows.
 - **`apps/macos`** — the macOS app: SwiftUI views and the Apple-specific wiring (Keychain,
   `ASWebAuthenticationSession`, and so on).
+- **`apps/windows`** — the Windows app: a WinUI 3 (C#/.NET 8) front end that calls the Swift
+  core through the `YoruMimizukuBridge` C ABI DLL via P/Invoke. OAuth uses an embedded
+  WebView2.
 
 The same author's Ruby terminal client [tempest](https://github.com/asonas/tempest) served
 as the reference implementation; this is a fresh Swift implementation rather than a port.
@@ -60,6 +68,23 @@ open YoruMimizuku.xcodeproj
 ```
 
 Re-run `mise run generate` (or `xcodegen generate`) after editing `project.yml`.
+
+### Windows
+
+The Windows app is built with the Swift toolchain for Windows plus the .NET 8 SDK and a
+Visual Studio C++ workload. Helper scripts live in `scripts/windows`:
+
+```powershell
+# Build the Swift core bridge DLL and stage it (+ Swift runtime) into the app
+scripts\windows\stage-bridge.ps1
+
+# Build the WinUI app (self-contained: bundles the .NET and Windows App SDK runtimes)
+dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
+# -> App\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
+```
+
+See [`apps/windows/README.md`](apps/windows/README.md) for details. `scripts\windows\ci.ps1`
+runs the full chain (core `swift build`/`swift test`, stage, then `dotnet build`).
 
 ### Tests
 
