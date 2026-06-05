@@ -1,8 +1,13 @@
 import Foundation
 import Crypto
 
-/// Apple-platform `DPoPCryptoProvider` backed by CryptoKit's P-256.
-public struct CryptoKitDPoPProvider: DPoPCryptoProvider {
+/// `DPoPCryptoProvider` backed by swift-crypto's P-256 (CryptoKit on Apple).
+///
+/// `@unchecked Sendable`: `DPoPCryptoProvider` refines `Sendable`, but
+/// swift-crypto does not annotate `P256.Signing.PrivateKey` as `Sendable` on
+/// non-Apple platforms (Apple's CryptoKit does). The stored key is an immutable
+/// value, so sharing it across concurrency domains is safe.
+public struct CryptoKitDPoPProvider: DPoPCryptoProvider, @unchecked Sendable {
     private let privateKey: P256.Signing.PrivateKey
 
     /// Generate a fresh P-256 key.

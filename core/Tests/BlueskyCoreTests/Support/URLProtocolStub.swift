@@ -1,3 +1,7 @@
+// Custom URLProtocol subclassing is only reliably supported on Apple's
+// Foundation; swift-corelibs-foundation (Windows/Linux) does not expose the
+// URLProtocol client plumbing, so this offline stub is Apple-only.
+#if canImport(Darwin)
 import Foundation
 
 /// Intercepts URLSession traffic so `URLSessionHTTPClient` can be tested offline.
@@ -32,3 +36,4 @@ final class URLProtocolStub: URLProtocol {
 
     override func stopLoading() {}
 }
+#endif

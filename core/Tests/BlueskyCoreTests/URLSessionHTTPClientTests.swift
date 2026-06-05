@@ -1,3 +1,5 @@
+// Relies on URLProtocolStub, which is Apple-only (see URLProtocolStub.swift).
+#if canImport(Darwin)
 import XCTest
 @testable import BlueskyCore
 
@@ -40,3 +42,4 @@ final class URLSessionHTTPClientTests: XCTestCase {
         XCTAssertEqual(captured.value(forHTTPHeaderField: "Content-Type"), "application/json")
     }
 }
+#endif

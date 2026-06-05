@@ -1,3 +1,6 @@
+// SecRandomBytesGenerator is an Apple-only adapter (Security), so this test only
+// applies where it exists.
+#if canImport(Security)
 import XCTest
 @testable import BlueskyCore
 import PlatformApple
@@ -16,3 +19,4 @@ final class RandomBytesGeneratorTests: XCTestCase {
         XCTAssertNotEqual(generator.bytes(32), generator.bytes(32))
     }
 }
+#endif
