@@ -1,6 +1,12 @@
 import XCTest
 @testable import YoruMimizukuKit
 
+// Test methods are `async` (despite having no awaits): swift-corelibs-xctest on
+// Windows routes `@MainActor` test methods through its async invoker, which
+// handles the MainActor isolation correctly. A `@MainActor` class whose methods
+// are all synchronous falls into the sync invoker and crashes with a function
+// cast failure, aborting the whole run. `async` keeps this suite runnable on
+// Windows and is a no-op on macOS.
 @MainActor
 final class WorkspaceModelTests: XCTestCase {
     private final class StubThreadLoader: ThreadLoading, @unchecked Sendable {
@@ -39,7 +45,7 @@ final class WorkspaceModelTests: XCTestCase {
         PostDisplay(id: id, authorDisplayName: name, authorHandle: handle, body: "body", createdAt: Date())
     }
 
-    func testRestoresSavedConversationsOnInit() {
+    func testRestoresSavedConversationsOnInit() async {
         let persistence = FakePersistence(state: ConversationState(
             conversations: [
                 SavedConversation(anchorID: "at://a", title: "Alice", handle: "@alice", subtitle: "hi"),
@@ -56,7 +62,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.conversation(id: id)?.anchorID, "at://b")
     }
 
-    func testRestoreWithNoSelectionFallsBackToHome() {
+    func testRestoreWithNoSelectionFallsBackToHome() async {
         let persistence = FakePersistence(state: ConversationState(
             conversations: [SavedConversation(anchorID: "at://a", title: "Alice", handle: "@alice", subtitle: "hi")],
             selectedAnchorID: nil
@@ -67,7 +73,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.selection, .home)
     }
 
-    func testOpenConversationPersistsTabAndSelection() {
+    func testOpenConversationPersistsTabAndSelection() async {
         let persistence = FakePersistence()
         let model = makeModel(persistence: persistence)
 
@@ -77,7 +83,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(persistence.state.selectedAnchorID, "at://a")
     }
 
-    func testCloseConversationPersistsRemoval() {
+    func testCloseConversationPersistsRemoval() async {
         let persistence = FakePersistence()
         let model = makeModel(persistence: persistence)
         model.openConversation(post(id: "at://a"))
@@ -89,7 +95,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertNil(persistence.state.selectedAnchorID)
     }
 
-    func testOpenHashtagFilterCreatesAndSelectsFilterTab() {
+    func testOpenHashtagFilterCreatesAndSelectsFilterTab() async {
         let model = makeModel(persistence: FakePersistence())
 
         model.openHashtagFilter(tag: "swift")
@@ -101,7 +107,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.selection, .filter(tab.id))
     }
 
-    func testOpenHashtagFilterStripsLeadingHash() {
+    func testOpenHashtagFilterStripsLeadingHash() async {
         let model = makeModel(persistence: FakePersistence())
 
         model.openHashtagFilter(tag: "#swift")
@@ -109,7 +115,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.filters.first?.filter.terms.first?.value, "swift")
     }
 
-    func testOpenHashtagFilterReusesExistingTab() {
+    func testOpenHashtagFilterReusesExistingTab() async {
         let model = makeModel(persistence: FakePersistence())
         model.openHashtagFilter(tag: "swift")
         let firstID = model.filters[0].id
@@ -121,7 +127,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.selection, .filter(firstID))
     }
 
-    func testOpenHashtagFilterIgnoresBlankTag() {
+    func testOpenHashtagFilterIgnoresBlankTag() async {
         let model = makeModel(persistence: FakePersistence())
 
         model.openHashtagFilter(tag: "#")
@@ -130,7 +136,7 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.selection, .home)
     }
 
-    func testRestoreThenReopenRoundTrips() {
+    func testRestoreThenReopenRoundTrips() async {
         // Simulate a relaunch: persist with one model, restore with a fresh one
         // backed by the same store.
         let persistence = FakePersistence()
