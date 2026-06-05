@@ -88,6 +88,48 @@ public struct ImagesEmbedWrite: Encodable, Equatable, Sendable {
     }
 }
 
+/// A record embed (`app.bsky.embed.record`) wrapping a strong reference to the
+/// quoted post.
+public struct RecordEmbedWrite: Encodable, Equatable, Sendable {
+    public let record: StrongRef
+
+    public init(record: StrongRef) {
+        self.record = record
+    }
+
+    enum CodingKeys: String, CodingKey { case type = "$type", record }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode("app.bsky.embed.record", forKey: .type)
+        try c.encode(record, forKey: .record)
+    }
+}
+
+/// A post's embed slot. A post can carry images, a quoted record, or both
+/// (`recordWithMedia`). Encodes the right `$type` for each case.
+public enum PostEmbedWrite: Encodable, Equatable, Sendable {
+    case images([ImageWrite])
+    case record(StrongRef)
+    case recordWithMedia(record: StrongRef, images: [ImageWrite])
+
+    enum RecordWithMediaKeys: String, CodingKey { case type = "$type", record, media }
+
+    public func encode(to encoder: Encoder) throws {
+        switch self {
+        case .images(let images):
+            try ImagesEmbedWrite(images: images).encode(to: encoder)
+        case .record(let ref):
+            try RecordEmbedWrite(record: ref).encode(to: encoder)
+        case .recordWithMedia(let ref, let images):
+            var c = encoder.container(keyedBy: RecordWithMediaKeys.self)
+            try c.encode("app.bsky.embed.recordWithMedia", forKey: .type)
+            try c.encode(RecordEmbedWrite(record: ref), forKey: .record)
+            try c.encode(ImagesEmbedWrite(images: images), forKey: .media)
+        }
+    }
+}
+
 /// A strong reference (`com.atproto.repo.strongRef`): a record's uri + cid.
 public struct StrongRef: Codable, Equatable, Sendable {
     public let uri: String
@@ -116,11 +158,11 @@ public struct PostRecordWrite: Encodable, Equatable, Sendable {
     public let text: String
     public let createdAt: String
     public let facets: [FacetWrite]
-    public let embed: ImagesEmbedWrite?
+    public let embed: PostEmbedWrite?
     public let reply: ReplyRefWrite?
 
     public init(text: String, createdAt: String, facets: [FacetWrite],
-                embed: ImagesEmbedWrite?, reply: ReplyRefWrite?) {
+                embed: PostEmbedWrite?, reply: ReplyRefWrite?) {
         self.text = text
         self.createdAt = createdAt
         self.facets = facets

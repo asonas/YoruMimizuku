@@ -44,6 +44,40 @@ final class PostWriteTests: XCTestCase {
         XCTAssertEqual(ref["$link"] as? String, "bafycid")
     }
 
+    func testRecordEmbedEncodesQuoteStrongRef() throws {
+        let embed = PostEmbedWrite.record(StrongRef(uri: "at://did:plc:a/app.bsky.feed.post/x", cid: "bafyquote"))
+        let json = try encodeJSON(embed)
+        XCTAssertEqual(json["$type"] as? String, "app.bsky.embed.record")
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        XCTAssertEqual(record["uri"] as? String, "at://did:plc:a/app.bsky.feed.post/x")
+        XCTAssertEqual(record["cid"] as? String, "bafyquote")
+    }
+
+    func testRecordWithMediaEmbedNestsRecordAndImages() throws {
+        let blob = BlobRef(cid: "bafycid", mimeType: "image/jpeg", size: 1)
+        let embed = PostEmbedWrite.recordWithMedia(
+            record: StrongRef(uri: "at://did:plc:a/app.bsky.feed.post/x", cid: "bafyquote"),
+            images: [ImageWrite(image: blob, alt: "alt")]
+        )
+        let json = try encodeJSON(embed)
+        XCTAssertEqual(json["$type"] as? String, "app.bsky.embed.recordWithMedia")
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        XCTAssertEqual(record["$type"] as? String, "app.bsky.embed.record")
+        let inner = try XCTUnwrap(record["record"] as? [String: Any])
+        XCTAssertEqual(inner["uri"] as? String, "at://did:plc:a/app.bsky.feed.post/x")
+        let media = try XCTUnwrap(json["media"] as? [String: Any])
+        XCTAssertEqual(media["$type"] as? String, "app.bsky.embed.images")
+        XCTAssertNotNil(media["images"] as? [[String: Any]])
+    }
+
+    func testImagesEmbedWriteCaseEncodesImagesType() throws {
+        let blob = BlobRef(cid: "bafycid", mimeType: "image/png", size: 2)
+        let embed = PostEmbedWrite.images([ImageWrite(image: blob, alt: "x")])
+        let json = try encodeJSON(embed)
+        XCTAssertEqual(json["$type"] as? String, "app.bsky.embed.images")
+        XCTAssertNotNil(json["images"] as? [[String: Any]])
+    }
+
     func testUploadBlobResponseDecodes() throws {
         let data = Data(##"""
         {"blob":{"$type":"blob","ref":{"$link":"bafycid"},"mimeType":"image/png","size":42}}

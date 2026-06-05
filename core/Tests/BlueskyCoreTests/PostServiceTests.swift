@@ -147,6 +147,31 @@ extension PostServiceTests {
         XCTAssertEqual(record["$type"] as? String, "app.bsky.feed.repost")
     }
 
+    func testCreatePostWithQuoteEmbedsRecord() async throws {
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.post/quote1","cid":"bafyq"}
+        """##.utf8))
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("com.atproto.repo.createRecord") }, response: created),
+        ])
+        let service = makeService(http: http)
+
+        _ = try await service.createPost(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            did: "did:plc:me", text: "見て", images: [], replyParentURI: nil,
+            quote: StrongRef(uri: "at://did:plc:alice/app.bsky.feed.post/aaa", cid: "bafyaaa")
+        )
+
+        let req = try XCTUnwrap(http.sentRequests.first { $0.url.absoluteString.contains("createRecord") })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(req.body)) as? [String: Any])
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        let embed = try XCTUnwrap(record["embed"] as? [String: Any])
+        XCTAssertEqual(embed["$type"] as? String, "app.bsky.embed.record")
+        let quoted = try XCTUnwrap(embed["record"] as? [String: Any])
+        XCTAssertEqual(quoted["uri"] as? String, "at://did:plc:alice/app.bsky.feed.post/aaa")
+        XCTAssertEqual(quoted["cid"] as? String, "bafyaaa")
+    }
+
     func testDeleteRecordSendsRepoCollectionRkey() async throws {
         let http = RoutingHTTPClient(routes: [
             .init(matches: { $0.absoluteString.contains("com.atproto.repo.deleteRecord") },

@@ -17,6 +17,8 @@ struct MainWindowView: View {
     var accountAvatarURL: URL?
     /// Builds a composer VM for a new post (nil parent) or a reply (parent URI).
     var makeComposer: @MainActor (String?) -> ComposerViewModel
+    /// Builds a composer VM that quotes `post`.
+    var makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
 
     @State private var lightbox: ImageGallery?
     @State private var showSettings = false
@@ -160,7 +162,8 @@ struct MainWindowView: View {
                     onReplyTap: { _ in workspace.openConversation(post) },
                     onSelect: { focusedPostID = post.id },
                     onLike: { Task { await model.toggleLike(post) } },
-                    onRepost: { Task { await model.toggleRepost(post) } }
+                    onRepost: { Task { await model.toggleRepost(post) } },
+                    onQuote: { openQuoteComposer(for: post) }
                 )
                 // Clicking anywhere on the row's open area moves j/k focus here, so
                 // navigation resumes from the post the user just clicked.
@@ -268,6 +271,13 @@ struct MainWindowView: View {
         if focusedPostID == posts.last?.id {
             Task { await model.loadMore() }
         }
+    }
+
+    /// Open the composer quoting `post`, refreshing the feed once the quote posts.
+    private func openQuoteComposer(for post: PostDisplay) {
+        let vm = makeQuoteComposer(post)
+        vm.onPosted = { composer = nil; Task { await model.refresh() } }
+        composer = vm
     }
 
     // MARK: - Keyboard shortcuts

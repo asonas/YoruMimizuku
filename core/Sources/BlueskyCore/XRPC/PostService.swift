@@ -109,6 +109,7 @@ public struct PostService: Sendable {
         pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
         did: String, text: String, images: [(data: Data, mimeType: String, alt: String)],
         replyParentURI: String?,
+        quote: StrongRef? = nil,
         createdAt: String = Self.timestamp()
     ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
         var token = accessToken
@@ -192,8 +193,15 @@ public struct PostService: Sendable {
             reply = try await fetchReplyRefs(parentURI: replyParentURI)
         }
 
-        // 4. Build and send the record.
-        let embed = imageWrites.isEmpty ? nil : ImagesEmbedWrite(images: imageWrites)
+        // 4. Build and send the record. The embed slot holds images, a quoted
+        // record, or both (recordWithMedia) depending on what the draft carries.
+        let embed: PostEmbedWrite?
+        switch (imageWrites.isEmpty, quote) {
+        case (true, nil): embed = nil
+        case (false, nil): embed = .images(imageWrites)
+        case (true, .some(let ref)): embed = .record(ref)
+        case (false, .some(let ref)): embed = .recordWithMedia(record: ref, images: imageWrites)
+        }
         let record = PostRecordWrite(text: text, createdAt: createdAt, facets: facets, embed: embed, reply: reply)
         let request = CreateRecordRequest(repo: did, collection: "app.bsky.feed.post", record: record)
         let payload = try JSONEncoder().encode(request)

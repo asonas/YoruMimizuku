@@ -11,10 +11,15 @@ struct ComposerView: View {
 
     @State private var importing = false
 
+    private var headerTitle: String {
+        if model.quotedPost != nil { return "引用投稿" }
+        return model.replyParentURI == nil ? "新規投稿" : "返信"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(model.replyParentURI == nil ? "新規投稿" : "返信")
+                Text(headerTitle)
                     .font(.headline)
                 Spacer()
                 Button("キャンセル") { onClose() }
@@ -22,6 +27,9 @@ struct ComposerView: View {
             TextEditor(text: $model.text)
                 .frame(minHeight: 120)
                 .font(.body)
+            if let quoted = model.quotedPost {
+                quotePreview(quoted)
+            }
             if !model.images.isEmpty {
                 imageStrip
             }
@@ -47,6 +55,18 @@ struct ComposerView: View {
                       allowsMultipleSelection: true) { result in
             handleImport(result)
         }
+    }
+
+    /// Read-only preview of the post being quoted, shown inside the composer so the
+    /// author sees what they are quoting. Hit testing is disabled so it cannot steal
+    /// taps from the editor.
+    private func quotePreview(_ post: PostDisplay) -> some View {
+        PostRowView(post: post, density: .compact, now: Date(), showReplyMarker: false)
+            .allowsHitTesting(false)
+            .padding(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1)
+            )
     }
 
     private var imageStrip: some View {

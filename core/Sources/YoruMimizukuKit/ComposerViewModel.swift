@@ -1,4 +1,5 @@
 import Foundation
+import BlueskyCore
 
 /// Drives the composer sheet: holds the draft body and images, exposes the
 /// grapheme-based character budget (Bluesky caps posts at 300 graphemes), and
@@ -19,14 +20,18 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
     @Published public private(set) var errorMessage: String?
 
     public let replyParentURI: String?
+    /// The post being quoted, when this composer is a quote post. Shown as a
+    /// preview and embedded as a record reference on submit.
+    public let quotedPost: PostDisplay?
     /// Called after a successful submit so the view can dismiss and refresh.
     public var onPosted: (() -> Void)?
 
     private let submitter: PostSubmitting
 
-    public init(submitter: PostSubmitting, replyParentURI: String? = nil) {
+    public init(submitter: PostSubmitting, replyParentURI: String? = nil, quotedPost: PostDisplay? = nil) {
         self.submitter = submitter
         self.replyParentURI = replyParentURI
+        self.quotedPost = quotedPost
     }
 
     /// Grapheme-cluster count (not UTF-16 length) so emoji and combined marks count as one.
@@ -38,14 +43,17 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
         guard !isSubmitting else { return false }
         guard graphemeCount <= Self.maxGraphemes else { return false }
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        return hasText || !images.isEmpty
+        // A quote with no text is valid (quoting alone), so the quoted post also
+        // makes the draft submittable.
+        return hasText || !images.isEmpty || quotedPost != nil
     }
 
     public func submit() async {
         guard canSubmit else { return }
         isSubmitting = true
         errorMessage = nil
-        let draft = PostDraft(text: text, images: images, replyParentURI: replyParentURI)
+        let quote = quotedPost.map { StrongRef(uri: $0.id, cid: $0.cid) }
+        let draft = PostDraft(text: text, images: images, replyParentURI: replyParentURI, quote: quote)
         do {
             _ = try await submitter.submit(draft)
             isSubmitting = false

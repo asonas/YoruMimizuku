@@ -61,6 +61,9 @@ struct RootView: View {
                     accountAvatarURL: accountAvatarURL,
                     makeComposer: { parentURI in
                         ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParentURI: parentURI)
+                    },
+                    makeQuoteComposer: { post in
+                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), quotedPost: post)
                     }
                 )
                 .task(id: currentDID) { await loadAvatar() }

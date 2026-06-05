@@ -27,7 +27,8 @@ struct LiveComposer: PostSubmitting {
             did: context.account.did,
             text: draft.text,
             images: images,
-            replyParentURI: draft.replyParentURI
+            replyParentURI: draft.replyParentURI,
+            quote: draft.quote
         )
         try context.persist(result.refreshed)
         return PostResult(uri: result.response.uri, cid: result.response.cid)

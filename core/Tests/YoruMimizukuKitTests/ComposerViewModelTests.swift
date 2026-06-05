@@ -45,6 +45,23 @@ final class ComposerViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isSubmitting)
     }
 
+    func testQuotePostIsSubmittableWithEmptyTextAndForwardsQuote() async {
+        let submitter = FakeSubmitter()
+        let quoted = PostDisplay(
+            id: "at://did:plc:a/app.bsky.feed.post/x", cid: "bafyquote",
+            authorDisplayName: "Alice", authorHandle: "alice.bsky.social",
+            body: "original", createdAt: Date()
+        )
+        let vm = ComposerViewModel(submitter: submitter, quotedPost: quoted)
+
+        XCTAssertTrue(vm.canSubmit) // quoting alone, no text, is allowed
+
+        await vm.submit()
+
+        XCTAssertEqual(submitter.received?.quote?.uri, "at://did:plc:a/app.bsky.feed.post/x")
+        XCTAssertEqual(submitter.received?.quote?.cid, "bafyquote")
+    }
+
     func testSubmitSetsErrorMessageOnFailure() async {
         let submitter = FakeSubmitter()
         submitter.result = .failure(NSError(domain: "x", code: 1))
