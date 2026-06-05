@@ -95,7 +95,12 @@ struct MainWindowView: View {
                     now: now,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenConversation: { workspace.openConversation($0) },
-                    onClose: { workspace.closeConversation(id) }
+                    onClose: { workspace.closeConversation(id) },
+                    onReply: { parentURI in
+                        let vm = makeComposer(parentURI)
+                        vm.onPosted = { composer = nil }
+                        composer = vm
+                    }
                 )
                 .id(id)
             } else {
