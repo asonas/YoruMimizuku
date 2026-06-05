@@ -1,5 +1,5 @@
 import Foundation
-import os
+import BlueskyCore
 
 /// One fetched page of the timeline: the rows plus the cursor that fetches the
 /// next (older) page. A nil `cursor` means there is nothing older to load.
@@ -50,9 +50,11 @@ public final class TimelineViewModel: ObservableObject {
     /// feed has been exhausted.
     private var cursor: String?
     private let loader: TimelineLoading
+    private let tracer: SignpostTracing
 
-    public init(loader: TimelineLoading) {
+    public init(loader: TimelineLoading, tracer: SignpostTracing = NoopSignpostTracing()) {
         self.loader = loader
+        self.tracer = tracer
     }
 
     /// Convenience accessor for the currently loaded posts (empty otherwise).
@@ -68,17 +70,16 @@ public final class TimelineViewModel: ObservableObject {
     /// Wrapped in a signposted interval so the end-to-end load time (network +
     /// decode + mapping) is visible in Instruments.
     public func load() async {
-        let signposter = PerfSignpost.timeline
-        let interval = signposter.beginInterval("Timeline load")
+        let endInterval = tracer.beginInterval("Timeline load")
         state = .loading
         do {
             let page = try await loader.loadPage(cursor: nil)
             cursor = page.cursor
             state = .loaded(page.posts)
-            signposter.endInterval("Timeline load", interval, "loaded \(page.posts.count) posts")
+            endInterval("loaded \(page.posts.count) posts")
         } catch {
             state = .failed(String(describing: error))
-            signposter.endInterval("Timeline load", interval, "failed")
+            endInterval("failed")
         }
     }
 

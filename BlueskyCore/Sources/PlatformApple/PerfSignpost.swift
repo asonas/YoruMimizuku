@@ -1,3 +1,4 @@
+#if canImport(os)
 import os
 
 /// Centralized `OSSignposter` loggers for performance profiling. The signposts
@@ -17,3 +18,4 @@ public enum PerfSignpost {
     /// Coarse render milestones, e.g. launch to first content.
     public static let render = OSSignposter(subsystem: subsystem, category: "Render")
 }
+#endif

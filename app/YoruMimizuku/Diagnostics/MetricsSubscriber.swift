@@ -2,6 +2,7 @@ import Foundation
 import MetricKit
 import os
 import YoruMimizukuKit
+import PlatformApple
 
 /// Subscribes to MetricKit so the OS delivers aggregated field metrics (launch
 /// time, memory, animation hitches) and diagnostics (hangs, crashes). Payloads

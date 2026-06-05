@@ -2,6 +2,7 @@ import Foundation
 import os
 import BlueskyCore
 import YoruMimizukuKit
+import PlatformApple
 
 /// Live `TimelineLoading`: wires the real `TimelineService` through a
 /// `LiveServiceContext`, fetches a page of the home timeline (passing the cursor

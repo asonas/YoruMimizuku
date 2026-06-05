@@ -27,7 +27,7 @@ struct RootView: View {
             wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager))
         )
         _timelineModel = StateObject(
-            wrappedValue: TimelineViewModel(loader: LiveTimelineLoader(accountManager: manager))
+            wrappedValue: TimelineViewModel(loader: LiveTimelineLoader(accountManager: manager), tracer: OSSignpostTracing.timeline)
         )
         _notificationsModel = StateObject(
             wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: manager))

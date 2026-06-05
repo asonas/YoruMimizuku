@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 import ImageIO
 import YoruMimizukuKit
+import PlatformApple
 
 /// A decoded, already-downsampled image plus its memory cost for `NSCache`.
 /// `@unchecked Sendable`: it wraps an immutable `CGImage` and is never mutated
