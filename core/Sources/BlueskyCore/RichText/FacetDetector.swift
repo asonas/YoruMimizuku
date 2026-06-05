@@ -35,7 +35,6 @@ public enum FacetDetector {
     private static let linkTrailing = CharacterSet(charactersIn: ".,;:!?)\"']")
 
     static func detectLinks(_ text: String) -> [DetectedFacet] {
-        let bytes = Array(text.utf8)
         var facets: [DetectedFacet] = []
         // Scan for http(s):// runs up to the next whitespace.
         guard let regex = try? NSRegularExpression(pattern: "https?://[^\\s]+") else { return [] }
