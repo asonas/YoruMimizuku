@@ -96,3 +96,8 @@ run = """
 echo "Apple ID and an app-specific password (from appleid.apple.com) are required."
 xcrun notarytool store-credentials "$NOTARY_PROFILE" --team-id "$TEAM_ID"
 """
+
+[tasks.bump]
+description = "Set MARKETING_VERSION in project.yml, bump the build number, and regenerate"
+usage = 'arg "version" help="New marketing version, e.g. 0.2.0"'
+run = './scripts/bump-version.sh "$usage_version"'
