@@ -1,0 +1,79 @@
+[tools]
+xcodegen = "latest"
+
+[env]
+SCHEME = "YoruMimizuku"
+APP_NAME = "YoruMimizuku"
+CONFIGURATION = "Release"
+BUILD_DIR = "build"
+PROJECT = "YoruMimizuku.xcodeproj"
+TEAM_ID = "QYP65434UW"
+# Developer ID Application identity used to sign the DMG itself.
+SIGN_IDENTITY = "Developer ID Application: Yuya Fujiwara (QYP65434UW)"
+# Keychain profile name used by notarytool. Create it once with `mise run setup-notary`.
+NOTARY_PROFILE = "YoruMimizukuNotary"
+
+[tasks.generate]
+description = "Generate the Xcode project from project.yml"
+run = "xcodegen generate"
+
+[tasks.archive]
+description = "Archive the app for release"
+depends = ["generate"]
+run = """
+xcodebuild archive \
+  -scheme "$SCHEME" \
+  -project "$PROJECT" \
+  -configuration "$CONFIGURATION" \
+  -destination 'generic/platform=macOS' \
+  -archivePath "$BUILD_DIR/$APP_NAME.xcarchive"
+"""
+
+[tasks.export]
+description = "Export a Developer ID signed .app from the archive"
+depends = ["archive"]
+run = """
+rm -rf "$BUILD_DIR/export"
+xcodebuild -exportArchive \
+  -archivePath "$BUILD_DIR/$APP_NAME.xcarchive" \
+  -exportOptionsPlist ExportOptions.plist \
+  -exportPath "$BUILD_DIR/export"
+"""
+
+[tasks.dmg]
+description = "Package the exported .app into a signed DMG"
+depends = ["export"]
+run = """
+rm -f "$BUILD_DIR/$APP_NAME.dmg"
+hdiutil create \
+  -volname "$APP_NAME" \
+  -srcfolder "$BUILD_DIR/export/$APP_NAME.app" \
+  -ov -format UDZO \
+  "$BUILD_DIR/$APP_NAME.dmg"
+codesign --force --timestamp \
+  --sign "$SIGN_IDENTITY" \
+  "$BUILD_DIR/$APP_NAME.dmg"
+"""
+
+[tasks.notarize]
+description = "Notarize and staple the DMG, then verify with Gatekeeper"
+depends = ["dmg"]
+run = """
+xcrun notarytool submit "$BUILD_DIR/$APP_NAME.dmg" \
+  --keychain-profile "$NOTARY_PROFILE" \
+  --wait
+xcrun stapler staple "$BUILD_DIR/$APP_NAME.dmg"
+spctl -a -vvv -t open --context context:primary-signature "$BUILD_DIR/$APP_NAME.dmg"
+"""
+
+[tasks.release]
+description = "Build, sign, notarize and package a distributable DMG"
+depends = ["notarize"]
+run = 'echo "Release DMG ready: $BUILD_DIR/$APP_NAME.dmg"'
+
+[tasks.setup-notary]
+description = "Store notarytool credentials in the keychain (run once, interactive)"
+run = """
+echo "Apple ID and an app-specific password (from appleid.apple.com) are required."
+xcrun notarytool store-credentials "$NOTARY_PROFILE" --team-id "$TEAM_ID"
+"""
