@@ -50,14 +50,10 @@ struct SidebarView: View {
             }
         case let .edit(filter):
             FilterEditorView(name: filter.name, terms: filter.terms, combinator: filter.combinator, isEditing: true) { name, terms, combinator in
+                var edited = SavedFilter(id: filter.id, name: name, terms: terms, combinator: combinator, createdAt: filter.createdAt)
                 let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                let candidate = SavedFilter(id: filter.id, name: trimmed, terms: terms, combinator: combinator, createdAt: filter.createdAt)
-                let resolvedName = trimmed.isEmpty
-                    ? candidate.subqueries.joined(separator: combinator == .or ? " | " : " ")
-                    : trimmed
-                workspace.updateFilter(
-                    SavedFilter(id: filter.id, name: resolvedName, terms: terms, combinator: combinator, createdAt: filter.createdAt)
-                )
+                edited.name = trimmed.isEmpty ? edited.fallbackName : trimmed
+                workspace.updateFilter(edited)
             }
         }
     }

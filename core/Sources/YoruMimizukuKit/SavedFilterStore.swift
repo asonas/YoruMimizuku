@@ -32,9 +32,7 @@ public final class SavedFilterStore: ObservableObject {
         let candidate = SavedFilter(name: "", terms: terms, combinator: combinator)
         guard !candidate.subqueries.isEmpty else { return nil }
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedName = trimmedName.isEmpty
-            ? candidate.subqueries.joined(separator: combinator == .or ? " | " : " ")
-            : trimmedName
+        let resolvedName = trimmedName.isEmpty ? candidate.fallbackName : trimmedName
         let filter = SavedFilter(name: resolvedName, terms: terms, combinator: combinator)
         filters.append(filter)
         persist()

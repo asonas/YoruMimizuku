@@ -51,31 +51,32 @@ struct LiveSearchLoader: TimelineLoading {
     }
 
     /// OR: fetch each non-exhausted subquery, merge newest-first, and re-encode the
-    /// per-subquery cursors. A failing subquery contributes no posts this page and
-    /// keeps its cursor so a later page retries.
+    /// per-subquery cursors. Fail-fast: if any subquery errors the whole page throws
+    /// so the existing retry UI handles it (and the composite cursor is left
+    /// unchanged, so a retry re-runs the same fetches). On a follow-up page a nil
+    /// sub-cursor unambiguously means that subquery is exhausted and is skipped.
     private func loadComposite(cursor: String?) async throws -> TimelinePage {
         let decoded = CompositeCursor.decode(cursor)
         let isFirstPage = decoded == nil
         let composite = decoded ?? CompositeCursor(cursors: Array(repeating: nil, count: subqueries.count))
+        // Defend against a cursor that no longer matches the subquery count (e.g.
+        // the filter was edited): treat a mismatch as a fresh first page.
+        let cursors = composite.cursors.count == subqueries.count
+            ? composite.cursors
+            : Array(repeating: nil, count: subqueries.count)
 
         var pages: [[PostDisplay]] = []
         var nextCursors: [String?] = []
         for (index, query) in subqueries.enumerated() {
-            let sub = composite.cursors[index]
-            // On follow-up pages a nil sub-cursor means that subquery is exhausted.
+            let sub = cursors[index]
             if !isFirstPage && sub == nil {
-                pages.append([])
+                pages.append([])      // exhausted: nothing more from this subquery
                 nextCursors.append(nil)
                 continue
             }
-            do {
-                let page = try await runQuery(query, cursor: sub)
-                pages.append(page.posts)
-                nextCursors.append(page.cursor)
-            } catch {
-                pages.append([])
-                nextCursors.append(sub)
-            }
+            let page = try await runQuery(query, cursor: sub)
+            pages.append(page.posts)
+            nextCursors.append(page.cursor)
         }
         let merged = FilterSearchMerge.merge(pages)
         return TimelinePage(posts: merged, cursor: CompositeCursor(cursors: nextCursors).encoded())

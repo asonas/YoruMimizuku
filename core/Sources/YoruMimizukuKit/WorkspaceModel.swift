@@ -77,12 +77,7 @@ public final class FilterTab: Identifiable {
     }
 
     /// One-line summary for the sidebar meta row.
-    public var summary: String {
-        switch filter.combinator {
-        case .and: return filter.subqueries.first ?? ""
-        case .or: return "OR: " + filter.subqueries.joined(separator: ", ")
-        }
-    }
+    public var summary: String { filter.summary }
 
     /// Apply an edited filter: relabel, and if the expanded queries changed rebuild
     /// the model so the next appearance loads the new search.

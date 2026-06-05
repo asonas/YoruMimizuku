@@ -99,4 +99,29 @@ final class SavedFilterTests: XCTestCase {
         XCTAssertTrue(filter(.or, [FilterTerm(kind: .keyword, value: "  ")]).subqueries.isEmpty)
         XCTAssertTrue(filter(.and, []).subqueries.isEmpty)
     }
+
+    func testPrefixOnlyValuesYieldNoFragment() {
+        // A value of just "@" or "#" must not produce a degenerate fragment.
+        XCTAssertTrue(filter(.or, [
+            FilterTerm(kind: .user, value: "@"),
+            FilterTerm(kind: .mention, value: " @ "),
+            FilterTerm(kind: .hashtag, value: "#")
+        ]).subqueries.isEmpty)
+    }
+
+    func testFallbackNameAndSummary() {
+        let or = filter(.or, [
+            FilterTerm(kind: .user, value: "alice.bsky.social"),
+            FilterTerm(kind: .user, value: "bob.bsky.social")
+        ])
+        XCTAssertEqual(or.fallbackName, "from:alice.bsky.social | from:bob.bsky.social")
+        XCTAssertEqual(or.summary, "OR: from:alice.bsky.social, from:bob.bsky.social")
+
+        let and = filter(.and, [
+            FilterTerm(kind: .hashtag, value: "swift"),
+            FilterTerm(kind: .user, value: "alice.bsky.social")
+        ])
+        XCTAssertEqual(and.fallbackName, "#swift from:alice.bsky.social")
+        XCTAssertEqual(and.summary, "#swift from:alice.bsky.social")
+    }
 }

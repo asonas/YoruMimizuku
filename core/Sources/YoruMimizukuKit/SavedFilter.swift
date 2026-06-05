@@ -88,15 +88,22 @@ public struct SavedFilter: Codable, Equatable, Sendable, Identifiable {
 
 extension FilterTerm {
     /// The `searchPosts` query fragment for this term, or nil when the value is
-    /// blank after trimming. Strips a leading `@`/`#` so users can type either form.
+    /// blank after trimming AND stripping a leading `@`/`#` (so a value of just
+    /// "@" or "#" yields no fragment rather than a degenerate `from:`/`#`).
     public var fragment: String? {
         let v = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !v.isEmpty else { return nil }
         switch kind {
-        case .keyword: return v
-        case .user: return "from:" + Self.stripLeading("@", v)
-        case .hashtag: return "#" + Self.stripLeading("#", v)
-        case .mention: return "mentions:" + Self.stripLeading("@", v)
+        case .keyword:
+            return v.isEmpty ? nil : v
+        case .user:
+            let handle = Self.stripLeading("@", v)
+            return handle.isEmpty ? nil : "from:" + handle
+        case .hashtag:
+            let tag = Self.stripLeading("#", v)
+            return tag.isEmpty ? nil : "#" + tag
+        case .mention:
+            let handle = Self.stripLeading("@", v)
+            return handle.isEmpty ? nil : "mentions:" + handle
         }
     }
 
@@ -115,6 +122,20 @@ extension SavedFilter {
         switch combinator {
         case .and: return [fragments.joined(separator: " ")]
         case .or: return fragments
+        }
+    }
+
+    /// Label used when the user leaves the name blank: the expanded subqueries
+    /// joined with a combinator-appropriate separator.
+    public var fallbackName: String {
+        subqueries.joined(separator: combinator == .or ? " | " : " ")
+    }
+
+    /// One-line summary for the sidebar meta row.
+    public var summary: String {
+        switch combinator {
+        case .and: return subqueries.first ?? ""
+        case .or: return "OR: " + subqueries.joined(separator: ", ")
         }
     }
 }
