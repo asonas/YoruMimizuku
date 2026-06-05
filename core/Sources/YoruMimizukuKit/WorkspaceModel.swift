@@ -1,10 +1,12 @@
 import Foundation
 
 /// Identifies a vertical tab in the sidebar. `home` and `notifications` are pinned
-/// and always present; each `conversation` is a closable reply-thread tab.
+/// and always present; `filter` is a saved-search subscription; each
+/// `conversation` is a closable reply-thread tab.
 public enum WorkspaceTab: Hashable, Sendable {
     case home
     case notifications
+    case filter(UUID)
     case conversation(UUID)
 }
 
@@ -48,12 +50,45 @@ public final class ConversationTab: Identifiable {
     }
 }
 
-/// Holds the sidebar's tab state: the pinned home/notifications tabs plus an
-/// ordered list of conversation tabs that open below them. Opening a post's
-/// parent appends a new conversation tab and selects it; closing a conversation
-/// falls back to a neighbor (never to a pinned tab being removed).
+/// One filter tab: a saved search subscription. `id` mirrors the backing
+/// `SavedFilter.id`; it owns a `TimelineViewModel` whose loader runs the search
+/// query, so the existing timeline machinery (polling, infinite scroll) is reused
+/// unchanged. Editing relabels and, when the query changes, rebuilds the model.
+@MainActor
+public final class FilterTab: Identifiable {
+    public let id: UUID
+    public private(set) var title: String
+    public private(set) var query: String
+    public private(set) var model: TimelineViewModel
+    private let makeModel: @MainActor (String) -> TimelineViewModel
+
+    init(filter: SavedFilter, makeModel: @escaping @MainActor (String) -> TimelineViewModel) {
+        self.id = filter.id
+        self.title = filter.name
+        self.query = filter.query
+        self.makeModel = makeModel
+        self.model = makeModel(filter.query)
+    }
+
+    /// Apply an edited filter: relabel, and if the query changed rebuild the model
+    /// so the next appearance loads the new search.
+    func apply(_ filter: SavedFilter) {
+        title = filter.name
+        if filter.query != query {
+            query = filter.query
+            model = makeModel(filter.query)
+        }
+    }
+}
+
+/// Holds the sidebar's tab state: the pinned home/notifications tabs, the saved
+/// filter tabs (persisted via `SavedFilterStore`), and an ordered list of
+/// conversation tabs (persisted via `ConversationPersisting`). Opening a post's
+/// parent appends a conversation; closing a tab falls back to a neighbor of the
+/// same kind, otherwise home.
 @MainActor
 public final class WorkspaceModel: ObservableObject {
+    @Published public private(set) var filters: [FilterTab] = []
     @Published public private(set) var conversations: [ConversationTab] = [] {
         didSet { if !isRestoring { persist() } }
     }
@@ -61,23 +96,31 @@ public final class WorkspaceModel: ObservableObject {
         didSet { if !isRestoring { persist() } }
     }
 
+    public let filterStore: SavedFilterStore
     private let makeThreadModel: @MainActor (String) -> ThreadViewModel
+    private let makeFilterModel: @MainActor (String) -> TimelineViewModel
     private let persistence: ConversationPersisting
     /// Set while `restore()` repopulates state from disk so the property observers
     /// do not write the just-loaded state straight back out.
     private var isRestoring = false
 
     public init(
+        filterStore: SavedFilterStore,
         persistence: ConversationPersisting = EphemeralConversationStore(),
-        makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel
+        makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel,
+        makeFilterModel: @escaping @MainActor (String) -> TimelineViewModel
     ) {
-        self.makeThreadModel = makeThreadModel
+        self.filterStore = filterStore
         self.persistence = persistence
+        self.makeThreadModel = makeThreadModel
+        self.makeFilterModel = makeFilterModel
+        self.filters = filterStore.filters.map { FilterTab(filter: $0, makeModel: makeFilterModel) }
         restore()
     }
 
-    /// Repopulate the open tabs and selection from the persisted state, rebuilding
-    /// each tab's `ThreadViewModel` so its thread reloads when first viewed.
+    /// Repopulate the open conversation tabs and selection from the persisted
+    /// state, rebuilding each tab's `ThreadViewModel` so its thread reloads when
+    /// first viewed.
     private func restore() {
         isRestoring = true
         defer { isRestoring = false }
@@ -93,7 +136,7 @@ public final class WorkspaceModel: ObservableObject {
         }
     }
 
-    /// Write the current open tabs and selected anchor to the persistence store.
+    /// Write the current open conversation tabs and selected anchor to the store.
     private func persist() {
         let selectedAnchorID: String? = {
             guard case let .conversation(id) = selection else { return nil }
@@ -103,6 +146,48 @@ public final class WorkspaceModel: ObservableObject {
             ConversationState(conversations: conversations.map(\.saved), selectedAnchorID: selectedAnchorID)
         )
     }
+
+    // MARK: - Filters
+
+    /// Create a filter from raw name/query, append its tab, and select it. No-op
+    /// when the query is blank (the store rejects it).
+    public func addFilter(name: String, query: String) {
+        guard let saved = filterStore.add(name: name, query: query) else { return }
+        let tab = FilterTab(filter: saved, makeModel: makeFilterModel)
+        filters.append(tab)
+        selection = .filter(tab.id)
+    }
+
+    /// Persist an edited filter and reflect it in its tab (relabel / model swap).
+    public func updateFilter(_ edited: SavedFilter) {
+        filterStore.update(edited)
+        guard let tab = filters.first(where: { $0.id == edited.id }) else { return }
+        tab.apply(edited)
+        filters = filters  // republish so the sidebar picks up the relabel
+    }
+
+    /// Delete a filter tab. When the closed tab was selected, select the adjacent
+    /// filter if any, otherwise fall back to home.
+    public func removeFilter(id: UUID) {
+        let wasSelected = selection == .filter(id)
+        let index = filters.firstIndex { $0.id == id }
+        filterStore.remove(id: id)
+        filters.removeAll { $0.id == id }
+
+        guard wasSelected else { return }
+        if let index, !filters.isEmpty {
+            selection = .filter(filters[min(index, filters.count - 1)].id)
+        } else {
+            selection = .home
+        }
+    }
+
+    public func filter(id: UUID) -> FilterTab? { filters.first { $0.id == id } }
+
+    /// The backing `SavedFilter` for an id (for the editor); nil if absent.
+    public func savedFilter(id: UUID) -> SavedFilter? { filterStore.filters.first { $0.id == id } }
+
+    // MARK: - Conversations
 
     /// Open `post` in a conversation tab. If a tab for the same post already
     /// exists it is re-selected rather than duplicated.
@@ -135,10 +220,14 @@ public final class WorkspaceModel: ObservableObject {
         conversations.first { $0.id == id }
     }
 
-    /// All tabs in display order: the two pinned tabs followed by the open
+    // MARK: - Cycling
+
+    /// All tabs in display order: the two pinned tabs, the filters, then the open
     /// conversations. Drives the Cmd-Shift-J/K cycling shortcuts.
     public var orderedTabs: [WorkspaceTab] {
-        [.home, .notifications] + conversations.map { .conversation($0.id) }
+        [.home, .notifications]
+            + filters.map { .filter($0.id) }
+            + conversations.map { .conversation($0.id) }
     }
 
     /// Select the next tab in display order, wrapping past the last back to home.

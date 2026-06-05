@@ -10,37 +10,14 @@ struct ConversationView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
 
-    let title: String
     let now: Date
     var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
-    var onClose: () -> Void
-    /// Called with the post URI to reply to, so the host can open the composer.
-    var onReply: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            DetailHeader("会話 · \(title)", systemImage: "bubble.left.and.bubble.right.fill") {
-                HStack(spacing: 8) {
-                    if let focus = focusedPost {
-                        ChromeIconButton(systemImage: "arrowshape.turn.up.left", help: "この投稿に返信") {
-                            onReply(focus.id)
-                        }
-                    }
-                    ChromeIconButton(systemImage: "xmark", help: "このタブを閉じる", action: onClose)
-                }
-            }
-            content
-        }
-        .background(theme.canvas)
-        .task { if case .idle = model.state { await model.load() } }
-    }
-
-    /// The currently anchored post, available once the thread has loaded; the reply
-    /// affordance targets it.
-    private var focusedPost: PostDisplay? {
-        if case let .loaded(focus) = model.state { return focus }
-        return nil
+        content
+            .background(theme.canvas)
+            .task { if case .idle = model.state { await model.load() } }
     }
 
     @ViewBuilder

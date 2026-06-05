@@ -9,6 +9,15 @@ final class WorkspaceModelTests: XCTestCase {
         }
     }
 
+    private final class StubTimelineLoader: TimelineLoading, @unchecked Sendable {
+        func loadPage(cursor: String?) async throws -> TimelinePage { TimelinePage(posts: [], cursor: nil) }
+    }
+
+    private final class InMemoryFilterPort: SavedFilterStoring, @unchecked Sendable {
+        func load() throws -> [SavedFilter] { [] }
+        func save(_ filters: [SavedFilter]) throws {}
+    }
+
     private final class FakePersistence: ConversationPersisting, @unchecked Sendable {
         var state: ConversationState
         private(set) var saveCount = 0
@@ -18,9 +27,12 @@ final class WorkspaceModelTests: XCTestCase {
     }
 
     private func makeModel(persistence: ConversationPersisting) -> WorkspaceModel {
-        WorkspaceModel(persistence: persistence) { uri in
-            ThreadViewModel(loader: StubThreadLoader(), uri: uri)
-        }
+        WorkspaceModel(
+            filterStore: SavedFilterStore(port: InMemoryFilterPort()),
+            persistence: persistence,
+            makeThreadModel: { uri in ThreadViewModel(loader: StubThreadLoader(), uri: uri) },
+            makeFilterModel: { _ in TimelineViewModel(loader: StubTimelineLoader()) }
+        )
     }
 
     private func post(id: String, name: String = "Alice", handle: String = "alice.bsky.social") -> PostDisplay {
