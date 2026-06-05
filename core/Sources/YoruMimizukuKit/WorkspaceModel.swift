@@ -31,6 +31,21 @@ public final class ConversationTab: Identifiable {
         self.subtitle = anchor.body.trimmingCharacters(in: .whitespacesAndNewlines)
         self.model = model
     }
+
+    /// Rebuild a tab from a persisted snapshot, restoring its sidebar fields so it
+    /// renders before its thread loads.
+    public init(saved: SavedConversation, model: ThreadViewModel) {
+        self.anchorID = saved.anchorID
+        self.title = saved.title
+        self.handle = saved.handle
+        self.subtitle = saved.subtitle
+        self.model = model
+    }
+
+    /// The snapshot persisted for this tab.
+    var saved: SavedConversation {
+        SavedConversation(anchorID: anchorID, title: title, handle: handle, subtitle: subtitle)
+    }
 }
 
 /// Holds the sidebar's tab state: the pinned home/notifications tabs plus an
@@ -39,13 +54,54 @@ public final class ConversationTab: Identifiable {
 /// falls back to a neighbor (never to a pinned tab being removed).
 @MainActor
 public final class WorkspaceModel: ObservableObject {
-    @Published public private(set) var conversations: [ConversationTab] = []
-    @Published public var selection: WorkspaceTab = .home
+    @Published public private(set) var conversations: [ConversationTab] = [] {
+        didSet { if !isRestoring { persist() } }
+    }
+    @Published public var selection: WorkspaceTab = .home {
+        didSet { if !isRestoring { persist() } }
+    }
 
     private let makeThreadModel: @MainActor (String) -> ThreadViewModel
+    private let persistence: ConversationPersisting
+    /// Set while `restore()` repopulates state from disk so the property observers
+    /// do not write the just-loaded state straight back out.
+    private var isRestoring = false
 
-    public init(makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel) {
+    public init(
+        persistence: ConversationPersisting = EphemeralConversationStore(),
+        makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel
+    ) {
         self.makeThreadModel = makeThreadModel
+        self.persistence = persistence
+        restore()
+    }
+
+    /// Repopulate the open tabs and selection from the persisted state, rebuilding
+    /// each tab's `ThreadViewModel` so its thread reloads when first viewed.
+    private func restore() {
+        isRestoring = true
+        defer { isRestoring = false }
+        let state = persistence.load()
+        conversations = state.conversations.map { saved in
+            ConversationTab(saved: saved, model: makeThreadModel(saved.anchorID))
+        }
+        if let anchor = state.selectedAnchorID,
+           let tab = conversations.first(where: { $0.anchorID == anchor }) {
+            selection = .conversation(tab.id)
+        } else {
+            selection = .home
+        }
+    }
+
+    /// Write the current open tabs and selected anchor to the persistence store.
+    private func persist() {
+        let selectedAnchorID: String? = {
+            guard case let .conversation(id) = selection else { return nil }
+            return conversations.first { $0.id == id }?.anchorID
+        }()
+        persistence.save(
+            ConversationState(conversations: conversations.map(\.saved), selectedAnchorID: selectedAnchorID)
+        )
     }
 
     /// Open `post` in a conversation tab. If a tab for the same post already

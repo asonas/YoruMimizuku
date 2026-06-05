@@ -38,7 +38,7 @@ struct RootView: View {
             wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: manager))
         )
         _workspace = StateObject(
-            wrappedValue: WorkspaceModel { uri in
+            wrappedValue: WorkspaceModel(persistence: UserDefaultsConversationStore()) { uri in
                 ThreadViewModel(
                     loader: LiveThreadLoader(accountManager: manager), uri: uri,
                     interactor: LivePostInteractor(accountManager: manager)
