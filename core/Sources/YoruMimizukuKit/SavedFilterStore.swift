@@ -24,17 +24,18 @@ public final class SavedFilterStore: ObservableObject {
         self.filters = (try? port.load()) ?? []
     }
 
-    /// Append a new filter. Returns nil (and does nothing) when the query is blank
-    /// after trimming. A blank name falls back to the query as the label.
+    /// Append a new filter built from typed terms. Returns nil (and does nothing)
+    /// when the terms expand to no usable query. A blank name falls back to the
+    /// joined subqueries as the label.
     @discardableResult
-    public func add(name: String, query: String) -> SavedFilter? {
-        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedQuery.isEmpty else { return nil }
+    public func add(name: String, terms: [FilterTerm], combinator: FilterCombinator) -> SavedFilter? {
+        let candidate = SavedFilter(name: "", terms: terms, combinator: combinator)
+        guard !candidate.subqueries.isEmpty else { return nil }
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filter = SavedFilter(
-            name: trimmedName.isEmpty ? trimmedQuery : trimmedName,
-            query: trimmedQuery
-        )
+        let resolvedName = trimmedName.isEmpty
+            ? candidate.subqueries.joined(separator: combinator == .or ? " | " : " ")
+            : trimmedName
+        let filter = SavedFilter(name: resolvedName, terms: terms, combinator: combinator)
         filters.append(filter)
         persist()
         return filter
