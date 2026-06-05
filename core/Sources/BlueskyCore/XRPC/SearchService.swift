@@ -30,9 +30,10 @@ public struct SearchService: Sendable {
         refreshToken: String?,
         query: String,
         limit: Int = 25,
-        cursor: String? = nil
+        cursor: String? = nil,
+        sort: String? = nil
     ) async throws -> (response: SearchResponse, refreshed: TokenResponse?) {
-        let url = try Self.searchURL(pds: pds, query: query, limit: limit, cursor: cursor)
+        let url = try Self.searchURL(pds: pds, query: query, limit: limit, cursor: cursor, sort: sort)
         let response = try await fetch(url: url, accessToken: accessToken)
 
         if response.statusCode == 401,
@@ -60,7 +61,7 @@ public struct SearchService: Sendable {
         )
     }
 
-    static func searchURL(pds: URL, query: String, limit: Int, cursor: String?) throws -> URL {
+    static func searchURL(pds: URL, query: String, limit: Int, cursor: String?, sort: String? = nil) throws -> URL {
         let endpoint = pds.appendingPathComponent("xrpc/app.bsky.feed.searchPosts")
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL("app.bsky.feed.searchPosts")
@@ -70,6 +71,7 @@ public struct SearchService: Sendable {
             URLQueryItem(name: "limit", value: String(limit))
         ]
         if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
+        if let sort { items.append(URLQueryItem(name: "sort", value: sort)) }
         components.queryItems = items
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.feed.searchPosts")

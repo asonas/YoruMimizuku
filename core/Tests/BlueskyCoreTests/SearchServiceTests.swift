@@ -50,6 +50,19 @@ final class SearchServiceTests: XCTestCase {
         XCTAssertEqual(sent.headers["Authorization"], "DPoP atk")
     }
 
+    func testSearchIncludesSortWhenProvided() async throws {
+        let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, body: Self.searchBody))
+        let service = makeService(http: http)
+
+        _ = try await service.searchPosts(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: nil,
+            query: "cats", limit: 25, cursor: nil, sort: "latest"
+        )
+
+        let sent = try XCTUnwrap(http.sentRequests.last)
+        XCTAssertEqual(sent.url.query?.contains("sort=latest"), true)
+    }
+
     func testSearchIncludesCursorWhenProvided() async throws {
         let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, body: Self.searchBody))
         let service = makeService(http: http)
