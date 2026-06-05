@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="YoruMimizuku.App.Views.ConversationView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="12">
+        <StackPanel Spacing="10">
+            <!-- Ancestor (reply parent), tappable to re-anchor the conversation. -->
+            <Button x:Name="ParentButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    Visibility="Collapsed" Click="OnParentClick">
+                <StackPanel Spacing="2">
+                    <TextBlock x:Name="ParentAuthor" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock x:Name="ParentBody" TextWrapping="Wrap" Opacity="0.7" />
+                </StackPanel>
+            </Button>
+
+            <Border x:Name="FocusedCard" BorderThickness="2,0,0,0" Padding="10,2">
+                <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock x:Name="FocusedAuthor" FontWeight="SemiBold" />
+                        <TextBlock x:Name="FocusedHandle" Opacity="0.6" />
+                    </StackPanel>
+                    <TextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <ProgressRing x:Name="Spinner" IsActive="False" HorizontalAlignment="Center" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

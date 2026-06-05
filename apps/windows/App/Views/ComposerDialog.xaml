@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="YoruMimizuku.App.Views.ComposerDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="新規投稿"
+    PrimaryButtonText="投稿"
+    SecondaryButtonText="キャンセル"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="8" Width="420">
+        <TextBox x:Name="TextBox" PlaceholderText="いまどうしてる？"
+                 AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120"
+                 TextChanged="OnTextChanged" />
+        <Grid>
+            <Button Content="画像を追加" Click="OnAddImageClick" HorizontalAlignment="Left" />
+            <TextBlock x:Name="CounterText" Text="300" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+        <ItemsControl x:Name="ImagesList">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="6" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed" />
+    </StackPanel>
+</ContentDialog>

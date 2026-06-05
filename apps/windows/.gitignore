@@ -1,0 +1,7 @@
+# Build outputs and staged native artifacts (produced by dotnet build /
+# scripts/windows/stage-bridge.ps1).
+bin/
+obj/
+native/
+.vs/
+*.user

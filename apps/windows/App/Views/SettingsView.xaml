@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="YoruMimizuku.App.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer Padding="24">
+        <StackPanel Spacing="20" MaxWidth="520" HorizontalAlignment="Left">
+            <TextBlock Text="設定" FontSize="24" FontWeight="SemiBold" />
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="表示密度" FontWeight="SemiBold" />
+                <RadioButtons x:Name="DensityChoice" SelectionChanged="OnDensityChanged">
+                    <x:String>コンパクト</x:String>
+                    <x:String>ゆとり</x:String>
+                </RadioButtons>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="配色 (randoma11y)" FontWeight="SemiBold" />
+                <TextBox x:Name="ThemeUrlBox" PlaceholderText="https://randoma11y.com/?... のURLを貼り付け" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="適用" Click="OnApplyThemeClick" />
+                    <Button Content="デフォルトに戻す" Click="OnResetThemeClick" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Spacing="6">
+                <TextBlock Text="フォントサイズ" FontWeight="SemiBold" />
+                <Slider x:Name="FontSlider" Minimum="11" Maximum="24" Value="14"
+                        ValueChanged="OnFontSizeChanged" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
