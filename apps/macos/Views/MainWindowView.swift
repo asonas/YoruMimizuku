@@ -97,7 +97,7 @@ struct MainWindowView: View {
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
-                .id("\(id)-\(tab.query)")
+                .id("\(id)-\(tab.contentKey)")
             } else {
                 Color.clear.background(theme.canvas)
             }

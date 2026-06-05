@@ -116,8 +116,8 @@ private struct AuthenticatedRootView: View {
                         interactor: LivePostInteractor(accountManager: accountManager)
                     )
                 },
-                makeFilterModel: { query in
-                    TimelineViewModel(loader: LiveSearchLoader(accountManager: accountManager, query: query))
+                makeFilterModel: { filter in
+                    TimelineViewModel(loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries))
                 }
             )
         )

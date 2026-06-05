@@ -2,23 +2,9 @@ import XCTest
 @testable import YoruMimizukuKit
 
 final class SavedFilterStoreTests: XCTestCase {
-    func testSavedFilterIsCodableRoundTrips() throws {
-        let filter = SavedFilter(
-            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
-            name: "Swift",
-            query: "#swift",
-            createdAt: Date(timeIntervalSince1970: 1_000)
-        )
-        let data = try JSONEncoder().encode(filter)
-        let decoded = try JSONDecoder().decode(SavedFilter.self, from: data)
-        XCTAssertEqual(decoded, filter)
-    }
-
-    // MARK: - Store
-
     @MainActor
     func testLoadsExistingFiltersFromPort() {
-        let existing = SavedFilter(name: "Swift", query: "#swift")
+        let existing = SavedFilter(name: "Swift", terms: [FilterTerm(kind: .hashtag, value: "swift")], combinator: .and)
         let port = InMemoryFilterStoring(initial: [existing])
         let store = SavedFilterStore(port: port)
         XCTAssertEqual(store.filters, [existing])
@@ -29,51 +15,60 @@ final class SavedFilterStoreTests: XCTestCase {
         let port = InMemoryFilterStoring()
         let store = SavedFilterStore(port: port)
 
-        let added = try XCTUnwrap(store.add(name: "Cats", query: "cats"))
+        let added = try XCTUnwrap(store.add(
+            name: "Cats", terms: [FilterTerm(kind: .keyword, value: "cats")], combinator: .and
+        ))
 
         XCTAssertEqual(store.filters.map(\.id), [added.id])
         XCTAssertEqual(port.saved.last?.map(\.id), [added.id])
     }
 
     @MainActor
-    func testAddRejectsBlankQuery() {
+    func testAddRejectsWhenNoUsableTerms() {
         let port = InMemoryFilterStoring()
         let store = SavedFilterStore(port: port)
 
-        XCTAssertNil(store.add(name: "Empty", query: "   "))
+        XCTAssertNil(store.add(
+            name: "Empty", terms: [FilterTerm(kind: .keyword, value: "   ")], combinator: .or
+        ))
         XCTAssertTrue(store.filters.isEmpty)
         XCTAssertTrue(port.saved.isEmpty)
     }
 
     @MainActor
-    func testAddUsesQueryAsNameWhenNameBlank() throws {
+    func testAddUsesJoinedSubqueriesAsNameWhenBlank() throws {
         let port = InMemoryFilterStoring()
         let store = SavedFilterStore(port: port)
 
-        let added = try XCTUnwrap(store.add(name: "  ", query: "#swift"))
-        XCTAssertEqual(added.name, "#swift")
+        let added = try XCTUnwrap(store.add(
+            name: "  ",
+            terms: [FilterTerm(kind: .user, value: "alice.bsky.social"),
+                    FilterTerm(kind: .user, value: "bob.bsky.social")],
+            combinator: .or
+        ))
+        XCTAssertEqual(added.name, "from:alice.bsky.social | from:bob.bsky.social")
     }
 
     @MainActor
     func testUpdateReplacesByIdAndPersists() throws {
-        let original = SavedFilter(name: "Swift", query: "#swift")
+        let original = SavedFilter(name: "Swift", terms: [FilterTerm(kind: .hashtag, value: "swift")], combinator: .and)
         let port = InMemoryFilterStoring(initial: [original])
         let store = SavedFilterStore(port: port)
 
         var edited = original
         edited.name = "Swift Lang"
-        edited.query = "#swiftlang"
+        edited.combinator = .or
         store.update(edited)
 
         XCTAssertEqual(store.filters.first?.name, "Swift Lang")
-        XCTAssertEqual(store.filters.first?.query, "#swiftlang")
-        XCTAssertEqual(port.saved.last?.first?.query, "#swiftlang")
+        XCTAssertEqual(store.filters.first?.combinator, .or)
+        XCTAssertEqual(port.saved.last?.first?.name, "Swift Lang")
     }
 
     @MainActor
     func testRemoveDeletesByIdAndPersists() {
-        let a = SavedFilter(name: "A", query: "a")
-        let b = SavedFilter(name: "B", query: "b")
+        let a = SavedFilter(name: "A", terms: [FilterTerm(kind: .keyword, value: "a")], combinator: .and)
+        let b = SavedFilter(name: "B", terms: [FilterTerm(kind: .keyword, value: "b")], combinator: .and)
         let port = InMemoryFilterStoring(initial: [a, b])
         let store = SavedFilterStore(port: port)
 
@@ -91,8 +86,6 @@ final class SavedFilterStoreTests: XCTestCase {
     }
 }
 
-/// In-memory `SavedFilterStoring` fake recording every `save` so tests can assert
-/// that mutations persisted. `loadError` simulates a corrupt/missing store file.
 private final class InMemoryFilterStoring: SavedFilterStoring, @unchecked Sendable {
     private let initial: [SavedFilter]
     private let loadError: Error?

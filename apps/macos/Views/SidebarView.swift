@@ -45,14 +45,15 @@ struct SidebarView: View {
     private func editor(for request: EditorRequest) -> some View {
         switch request {
         case .new:
-            FilterEditorView(name: "", query: "", isEditing: false) { name, query in
-                workspace.addFilter(name: name, query: query)
+            FilterEditorView(name: "", terms: [], combinator: .and, isEditing: false) { name, terms, combinator in
+                workspace.addFilter(name: name, terms: terms, combinator: combinator)
             }
         case let .edit(filter):
-            FilterEditorView(name: filter.name, query: filter.query, isEditing: true) { name, query in
-                workspace.updateFilter(
-                    SavedFilter(id: filter.id, name: name, query: query, createdAt: filter.createdAt)
-                )
+            FilterEditorView(name: filter.name, terms: filter.terms, combinator: filter.combinator, isEditing: true) { name, terms, combinator in
+                var edited = SavedFilter(id: filter.id, name: name, terms: terms, combinator: combinator, createdAt: filter.createdAt)
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                edited.name = trimmed.isEmpty ? edited.fallbackName : trimmed
+                workspace.updateFilter(edited)
             }
         }
     }
@@ -118,7 +119,7 @@ struct SidebarView: View {
                 SidebarRow(
                     icon: "line.3.horizontal.decrease",
                     title: tab.title,
-                    meta: tab.query,
+                    meta: tab.summary,
                     isSelected: workspace.selection == .filter(tab.id),
                     onClose: { workspace.removeFilter(id: tab.id) },
                     onEdit: {
