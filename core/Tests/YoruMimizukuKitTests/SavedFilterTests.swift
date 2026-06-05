@@ -46,4 +46,57 @@ final class SavedFilterTests: XCTestCase {
         XCTAssertNotNil(object?["terms"])
         XCTAssertNil(object?["query"], "legacy query key must not be written")
     }
+
+    // MARK: - subqueries
+
+    private func filter(_ combinator: FilterCombinator, _ terms: [FilterTerm]) -> SavedFilter {
+        SavedFilter(name: "n", terms: terms, combinator: combinator)
+    }
+
+    func testFragmentRenderingPerKind() {
+        XCTAssertEqual(
+            filter(.or, [
+                FilterTerm(kind: .keyword, value: "  hello world "),
+                FilterTerm(kind: .user, value: "@alice.bsky.social"),
+                FilterTerm(kind: .hashtag, value: "#swift"),
+                FilterTerm(kind: .mention, value: "bob.bsky.social")
+            ]).subqueries,
+            ["hello world", "from:alice.bsky.social", "#swift", "mentions:bob.bsky.social"]
+        )
+    }
+
+    func testAndJoinsFragmentsIntoOneQuery() {
+        XCTAssertEqual(
+            filter(.and, [
+                FilterTerm(kind: .hashtag, value: "swift"),
+                FilterTerm(kind: .user, value: "alice.bsky.social")
+            ]).subqueries,
+            ["#swift from:alice.bsky.social"]
+        )
+    }
+
+    func testOrSplitsFragments() {
+        XCTAssertEqual(
+            filter(.or, [
+                FilterTerm(kind: .user, value: "alice.bsky.social"),
+                FilterTerm(kind: .user, value: "bob.bsky.social")
+            ]).subqueries,
+            ["from:alice.bsky.social", "from:bob.bsky.social"]
+        )
+    }
+
+    func testBlankTermsAreDropped() {
+        XCTAssertEqual(
+            filter(.and, [
+                FilterTerm(kind: .keyword, value: "   "),
+                FilterTerm(kind: .hashtag, value: "swift")
+            ]).subqueries,
+            ["#swift"]
+        )
+    }
+
+    func testAllBlankYieldsEmpty() {
+        XCTAssertTrue(filter(.or, [FilterTerm(kind: .keyword, value: "  ")]).subqueries.isEmpty)
+        XCTAssertTrue(filter(.and, []).subqueries.isEmpty)
+    }
 }

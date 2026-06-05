@@ -85,3 +85,36 @@ public struct SavedFilter: Codable, Equatable, Sendable, Identifiable {
         try c.encode(createdAt, forKey: .createdAt)
     }
 }
+
+extension FilterTerm {
+    /// The `searchPosts` query fragment for this term, or nil when the value is
+    /// blank after trimming. Strips a leading `@`/`#` so users can type either form.
+    public var fragment: String? {
+        let v = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !v.isEmpty else { return nil }
+        switch kind {
+        case .keyword: return v
+        case .user: return "from:" + Self.stripLeading("@", v)
+        case .hashtag: return "#" + Self.stripLeading("#", v)
+        case .mention: return "mentions:" + Self.stripLeading("@", v)
+        }
+    }
+
+    private static func stripLeading(_ ch: Character, _ s: String) -> String {
+        s.hasPrefix(String(ch)) ? String(s.dropFirst()) : s
+    }
+}
+
+extension SavedFilter {
+    /// The `searchPosts` queries this filter expands to. `and` joins every
+    /// non-blank fragment into a single query; `or` yields one query per fragment
+    /// (merged client-side by the loader). Empty when there are no usable terms.
+    public var subqueries: [String] {
+        let fragments = terms.compactMap(\.fragment)
+        guard !fragments.isEmpty else { return [] }
+        switch combinator {
+        case .and: return [fragments.joined(separator: " ")]
+        case .or: return fragments
+        }
+    }
+}
