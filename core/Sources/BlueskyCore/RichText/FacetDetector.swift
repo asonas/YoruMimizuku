@@ -26,7 +26,7 @@ public enum FacetDetector {
 
     /// Detect all facets and return them sorted by byte start.
     public static func detect(text: String) -> [DetectedFacet] {
-        let all = detectLinks(text)
+        let all = detectLinks(text) + detectTags(text)
         return all.sorted { $0.byteStart < $1.byteStart }
     }
 
@@ -53,6 +53,33 @@ public enum FacetDetector {
             let byteStart = Array(prefix.utf8).count
             facets.append(DetectedFacet(byteStart: byteStart, byteEnd: byteStart + uriBytes.count,
                                         feature: .link(uri: uri)))
+        }
+        return facets
+    }
+
+    // A hashtag starts at text start or after whitespace, allows a fullwidth '#',
+    // must contain at least one non-digit/non-punctuation character (so bare
+    // "#123" is ignored), drops trailing punctuation, and is capped at 64 graphemes.
+    static func detectTags(_ text: String) -> [DetectedFacet] {
+        guard text.contains("#") || text.contains("＃") else { return [] }
+        let pattern = "(?:^|\\s)[#＃]([^\\s#＃]*[^\\d\\s\\p{P}#＃]+[^\\s#＃]*)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let ns = text as NSString
+        var facets: [DetectedFacet] = []
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            let bodyRange = match.range(at: 1)
+            var tag = ns.substring(with: bodyRange)
+            while let last = tag.unicodeScalars.last,
+                  CharacterSet.punctuationCharacters.contains(last) {
+                tag = String(tag.dropLast())
+            }
+            guard !tag.isEmpty, tag.count <= 64 else { continue }
+            // The '#' sits one UTF-16 unit before the captured body; rebuild byte offsets.
+            let hashUTF16 = bodyRange.location - 1
+            let prefix = ns.substring(to: hashUTF16)
+            let byteStart = Array(prefix.utf8).count
+            let byteEnd = byteStart + Array(("#" + tag).utf8).count
+            facets.append(DetectedFacet(byteStart: byteStart, byteEnd: byteEnd, feature: .tag(tag: tag)))
         }
         return facets
     }
