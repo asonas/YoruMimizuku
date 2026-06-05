@@ -90,3 +90,60 @@ extension PostServiceTests {
         XCTAssertNil(record["facets"]) // mention dropped, no other facets -> omitted
     }
 }
+
+extension PostServiceTests {
+    func testCreateReplyBuildsRootAndParentFromParentRecord() async throws {
+        // Parent is itself a reply, so its reply.root must be reused as the root.
+        let getRecord = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:bob/app.bsky.feed.post/parent","cid":"bafyparent",
+         "value":{"reply":{"root":{"uri":"at://did:plc:bob/app.bsky.feed.post/root","cid":"bafyroot"}}}}
+        """##.utf8))
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.post/new","cid":"bafynew"}
+        """##.utf8))
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("getRecord") }, response: getRecord),
+            .init(matches: { $0.absoluteString.contains("createRecord") }, response: created),
+        ])
+        let service = makeService(http: http)
+
+        _ = try await service.createPost(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            did: "did:plc:me", text: "thanks", images: [],
+            replyParentURI: "at://did:plc:bob/app.bsky.feed.post/parent"
+        )
+
+        let createReq = try XCTUnwrap(http.sentRequests.first { $0.url.absoluteString.contains("createRecord") })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(createReq.body)) as? [String: Any])
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        let reply = try XCTUnwrap(record["reply"] as? [String: Any])
+        let root = try XCTUnwrap(reply["root"] as? [String: Any])
+        let parent = try XCTUnwrap(reply["parent"] as? [String: Any])
+        XCTAssertEqual(root["uri"] as? String, "at://did:plc:bob/app.bsky.feed.post/root")
+        XCTAssertEqual(parent["uri"] as? String, "at://did:plc:bob/app.bsky.feed.post/parent")
+    }
+
+    func testCreatePostRefreshesOnUnauthorizedCreateRecord() async throws {
+        let unauthorized = HTTPResponse(statusCode: 401, body: Data(##"{"error":"invalid_token"}"##.utf8))
+        let metadata = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"issuer":"https://bsky.social","authorization_endpoint":"https://bsky.social/oauth/authorize","token_endpoint":"https://bsky.social/oauth/token"}
+        """##.utf8))
+        let tokens = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"access_token":"atk2","token_type":"DPoP","refresh_token":"rtk2","sub":"did:plc:me"}
+        """##.utf8))
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.post/abc","cid":"bafypost"}
+        """##.utf8))
+        let http = SequencedHTTPClient([unauthorized, metadata, tokens, created])
+        let service = makeService(http: http)
+
+        let result = try await service.createPost(
+            pds: pds, issuer: issuer, accessToken: "old", refreshToken: "rtk",
+            did: "did:plc:me", text: "plain text", images: [], replyParentURI: nil
+        )
+
+        XCTAssertEqual(result.refreshed?.accessToken, "atk2")
+        XCTAssertEqual(result.response.cid, "bafypost")
+        XCTAssertEqual(http.sentRequests.last?.headers["Authorization"], "DPoP atk2")
+    }
+}
