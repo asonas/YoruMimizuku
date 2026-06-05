@@ -170,6 +170,44 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertNil(item.reply?.parent)
     }
 
+    func testDecodesViewerLikeAndRepostState() throws {
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:x/app.bsky.feed.post/x",
+          "cid": "cid",
+          "author": { "did": "did:plc:x", "handle": "x.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "hi", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "viewer": {
+            "like": "at://did:plc:me/app.bsky.feed.like/abc",
+            "repost": "at://did:plc:me/app.bsky.feed.repost/def"
+          }
+        }
+        """##.utf8)
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+
+        XCTAssertEqual(post.viewer?.like, "at://did:plc:me/app.bsky.feed.like/abc")
+        XCTAssertEqual(post.viewer?.repost, "at://did:plc:me/app.bsky.feed.repost/def")
+    }
+
+    func testViewerStateOmitsUnsetFields() throws {
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:x/app.bsky.feed.post/x",
+          "cid": "cid",
+          "author": { "did": "did:plc:x", "handle": "x.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "hi", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "viewer": { "threadMuted": false, "embeddingDisabled": false }
+        }
+        """##.utf8)
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+
+        XCTAssertNotNil(post.viewer)
+        XCTAssertNil(post.viewer?.like)
+        XCTAssertNil(post.viewer?.repost)
+    }
+
     func testNonImageEmbedDecodesToEmptyImages() throws {
         // A record embed (different shape) must not break decoding; images is empty.
         let json = Data(##"""

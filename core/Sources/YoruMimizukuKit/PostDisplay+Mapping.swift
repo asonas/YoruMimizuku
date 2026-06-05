@@ -16,6 +16,7 @@ extension PostDisplay {
         }
         self.init(
             id: post.uri,
+            cid: post.cid,
             authorDisplayName: author.displayName ?? author.handle,
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
@@ -27,7 +28,9 @@ extension PostDisplay {
             replyParent: replyParent,
             replyCount: post.replyCount ?? 0,
             repostCount: post.repostCount ?? 0,
-            likeCount: post.likeCount ?? 0
+            likeCount: post.likeCount ?? 0,
+            viewerLikeURI: post.viewer?.like,
+            viewerRepostURI: post.viewer?.repost
         )
     }
 

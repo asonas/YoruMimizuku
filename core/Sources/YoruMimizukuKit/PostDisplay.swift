@@ -36,6 +36,9 @@ public final class ReplyParent: Equatable, Sendable {
 /// `BlueskyCore` models in a later plan; for now `samples` provides mock data.
 public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let id: String
+    /// The post record's CID, needed alongside `id` (its URI) to form the
+    /// `com.atproto.repo.strongRef` subject of a like / repost / quote.
+    public let cid: String
     public let authorDisplayName: String
     public let authorHandle: String
     public let avatarURL: URL?
@@ -49,11 +52,23 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     /// The post this one replies to, when its parent is available in the feed.
     public let replyParent: ReplyParent?
     public let replyCount: Int
-    public let repostCount: Int
-    public let likeCount: Int
+    /// Counts and viewer state are `var` so an interaction can be reflected
+    /// optimistically in place before the network round-trip confirms it.
+    public var repostCount: Int
+    public var likeCount: Int
+    /// AT-URI of the viewer's own like record when they have liked this post.
+    public var viewerLikeURI: String?
+    /// AT-URI of the viewer's own repost record when they have reposted it.
+    public var viewerRepostURI: String?
+
+    /// Whether the viewer has liked this post.
+    public var isLiked: Bool { viewerLikeURI != nil }
+    /// Whether the viewer has reposted this post.
+    public var isReposted: Bool { viewerRepostURI != nil }
 
     public init(
         id: String,
+        cid: String = "",
         authorDisplayName: String,
         authorHandle: String,
         avatarURL: URL? = nil,
@@ -65,9 +80,12 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         replyParent: ReplyParent? = nil,
         replyCount: Int = 0,
         repostCount: Int = 0,
-        likeCount: Int = 0
+        likeCount: Int = 0,
+        viewerLikeURI: String? = nil,
+        viewerRepostURI: String? = nil
     ) {
         self.id = id
+        self.cid = cid
         self.authorDisplayName = authorDisplayName
         self.authorHandle = authorHandle
         self.avatarURL = avatarURL
@@ -80,6 +98,8 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.replyCount = replyCount
         self.repostCount = repostCount
         self.likeCount = likeCount
+        self.viewerLikeURI = viewerLikeURI
+        self.viewerRepostURI = viewerRepostURI
     }
 
     /// Deterministic mock timeline for the app shell, newest first.

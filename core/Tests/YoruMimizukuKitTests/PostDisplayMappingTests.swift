@@ -41,6 +41,34 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.likeCount, 3)
     }
 
+    func testMapsCidAndViewerState() {
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "bafyreialice",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(text: "hi", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            viewer: PostViewerState(like: "at://did:plc:me/app.bsky.feed.like/xyz", repost: nil)
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+
+        XCTAssertEqual(display.cid, "bafyreialice")
+        XCTAssertEqual(display.viewerLikeURI, "at://did:plc:me/app.bsky.feed.like/xyz")
+        XCTAssertTrue(display.isLiked)
+        XCTAssertNil(display.viewerRepostURI)
+        XCTAssertFalse(display.isReposted)
+    }
+
+    func testNoViewerMapsToNotLikedNotReposted() {
+        let display = PostDisplay(FeedViewPost(post: post()))
+        XCTAssertNil(display.viewerLikeURI)
+        XCTAssertNil(display.viewerRepostURI)
+        XCTAssertFalse(display.isLiked)
+        XCTAssertFalse(display.isReposted)
+    }
+
     func testFallsBackToHandleAndZeroCountsWhenAbsent() {
         let item = FeedViewPost(post: post(displayName: nil))
 

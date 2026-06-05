@@ -56,6 +56,10 @@ public struct PostView: Decodable, Equatable, Sendable {
     public let likeCount: Int?
     public let indexedAt: String
     public let embed: PostEmbed?
+    /// The viewer's own interaction state for this post: the AT-URIs of the
+    /// viewer's like / repost records when they have liked / reposted it. nil
+    /// (or absent fields) means the viewer has not interacted.
+    public let viewer: PostViewerState?
 
     public init(
         uri: String,
@@ -66,7 +70,8 @@ public struct PostView: Decodable, Equatable, Sendable {
         repostCount: Int?,
         likeCount: Int?,
         indexedAt: String,
-        embed: PostEmbed? = nil
+        embed: PostEmbed? = nil,
+        viewer: PostViewerState? = nil
     ) {
         self.uri = uri
         self.cid = cid
@@ -77,6 +82,20 @@ public struct PostView: Decodable, Equatable, Sendable {
         self.likeCount = likeCount
         self.indexedAt = indexedAt
         self.embed = embed
+        self.viewer = viewer
+    }
+}
+
+/// The viewer's interaction state (`app.bsky.feed.defs#viewerState`). `like` and
+/// `repost` carry the AT-URI of the viewer's own like / repost record when set,
+/// so the client can show the filled state and delete the record to undo it.
+public struct PostViewerState: Decodable, Equatable, Sendable {
+    public let like: String?
+    public let repost: String?
+
+    public init(like: String?, repost: String?) {
+        self.like = like
+        self.repost = repost
     }
 }
 
