@@ -31,6 +31,117 @@ public struct PostService: Sendable {
         return (decoded.blob, outcome.refreshed)
     }
 
+    /// Create an `app.bsky.feed.post`. Uploads any images first, detects link/tag
+    /// facets, resolves `@handle` mentions to DIDs (dropping any that fail), builds
+    /// the record, and sends `createRecord`. Threads refreshed tokens across all the
+    /// sub-requests and returns the latest so the caller can persist them.
+    public func createPost(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        did: String, text: String, images: [(data: Data, mimeType: String, alt: String)],
+        replyParentURI: String?,
+        createdAt: String = Self.timestamp()
+    ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
+        var token = accessToken
+        var currentRefresh = refreshToken
+        var refreshed: TokenResponse? = nil
+
+        func authed(_ method: HTTPMethod, _ url: URL, _ headers: [String: String], _ body: Data?) async throws -> HTTPResponse {
+            let outcome = try await perform(method: method, url: url, headers: headers, body: body,
+                                            issuer: issuer, accessToken: token, refreshToken: currentRefresh)
+            if let tokens = outcome.refreshed {
+                refreshed = tokens
+                token = tokens.accessToken
+                currentRefresh = tokens.refreshToken ?? currentRefresh
+            }
+            return outcome.response
+        }
+
+        // Resolve `@handle` to a DID via getProfile. Returns nil on any failure so the
+        // mention facet is dropped and the text is left plain.
+        func resolveDID(handle: String) async throws -> String? {
+            guard var components = URLComponents(
+                url: pds.appendingPathComponent("xrpc/app.bsky.actor.getProfile"), resolvingAgainstBaseURL: false
+            ) else { return nil }
+            components.queryItems = [URLQueryItem(name: "actor", value: handle)]
+            guard let url = components.url else { return nil }
+            let response = try await authed(.get, url, ["Accept": "application/json"], nil)
+            guard (200..<300).contains(response.statusCode) else { return nil }
+            return (try? JSONDecoder().decode(ResolveDIDResponse.self, from: response.body))?.did
+        }
+
+        // Build reply refs from a parent at:// URI: getRecord the parent, reuse its
+        // conversation root when it is itself a reply, otherwise the parent is the root.
+        func fetchReplyRefs(parentURI: String) async throws -> ReplyRefWrite {
+            let parts = parentURI.replacingOccurrences(of: "at://", with: "").split(separator: "/", maxSplits: 2)
+            guard parts.count == 3 else { throw XRPCError.invalidURL(parentURI) }
+            guard var components = URLComponents(
+                url: pds.appendingPathComponent("xrpc/com.atproto.repo.getRecord"), resolvingAgainstBaseURL: false
+            ) else { throw XRPCError.invalidURL(parentURI) }
+            components.queryItems = [
+                URLQueryItem(name: "repo", value: String(parts[0])),
+                URLQueryItem(name: "collection", value: String(parts[1])),
+                URLQueryItem(name: "rkey", value: String(parts[2])),
+            ]
+            guard let url = components.url else { throw XRPCError.invalidURL(parentURI) }
+            let response = try await authed(.get, url, ["Accept": "application/json"], nil)
+            let decoded: GetRecordResponse = try Self.decode(response)
+            let parentRef = StrongRef(uri: decoded.uri, cid: decoded.cid)
+            return ReplyRefWrite(root: decoded.replyRoot ?? parentRef, parent: parentRef)
+        }
+
+        // 1. Upload images.
+        var imageWrites: [ImageWrite] = []
+        for image in images {
+            let url = pds.appendingPathComponent("xrpc/com.atproto.repo.uploadBlob")
+            let response = try await authed(.post, url,
+                                            ["Content-Type": image.mimeType, "Accept": "application/json"],
+                                            image.data)
+            let decoded: UploadBlobResponse = try Self.decode(response)
+            imageWrites.append(ImageWrite(image: decoded.blob, alt: image.alt))
+        }
+
+        // 2. Detect facets; resolve mention handles to DIDs.
+        var facets: [FacetWrite] = []
+        for detected in FacetDetector.detect(text: text) {
+            switch detected.feature {
+            case .link(let uri):
+                facets.append(FacetWrite(byteStart: detected.byteStart, byteEnd: detected.byteEnd, feature: .link(uri: uri)))
+            case .tag(let tag):
+                facets.append(FacetWrite(byteStart: detected.byteStart, byteEnd: detected.byteEnd, feature: .tag(tag: tag)))
+            case .mentionCandidate(let handle):
+                if let didValue = try await resolveDID(handle: handle) {
+                    facets.append(FacetWrite(byteStart: detected.byteStart, byteEnd: detected.byteEnd, feature: .mention(did: didValue)))
+                }
+            }
+        }
+        facets.sort { $0.byteStart < $1.byteStart }
+
+        // 3. Resolve reply refs from the parent URI.
+        var reply: ReplyRefWrite? = nil
+        if let replyParentURI {
+            reply = try await fetchReplyRefs(parentURI: replyParentURI)
+        }
+
+        // 4. Build and send the record.
+        let embed = imageWrites.isEmpty ? nil : ImagesEmbedWrite(images: imageWrites)
+        let record = PostRecordWrite(text: text, createdAt: createdAt, facets: facets, embed: embed, reply: reply)
+        let request = CreateRecordRequest(repo: did, collection: "app.bsky.feed.post", record: record)
+        let payload = try JSONEncoder().encode(request)
+        let url = pds.appendingPathComponent("xrpc/com.atproto.repo.createRecord")
+        let response = try await authed(.post, url,
+                                        ["Content-Type": "application/json", "Accept": "application/json"],
+                                        payload)
+        let decoded: CreateRecordResponse = try Self.decode(response)
+        return (decoded, refreshed)
+    }
+
+    /// ISO8601 timestamp with milliseconds and a `Z` suffix, matching atproto records.
+    public static func timestamp(_ date: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+
     /// One authorized request with a 401→refresh→retry-once. Returns the response
     /// and, when a refresh occurred, the freshly issued tokens.
     func perform(
