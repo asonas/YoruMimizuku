@@ -226,8 +226,15 @@ struct PostRowView: View {
                     Label("引用", systemImage: "quote.bubble")
                 }
             } label: {
+                // Pin the font/label/digit styling on the label itself: the macOS
+                // borderless menu style otherwise renders it at the system control
+                // size, making the repost icon larger and misaligned vs the plain
+                // Button rows beside it.
                 actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
                             active: post.isReposted, activeColor: theme.accent)
+                    .font(.app(.caption))
+                    .labelStyle(.titleAndIcon)
+                    .monospacedDigit()
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
