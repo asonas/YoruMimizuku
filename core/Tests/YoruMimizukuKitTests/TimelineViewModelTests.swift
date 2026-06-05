@@ -23,11 +23,110 @@ final class TimelineViewModelTests: XCTestCase {
 
     private struct StubError: Error {}
 
-    private func sample(id: String) -> PostDisplay {
+    private final class FakeInteractor: PostInteracting, @unchecked Sendable {
+        var likeResult: Result<String, Error> = .success("at://me/app.bsky.feed.like/new")
+        var repostResult: Result<String, Error> = .success("at://me/app.bsky.feed.repost/new")
+        var removeShouldFail = false
+        private(set) var likeCalls = 0
+        private(set) var removeLikeCalls = 0
+        private(set) var repostCalls = 0
+        private(set) var lastLikeUri: String?
+        private(set) var lastLikeCid: String?
+        private(set) var lastRemovedLikeURI: String?
+
+        func like(uri: String, cid: String) async throws -> String {
+            likeCalls += 1; lastLikeUri = uri; lastLikeCid = cid
+            return try likeResult.get()
+        }
+        func removeLike(recordURI: String) async throws {
+            removeLikeCalls += 1; lastRemovedLikeURI = recordURI
+            if removeShouldFail { throw StubError() }
+        }
+        func repost(uri: String, cid: String) async throws -> String {
+            repostCalls += 1
+            return try repostResult.get()
+        }
+        func removeRepost(recordURI: String) async throws {
+            if removeShouldFail { throw StubError() }
+        }
+    }
+
+    private func sample(
+        id: String, cid: String = "cid", likeCount: Int = 0, viewerLikeURI: String? = nil
+    ) -> PostDisplay {
         PostDisplay(
-            id: id, authorDisplayName: "Alice", authorHandle: "alice.bsky.social",
-            body: "hi", createdAt: Date(timeIntervalSince1970: 1_780_574_400)
+            id: id, cid: cid, authorDisplayName: "Alice", authorHandle: "alice.bsky.social",
+            body: "hi", createdAt: Date(timeIntervalSince1970: 1_780_574_400),
+            likeCount: likeCount, viewerLikeURI: viewerLikeURI
         )
+    }
+
+    func testToggleLikeOptimisticallyLikesThenConfirmsRecordURI() async {
+        let interactor = FakeInteractor()
+        let post = sample(id: "p1", cid: "c1", likeCount: 3)
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+
+        await vm.toggleLike(post)
+
+        XCTAssertTrue(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/new")
+        XCTAssertEqual(interactor.likeCalls, 1)
+        XCTAssertEqual(interactor.lastLikeUri, "p1")
+        XCTAssertEqual(interactor.lastLikeCid, "c1")
+    }
+
+    func testToggleLikeOnLikedPostUnlikesAndDeletesRecord() async {
+        let interactor = FakeInteractor()
+        let post = sample(id: "p1", likeCount: 5, viewerLikeURI: "at://me/app.bsky.feed.like/existing")
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+
+        await vm.toggleLike(post)
+
+        XCTAssertFalse(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+        XCTAssertEqual(interactor.removeLikeCalls, 1)
+        XCTAssertEqual(interactor.lastRemovedLikeURI, "at://me/app.bsky.feed.like/existing")
+    }
+
+    func testToggleLikeRollsBackWhenLikeFails() async {
+        let interactor = FakeInteractor()
+        interactor.likeResult = .failure(StubError())
+        let post = sample(id: "p1", likeCount: 3)
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+
+        await vm.toggleLike(post)
+
+        XCTAssertFalse(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 3)
+    }
+
+    func testToggleRepostOptimisticallyRepostsThenConfirms() async {
+        let interactor = FakeInteractor()
+        let post = sample(id: "p1")
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+
+        await vm.toggleRepost(post)
+
+        XCTAssertTrue(vm.posts[0].isReposted)
+        XCTAssertEqual(vm.posts[0].repostCount, 1)
+        XCTAssertEqual(vm.posts[0].viewerRepostURI, "at://me/app.bsky.feed.repost/new")
+        XCTAssertEqual(interactor.repostCalls, 1)
+    }
+
+    func testToggleLikeIsNoOpWithoutInteractor() async {
+        let post = sample(id: "p1", likeCount: 3)
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])))
+        await vm.load()
+
+        await vm.toggleLike(post)
+
+        XCTAssertFalse(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 3)
     }
 
     func testInitialStateIsIdle() {

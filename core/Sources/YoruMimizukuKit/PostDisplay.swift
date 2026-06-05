@@ -102,6 +102,41 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.viewerRepostURI = viewerRepostURI
     }
 
+    /// Sentinel URIs used while a like / repost is in flight: `isLiked` /
+    /// `isReposted` read true immediately, then the real record URI replaces the
+    /// sentinel once the network confirms it.
+    public static let pendingLikeURI = "pending:like"
+    public static let pendingRepostURI = "pending:repost"
+
+    /// Optimistically mark this post liked: flip the viewer state and bump the
+    /// count. No-op if already liked so a double tap cannot double-count.
+    public mutating func applyOptimisticLike() {
+        guard !isLiked else { return }
+        viewerLikeURI = Self.pendingLikeURI
+        likeCount += 1
+    }
+
+    /// Optimistically clear the like and decrement the count (never below zero).
+    public mutating func applyOptimisticUnlike() {
+        guard isLiked else { return }
+        viewerLikeURI = nil
+        likeCount = max(0, likeCount - 1)
+    }
+
+    /// Optimistically mark this post reposted; no-op if already reposted.
+    public mutating func applyOptimisticRepost() {
+        guard !isReposted else { return }
+        viewerRepostURI = Self.pendingRepostURI
+        repostCount += 1
+    }
+
+    /// Optimistically clear the repost and decrement the count (never below zero).
+    public mutating func applyOptimisticUnrepost() {
+        guard isReposted else { return }
+        viewerRepostURI = nil
+        repostCount = max(0, repostCount - 1)
+    }
+
     /// Deterministic mock timeline for the app shell, newest first.
     public static func samples(now: Date) -> [PostDisplay] {
         [

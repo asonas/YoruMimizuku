@@ -50,11 +50,50 @@ public final class TimelineViewModel: ObservableObject {
     /// feed has been exhausted.
     private var cursor: String?
     private let loader: TimelineLoading
+    private let interactor: PostInteracting?
     private let tracer: SignpostTracing
 
-    public init(loader: TimelineLoading, tracer: SignpostTracing = NoopSignpostTracing()) {
+    public init(
+        loader: TimelineLoading,
+        interactor: PostInteracting? = nil,
+        tracer: SignpostTracing = NoopSignpostTracing()
+    ) {
         self.loader = loader
+        self.interactor = interactor
         self.tracer = tracer
+    }
+
+    /// Toggle the viewer's like on `post`, updating the row optimistically and
+    /// reconciling with the network. No-op when no interactor was injected.
+    public func toggleLike(_ post: PostDisplay) async {
+        await controller?.toggleLike(post.id)
+    }
+
+    /// Toggle the viewer's repost on `post`, updating optimistically. No-op when no
+    /// interactor was injected.
+    public func toggleRepost(_ post: PostDisplay) async {
+        await controller?.toggleRepost(post.id)
+    }
+
+    /// A controller bound to this view model's post storage, or nil without an
+    /// injected interactor.
+    private var controller: PostInteractionController? {
+        guard let interactor else { return nil }
+        return PostInteractionController(
+            interactor: interactor,
+            currentPost: { [weak self] id in self?.post(id: id) },
+            writePost: { [weak self] post in self?.write(post) }
+        )
+    }
+
+    private func post(id: String) -> PostDisplay? {
+        posts.first { $0.id == id }
+    }
+
+    private func write(_ post: PostDisplay) {
+        guard case var .loaded(posts) = state, let index = posts.firstIndex(where: { $0.id == post.id }) else { return }
+        posts[index] = post
+        state = .loaded(posts)
     }
 
     /// Convenience accessor for the currently loaded posts (empty otherwise).

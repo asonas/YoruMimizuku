@@ -15,6 +15,25 @@ final class ThreadViewModelTests: XCTestCase {
 
     private struct StubError: Error {}
 
+    private final class FakeInteractor: PostInteracting, @unchecked Sendable {
+        func like(uri: String, cid: String) async throws -> String { "at://me/app.bsky.feed.like/new" }
+        func removeLike(recordURI: String) async throws {}
+        func repost(uri: String, cid: String) async throws -> String { "at://me/app.bsky.feed.repost/new" }
+        func removeRepost(recordURI: String) async throws {}
+    }
+
+    func testToggleLikeUpdatesFocusedPost() async {
+        let focus = sample(id: "reply")
+        let vm = ThreadViewModel(loader: StubLoader(result: .success(focus)), uri: "reply", interactor: FakeInteractor())
+        await vm.load()
+
+        await vm.toggleLike(focus)
+
+        guard case let .loaded(updated) = vm.state else { return XCTFail("expected loaded") }
+        XCTAssertTrue(updated.isLiked)
+        XCTAssertEqual(updated.viewerLikeURI, "at://me/app.bsky.feed.like/new")
+    }
+
     private func sample(id: String, parent: PostDisplay? = nil) -> PostDisplay {
         PostDisplay(
             id: id, authorDisplayName: "Bob", authorHandle: "bob.bsky.social",

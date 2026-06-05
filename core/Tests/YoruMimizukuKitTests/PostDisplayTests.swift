@@ -27,6 +27,58 @@ final class PostDisplayTests: XCTestCase {
         XCTAssertEqual(post.likeCount, 3)
     }
 
+    func test_applyOptimisticLike_setsLikedAndIncrementsCount() {
+        var post = PostDisplay(id: "p", authorDisplayName: "a", authorHandle: "a", body: "b", createdAt: Date(), likeCount: 3)
+
+        post.applyOptimisticLike()
+
+        XCTAssertTrue(post.isLiked)
+        XCTAssertNotNil(post.viewerLikeURI)
+        XCTAssertEqual(post.likeCount, 4)
+    }
+
+    func test_applyOptimisticLike_isNoOpWhenAlreadyLiked() {
+        var post = PostDisplay(id: "p", authorDisplayName: "a", authorHandle: "a", body: "b", createdAt: Date(),
+                               likeCount: 4, viewerLikeURI: "at://did/app.bsky.feed.like/x")
+
+        post.applyOptimisticLike()
+
+        XCTAssertEqual(post.likeCount, 4)
+        XCTAssertEqual(post.viewerLikeURI, "at://did/app.bsky.feed.like/x")
+    }
+
+    func test_applyOptimisticUnlike_clearsAndDecrementsCount() {
+        var post = PostDisplay(id: "p", authorDisplayName: "a", authorHandle: "a", body: "b", createdAt: Date(),
+                               likeCount: 5, viewerLikeURI: "at://did/app.bsky.feed.like/x")
+
+        post.applyOptimisticUnlike()
+
+        XCTAssertFalse(post.isLiked)
+        XCTAssertNil(post.viewerLikeURI)
+        XCTAssertEqual(post.likeCount, 4)
+    }
+
+    func test_applyOptimisticUnlike_doesNotGoBelowZero() {
+        var post = PostDisplay(id: "p", authorDisplayName: "a", authorHandle: "a", body: "b", createdAt: Date(),
+                               likeCount: 0, viewerLikeURI: "at://did/app.bsky.feed.like/x")
+
+        post.applyOptimisticUnlike()
+
+        XCTAssertEqual(post.likeCount, 0)
+    }
+
+    func test_applyOptimisticRepost_andUnrepost() {
+        var post = PostDisplay(id: "p", authorDisplayName: "a", authorHandle: "a", body: "b", createdAt: Date(), repostCount: 1)
+
+        post.applyOptimisticRepost()
+        XCTAssertTrue(post.isReposted)
+        XCTAssertEqual(post.repostCount, 2)
+
+        post.applyOptimisticUnrepost()
+        XCTAssertFalse(post.isReposted)
+        XCTAssertEqual(post.repostCount, 1)
+    }
+
     func test_samples_returnNonEmptyDeterministicData() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let samples = PostDisplay.samples(now: now)

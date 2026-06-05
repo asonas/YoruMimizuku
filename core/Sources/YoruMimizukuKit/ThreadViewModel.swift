@@ -29,10 +29,44 @@ public final class ThreadViewModel: ObservableObject {
 
     public let uri: String
     private let loader: ThreadLoading
+    private let interactor: PostInteracting?
 
-    public init(loader: ThreadLoading, uri: String) {
+    public init(loader: ThreadLoading, uri: String, interactor: PostInteracting? = nil) {
         self.loader = loader
         self.uri = uri
+        self.interactor = interactor
+    }
+
+    /// Toggle the viewer's like on the focused post, optimistically. No-op unless
+    /// the post is loaded and an interactor was injected.
+    public func toggleLike(_ post: PostDisplay) async {
+        await controller?.toggleLike(post.id)
+    }
+
+    /// Toggle the viewer's repost on the focused post, optimistically.
+    public func toggleRepost(_ post: PostDisplay) async {
+        await controller?.toggleRepost(post.id)
+    }
+
+    private var controller: PostInteractionController? {
+        guard let interactor else { return nil }
+        return PostInteractionController(
+            interactor: interactor,
+            currentPost: { [weak self] id in self?.post(id: id) },
+            writePost: { [weak self] post in self?.write(post) }
+        )
+    }
+
+    /// Only the focused post is interactive in the conversation view; ancestors are
+    /// re-anchor targets, so a non-matching id resolves to nil.
+    private func post(id: String) -> PostDisplay? {
+        guard case let .loaded(focus) = state, focus.id == id else { return nil }
+        return focus
+    }
+
+    private func write(_ post: PostDisplay) {
+        guard case let .loaded(focus) = state, focus.id == post.id else { return }
+        state = .loaded(post)
     }
 
     /// Load the thread for `uri`, moving through loading -> loaded/failed.
