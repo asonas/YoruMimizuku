@@ -9,7 +9,8 @@ struct FilterEditorView: View {
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.dismiss) private var dismiss
 
-    /// Title differs for create vs edit; `existing` is only used for the heading.
+    /// `isEditing` only selects the heading/button labels (create vs edit); the
+    /// initial `name`/`query` and the `onSubmit` callback carry all the data.
     let isEditing: Bool
     /// Called with the resolved (trimmed, name-fallback-applied) name and query.
     let onSubmit: (_ name: String, _ query: String) -> Void
