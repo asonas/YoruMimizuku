@@ -45,13 +45,18 @@ struct SidebarView: View {
     private func editor(for request: EditorRequest) -> some View {
         switch request {
         case .new:
-            FilterEditorView(name: "", query: "", isEditing: false) { name, query in
-                workspace.addFilter(name: name, query: query)
+            FilterEditorView(name: "", terms: [], combinator: .and, isEditing: false) { name, terms, combinator in
+                workspace.addFilter(name: name, terms: terms, combinator: combinator)
             }
         case let .edit(filter):
-            FilterEditorView(name: filter.name, query: filter.query, isEditing: true) { name, query in
+            FilterEditorView(name: filter.name, terms: filter.terms, combinator: filter.combinator, isEditing: true) { name, terms, combinator in
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                let candidate = SavedFilter(id: filter.id, name: trimmed, terms: terms, combinator: combinator, createdAt: filter.createdAt)
+                let resolvedName = trimmed.isEmpty
+                    ? candidate.subqueries.joined(separator: combinator == .or ? " | " : " ")
+                    : trimmed
                 workspace.updateFilter(
-                    SavedFilter(id: filter.id, name: name, query: query, createdAt: filter.createdAt)
+                    SavedFilter(id: filter.id, name: resolvedName, terms: terms, combinator: combinator, createdAt: filter.createdAt)
                 )
             }
         }
@@ -118,7 +123,7 @@ struct SidebarView: View {
                 SidebarRow(
                     icon: "line.3.horizontal.decrease",
                     title: tab.title,
-                    meta: tab.query,
+                    meta: tab.summary,
                     isSelected: workspace.selection == .filter(tab.id),
                     onClose: { workspace.removeFilter(id: tab.id) },
                     onEdit: {

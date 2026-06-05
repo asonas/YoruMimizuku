@@ -1,32 +1,39 @@
 import SwiftUI
 import YoruMimizukuKit
 
-/// Sheet for creating or editing a saved filter: a name field and a raw
-/// `searchPosts` query field. Save is disabled until the query is non-blank; a
-/// blank name falls back to the query. The caller decides whether the submitted
-/// name/query create a new filter or update an existing one.
+/// Sheet for creating or editing a structured filter: a name, an AND/OR selector,
+/// and a list of typed condition rows (keyword / user / hashtag / mention). Save is
+/// disabled until at least one row expands to a usable query. The caller decides
+/// whether the submitted values create a new filter or update an existing one.
 struct FilterEditorView: View {
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.dismiss) private var dismiss
 
-    /// `isEditing` only selects the heading/button labels (create vs edit); the
-    /// initial `name`/`query` and the `onSubmit` callback carry all the data.
     let isEditing: Bool
-    /// Called with the resolved (trimmed, name-fallback-applied) name and query.
-    let onSubmit: (_ name: String, _ query: String) -> Void
+    let onSubmit: (_ name: String, _ terms: [FilterTerm], _ combinator: FilterCombinator) -> Void
 
     @State private var name: String
-    @State private var query: String
+    @State private var combinator: FilterCombinator
+    @State private var terms: [FilterTerm]
 
-    init(name: String, query: String, isEditing: Bool, onSubmit: @escaping (String, String) -> Void) {
+    init(
+        name: String,
+        terms: [FilterTerm],
+        combinator: FilterCombinator,
+        isEditing: Bool,
+        onSubmit: @escaping (String, [FilterTerm], FilterCombinator) -> Void
+    ) {
         self.isEditing = isEditing
         self.onSubmit = onSubmit
         _name = State(initialValue: name)
-        _query = State(initialValue: query)
+        _combinator = State(initialValue: combinator)
+        // Always show at least one editable row.
+        _terms = State(initialValue: terms.isEmpty ? [FilterTerm(kind: .keyword, value: "")] : terms)
     }
 
-    private var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool { !trimmedQuery.isEmpty }
+    private var canSave: Bool {
+        !SavedFilter(name: "", terms: terms, combinator: combinator).subqueries.isEmpty
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -36,25 +43,59 @@ struct FilterEditorView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("名前").font(.caption).foregroundStyle(theme.secondaryText)
-                TextField("例: Swift", text: $name)
+                TextField("例: Swift界隈", text: $name)
                     .textFieldStyle(.roundedBorder)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("検索クエリ").font(.caption).foregroundStyle(theme.secondaryText)
-                TextField("例: #swift from:alice.bsky.social", text: $query)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                Text("ハッシュタグ・from:ユーザー名・キーワードなどを指定できます")
-                    .font(.caption2).foregroundStyle(theme.tertiaryText)
+            Picker("結合", selection: $combinator) {
+                Text("すべて満たす（AND）").tag(FilterCombinator.and)
+                Text("いずれか（OR）").tag(FilterCombinator.or)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("条件").font(.caption).foregroundStyle(theme.secondaryText)
+                ForEach($terms) { $term in
+                    HStack(spacing: 8) {
+                        Picker("種別", selection: $term.kind) {
+                            Text("キーワード").tag(FilterTermKind.keyword)
+                            Text("ユーザー").tag(FilterTermKind.user)
+                            Text("ハッシュタグ").tag(FilterTermKind.hashtag)
+                            Text("メンション").tag(FilterTermKind.mention)
+                        }
+                        .labelsHidden()
+                        .frame(width: 130)
+
+                        TextField(placeholder(for: term.kind), text: $term.value)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button {
+                            terms.removeAll { $0.id == term.id }
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(theme.tertiaryText)
+                        .disabled(terms.count <= 1)
+                    }
+                }
+
+                Button {
+                    terms.append(FilterTerm(kind: .keyword, value: ""))
+                } label: {
+                    Label("条件を追加", systemImage: "plus")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(theme.accent)
+                .padding(.top, 2)
             }
 
             HStack {
                 Spacer()
                 Button("キャンセル") { dismiss() }
                 Button(isEditing ? "保存" : "追加") {
-                    let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    onSubmit(trimmedName.isEmpty ? trimmedQuery : trimmedName, trimmedQuery)
+                    onSubmit(name, terms, combinator)
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -63,7 +104,16 @@ struct FilterEditorView: View {
             }
         }
         .padding(20)
-        .frame(width: 380)
+        .frame(width: 460)
         .background(theme.background)
+    }
+
+    private func placeholder(for kind: FilterTermKind) -> String {
+        switch kind {
+        case .keyword: return "キーワード"
+        case .user: return "alice.bsky.social"
+        case .hashtag: return "swift"
+        case .mention: return "bob.bsky.social"
+        }
     }
 }

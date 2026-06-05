@@ -50,33 +50,48 @@ public final class ConversationTab: Identifiable {
     }
 }
 
-/// One filter tab: a saved search subscription. `id` mirrors the backing
-/// `SavedFilter.id`; it owns a `TimelineViewModel` whose loader runs the search
-/// query, so the existing timeline machinery (polling, infinite scroll) is reused
-/// unchanged. Editing relabels and, when the query changes, rebuilds the model.
+/// One filter tab: a saved structured search. `id` mirrors the backing
+/// `SavedFilter.id`; it owns a `TimelineViewModel` whose loader runs the filter's
+/// expanded subqueries, reusing the timeline machinery unchanged. Editing relabels
+/// and, when the expanded queries change, rebuilds the model.
 @MainActor
 public final class FilterTab: Identifiable {
     public let id: UUID
     public private(set) var title: String
-    public private(set) var query: String
+    public private(set) var filter: SavedFilter
     public private(set) var model: TimelineViewModel
-    private let makeModel: @MainActor (String) -> TimelineViewModel
+    private let makeModel: @MainActor (SavedFilter) -> TimelineViewModel
 
-    init(filter: SavedFilter, makeModel: @escaping @MainActor (String) -> TimelineViewModel) {
+    init(filter: SavedFilter, makeModel: @escaping @MainActor (SavedFilter) -> TimelineViewModel) {
         self.id = filter.id
         self.title = filter.name
-        self.query = filter.query
+        self.filter = filter
         self.makeModel = makeModel
-        self.model = makeModel(filter.query)
+        self.model = makeModel(filter)
     }
 
-    /// Apply an edited filter: relabel, and if the query changed rebuild the model
-    /// so the next appearance loads the new search.
-    func apply(_ filter: SavedFilter) {
-        title = filter.name
-        if filter.query != query {
-            query = filter.query
-            model = makeModel(filter.query)
+    /// A stable key over the expanded query content, so the view reloads only when
+    /// the actual search changes (not on a pure rename).
+    public var contentKey: String {
+        filter.subqueries.joined(separator: "\u{1}") + "|" + filter.combinator.rawValue
+    }
+
+    /// One-line summary for the sidebar meta row.
+    public var summary: String {
+        switch filter.combinator {
+        case .and: return filter.subqueries.first ?? ""
+        case .or: return "OR: " + filter.subqueries.joined(separator: ", ")
+        }
+    }
+
+    /// Apply an edited filter: relabel, and if the expanded queries changed rebuild
+    /// the model so the next appearance loads the new search.
+    func apply(_ edited: SavedFilter) {
+        let queriesChanged = edited.subqueries != filter.subqueries
+        title = edited.name
+        filter = edited
+        if queriesChanged {
+            model = makeModel(edited)
         }
     }
 }
@@ -98,7 +113,7 @@ public final class WorkspaceModel: ObservableObject {
 
     public let filterStore: SavedFilterStore
     private let makeThreadModel: @MainActor (String) -> ThreadViewModel
-    private let makeFilterModel: @MainActor (String) -> TimelineViewModel
+    private let makeFilterModel: @MainActor (SavedFilter) -> TimelineViewModel
     private let persistence: ConversationPersisting
     /// Set while `restore()` repopulates state from disk so the property observers
     /// do not write the just-loaded state straight back out.
@@ -108,7 +123,7 @@ public final class WorkspaceModel: ObservableObject {
         filterStore: SavedFilterStore,
         persistence: ConversationPersisting = EphemeralConversationStore(),
         makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel,
-        makeFilterModel: @escaping @MainActor (String) -> TimelineViewModel
+        makeFilterModel: @escaping @MainActor (SavedFilter) -> TimelineViewModel
     ) {
         self.filterStore = filterStore
         self.persistence = persistence
@@ -149,10 +164,10 @@ public final class WorkspaceModel: ObservableObject {
 
     // MARK: - Filters
 
-    /// Create a filter from raw name/query, append its tab, and select it. No-op
-    /// when the query is blank (the store rejects it).
-    public func addFilter(name: String, query: String) {
-        guard let saved = filterStore.add(name: name, query: query) else { return }
+    /// Create a filter from typed terms, append its tab, and select it. No-op when
+    /// the terms expand to no usable query (the store rejects it).
+    public func addFilter(name: String, terms: [FilterTerm], combinator: FilterCombinator) {
+        guard let saved = filterStore.add(name: name, terms: terms, combinator: combinator) else { return }
         let tab = FilterTab(filter: saved, makeModel: makeFilterModel)
         filters.append(tab)
         selection = .filter(tab.id)
