@@ -35,6 +35,7 @@ struct PostRowView: View {
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
+    @State private var showRepostOptions = false
 
     private let timeFormatter = RelativeTimeFormatter()
 
@@ -212,34 +213,21 @@ struct PostRowView: View {
             }
             .help("会話を開く")
 
-            Menu {
-                Button {
-                    onSelect()
-                    onRepost()
-                } label: {
-                    Label(post.isReposted ? "リポストを取り消す" : "リポスト", systemImage: "arrow.2.squarepath")
-                }
-                Button {
-                    onSelect()
-                    onQuote()
-                } label: {
-                    Label("引用", systemImage: "quote.bubble")
-                }
+            // A plain Button (not a Menu) so it inherits the same caption font and
+            // metrics as the reply/like buttons — a macOS `Menu` renders its label
+            // through a control that ignores the SwiftUI font, making it larger. The
+            // repost / quote choice opens in a popover instead.
+            Button {
+                onSelect()
+                showRepostOptions = true
             } label: {
-                // Pin the font/label/digit styling on the label itself: the macOS
-                // borderless menu style otherwise renders it at the system control
-                // size, making the repost icon larger and misaligned vs the plain
-                // Button rows beside it.
                 actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
                             active: post.isReposted, activeColor: theme.accent)
-                    .font(.app(.caption))
-                    .labelStyle(.titleAndIcon)
-                    .monospacedDigit()
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
             .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
+            .popover(isPresented: $showRepostOptions, arrowEdge: .bottom) {
+                repostOptions
+            }
 
             Button {
                 onSelect()
@@ -255,6 +243,33 @@ struct PostRowView: View {
         .monospacedDigit()
         .buttonStyle(.plain)
         .padding(.top, 3)
+    }
+
+    /// The repost / quote choices shown in the popover anchored to the repost button.
+    private var repostOptions: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Button {
+                showRepostOptions = false
+                onRepost()
+            } label: {
+                Label(post.isReposted ? "リポストを取り消す" : "リポスト", systemImage: "arrow.2.squarepath")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            Button {
+                showRepostOptions = false
+                onQuote()
+            } label: {
+                Label("引用", systemImage: "quote.bubble")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+        }
+        .font(.app(.callout))
+        .labelStyle(.titleAndIcon)
+        .buttonStyle(.plain)
+        .padding(8)
+        .frame(width: 200)
     }
 
     /// Non-interactive action bar (counts only), used for conversation ancestor rows
