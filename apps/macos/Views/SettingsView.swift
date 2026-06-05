@@ -27,7 +27,7 @@ struct SettingsView: View {
     private var titleBar: some View {
         HStack {
             Text("設定")
-                .font(.title3).bold()
+                .font(.app(.title3, weight: .bold))
                 .foregroundStyle(theme.primaryText)
             Spacer()
             Button("閉じる") { dismiss() }
@@ -54,7 +54,7 @@ struct SettingsView: View {
             selection = tab
         } label: {
             Label(tab.title, systemImage: tab.icon)
-                .font(.callout.weight(isSelected ? .semibold : .regular))
+                .font(.app(.callout, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? theme.primaryText : theme.secondaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 10)
@@ -63,6 +63,7 @@ struct SettingsView: View {
                     RoundedRectangle(cornerRadius: 7)
                         .fill(isSelected ? theme.accent.opacity(0.16) : .clear)
                 )
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -72,6 +73,8 @@ struct SettingsView: View {
         switch selection {
         case .appearance:
             AppearanceSettingsView()
+        case .font:
+            FontSettingsContentView()
         case .display:
             DisplaySettingsContentView()
         }
@@ -81,6 +84,7 @@ struct SettingsView: View {
 /// Categories shown in the settings sidebar.
 private enum SettingsTab: String, CaseIterable, Identifiable {
     case appearance
+    case font
     case display
 
     var id: String { rawValue }
@@ -88,6 +92,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .appearance: return "配色"
+        case .font: return "フォント"
         case .display: return "表示"
         }
     }
@@ -95,6 +100,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .appearance: return "paintpalette"
+        case .font: return "textformat"
         case .display: return "rectangle.grid.1x2"
         }
     }
@@ -117,7 +123,7 @@ private struct AppearanceSettingsView: View {
                 urlField
                 if let errorMessage {
                     Text(errorMessage)
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(.red)
                 }
                 preview
@@ -131,14 +137,14 @@ private struct AppearanceSettingsView: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.headline)
+            .font(.app(.headline))
             .foregroundStyle(theme.primaryText)
     }
 
     private var urlField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("randoma11y の URL")
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(theme.secondaryText)
             HStack(spacing: 8) {
                 TextField("https://randoma11y.com/%2344403c/%23fafaf9", text: $urlInput)
@@ -149,7 +155,7 @@ private struct AppearanceSettingsView: View {
                     .disabled(urlInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             Text("1色目を背景、2色目を文字色として適用します。")
-                .font(.caption2)
+                .font(.app(.caption2))
                 .foregroundStyle(theme.secondaryText)
         }
     }
@@ -157,14 +163,14 @@ private struct AppearanceSettingsView: View {
     private var preview: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("プレビュー")
-                .font(.caption)
+                .font(.app(.caption))
                 .foregroundStyle(theme.secondaryText)
             VStack(alignment: .leading, spacing: 6) {
                 Text("YoruMimizuku")
-                    .font(.headline)
+                    .font(.app(.headline))
                     .foregroundStyle(theme.primaryText)
                 Text("いまどうしてる? — あいうえお Aa 123")
-                    .font(.callout)
+                    .font(.app(.callout))
                     .foregroundStyle(theme.secondaryText)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -221,6 +227,104 @@ private struct AppearanceSettingsView: View {
     }
 }
 
+// MARK: - Font
+
+/// Font settings: pick any installed font family for the whole UI, preview it,
+/// and reset to the default. The chosen family is persisted by `FontSettingsStore`.
+private struct FontSettingsContentView: View {
+    @EnvironmentObject private var theme: ThemeStore
+    @EnvironmentObject private var fontSettings: FontSettingsStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("フォント")
+                    .font(.app(.headline))
+                    .foregroundStyle(theme.primaryText)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("フォントファミリ")
+                        .font(.app(.caption))
+                        .foregroundStyle(theme.secondaryText)
+                    HStack(spacing: 8) {
+                        familyPicker
+                        Button("デフォルトに戻す") { fontSettings.reset() }
+                            .disabled(fontSettings.isDefault)
+                    }
+                    Text("UI 全体のテキストに適用されます。等幅が必要な箇所(数値や @handle など)はシステムフォントのままです。")
+                        .font(.app(.caption2))
+                        .foregroundStyle(theme.secondaryText)
+                }
+
+                sizeControl
+
+                preview
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var familyPicker: some View {
+        Picker("フォントファミリ", selection: $fontSettings.family) {
+            ForEach(fontSettings.availableFamilies, id: \.self) { name in
+                Text(name)
+                    .font(.custom(name, size: 13))
+                    .tag(name)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .frame(maxWidth: 280, alignment: .leading)
+    }
+
+    private var sizeControl: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("フォントサイズ(本文)")
+                    .font(.app(.caption))
+                    .foregroundStyle(theme.secondaryText)
+                Spacer()
+                Stepper(
+                    value: $fontSettings.baseSize,
+                    in: Double(AppTypography.minBaseSize)...Double(AppTypography.maxBaseSize),
+                    step: 1
+                ) {
+                    Text("\(Int(fontSettings.baseSize.rounded())) pt")
+                        .font(.app(.callout))
+                        .foregroundStyle(theme.primaryText)
+                        .monospacedDigit()
+                }
+            }
+            Text("本文の大きさを指定します。見出しや補助テキストはこれに比例して拡大・縮小します。")
+                .font(.app(.caption2))
+                .foregroundStyle(theme.secondaryText)
+        }
+    }
+
+    private var preview: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("プレビュー")
+                .font(.app(.caption))
+                .foregroundStyle(theme.secondaryText)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(fontSettings.family)
+                    .font(.app(.headline))
+                    .foregroundStyle(theme.primaryText)
+                Text("吾輩は猫である。名前はまだ無い。The quick brown fox 0123456789")
+                    .font(.app(.callout))
+                    .foregroundStyle(theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(theme.surface.opacity(0.4))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
+        }
+    }
+}
+
 // MARK: - Display
 
 /// Display settings: choose how densely timeline posts are rendered.
@@ -232,12 +336,12 @@ private struct DisplaySettingsContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("表示")
-                    .font(.headline)
+                    .font(.app(.headline))
                     .foregroundStyle(theme.primaryText)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("表示密度")
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(theme.secondaryText)
                     Picker("表示密度", selection: $displaySettings.density) {
                         Text("コンパクト").tag(DisplayDensity.compact)
@@ -246,7 +350,7 @@ private struct DisplaySettingsContentView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     Text("コンパクトは Yorufukurou 風の密なレイアウト、ゆとりはアバターやサムネイル、アクション数を表示します。")
-                        .font(.caption2)
+                        .font(.app(.caption2))
                         .foregroundStyle(theme.secondaryText)
                 }
             }

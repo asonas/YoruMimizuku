@@ -12,10 +12,10 @@ struct LoginView: View {
             VStack(spacing: 6) {
                 Text("✦").font(.system(size: 30)).foregroundStyle(theme.star)
                 Text("星月夜")
-                    .font(.system(size: 34, weight: .semibold, design: .serif))
+                    .font(.appSize(34, weight: .semibold))
                     .foregroundStyle(theme.primaryText)
                 Text("Bluesky にログイン")
-                    .font(.callout).foregroundStyle(theme.secondaryText)
+                    .font(.app(.callout)).foregroundStyle(theme.secondaryText)
             }
             .padding(.bottom, 8)
 
@@ -41,7 +41,7 @@ struct LoginView: View {
             .disabled(!model.canSubmit)
 
             if case let .failed(message) = model.state {
-                Text(message).font(.caption).foregroundStyle(.red).frame(width: 280)
+                Text(message).font(.app(.caption)).foregroundStyle(.red).frame(width: 280)
             }
         }
         .padding(40)

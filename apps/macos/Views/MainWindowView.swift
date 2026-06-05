@@ -12,6 +12,7 @@ struct MainWindowView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
+    @EnvironmentObject private var fontSettings: FontSettingsStore
     var accountHandle: String
     var accountAvatarURL: URL?
 
@@ -25,6 +26,29 @@ struct MainWindowView: View {
     private let now = Date()
 
     var body: some View {
+        // A stable ZStack hosts the sheet/overlays so changing the font (which
+        // re-ids the inner content to refresh every `.font(.app(...))`) never
+        // dismisses the settings sheet or resets `showSettings`.
+        ZStack {
+            splitView
+                .id("\(fontSettings.family)|\(fontSettings.baseSize)")
+        }
+        // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
+        .background { tabShortcuts }
+        .overlay {
+            if let lightbox {
+                ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
+            }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .environmentObject(theme)
+                .environmentObject(displaySettings)
+                .environmentObject(fontSettings)
+        }
+    }
+
+    private var splitView: some View {
         NavigationSplitView {
             SidebarView(
                 workspace: workspace,
@@ -43,18 +67,6 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 600, minHeight: 540)
-        // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
-        .background { tabShortcuts }
-        .overlay {
-            if let lightbox {
-                ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
-            }
-        }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(theme)
-                .environmentObject(displaySettings)
-        }
     }
 
     // MARK: - Detail routing
@@ -164,7 +176,7 @@ struct MainWindowView: View {
         VStack(spacing: 12) {
             ProgressView().controlSize(.regular)
             Text("夜空を眺めています…")
-                .font(.callout)
+                .font(.app(.callout))
                 .foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity)
@@ -177,9 +189,9 @@ struct MainWindowView: View {
                 .font(.system(size: 26))
                 .foregroundStyle(theme.star)
             Text("タイムラインの読み込みに失敗しました")
-                .font(.callout).foregroundStyle(theme.secondaryText)
+                .font(.app(.callout)).foregroundStyle(theme.secondaryText)
             Text(message)
-                .font(.caption).foregroundStyle(theme.tertiaryText)
+                .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
             Button("再試行") { Task { await model.load() } }
@@ -197,7 +209,7 @@ struct MainWindowView: View {
                 .font(.system(size: 28))
                 .foregroundStyle(theme.tertiaryText)
             Text("まだ投稿がありません")
-                .font(.callout).foregroundStyle(theme.tertiaryText)
+                .font(.app(.callout)).foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)

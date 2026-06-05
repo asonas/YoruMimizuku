@@ -34,16 +34,16 @@ struct ConversationView: View {
             stateMessage {
                 ProgressView().controlSize(.regular)
                 Text("会話を読み込んでいます…")
-                    .font(.callout).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.callout)).foregroundStyle(theme.tertiaryText)
             }
         case let .failed(message):
             stateMessage {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.system(size: 26)).foregroundStyle(theme.star)
                 Text("会話を読み込めませんでした")
-                    .font(.callout).foregroundStyle(theme.secondaryText)
+                    .font(.app(.callout)).foregroundStyle(theme.secondaryText)
                 Text(message)
-                    .font(.caption).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                     .multilineTextAlignment(.center).frame(maxWidth: 320)
                 Button("再試行") { Task { await model.load() } }
                     .buttonStyle(.borderedProminent).tint(theme.accent).padding(.top, 4)
@@ -120,7 +120,7 @@ struct ConversationView: View {
 
     private var rootNotice: some View {
         Label("これがスレッドの起点です", systemImage: "flag")
-            .font(.caption)
+            .font(.app(.caption))
             .foregroundStyle(theme.tertiaryText)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

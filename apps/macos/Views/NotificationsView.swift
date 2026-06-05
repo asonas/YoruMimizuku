@@ -48,7 +48,7 @@ struct NotificationsView: View {
         VStack(spacing: 12) {
             ProgressView().controlSize(.regular)
             Text("通知を読み込んでいます…")
-                .font(.callout).foregroundStyle(theme.tertiaryText)
+                .font(.app(.callout)).foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity).padding(.top, 80)
     }
@@ -58,9 +58,9 @@ struct NotificationsView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 26)).foregroundStyle(theme.star)
             Text("通知の読み込みに失敗しました")
-                .font(.callout).foregroundStyle(theme.secondaryText)
+                .font(.app(.callout)).foregroundStyle(theme.secondaryText)
             Text(message)
-                .font(.caption).foregroundStyle(theme.tertiaryText)
+                .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center).frame(maxWidth: 320)
             Button("再試行") { Task { await model.load() } }
                 .buttonStyle(.borderedProminent).tint(theme.accent).padding(.top, 4)
@@ -73,7 +73,7 @@ struct NotificationsView: View {
             Image(systemName: "bell.slash")
                 .font(.system(size: 28)).foregroundStyle(theme.tertiaryText)
             Text("通知はまだありません")
-                .font(.callout).foregroundStyle(theme.tertiaryText)
+                .font(.app(.callout)).foregroundStyle(theme.tertiaryText)
         }
         .frame(maxWidth: .infinity).padding(.top, 80)
     }
@@ -107,26 +107,26 @@ private struct NotificationRowView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(leadActor?.displayName ?? "")
-                        .font(.subheadline).fontWeight(.semibold)
+                        .font(.app(.subheadline, weight: .semibold))
                         .foregroundStyle(theme.primaryText)
                         .lineLimit(1)
                     if othersCount > 0 {
                         Text("他\(othersCount)人")
-                            .font(.caption).foregroundStyle(theme.tertiaryText)
+                            .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                             .lineLimit(1)
                     }
                     Text(verb)
-                        .font(.caption)
+                        .font(.app(.caption))
                         .foregroundStyle(theme.secondaryText)
                         .lineLimit(1)
                     Spacer(minLength: 4)
                     Text(timeFormatter.string(for: item.latestCreatedAt, now: now))
-                        .font(.caption2).foregroundStyle(theme.tertiaryText)
+                        .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
                         .monospacedDigit()
                 }
                 if othersCount == 0, let handle = leadActor?.handle {
                     Text("@\(handle)")
-                        .font(.caption2).foregroundStyle(theme.tertiaryText)
+                        .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
                         .lineLimit(1).truncationMode(.tail)
                 }
                 context
@@ -153,7 +153,7 @@ private struct NotificationRowView: View {
         default:
             if let text = item.text, !text.isEmpty {
                 Text(text)
-                    .font(.callout).foregroundStyle(theme.secondaryText)
+                    .font(.app(.callout)).foregroundStyle(theme.secondaryText)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 1)
             }
@@ -175,11 +175,11 @@ private struct NotificationRowView: View {
             }
             if !text.isEmpty {
                 Text(text)
-                    .font(.caption).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             } else {
                 Text("画像")
-                    .font(.caption).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
             }
             Spacer(minLength: 0)
         }

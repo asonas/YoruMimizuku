@@ -57,7 +57,7 @@ struct PostRowView: View {
 
     private func contextHeader(_ text: String) -> some View {
         Label(text, systemImage: "arrow.2.squarepath")
-            .font(density == .compact ? .caption2 : .caption)
+            .font(.app(density == .compact ? .caption2 : .caption))
             .foregroundStyle(theme.tertiaryText)
             .labelStyle(.titleAndIcon)
             .lineLimit(1)
@@ -68,8 +68,7 @@ struct PostRowView: View {
             onReplyTap(parent)
         } label: {
             Label("@\(parent.authorHandle) への返信", systemImage: "arrowshape.turn.up.left")
-                .font(density == .compact ? .caption2 : .caption)
-                .fontWeight(.medium)
+                .font(.app(density == .compact ? .caption2 : .caption, weight: .medium))
                 .foregroundStyle(theme.accent)
                 .lineLimit(1)
         }
@@ -95,7 +94,7 @@ struct PostRowView: View {
         VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
             Text(bodyAttributed)
-                .font(density == .compact ? .callout : .body)
+                .font(.app(density == .compact ? .callout : .body))
                 .foregroundStyle(theme.primaryText)
                 .tint(theme.accent)
                 .lineSpacing(density == .compact ? 1 : 2)
@@ -169,17 +168,17 @@ struct PostRowView: View {
     private var authorLine: some View {
         HStack(spacing: density == .compact ? 5 : 6) {
             Text(post.authorDisplayName)
-                .font(density == .compact ? .caption : .subheadline).fontWeight(.semibold)
+                .font(.app(density == .compact ? .caption : .subheadline, weight: .semibold))
                 .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
             Text("@\(post.authorHandle)")
-                .font(density == .compact ? .caption2 : .caption)
+                .font(.app(density == .compact ? .caption2 : .caption))
                 .foregroundStyle(theme.tertiaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 4)
             Text(relativeTime)
-                .font(density == .compact ? .caption2 : .caption)
+                .font(.app(density == .compact ? .caption2 : .caption))
                 .foregroundStyle(theme.tertiaryText)
                 .monospacedDigit()
         }
@@ -191,7 +190,7 @@ struct PostRowView: View {
             Label("\(post.repostCount)", systemImage: "arrow.2.squarepath")
             Label("\(post.likeCount)", systemImage: "heart")
         }
-        .font(.caption)
+        .font(.app(.caption))
         .foregroundStyle(theme.tertiaryText)
         .labelStyle(.titleAndIcon)
         .monospacedDigit()

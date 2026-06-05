@@ -14,6 +14,7 @@ struct RootView: View {
     @StateObject private var workspace: WorkspaceModel
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
+    @StateObject private var fontSettings = FontSettingsStore()
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
@@ -61,6 +62,11 @@ struct RootView: View {
         }
         .environmentObject(themeStore)
         .environmentObject(displaySettings)
+        .environmentObject(fontSettings)
+        // Establish the app-wide base font and Japanese typesetting so line metrics
+        // and glyph selection are correct regardless of UI locale.
+        .font(.app(.body))
+        .typesettingLanguage(.init(languageCode: .japanese))
     }
 
     /// Handle of the current account for the account chip; falls back to the DID.

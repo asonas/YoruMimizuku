@@ -70,7 +70,7 @@ struct SidebarView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.appSize(10, weight: .semibold))
             .tracking(1)
             .foregroundStyle(theme.tertiaryText)
             .padding(.horizontal, 12)
@@ -82,7 +82,7 @@ struct SidebarView: View {
         HStack(spacing: 8) {
             accountAvatar
             Text("@\(accountHandle)")
-                .font(.caption.weight(.medium))
+                .font(.app(.caption, weight: .medium))
                 .foregroundStyle(theme.secondaryText)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -147,14 +147,14 @@ private struct SidebarRow: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 12.5, weight: .semibold))
+                        .font(.appSize(12.5, weight: .semibold))
                         .foregroundStyle(titleColor)
                         .lineLimit(1)
                         .truncationMode(.tail)
 
                     if let subtitle, !subtitle.isEmpty {
                         Text(subtitle)
-                            .font(.system(size: 11))
+                            .font(.appSize(11))
                             .foregroundStyle(subtitleColor)
                             .lineLimit(2)
                             .truncationMode(.tail)

@@ -27,7 +27,7 @@ struct DetailHeader<Trailing: View>: View {
             }
             if let title {
                 Text(title)
-                    .font(.headline)
+                    .font(.app(.headline))
                     .foregroundStyle(theme.primaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
