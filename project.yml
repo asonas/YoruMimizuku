@@ -2,7 +2,7 @@ name: YoruMimizuku
 options:
   bundleIdPrefix: as.ason
   deploymentTarget:
-    macOS: "26.0"
+    macOS: "15.0"
   createIntermediateGroups: true
 packages:
   BlueskyCore:
@@ -24,7 +24,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizuku
         PRODUCT_NAME: YoruMimizuku
-        MARKETING_VERSION: "0.3.0"
+        MARKETING_VERSION: "0.4.0"
         CURRENT_PROJECT_VERSION: "2"
         SWIFT_VERSION: "6.0"
         ENABLE_HARDENED_RUNTIME: YES
@@ -35,7 +35,7 @@ targets:
       path: apps/macos/Info.plist
       properties:
         CFBundleDisplayName: YoruMimizuku
-        LSMinimumSystemVersion: "26.0"
+        LSMinimumSystemVersion: "15.0"
         CFBundleURLTypes:
           - CFBundleURLName: as.ason.YoruMimizuku
             CFBundleURLSchemes:
