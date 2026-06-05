@@ -26,7 +26,7 @@ public enum FacetDetector {
 
     /// Detect all facets and return them sorted by byte start.
     public static func detect(text: String) -> [DetectedFacet] {
-        let all = detectLinks(text) + detectTags(text)
+        let all = detectLinks(text) + detectTags(text) + detectMentions(text)
         return all.sorted { $0.byteStart < $1.byteStart }
     }
 
@@ -80,6 +80,28 @@ public enum FacetDetector {
             let byteStart = Array(prefix.utf8).count
             let byteEnd = byteStart + Array(("#" + tag).utf8).count
             facets.append(DetectedFacet(byteStart: byteStart, byteEnd: byteEnd, feature: .tag(tag: tag)))
+        }
+        return facets
+    }
+
+    // A mention starts at text start or after whitespace / '(' / '[' and matches a
+    // domain-shaped handle. The byte range covers '@' + handle; PostService resolves
+    // the handle to a DID and drops the facet when resolution fails.
+    static func detectMentions(_ text: String) -> [DetectedFacet] {
+        guard text.contains("@") else { return [] }
+        let pattern = "(?:^|[\\s(\\[])@([a-zA-Z0-9._-]+\\.[a-zA-Z]{2,})"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let ns = text as NSString
+        var facets: [DetectedFacet] = []
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            let handleRange = match.range(at: 1)
+            let handle = ns.substring(with: handleRange)
+            let atUTF16 = handleRange.location - 1
+            let prefix = ns.substring(to: atUTF16)
+            let byteStart = Array(prefix.utf8).count
+            let byteEnd = byteStart + Array(("@" + handle).utf8).count
+            facets.append(DetectedFacet(byteStart: byteStart, byteEnd: byteEnd,
+                                        feature: .mentionCandidate(handle: handle)))
         }
         return facets
     }

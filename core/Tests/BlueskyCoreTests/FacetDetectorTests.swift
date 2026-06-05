@@ -42,3 +42,22 @@ extension FacetDetectorTests {
         XCTAssertEqual(facets[0].byteEnd, 8)
     }
 }
+
+extension FacetDetectorTests {
+    func testDetectsMentionCandidate() {
+        let facets = FacetDetector.detect(text: "hi @alice.bsky.social !")
+        XCTAssertEqual(facets.count, 1)
+        XCTAssertEqual(facets[0].feature, .mentionCandidate(handle: "alice.bsky.social"))
+        XCTAssertEqual(facets[0].byteStart, 3)
+        XCTAssertEqual(facets[0].byteEnd, 21)
+    }
+
+    func testSortsMixedFacetsByByteStart() {
+        let facets = FacetDetector.detect(text: "@bob.test #tag https://x.io")
+        XCTAssertEqual(facets.map(\.feature), [
+            .mentionCandidate(handle: "bob.test"),
+            .tag(tag: "tag"),
+            .link(uri: "https://x.io"),
+        ])
+    }
+}
