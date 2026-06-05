@@ -12,6 +12,10 @@ struct PostRowView: View {
     /// Whether to show the "reply to @handle" affordance. Hidden inside the
     /// conversation inspector, where the parent is already on screen.
     var showReplyMarker: Bool = true
+    /// Whether the action bar is tappable (like / repost / quote / open conversation).
+    /// Set false where the row is itself wrapped in a button (conversation ancestors)
+    /// so the counts render as plain labels and avoid nested-button ambiguity.
+    var interactiveActions: Bool = true
     /// Called when a thumbnail is tapped with every full-size URL in the post and
     /// the index of the tapped one, so the host can open the lightbox positioned
     /// on that image and let the viewer page through the rest.
@@ -113,7 +117,11 @@ struct PostRowView: View {
                 imageGrid.padding(.top, 3)
             }
             if density == .comfortable {
-                actionBar
+                if interactiveActions {
+                    actionBar
+                } else {
+                    staticActionBar
+                }
             }
         }
     }
@@ -239,6 +247,20 @@ struct PostRowView: View {
         .labelStyle(.titleAndIcon)
         .monospacedDigit()
         .buttonStyle(.plain)
+        .padding(.top, 3)
+    }
+
+    /// Non-interactive action bar (counts only), used for conversation ancestor rows
+    /// that are themselves wrapped in a re-anchor button.
+    private var staticActionBar: some View {
+        HStack(spacing: 26) {
+            actionLabel("\(post.replyCount)", systemImage: "bubble.left")
+            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent)
+            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star)
+        }
+        .font(.app(.caption))
+        .labelStyle(.titleAndIcon)
+        .monospacedDigit()
         .padding(.top, 3)
     }
 

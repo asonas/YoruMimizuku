@@ -105,9 +105,12 @@ struct ConversationView: View {
         Button {
             onOpenConversation(parent)
         } label: {
-            PostRowView(post: parent, density: displaySettings.density, now: now, showReplyMarker: false)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+            PostRowView(
+                post: parent, density: displaySettings.density, now: now,
+                showReplyMarker: false, interactiveActions: false
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help("@\(parent.authorHandle) の会話を開く")
