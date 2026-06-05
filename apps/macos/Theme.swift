@@ -35,10 +35,11 @@ final class ThemeStore: ObservableObject {
     private static let paletteKey = "theme.palette"
     private static let sourceURLKey = "theme.sourceURL"
 
-    /// Moonlit indigo — links, the active source, reply markers, controls.
-    private static let accentColor = Color(hex: 0x8E9DFF)
-    /// Warm gold — reserved for the brand star.
-    private static let starColor = Color(hex: 0xE7C46B)
+    /// Neutral gray — selected tabs, links, the active source, reply markers,
+    /// controls. Monochrome by default; dark enough to carry white text.
+    private static let accentColor = Color(hex: 0x595959)
+    /// Neutral gray — the brand star (kept monochrome with the rest of the UI).
+    private static let starColor = Color(hex: 0x808080)
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -99,7 +100,7 @@ final class ThemeStore: ObservableObject {
     var hairline: Color { Color(palette.text.withOpacity(0.06)) }
     var rowHover: Color { Color(palette.text.withOpacity(0.05)) }
 
-    private var canvasTop: Color { Color(palette.background.blended(toward: palette.text, fraction: 0.14)) }
+    private var canvasTop: Color { Color(palette.background.blended(toward: palette.text, fraction: 0.03)) }
     private var canvasBottom: Color { background }
 
     /// The full-window night canvas: a vertical warm gradient lit by a soft star
