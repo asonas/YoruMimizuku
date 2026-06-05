@@ -98,4 +98,35 @@ final class NotificationGroupTests: XCTestCase {
         XCTAssertEqual(updated.subjectText, "hello")
         XCTAssertEqual(updated.subjectImageURL, url)
     }
+
+    func testActionSummarySingleLikeReadsBlueskyStyle() {
+        let items = [display(id: "1", reason: .like, handle: "joker1007", subjectURI: "at://post/1")]
+        let group = NotificationGroup.group(items)[0]
+        XCTAssertEqual(group.actionSummary, "joker1007があなたの投稿をいいねしました")
+    }
+
+    func testActionSummaryAggregatedLikeMentionsOthersCount() {
+        let items = [
+            display(id: "1", reason: .like, handle: "joker1007", subjectURI: "at://post/1"),
+            display(id: "2", reason: .like, handle: "kiryuanzu", subjectURI: "at://post/1"),
+            display(id: "3", reason: .like, handle: "kakutani", subjectURI: "at://post/1")
+        ]
+        let group = NotificationGroup.group(items)[0]
+        XCTAssertEqual(group.actionSummary, "joker1007および他2人があなたの投稿をいいねしました")
+    }
+
+    func testActionSummaryFollowHasNoSubjectPhrase() {
+        let items = [display(id: "1", reason: .follow, handle: "kokko", subjectURI: nil)]
+        let group = NotificationGroup.group(items)[0]
+        XCTAssertEqual(group.actionSummary, "kokkoがあなたをフォローしました")
+    }
+
+    func testActionSummaryRepostUsesRepostVerb() {
+        let items = [
+            display(id: "1", reason: .repost, handle: "alice", subjectURI: "at://post/1"),
+            display(id: "2", reason: .repost, handle: "bob", subjectURI: "at://post/1")
+        ]
+        let group = NotificationGroup.group(items)[0]
+        XCTAssertEqual(group.actionSummary, "aliceおよび他1人があなたの投稿をリポストしました")
+    }
 }

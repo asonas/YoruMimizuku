@@ -79,56 +79,45 @@ struct NotificationsView: View {
     }
 }
 
-/// One notification row: reason icon, the actor avatar(s), a verb line, and the
-/// context of what was reacted to. For likes/reposts the target post snippet is
-/// shown in a quoted box (so you can see which post got the reaction); aggregated
-/// reactions read "Alice 他N人 がいいねしました". For replies/mentions/quotes the
-/// incoming post body is shown instead. Unread rows carry a faint accent tint.
+/// One notification row, styled after the Bluesky app. A reason icon leads, followed
+/// by a row of the actors' avatars (collapsed) that can expand into a per-actor list
+/// with handles via a chevron. Below sits a single summary sentence ("Aliceおよび他2人が
+/// あなたの投稿をいいねしました · 1分") and, for likes/reposts, the target post shown as
+/// plain grey text. Replies/mentions/quotes show the incoming body. Unread rows carry
+/// a faint accent tint.
 private struct NotificationRowView: View {
     let item: NotificationGroup
     let now: Date
     @EnvironmentObject private var theme: ThemeStore
+    @State private var isExpanded = false
 
     private let timeFormatter = RelativeTimeFormatter()
 
-    private var leadActor: NotificationGroup.Actor? { item.actors.first }
-    private var othersCount: Int { max(0, item.actors.count - 1) }
+    private var leadName: String {
+        guard let actor = item.actors.first else { return "" }
+        return actor.displayName.isEmpty ? actor.handle : actor.displayName
+    }
+
+    /// Only aggregated groups (more than one actor) offer the expand/collapse toggle.
+    private var canExpand: Bool { item.actors.count > 1 }
+
+    private var displayedActors: ArraySlice<NotificationGroup.Actor> { item.actors.prefix(12) }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(iconColor)
                 .frame(width: 20)
-                .padding(.top, 2)
+                .padding(.top, 1)
 
-            avatar
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(leadActor?.displayName ?? "")
-                        .font(.app(.subheadline, weight: .semibold))
-                        .foregroundStyle(theme.primaryText)
-                        .lineLimit(1)
-                    if othersCount > 0 {
-                        Text("他\(othersCount)人")
-                            .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
-                            .lineLimit(1)
-                    }
-                    Text(verb)
-                        .font(.app(.caption))
-                        .foregroundStyle(theme.secondaryText)
-                        .lineLimit(1)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 6) {
+                    if isExpanded { actorList } else { avatarRow }
                     Spacer(minLength: 4)
-                    Text(timeFormatter.string(for: item.latestCreatedAt, now: now))
-                        .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
-                        .monospacedDigit()
+                    if canExpand { expandToggle }
                 }
-                if othersCount == 0, let handle = leadActor?.handle {
-                    Text("@\(handle)")
-                        .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
-                        .lineLimit(1).truncationMode(.tail)
-                }
+                summaryLine
                 context
             }
             Spacer(minLength: 0)
@@ -139,7 +128,60 @@ private struct NotificationRowView: View {
         .background(item.isRead ? Color.clear : theme.accent.opacity(0.06))
     }
 
-    /// The post this notification is about: a quoted snippet of the target post for
+    /// The Bluesky-style sentence with the lead name in bold and the relative time
+    /// folded in as a trailing " · 1分".
+    private var summaryLine: some View {
+        let summary = item.actionSummary
+        let remainder = summary.hasPrefix(leadName) ? String(summary.dropFirst(leadName.count)) : summary
+        let time = timeFormatter.string(for: item.latestCreatedAt, now: now)
+        return (
+            Text(leadName).fontWeight(.semibold).foregroundColor(theme.primaryText)
+            + Text(remainder).foregroundColor(theme.primaryText)
+            + Text("  ·  \(time)").foregroundColor(theme.tertiaryText)
+        )
+        .font(.app(.subheadline))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Collapsed state: a horizontal row of the actors' avatars.
+    private var avatarRow: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(displayedActors.enumerated()), id: \.offset) { _, actor in
+                avatarCircle(actor.avatarURL, size: 26)
+            }
+        }
+    }
+
+    /// Expanded state: one row per actor with avatar, display name and handle.
+    private var actorList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(item.actors.enumerated()), id: \.offset) { _, actor in
+                HStack(spacing: 8) {
+                    avatarCircle(actor.avatarURL, size: 24)
+                    Text(actor.displayName.isEmpty ? actor.handle : actor.displayName)
+                        .font(.app(.caption, weight: .semibold))
+                        .foregroundStyle(theme.primaryText).lineLimit(1)
+                    Text("@\(actor.handle)")
+                        .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
+                        .lineLimit(1).truncationMode(.tail)
+                }
+            }
+        }
+    }
+
+    private var expandToggle: some View {
+        Button { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } } label: {
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.tertiaryText)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(isExpanded ? "非表示" : "すべて表示")
+    }
+
+    /// The post this notification is about: a plain grey snippet of the target post for
     /// likes/reposts, or the incoming body for replies/mentions/quotes.
     @ViewBuilder
     private var context: some View {
@@ -155,54 +197,47 @@ private struct NotificationRowView: View {
                 Text(text)
                     .font(.app(.callout)).foregroundStyle(theme.secondaryText)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 1)
             }
         }
     }
 
+    /// The liked/reposted post, rendered as plain grey text (no bordered box) to mirror
+    /// the Bluesky app. An image-only post falls back to a small thumbnail.
     private func subjectSnippet(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             if let imageURL = item.subjectImageURL {
-                RemoteImage(url: imageURL, maxPointSize: 36) { phase in
+                RemoteImage(url: imageURL, maxPointSize: 32) { phase in
                     if case let .success(image) = phase {
                         image.resizable().scaledToFill()
                     } else {
                         theme.avatarPlaceholder
                     }
                 }
-                .frame(width: 36, height: 36)
+                .frame(width: 32, height: 32)
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             }
             if !text.isEmpty {
                 Text(text)
-                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             } else {
                 Text("画像")
-                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
+                    .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
             }
             Spacer(minLength: 0)
         }
-        .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.surface.opacity(0.5))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(theme.hairline, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .padding(.top, 3)
     }
 
-    private var avatar: some View {
-        RemoteImage(url: leadActor?.avatarURL, maxPointSize: 30) { phase in
+    private func avatarCircle(_ url: URL?, size: CGFloat) -> some View {
+        RemoteImage(url: url, maxPointSize: size) { phase in
             if case let .success(image) = phase {
                 image.resizable().scaledToFill()
             } else {
                 theme.avatarPlaceholder
             }
         }
-        .frame(width: 30, height: 30)
+        .frame(width: size, height: size)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
     }
@@ -224,18 +259,6 @@ private struct NotificationRowView: View {
         case .like: return theme.star
         case .repost: return theme.accent
         default: return theme.secondaryText
-        }
-    }
-
-    private var verb: String {
-        switch item.reason {
-        case .like: return "がいいねしました"
-        case .repost: return "がリポストしました"
-        case .follow: return "がフォローしました"
-        case .mention: return "がメンションしました"
-        case .reply: return "が返信しました"
-        case .quote: return "が引用しました"
-        case .other: return "のアクティビティ"
         }
     }
 }
