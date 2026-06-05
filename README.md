@@ -87,4 +87,9 @@ Distribution requires an Apple Developer ID; forks must set their own `DEVELOPME
 
 ## License
 
-Not yet specified.
+YoruMimizuku is released under the [MIT License](LICENSE).
+
+It depends on [swift-crypto](https://github.com/apple/swift-crypto) and
+[swift-asn1](https://github.com/apple/swift-asn1), both licensed under Apache License 2.0,
+which is compatible with MIT. When redistributing a built binary, retain their license and
+NOTICE files as Apache 2.0 requires.
