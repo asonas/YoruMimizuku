@@ -55,7 +55,7 @@ final class ThreadServiceTests: XCTestCase {
             "unexpected url: \(sent.url.absoluteString)"
         )
         XCTAssertTrue(sent.url.query?.contains("uri=") == true)
-        XCTAssertTrue(sent.url.query?.contains("parentHeight=1") == true)
+        XCTAssertTrue(sent.url.query?.contains("parentHeight=80") == true)
         XCTAssertEqual(sent.headers["Authorization"], "DPoP atk")
         XCTAssertNotNil(sent.headers["DPoP"])
     }

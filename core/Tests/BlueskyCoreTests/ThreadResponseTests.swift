@@ -35,6 +35,50 @@ final class ThreadResponseTests: XCTestCase {
         XCTAssertEqual(response.thread.parentPost?.record.text, "親の投稿")
     }
 
+    func testDecodesFullAncestorChain() throws {
+        let body = Data(##"""
+        {
+          "thread": {
+            "$type": "app.bsky.feed.defs#threadViewPost",
+            "post": {
+              "uri": "at://did:plc:c/app.bsky.feed.post/leaf",
+              "cid": "cidc",
+              "author": { "did": "did:plc:c", "handle": "carol.bsky.social" },
+              "record": { "text": "孫", "createdAt": "2026-06-04T12:10:00.000Z" },
+              "indexedAt": "2026-06-04T12:10:01.000Z"
+            },
+            "parent": {
+              "$type": "app.bsky.feed.defs#threadViewPost",
+              "post": {
+                "uri": "at://did:plc:b/app.bsky.feed.post/mid",
+                "cid": "cidb",
+                "author": { "did": "did:plc:b", "handle": "bob.bsky.social" },
+                "record": { "text": "子", "createdAt": "2026-06-04T12:05:00.000Z" },
+                "indexedAt": "2026-06-04T12:05:01.000Z"
+              },
+              "parent": {
+                "$type": "app.bsky.feed.defs#threadViewPost",
+                "post": {
+                  "uri": "at://did:plc:a/app.bsky.feed.post/root",
+                  "cid": "cida",
+                  "author": { "did": "did:plc:a", "handle": "alice.bsky.social" },
+                  "record": { "text": "親", "createdAt": "2026-06-04T12:00:00.000Z" },
+                  "indexedAt": "2026-06-04T12:00:01.000Z"
+                }
+              }
+            }
+          }
+        }
+        """##.utf8)
+
+        let response = try JSONDecoder().decode(ThreadResponse.self, from: body)
+
+        XCTAssertEqual(response.thread.post.author.handle, "carol.bsky.social")
+        XCTAssertEqual(response.thread.parent?.post.author.handle, "bob.bsky.social")
+        XCTAssertEqual(response.thread.parent?.parent?.post.author.handle, "alice.bsky.social")
+        XCTAssertNil(response.thread.parent?.parent?.parent)
+    }
+
     func testParentIsNilForNotFoundOrAbsentParent() throws {
         let body = Data(##"""
         {

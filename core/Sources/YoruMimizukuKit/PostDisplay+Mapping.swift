@@ -44,12 +44,12 @@ extension PostDisplay {
         self.init(postView: feedViewPost.post, replyParent: replyParent, contextLabel: contextLabel)
     }
 
-    /// Map a `app.bsky.feed.getPostThread` node into a `PostDisplay` whose
-    /// `replyParent` is the immediate ancestor (when present). Opening that parent
-    /// in a new tab fetches its own thread, so the chain can be climbed recursively.
+    /// Map a `app.bsky.feed.getPostThread` node into a `PostDisplay`, recursively
+    /// building the full `replyParent` chain so the conversation view can render
+    /// every ancestor up to the thread root in one pass.
     public init(_ threadViewPost: ThreadViewPost) {
-        let replyParent = threadViewPost.parentPost.map { parent in
-            ReplyParent(PostDisplay(postView: parent))
+        let replyParent = threadViewPost.parent.map { parent in
+            ReplyParent(PostDisplay(parent))
         }
         self.init(postView: threadViewPost.post, replyParent: replyParent)
     }

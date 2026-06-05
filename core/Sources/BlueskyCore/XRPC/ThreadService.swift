@@ -63,12 +63,13 @@ public struct ThreadService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL("app.bsky.feed.getPostThread")
         }
-        // We only render the focused post and its immediate parent; one level of
-        // ancestry (and no descendants) is all that is needed per tab.
+        // The conversation view climbs the whole reply tree above the focused post,
+        // so request the full ancestor chain (the lexicon's default height) and no
+        // descendants.
         components.queryItems = [
             URLQueryItem(name: "uri", value: uri),
             URLQueryItem(name: "depth", value: "0"),
-            URLQueryItem(name: "parentHeight", value: "1")
+            URLQueryItem(name: "parentHeight", value: "80")
         ]
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.feed.getPostThread")

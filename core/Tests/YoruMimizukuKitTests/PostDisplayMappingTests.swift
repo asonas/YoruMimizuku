@@ -133,6 +133,23 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.replyParent?.post.body, "起点の投稿")
     }
 
+    func testMapsThreadViewPostFullAncestorChain() {
+        let root = post(uri: "at://p/root", handle: "alice.bsky.social", text: "親")
+        let mid = post(uri: "at://p/mid", handle: "bob.bsky.social", text: "子")
+        let leaf = post(uri: "at://p/leaf", handle: "carol.bsky.social", text: "孫")
+        let node = ThreadViewPost(
+            post: leaf,
+            parent: ThreadViewPost(post: mid, parent: ThreadViewPost(post: root))
+        )
+
+        let display = PostDisplay(node)
+
+        XCTAssertEqual(display.id, "at://p/leaf")
+        XCTAssertEqual(display.replyParent?.post.id, "at://p/mid")
+        XCTAssertEqual(display.replyParent?.post.replyParent?.post.id, "at://p/root")
+        XCTAssertNil(display.replyParent?.post.replyParent?.post.replyParent)
+    }
+
     func testMapsThreadViewPostWithoutParent() {
         let focus = post(uri: "at://did:plc:alice/app.bsky.feed.post/root", text: "起点")
         let display = PostDisplay(ThreadViewPost(post: focus, parentPost: nil))

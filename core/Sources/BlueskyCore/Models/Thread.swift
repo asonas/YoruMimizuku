@@ -1,8 +1,8 @@
 import Foundation
 
 /// Response of `app.bsky.feed.getPostThread`: the requested post wrapped in a
-/// thread node. Only the focused post and its immediate parent are modeled —
-/// climbing further up the tree is done by fetching the parent's own thread.
+/// thread node. The node carries the full ancestor chain via nested `parent`
+/// links, so the whole reply tree above the focused post can be rendered at once.
 public struct ThreadResponse: Decodable, Equatable, Sendable {
     public let thread: ThreadViewPost
 
@@ -11,16 +11,29 @@ public struct ThreadResponse: Decodable, Equatable, Sendable {
     }
 }
 
-/// A node in a post thread (`app.bsky.feed.defs#threadViewPost`). `parentPost` is
-/// the hydrated immediate parent, or nil when the parent is absent / not viewable
-/// (notFound / blocked), so decoding never fails on those stub shapes.
+/// A node in a post thread (`app.bsky.feed.defs#threadViewPost`). `parent` is the
+/// next node up the reply tree (recursively carrying its own ancestors), or nil
+/// when the parent is absent / not viewable (notFound / blocked) — those stub
+/// shapes decode to nil rather than failing the whole thread.
 public struct ThreadViewPost: Decodable, Equatable, Sendable {
     public let post: PostView
-    public let parentPost: PostView?
+    private let parentRef: ParentNodeRef?
 
-    public init(post: PostView, parentPost: PostView? = nil) {
+    /// The next node up the reply tree, if any.
+    public var parent: ThreadViewPost? { parentRef?.node }
+
+    /// The hydrated immediate parent post, if any. Convenience over `parent.post`.
+    public var parentPost: PostView? { parent?.post }
+
+    public init(post: PostView, parent: ThreadViewPost? = nil) {
         self.post = post
-        self.parentPost = parentPost
+        self.parentRef = parent.map(ParentNodeRef.init)
+    }
+
+    /// Convenience initializer that wraps a bare parent post into a node. Kept so
+    /// callers/tests can build a single-level thread without nesting by hand.
+    public init(post: PostView, parentPost: PostView?) {
+        self.init(post: post, parent: parentPost.map { ThreadViewPost(post: $0) })
     }
 
     enum CodingKeys: String, CodingKey { case post, parent }
@@ -28,20 +41,23 @@ public struct ThreadViewPost: Decodable, Equatable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.post = try container.decode(PostView.self, forKey: .post)
-        let parentNode = try? container.decodeIfPresent(ParentNode.self, forKey: .parent)
-        self.parentPost = (parentNode ?? nil)?.post
+        // A notFound/blocked parent has no `post`, so its decode throws and we
+        // collapse it (and anything above it) to nil; a real parent recurses.
+        let parent = (try? container.decodeIfPresent(ThreadViewPost.self, forKey: .parent)) ?? nil
+        self.parentRef = parent.map(ParentNodeRef.init)
     }
 }
 
-/// Decodes only the `post` of a parent thread node, yielding nil for notFound /
-/// blocked parents that carry no hydrated post.
-private struct ParentNode: Decodable {
-    let post: PostView?
+/// Reference box that breaks the otherwise-recursive value type (`ThreadViewPost`
+/// holding a `ThreadViewPost`). Immutable, so it stays `Sendable`.
+public final class ParentNodeRef: Equatable, Sendable {
+    public let node: ThreadViewPost
 
-    private enum CodingKeys: String, CodingKey { case post }
+    public init(_ node: ThreadViewPost) {
+        self.node = node
+    }
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.post = try? container.decodeIfPresent(PostView.self, forKey: .post)
+    public static func == (lhs: ParentNodeRef, rhs: ParentNodeRef) -> Bool {
+        lhs.node == rhs.node
     }
 }

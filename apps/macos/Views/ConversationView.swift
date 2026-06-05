@@ -2,9 +2,9 @@ import SwiftUI
 import YoruMimizukuKit
 
 /// One conversation tab's content: the focused post (left-marked as "current")
-/// plus its immediate parent. Tapping the parent opens a new tab anchored on it,
-/// whose own fetch reveals the next ancestor — so the reply tree is climbed
-/// recursively, one tab per level.
+/// preceded by its full ancestor chain, oldest first, up to the thread root. Each
+/// ancestor is tappable to re-anchor the tab on it. The chain is built from the
+/// recursive `replyParent` links the thread fetch hydrates in one request.
 struct ConversationView: View {
     @ObservedObject var model: ThreadViewModel
     @EnvironmentObject private var theme: ThemeStore
@@ -54,38 +54,44 @@ struct ConversationView: View {
     }
 
     private func loaded(_ focus: PostDisplay) -> some View {
-        ScrollView {
+        let ancestors = self.ancestors(of: focus)
+        return ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if let parent = focus.replyParent?.post {
-                    parentBlock(parent)
+                if ancestors.isEmpty {
+                    rootNotice
+                }
+                ForEach(ancestors) { ancestor in
+                    parentBlock(ancestor)
                     Divider().overlay(theme.divider)
                     connector
                 }
                 focusBlock(focus)
                 Divider().overlay(theme.divider)
-                if focus.replyParent == nil {
-                    rootNotice
-                }
             }
         }
     }
 
-    /// The parent post, wrapped as a button that climbs to its own conversation.
-    /// Image taps are disabled here so the climb gesture stays unambiguous.
+    /// The focused post's ancestors, ordered oldest (thread root) first so they
+    /// read top-to-bottom down to the focused post.
+    private func ancestors(of focus: PostDisplay) -> [PostDisplay] {
+        var chain: [PostDisplay] = []
+        var current = focus.replyParent?.post
+        while let post = current {
+            chain.append(post)
+            current = post.replyParent?.post
+        }
+        return chain.reversed()
+    }
+
+    /// An ancestor post, wrapped as a button that re-anchors the tab on it. Image
+    /// taps are disabled here so the climb gesture stays unambiguous.
     private func parentBlock(_ parent: PostDisplay) -> some View {
         Button {
             onOpenConversation(parent)
         } label: {
-            VStack(alignment: .leading, spacing: 0) {
-                Label("親の投稿を開いて遡る", systemImage: "arrow.up")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(theme.accent)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
-                PostRowView(post: parent, density: displaySettings.density, now: now, showReplyMarker: false)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            PostRowView(post: parent, density: displaySettings.density, now: now, showReplyMarker: false)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help("@\(parent.authorHandle) の会話を開く")
