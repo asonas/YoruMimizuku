@@ -41,18 +41,37 @@ xcodebuild -exportArchive \
 """
 
 [tasks.dmg]
-description = "Package the exported .app into a signed DMG"
+description = "Package the exported .app into a signed DMG with an /Applications drop link"
 depends = ["export"]
 run = """
-rm -f "$BUILD_DIR/$APP_NAME.dmg"
-hdiutil create \
-  -volname "$APP_NAME" \
-  -srcfolder "$BUILD_DIR/export/$APP_NAME.app" \
-  -ov -format UDZO \
-  "$BUILD_DIR/$APP_NAME.dmg"
-codesign --force --timestamp \
-  --sign "$SIGN_IDENTITY" \
-  "$BUILD_DIR/$APP_NAME.dmg"
+set -euo pipefail
+app="$BUILD_DIR/export/$APP_NAME.app"
+staging="$BUILD_DIR/dmg-staging"
+rw_dmg="$BUILD_DIR/$APP_NAME-rw.dmg"
+final_dmg="$BUILD_DIR/$APP_NAME.dmg"
+
+# Stage the app next to an /Applications symlink so the window offers drag-to-install.
+rm -rf "$staging" "$rw_dmg" "$final_dmg"
+mkdir -p "$staging"
+cp -R "$app" "$staging/"
+ln -s /Applications "$staging/Applications"
+
+# A read-write image we can arrange in Finder before compressing.
+hdiutil create -volname "$APP_NAME" -srcfolder "$staging" -fs HFS+ -format UDRW -ov "$rw_dmg"
+
+# Arrange the icons. Best-effort: a headless machine has no Finder, so ignore failures
+# and still ship a valid (unstyled) DMG.
+mount_dir="$(mktemp -d)"
+hdiutil attach "$rw_dmg" -mountpoint "$mount_dir" -nobrowse -noautoopen
+osascript scripts/dmg-layout.applescript "$APP_NAME" "$APP_NAME.app" || true
+sync
+hdiutil detach "$mount_dir" || hdiutil detach "$mount_dir" -force
+rmdir "$mount_dir" || true
+
+# Compress to the final read-only image and sign it.
+hdiutil convert "$rw_dmg" -format UDZO -imagekey zlib-level=9 -ov -o "$final_dmg"
+rm -rf "$rw_dmg" "$staging"
+codesign --force --timestamp --sign "$SIGN_IDENTITY" "$final_dmg"
 """
 
 [tasks.notarize]
