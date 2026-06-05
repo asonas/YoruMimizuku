@@ -1,6 +1,10 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
-/// Apple-platform `HTTPClient` backed by URLSession.
+/// `HTTPClient` backed by URLSession. On non-Apple platforms (Windows/Linux),
+/// URLSession lives in the separate `FoundationNetworking` module.
 public struct URLSessionHTTPClient: HTTPClient {
     private let session: URLSession
 

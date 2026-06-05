@@ -1,5 +1,5 @@
 import XCTest
-import CryptoKit
+import Crypto
 @testable import BlueskyCore
 
 final class CryptoKitDPoPProviderTests: XCTestCase {

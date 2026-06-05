@@ -1,5 +1,5 @@
 import Foundation
-import CryptoKit
+import Crypto
 
 /// Apple-platform `DPoPCryptoProvider` backed by CryptoKit's P-256.
 public struct CryptoKitDPoPProvider: DPoPCryptoProvider {
