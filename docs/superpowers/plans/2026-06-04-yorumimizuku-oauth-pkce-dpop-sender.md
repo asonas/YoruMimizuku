@@ -1,4 +1,4 @@
-# Hoshidukiyo OAuth PKCE + DPoP Sender Implementation Plan
+# YoruMimizuku OAuth PKCE + DPoP Sender Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,12 +8,12 @@
 
 **Tech Stack:** Swift 6 / Swift Package Manager / XCTest / Foundation / CryptoKit（PKCE 統合テストの実 SHA-256 のみ）。既存 `BlueskyCore`（macOS 14+/iOS 17+）に追加。
 
-このプランは設計書 `docs/superpowers/specs/2026-06-04-hoshidukiyo-design.md` の §5.2 ステップ3（PKCE）・§5.3（DPoP の `use_dpop_nonce` 1 回リトライ）に対応する。PAR・認可URL構築・トークン交換/リフレッシュは次プラン、`ASWebAuthenticationSession`・Keychain・`AccountManager`・アプリ結線はその後。
+このプランは設計書 `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` の §5.2 ステップ3（PKCE）・§5.3（DPoP の `use_dpop_nonce` 1 回リトライ）に対応する。PAR・認可URL構築・トークン交換/リフレッシュは次プラン、`ASWebAuthenticationSession`・Keychain・`AccountManager`・アプリ結線はその後。
 
 ## 前提・作業ルール
 
-- リポジトリ: `/Users/asonas/workspace/hoshidukiyo`（main に Plan 1–4 マージ済み）
-- worktree: `git -C /Users/asonas/workspace/hoshidukiyo wt feature/oauth-pkce-dpop` → `<wt>` = `/Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop`
+- リポジトリ: `/Users/asonas/workspace/yorumimizuku`（main に Plan 1–4 マージ済み）
+- worktree: `git -C /Users/asonas/workspace/yorumimizuku wt feature/oauth-pkce-dpop` → `<wt>` = `/Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop`
 - コミットは `git -C <wt> ai-commit`（`git commit` 直接実行禁止。ai-commit 不可なら中断して報告）
 - テスト: `swift test --package-path BlueskyCore`（`<wt>` 内）
 - 1 テストずつ Red → Green → Refactor
@@ -37,7 +37,7 @@
 
 - [ ] **Step 0: worktree 作成**
 
-Run: `git -C /Users/asonas/workspace/hoshidukiyo wt feature/oauth-pkce-dpop`
+Run: `git -C /Users/asonas/workspace/yorumimizuku wt feature/oauth-pkce-dpop`
 
 - [ ] **Step 1: 失敗するテストを書く**
 
@@ -130,8 +130,8 @@ Expected: PASS（3 テスト。特に RFC 7636 ベクタ一致が実 SHA-256 の
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Sources/BlueskyCore/OAuth/PKCE.swift BlueskyCore/Tests/BlueskyCoreTests/PKCETests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Sources/BlueskyCore/OAuth/PKCE.swift BlueskyCore/Tests/BlueskyCoreTests/PKCETests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop ai-commit
 ```
 メッセージ例: `Add PKCE generation`
 
@@ -309,8 +309,8 @@ Expected: PASS（2 テスト）。
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Sources/BlueskyCore/OAuth/DPoPRequestSender.swift BlueskyCore/Tests/BlueskyCoreTests/Support/SequencedHTTPClient.swift BlueskyCore/Tests/BlueskyCoreTests/DPoPRequestSenderTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Sources/BlueskyCore/OAuth/DPoPRequestSender.swift BlueskyCore/Tests/BlueskyCoreTests/Support/SequencedHTTPClient.swift BlueskyCore/Tests/BlueskyCoreTests/DPoPRequestSenderTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop ai-commit
 ```
 メッセージ例: `Add DPoP request sender with nonce challenge detection`
 
@@ -390,8 +390,8 @@ Expected: PASS（Task 2 の実装がリトライを処理済み）。FAIL する
 - [ ] **Step 3: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Tests/BlueskyCoreTests/DPoPRequestSenderTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-pkce-dpop ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop add BlueskyCore/Tests/BlueskyCoreTests/DPoPRequestSenderTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-pkce-dpop ai-commit
 ```
 メッセージ例: `Cover DPoP nonce retry path`
 
@@ -434,7 +434,7 @@ Expected: 成功、警告なし。
 - `HTTPClient`/`HTTPRequest`/`HTTPResponse`/`HTTPMethod`（Plan 1）を利用。`SequencedHTTPClient` は順序付きレスポンスのテスト用フェイク。
 
 ## 次プラン（PAR + 認可URL構築）への申し送り
-- `OAuthDiscovery.Result`（Plan 4）＋ クライアント設定（client_id=`https://ason.as/hoshidukiyo/client-metadata.json`、redirect_uri=`as.ason:/callback`、scope=`atproto transition:generic`）＋ `PKCE` ＋ state を入力に、`DPoPRequestSender.send` で PAR エンドポイントへ POST（フォームエンコード body）→ `request_uri` 取得 → 認可URL `<authorization_endpoint>?client_id=...&request_uri=...` を構築する。
+- `OAuthDiscovery.Result`（Plan 4）＋ クライアント設定（client_id=`https://ason.as/yorumimizuku/client-metadata.json`、redirect_uri=`as.ason:/callback`、scope=`atproto transition:generic`）＋ `PKCE` ＋ state を入力に、`DPoPRequestSender.send` で PAR エンドポイントへ POST（フォームエンコード body）→ `request_uri` 取得 → 認可URL `<authorization_endpoint>?client_id=...&request_uri=...` を構築する。
 - PAR の body は `application/x-www-form-urlencoded`（JSON ではない）。フォームエンコードのヘルパーが要る。`DPoPRequestSender.send` は body/Content-Type を渡せるよう `headers` で `Content-Type` を指定する。
 - state（CSRF 対策のランダム値）と `PKCE` は認可後のコールバックで照合・トークン交換に使うため、呼び出し側で保持する（次プランで `AuthorizationState` 的な型に束ねる）。
 - 乱数源（`generateVerifier`/state 用）の OS 実装（SecRandom 等）は、ブラウザ/Keychain を扱うプラットフォームプランで `RandomBytesGenerator` として用意する。本プランの PKCE は乱数を注入式にしてあるので接続は容易。

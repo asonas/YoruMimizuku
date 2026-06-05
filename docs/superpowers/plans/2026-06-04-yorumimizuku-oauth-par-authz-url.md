@@ -50,9 +50,9 @@ import XCTest
 @testable import BlueskyCore
 
 final class OAuthClientConfigTests: XCTestCase {
-    func testHoshidukiyoProductionConfigMatchesClientMetadata() {
-        let config = OAuthClientConfig.hoshidukiyo
-        XCTAssertEqual(config.clientID, "https://ason.as/hoshidukiyo/client-metadata.json")
+    func testYoruMimizukuProductionConfigMatchesClientMetadata() {
+        let config = OAuthClientConfig.yoruMimizuku
+        XCTAssertEqual(config.clientID, "https://ason.as/yorumimizuku/client-metadata.json")
         XCTAssertEqual(config.redirectURI, "as.ason:/callback")
         XCTAssertEqual(config.scope, "atproto transition:generic")
     }
@@ -82,10 +82,10 @@ public struct OAuthClientConfig: Equatable, Sendable {
         self.scope = scope
     }
 
-    /// Production configuration for Hoshidukiyo. Must stay in sync with
-    /// `https://ason.as/hoshidukiyo/client-metadata.json`.
-    public static let hoshidukiyo = OAuthClientConfig(
-        clientID: "https://ason.as/hoshidukiyo/client-metadata.json",
+    /// Production configuration for YoruMimizuku. Must stay in sync with
+    /// `https://ason.as/yorumimizuku/client-metadata.json`.
+    public static let yorumimizuku = OAuthClientConfig(
+        clientID: "https://ason.as/yorumimizuku/client-metadata.json",
         redirectURI: "as.ason:/callback",
         scope: "atproto transition:generic"
     )
@@ -99,7 +99,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
-Use the `/commit` skill (runs `git ai-commit`). Stage `OAuthClientConfig.swift` + `OAuthClientConfigTests.swift`. Behavioral change. Suggested message: `Add OAuth client config with Hoshidukiyo production values`.
+Use the `/commit` skill (runs `git ai-commit`). Stage `OAuthClientConfig.swift` + `OAuthClientConfigTests.swift`. Behavioral change. Suggested message: `Add OAuth client config with YoruMimizuku production values`.
 
 ---
 
@@ -257,7 +257,7 @@ Use the `/commit` skill. Stage `AuthorizationRequest.swift` + `AuthorizationRequ
     func testFormParametersContainAllRequiredOAuthFields() {
         let pkce = PKCE(codeVerifier: "verifier", codeChallenge: "challenge")
         let request = AuthorizationRequest(
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             pkce: pkce,
             state: "state-123",
             loginHint: "alice.bsky.social"
@@ -265,7 +265,7 @@ Use the `/commit` skill. Stage `AuthorizationRequest.swift` + `AuthorizationRequ
         let params = Dictionary(uniqueKeysWithValues: request.formParameters())
 
         XCTAssertEqual(params["response_type"], "code")
-        XCTAssertEqual(params["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(params["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
         XCTAssertEqual(params["redirect_uri"], "as.ason:/callback")
         XCTAssertEqual(params["scope"], "atproto transition:generic")
         XCTAssertEqual(params["state"], "state-123")
@@ -276,7 +276,7 @@ Use the `/commit` skill. Stage `AuthorizationRequest.swift` + `AuthorizationRequ
 
     func testFormParametersOmitLoginHintWhenNil() {
         let pkce = PKCE(codeVerifier: "v", codeChallenge: "c")
-        let request = AuthorizationRequest(config: .hoshidukiyo, pkce: pkce, state: "s", loginHint: nil)
+        let request = AuthorizationRequest(config: .yoruMimizuku, pkce: pkce, state: "s", loginHint: nil)
         let params = Dictionary(uniqueKeysWithValues: request.formParameters())
         XCTAssertNil(params["login_hint"])
     }
@@ -405,7 +405,7 @@ final class AuthorizationRequestServiceTests: XCTestCase {
 
     private func sampleRequest() -> AuthorizationRequest {
         AuthorizationRequest(
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             pkce: PKCE(codeVerifier: "v", codeChallenge: "c"),
             state: "state-1",
             loginHint: "alice.bsky.social"
@@ -531,7 +531,7 @@ Use the `/commit` skill. Stage `OAuthError.swift` + `AuthorizationRequestService
     func testAuthorizationURLAppendsClientIDAndRequestURI() throws {
         let url = try AuthorizationRequestService.authorizationURL(
             metadata: metadata(par: "https://bsky.social/oauth/par"),
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             requestURI: "urn:ietf:params:oauth:request_uri:abc"
         )
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -541,7 +541,7 @@ Use the `/commit` skill. Stage `OAuthError.swift` + `AuthorizationRequestService
         let items = Dictionary(
             uniqueKeysWithValues: (components?.queryItems ?? []).map { ($0.name, $0.value) }
         )
-        XCTAssertEqual(items["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(items["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
         XCTAssertEqual(items["request_uri"], "urn:ietf:params:oauth:request_uri:abc")
     }
 
@@ -554,7 +554,7 @@ Use the `/commit` skill. Stage `OAuthError.swift` + `AuthorizationRequestService
         let empty = try! JSONDecoder().decode(AuthorizationServerMetadata.self, from: Data(json.utf8))
         XCTAssertThrowsError(
             try AuthorizationRequestService.authorizationURL(
-                metadata: empty, config: .hoshidukiyo, requestURI: "urn:abc"
+                metadata: empty, config: .yoruMimizuku, requestURI: "urn:abc"
             )
         )
     }

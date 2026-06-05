@@ -1,14 +1,14 @@
-# Hoshidukiyo App Icon Implementation Plan
+# YoruMimizuku App Icon Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Generate the Hoshidukiyo macOS app icon (a CC0 horned-owl "ミミズク" rendered in the app's dark + blue B3 style) and wire it into the Xcode project so the built app shows it.
+**Goal:** Generate the YoruMimizuku macOS app icon (a CC0 horned-owl "ミミズク" rendered in the app's dark + blue B3 style) and wire it into the Xcode project so the built app shows it.
 
-**Architecture:** A reproducible pipeline. A CC0 owl SVG is stored as the source of truth under `design/app-icon/`. A Python script cleans the SVG, composes a 1024px "B3" master SVG (diagonal dark gradient background, blue top-lit owl, drop shadows, macOS rounded-square body with margin), and rasterizes every required macOS AppIcon size with `rsvg-convert` directly into `app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/`, writing a valid macOS `Contents.json`. `project.yml` gains `ASSETCATALOG_COMPILER_APPICON_NAME` so XcodeGen-generated project compiles the catalog as the app icon.
+**Architecture:** A reproducible pipeline. A CC0 owl SVG is stored as the source of truth under `design/app-icon/`. A Python script cleans the SVG, composes a 1024px "B3" master SVG (diagonal dark gradient background, blue top-lit owl, drop shadows, macOS rounded-square body with margin), and rasterizes every required macOS AppIcon size with `rsvg-convert` directly into `app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/`, writing a valid macOS `Contents.json`. `project.yml` gains `ASSETCATALOG_COMPILER_APPICON_NAME` so XcodeGen-generated project compiles the catalog as the app icon.
 
 **Tech Stack:** Python 3, librsvg (`rsvg-convert`), XcodeGen, xcodebuild (macOS 14+).
 
-**Working directory:** All paths are relative to the worktree root `/Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-icon` (branch `feature/app-icon`). Run all commands from there.
+**Working directory:** All paths are relative to the worktree root `/Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-icon` (branch `feature/app-icon`). Run all commands from there.
 
 **Commit convention:** This repo commits via the `/commit` skill (`git ai-commit`) — never `git commit` directly. Each "Commit" step lists exactly which files to `git add`; create the commit through the `/commit` skill with the suggested message.
 
@@ -22,9 +22,9 @@ Files created or modified by this plan:
 - Create `design/app-icon/SOURCE.md` — provenance + license record
 - Create `design/app-icon/generate-appicon.py` — the generation script (single responsibility: source SVG → master SVG → appiconset PNGs + Contents.json)
 - Create (generated) `design/app-icon/AppIcon-master.svg` — 1024px master, written by the script; committed for reference
-- Create `app/Hoshidukiyo/Assets.xcassets/Contents.json` — asset catalog root marker
-- Create (generated) `app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/Contents.json` — icon set manifest
-- Create (generated) `app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/icon_*.png` — 10 PNG entries
+- Create `app/YoruMimizuku/Assets.xcassets/Contents.json` — asset catalog root marker
+- Create (generated) `app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/Contents.json` — icon set manifest
+- Create (generated) `app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/icon_*.png` — 10 PNG entries
 - Modify `project.yml` — add `ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon` under `settings.base`
 - Modify `.gitignore` — ignore the throwaway `build/` derived-data directory used for verification
 
@@ -95,8 +95,8 @@ Create the commit via the `/commit` skill. Suggested message: `Add CC0 owl sourc
 **Files:**
 - Create: `design/app-icon/generate-appicon.py`
 - Create (generated): `design/app-icon/AppIcon-master.svg`
-- Create (generated): `app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/Contents.json`
-- Create (generated): `app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/icon_*.png` (10 files)
+- Create (generated): `app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/Contents.json`
+- Create (generated): `app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/icon_*.png` (10 files)
 
 - [ ] **Step 1: Write the generation script**
 
@@ -104,7 +104,7 @@ Create `design/app-icon/generate-appicon.py` with exactly this content:
 
 ```python
 #!/usr/bin/env python3
-"""Generate the Hoshidukiyo macOS AppIcon set from the CC0 owl source SVG.
+"""Generate the YoruMimizuku macOS AppIcon set from the CC0 owl source SVG.
 
 Reproducible pipeline:
   owl-source-original.svg -> cleaned owl paths -> B3 master SVG (1024px)
@@ -122,7 +122,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 SRC = os.path.join(HERE, "owl-source-original.svg")
 MASTER = os.path.join(HERE, "AppIcon-master.svg")
-ICONSET = os.path.join(REPO, "app", "Hoshidukiyo", "Assets.xcassets", "AppIcon.appiconset")
+ICONSET = os.path.join(REPO, "app", "YoruMimizuku", "Assets.xcassets", "AppIcon.appiconset")
 
 CANVAS = 1024
 MARGIN = 100
@@ -255,9 +255,9 @@ wrote Contents.json
 Run:
 ```bash
 ls design/app-icon/AppIcon-master.svg
-ls app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/
-sips -g pixelWidth -g pixelHeight app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png
-python3 -c "import json; d=json.load(open('app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset/Contents.json')); print('entries:', len(d['images']))"
+ls app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/
+sips -g pixelWidth -g pixelHeight app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png
+python3 -c "import json; d=json.load(open('app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset/Contents.json')); print('entries:', len(d['images']))"
 ```
 
 Expected:
@@ -269,7 +269,7 @@ Expected:
 - [ ] **Step 4: Commit**
 
 ```bash
-git add design/app-icon/generate-appicon.py design/app-icon/AppIcon-master.svg app/Hoshidukiyo/Assets.xcassets/AppIcon.appiconset
+git add design/app-icon/generate-appicon.py design/app-icon/AppIcon-master.svg app/YoruMimizuku/Assets.xcassets/AppIcon.appiconset
 ```
 Create the commit via the `/commit` skill. Suggested message: `Generate macOS AppIcon set from owl source`
 
@@ -278,11 +278,11 @@ Create the commit via the `/commit` skill. Suggested message: `Generate macOS Ap
 ## Task 3: Add the asset catalog root marker
 
 **Files:**
-- Create: `app/Hoshidukiyo/Assets.xcassets/Contents.json`
+- Create: `app/YoruMimizuku/Assets.xcassets/Contents.json`
 
 - [ ] **Step 1: Create the catalog root Contents.json**
 
-Create `app/Hoshidukiyo/Assets.xcassets/Contents.json`:
+Create `app/YoruMimizuku/Assets.xcassets/Contents.json`:
 
 ```json
 {
@@ -295,16 +295,16 @@ Create `app/Hoshidukiyo/Assets.xcassets/Contents.json`:
 
 - [ ] **Step 2: Verify the catalog layout**
 
-Run: `find app/Hoshidukiyo/Assets.xcassets -maxdepth 2 -type f | sort`
+Run: `find app/YoruMimizuku/Assets.xcassets -maxdepth 2 -type f | sort`
 
 Expected (12 files): the catalog `Contents.json`, the appiconset `Contents.json`, and the 10 `icon_*.png` files.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add app/Hoshidukiyo/Assets.xcassets/Contents.json
+git add app/YoruMimizuku/Assets.xcassets/Contents.json
 ```
-Create the commit via the `/commit` skill. Suggested message: `Add asset catalog root for Hoshidukiyo`
+Create the commit via the `/commit` skill. Suggested message: `Add asset catalog root for YoruMimizuku`
 
 ---
 
@@ -316,13 +316,13 @@ Create the commit via the `/commit` skill. Suggested message: `Add asset catalog
 
 - [ ] **Step 1: Add the AppIcon build setting**
 
-In `project.yml`, under `targets.Hoshidukiyo.settings.base` (the block that currently ends with `CODE_SIGN_STYLE: Automatic` on line 30), add one line so the block reads:
+In `project.yml`, under `targets.YoruMimizuku.settings.base` (the block that currently ends with `CODE_SIGN_STYLE: Automatic` on line 30), add one line so the block reads:
 
 ```yaml
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: as.ason.Hoshidukiyo
-        PRODUCT_NAME: Hoshidukiyo
+        PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizuku
+        PRODUCT_NAME: YoruMimizuku
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
@@ -344,22 +344,22 @@ grep -qxF 'build/' .gitignore || printf 'build/\n' >> .gitignore
 
 Run: `xcodegen generate --spec project.yml`
 
-Expected: prints `Created project at .../Hoshidukiyo.xcodeproj` (or `Loaded project ... Created project`), exit code 0.
+Expected: prints `Created project at .../YoruMimizuku.xcodeproj` (or `Loaded project ... Created project`), exit code 0.
 
 - [ ] **Step 4: Verify the setting landed in the project**
 
-Run: `grep -c ASSETCATALOG_COMPILER_APPICON_NAME Hoshidukiyo.xcodeproj/project.pbxproj`
+Run: `grep -c ASSETCATALOG_COMPILER_APPICON_NAME YoruMimizuku.xcodeproj/project.pbxproj`
 
 Expected: a number `>= 1` (the setting is present in the generated pbxproj).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add project.yml .gitignore Hoshidukiyo.xcodeproj/project.pbxproj
+git add project.yml .gitignore YoruMimizuku.xcodeproj/project.pbxproj
 ```
-Create the commit via the `/commit` skill. Suggested message: `Set AppIcon for Hoshidukiyo target`
+Create the commit via the `/commit` skill. Suggested message: `Set AppIcon for YoruMimizuku target`
 
-> Note: if `Hoshidukiyo.xcodeproj` is gitignored or not tracked in this repo, omit it from `git add` — XcodeGen regenerates it from `project.yml`. Check with `git check-ignore Hoshidukiyo.xcodeproj/project.pbxproj` before adding.
+> Note: if `YoruMimizuku.xcodeproj` is gitignored or not tracked in this repo, omit it from `git add` — XcodeGen regenerates it from `project.yml`. Check with `git check-ignore YoruMimizuku.xcodeproj/project.pbxproj` before adding.
 
 ---
 
@@ -371,7 +371,7 @@ Create the commit via the `/commit` skill. Suggested message: `Set AppIcon for H
 
 Run:
 ```bash
-xcodebuild build -project Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -configuration Debug -derivedDataPath build/ CODE_SIGN_IDENTITY="-" 2>&1 | tail -20
+xcodebuild build -project YoruMimizuku.xcodeproj -scheme YoruMimizuku -configuration Debug -derivedDataPath build/ CODE_SIGN_IDENTITY="-" 2>&1 | tail -20
 ```
 
 Expected: ends with `** BUILD SUCCEEDED **`. If signing fails locally, the `CODE_SIGN_IDENTITY="-"` (ad-hoc) override should allow a Debug build; if it still fails on signing, add `CODE_SIGNING_ALLOWED=NO`.
@@ -380,7 +380,7 @@ Expected: ends with `** BUILD SUCCEEDED **`. If signing fails locally, the `CODE
 
 Run:
 ```bash
-ls build/Build/Products/Debug/Hoshidukiyo.app/Contents/Resources/Assets.car
+ls build/Build/Products/Debug/YoruMimizuku.app/Contents/Resources/Assets.car
 ```
 
 Expected: the path exists (asset catalog, including AppIcon, was compiled by `actool`).
@@ -389,17 +389,17 @@ Expected: the path exists (asset catalog, including AppIcon, was compiled by `ac
 
 Run:
 ```bash
-xcrun --sdk macosx assetutil --info build/Build/Products/Debug/Hoshidukiyo.app/Contents/Resources/Assets.car 2>/dev/null | grep -i -m1 "AppIcon\|Icon" || echo "check manually"
+xcrun --sdk macosx assetutil --info build/Build/Products/Debug/YoruMimizuku.app/Contents/Resources/Assets.car 2>/dev/null | grep -i -m1 "AppIcon\|Icon" || echo "check manually"
 ```
 
-Expected: output references the AppIcon image set (the icon is present in the compiled catalog). If `assetutil` is unavailable, instead run `open build/Build/Products/Debug/Hoshidukiyo.app` and visually confirm the Dock/Finder icon is the blue owl.
+Expected: output references the AppIcon image set (the icon is present in the compiled catalog). If `assetutil` is unavailable, instead run `open build/Build/Products/Debug/YoruMimizuku.app` and visually confirm the Dock/Finder icon is the blue owl.
 
 - [ ] **Step 4: Visual confirmation (human/agent eyes)**
 
 Open the built app to confirm the Dock icon renders as the blue horned-owl on the dark rounded square:
 
 ```bash
-open build/Build/Products/Debug/Hoshidukiyo.app
+open build/Build/Products/Debug/YoruMimizuku.app
 ```
 
 Expected: the Dock shows the B3 owl icon. (Quit the app afterward.)

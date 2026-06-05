@@ -1,4 +1,4 @@
-# Hoshidukiyo OAuth Discovery Implementation Plan
+# YoruMimizuku OAuth Discovery Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,16 +8,16 @@
 
 **Tech Stack:** Swift 6 / Swift Package Manager / XCTest / Foundation。既存 `BlueskyCore`（macOS 14+/iOS 17+）に追加。
 
-このプランは設計書 `docs/superpowers/specs/2026-06-04-hoshidukiyo-design.md` の §5.2 ステップ1–2（identity 解決・authz server discovery）に対応する。PKCE・PAR・認可URL構築・トークン交換・nonce 再試行は次プラン、`ASWebAuthenticationSession`・Keychain・`AccountManager`・アプリ結線はその次のプラン。
+このプランは設計書 `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` の §5.2 ステップ1–2（identity 解決・authz server discovery）に対応する。PKCE・PAR・認可URL構築・トークン交換・nonce 再試行は次プラン、`ASWebAuthenticationSession`・Keychain・`AccountManager`・アプリ結線はその次のプラン。
 
 ## 前提・作業ルール
 
-- リポジトリ: `/Users/asonas/workspace/hoshidukiyo`（main に Plan 1/2/3 マージ済み）
+- リポジトリ: `/Users/asonas/workspace/yorumimizuku`（main に Plan 1/2/3 マージ済み）
 - worktree で実装:
   ```bash
-  git -C /Users/asonas/workspace/hoshidukiyo wt feature/oauth-discovery
+  git -C /Users/asonas/workspace/yorumimizuku wt feature/oauth-discovery
   ```
-  worktree: `/Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery`（以降 `<wt>`）
+  worktree: `/Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery`（以降 `<wt>`）
 - コミットは `git ai-commit`（`git commit` 直接実行禁止）
 - テスト: `swift test --package-path BlueskyCore`（`<wt>` 内で実行）
 - 1テストずつ Red → Green → Refactor
@@ -59,7 +59,7 @@
 
 - [ ] **Step 0: worktree 作成**
 
-Run: `git -C /Users/asonas/workspace/hoshidukiyo wt feature/oauth-discovery`
+Run: `git -C /Users/asonas/workspace/yorumimizuku wt feature/oauth-discovery`
 
 - [ ] **Step 1: 失敗するテストを書く**
 
@@ -152,8 +152,8 @@ Expected: PASS（2 テスト）。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthError.swift BlueskyCore/Sources/BlueskyCore/OAuth/DIDDocument.swift BlueskyCore/Tests/BlueskyCoreTests/DIDDocumentTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthError.swift BlueskyCore/Sources/BlueskyCore/OAuth/DIDDocument.swift BlueskyCore/Tests/BlueskyCoreTests/DIDDocumentTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 `git ai-commit` が使えない場合は中断して報告。メッセージ例: `Add DID document model and OAuth error type`
 
@@ -246,8 +246,8 @@ Expected: PASS。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthServerMetadata.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthServerMetadataTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthServerMetadata.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthServerMetadataTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 メッセージ例: `Add OAuth server metadata models`
 
@@ -419,8 +419,8 @@ Expected: PASS（2 テスト）。
 - [ ] **Step 7: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/JSONGet.swift BlueskyCore/Sources/BlueskyCore/OAuth/IdentityResolver.swift BlueskyCore/Tests/BlueskyCoreTests/Support/RoutingHTTPClient.swift BlueskyCore/Tests/BlueskyCoreTests/IdentityResolverTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/JSONGet.swift BlueskyCore/Sources/BlueskyCore/OAuth/IdentityResolver.swift BlueskyCore/Tests/BlueskyCoreTests/Support/RoutingHTTPClient.swift BlueskyCore/Tests/BlueskyCoreTests/IdentityResolverTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 メッセージ例: `Add identity resolver handle-to-DID with routing test client`
 
@@ -529,8 +529,8 @@ Expected: PASS（6 テスト）。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/IdentityResolver.swift BlueskyCore/Tests/BlueskyCoreTests/IdentityResolverTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/IdentityResolver.swift BlueskyCore/Tests/BlueskyCoreTests/IdentityResolverTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 メッセージ例: `Resolve DID to PDS for plc and web methods`
 
@@ -621,8 +621,8 @@ Expected: PASS。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthMetadataResolver.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthMetadataResolverTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthMetadataResolver.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthMetadataResolverTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 メッセージ例: `Add OAuth metadata resolver`
 
@@ -754,8 +754,8 @@ Expected: PASS（2 テスト）。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthDiscovery.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthDiscoveryTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery add BlueskyCore/Sources/BlueskyCore/OAuth/OAuthDiscovery.swift BlueskyCore/Tests/BlueskyCoreTests/OAuthDiscoveryTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/oauth-discovery ai-commit
 ```
 メッセージ例: `Add OAuthDiscovery orchestration`
 
@@ -768,7 +768,7 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/oauth-discovery ai
 - [ ] **Step 1: 全テストを実行**
 
 Run: `swift test --package-path BlueskyCore`
-Expected: 既存（BlueskyCore + HoshidukiyoKit）＋ 本プランの新規テストがすべて PASS。
+Expected: 既存（BlueskyCore + YoruMimizukuKit）＋ 本プランの新規テストがすべて PASS。
 
 - [ ] **Step 2: リリースビルド**
 

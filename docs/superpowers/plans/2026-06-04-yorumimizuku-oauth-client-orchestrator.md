@@ -33,7 +33,7 @@
 - `TokenService` (`OAuth/TokenService.swift`): `requestToken(metadata:config:grant:) async throws -> TokenResponse`。
 - `PKCE` (`OAuth/PKCE.swift`): `generateVerifier(randomBytes:)`、`make(verifier:sha256:)`、`codeVerifier`。
 - `AuthorizationRequest` (`OAuth/AuthorizationRequest.swift`): `init(config:pkce:state:loginHint:)`、`generateState(randomBytes:)`。
-- `OAuthClientConfig` (`.hoshidukiyo`, `clientID`, `redirectURI`, `scope`)、`TokenGrant.authorizationCode`、`TokenResponse`、`Base64URL.encode`。
+- `OAuthClientConfig` (`.yoruMimizuku`, `clientID`, `redirectURI`, `scope`)、`TokenGrant.authorizationCode`、`TokenResponse`、`Base64URL.encode`。
 - テスト用: 既存 Support の `FakeHTTPClient` / `FakeDPoPCryptoProvider` は本プランでは不要（新フェイクを `OAuthClientFakes.swift` に置く）。
 
 ---
@@ -115,7 +115,7 @@ Use the `/commit` skill (`git ai-commit`). Stage `RandomBytesGenerator.swift` + 
 
 ```swift
     func testCallbackSchemeIsTheRedirectURIScheme() {
-        XCTAssertEqual(OAuthClientConfig.hoshidukiyo.callbackScheme, "as.ason")
+        XCTAssertEqual(OAuthClientConfig.yoruMimizuku.callbackScheme, "as.ason")
         let custom = OAuthClientConfig(clientID: "x", redirectURI: "myapp:/cb", scope: "s")
         XCTAssertEqual(custom.callbackScheme, "myapp")
     }
@@ -460,7 +460,7 @@ final class OAuthClientTests: XCTestCase {
             browser: browser,
             random: StubRandomBytesGenerator(),
             sha256: { $0 },
-            config: .hoshidukiyo
+            config: .yoruMimizuku
         )
     }
 

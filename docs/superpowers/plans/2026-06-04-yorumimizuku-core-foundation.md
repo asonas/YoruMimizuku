@@ -1,4 +1,4 @@
-# Hoshidukiyo Core Foundation Implementation Plan
+# YoruMimizuku Core Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,14 +8,14 @@
 
 **Tech Stack:** Swift 6 / Swift Package Manager / XCTest / Foundation（URLSession）。ターゲット macOS 14+ / iOS 17+。
 
-このプランは設計書 `docs/superpowers/specs/2026-06-04-hoshidukiyo-design.md` の §4.2（OS 接点抽象: HTTP）・§4.3（`ATProtoHTTP` / `XRPCError`）に対応する。DPoP・OAuth・モデル・各 API は後続プランで積み増す。
+このプランは設計書 `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` の §4.2（OS 接点抽象: HTTP）・§4.3（`ATProtoHTTP` / `XRPCError`）に対応する。DPoP・OAuth・モデル・各 API は後続プランで積み増す。
 
 ## 前提・作業ルール
 
-- リポジトリ: `/Users/asonas/workspace/hoshidukiyo`（既存。spec が main にコミット済み）
+- リポジトリ: `/Users/asonas/workspace/yorumimizuku`（既存。spec が main にコミット済み）
 - 実装は **worktree で行う**。最初に次を実行する（ユーザーの git ルール）。
   ```bash
-  git -C /Users/asonas/workspace/hoshidukiyo wt feature/core-foundation
+  git -C /Users/asonas/workspace/yorumimizuku wt feature/core-foundation
   ```
   以降の作業はこの worktree 内で行う。
 - コミットは **`/commit` スキル（`git ai-commit`）** を使う。`git commit` を直接実行しない。各 Task 末尾の「Commit」ステップは「対象ファイルを `git add` してから `git ai-commit` を実行する」を意味する。
@@ -52,7 +52,7 @@
 
 Run:
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo wt feature/core-foundation
+git -C /Users/asonas/workspace/yorumimizuku wt feature/core-foundation
 ```
 作成された worktree ディレクトリ内で以降の作業を行う。
 

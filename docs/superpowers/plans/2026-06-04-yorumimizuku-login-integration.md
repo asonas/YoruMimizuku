@@ -4,46 +4,46 @@
 
 **Goal:** OAuth コアとアカウント永続化を実コラボレータでつなぎ、handle 入力からブラウザ認可・トークン取得・Keychain 保存・メインウィンドウ遷移までを行う、実際にビルド・起動できる macOS ログインを完成させる。
 
-**Architecture:** プレゼンテーションロジック（`LoginViewModel` と `LoginPerforming` 抽象）は `HoshidukiyoKit` に置き、フェイク注入で状態遷移を TDD する。OS/アプリ依存（`ASWebAuthenticationSession` 実体、`OAuthClient` の実配線、SwiftUI ビュー、アプリ統合）はアプリターゲットに置き、`xcodebuild` のビルド成功で検証する（ブラウザ認可と Keychain の実挙動は人手で実機確認）。
+**Architecture:** プレゼンテーションロジック（`LoginViewModel` と `LoginPerforming` 抽象）は `YoruMimizukuKit` に置き、フェイク注入で状態遷移を TDD する。OS/アプリ依存（`ASWebAuthenticationSession` 実体、`OAuthClient` の実配線、SwiftUI ビュー、アプリ統合）はアプリターゲットに置き、`xcodebuild` のビルド成功で検証する（ブラウザ認可と Keychain の実挙動は人手で実機確認）。
 
 **Tech Stack:** Swift 6, SwiftUI, AuthenticationServices (`ASWebAuthenticationSession`), CryptoKit (P-256), XCTest, XcodeGen。
 
-**Scope note:** トークン自動リフレッシュとそのスケジューリング、Jetstream、タイムライン取得 API、通知は本プランのスコープ外。本プランは「ログインしてアカウントが Keychain に保存され、メインウィンドウが出る」までに限定する。実ログインの動作には外部前提として `https://ason.as/hoshidukiyo/client-metadata.json` の公開が必要（§External Prerequisite 参照）。
+**Scope note:** トークン自動リフレッシュとそのスケジューリング、Jetstream、タイムライン取得 API、通知は本プランのスコープ外。本プランは「ログインしてアカウントが Keychain に保存され、メインウィンドウが出る」までに限定する。実ログインの動作には外部前提として `https://ason.as/yorumimizuku/client-metadata.json` の公開が必要（§External Prerequisite 参照）。
 
 ---
 
 ## File Structure
 
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/LoginPerforming.swift` — ログイン実行の抽象 + 状態の値型。
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/LoginViewModel.swift` — ログイン画面の状態機械（`@MainActor` `ObservableObject`）。
-- Test: `BlueskyCore/Tests/HoshidukiyoKitTests/LoginViewModelTests.swift`
-- Create: `app/Hoshidukiyo/Auth/ASWebAuthBrowserSession.swift` — `BrowserAuthorizationSession` の Apple 実体。
-- Create: `app/Hoshidukiyo/Auth/LiveLoginPerformer.swift` — `OAuthClient` 実配線 + `AccountManager` 保存。
-- Create: `app/Hoshidukiyo/Views/LoginView.swift` — handle 入力 + ログインボタン。
-- Create: `app/Hoshidukiyo/Views/RootView.swift` — 現在アカウント有無で Login/Main を出し分け。
-- Modify: `app/Hoshidukiyo/HoshidukiyoApp.swift` — `RootView` をホスト。
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/LoginPerforming.swift` — ログイン実行の抽象 + 状態の値型。
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/LoginViewModel.swift` — ログイン画面の状態機械（`@MainActor` `ObservableObject`）。
+- Test: `BlueskyCore/Tests/YoruMimizukuKitTests/LoginViewModelTests.swift`
+- Create: `app/YoruMimizuku/Auth/ASWebAuthBrowserSession.swift` — `BrowserAuthorizationSession` の Apple 実体。
+- Create: `app/YoruMimizuku/Auth/LiveLoginPerformer.swift` — `OAuthClient` 実配線 + `AccountManager` 保存。
+- Create: `app/YoruMimizuku/Views/LoginView.swift` — handle 入力 + ログインボタン。
+- Create: `app/YoruMimizuku/Views/RootView.swift` — 現在アカウント有無で Login/Main を出し分け。
+- Modify: `app/YoruMimizuku/YoruMimizukuApp.swift` — `RootView` をホスト。
 - Create: `docs/client-metadata.json` — 公開用 client-metadata の正本（ason.as へコピーする成果物）。
 
 **Existing context to reuse (do NOT recreate):**
-- BlueskyCore: `OAuthClient(discovery:authorizationRequester:tokenRequester:browser:random:sha256:config:)`, `OAuthLoginResult`, `OAuthDiscovery(http:)`, `DPoPRequestSender(http:proofBuilder:)`, `DPoPProofBuilder(crypto:)`, `AuthorizationRequestService(sender:)`, `TokenService(sender:)`, `CryptoKitDPoPProvider(privateKey:)` / `.sha256`, `SecRandomBytesGenerator`, `URLSessionHTTPClient`, `BrowserAuthorizationSession`, `OAuthClientConfig.hoshidukiyo`, `OAuthError`.
+- BlueskyCore: `OAuthClient(discovery:authorizationRequester:tokenRequester:browser:random:sha256:config:)`, `OAuthLoginResult`, `OAuthDiscovery(http:)`, `DPoPRequestSender(http:proofBuilder:)`, `DPoPProofBuilder(crypto:)`, `AuthorizationRequestService(sender:)`, `TokenService(sender:)`, `CryptoKitDPoPProvider(privateKey:)` / `.sha256`, `SecRandomBytesGenerator`, `URLSessionHTTPClient`, `BrowserAuthorizationSession`, `OAuthClientConfig.yoruMimizuku`, `OAuthError`.
 - Account: `KeychainStorage(service:)`, `AccountStore(storage:)`, `AccountManager(store:)`, `AccountManager.add(loginResult:handle:dpopPrivateKeyRaw:)`, `current()`.
 - App: `MainWindowView`, `Theme`.
 - `URLSessionHTTPClient` exact initializer — confirm in `BlueskyCore/Sources/BlueskyCore/Platform/URLSessionHTTPClient.swift` before wiring (Task 3).
 
 ---
 
-### Task 1: LoginViewModel state machine (HoshidukiyoKit, TDD)
+### Task 1: LoginViewModel state machine (YoruMimizukuKit, TDD)
 
 **Files:**
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/LoginPerforming.swift`
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/LoginViewModel.swift`
-- Test: `BlueskyCore/Tests/HoshidukiyoKitTests/LoginViewModelTests.swift`
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/LoginPerforming.swift`
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/LoginViewModel.swift`
+- Test: `BlueskyCore/Tests/YoruMimizukuKitTests/LoginViewModelTests.swift`
 
 - [ ] **Step 1: Write the failing test**
 
 ```swift
 import XCTest
-@testable import HoshidukiyoKit
+@testable import YoruMimizukuKit
 
 @MainActor
 final class LoginViewModelTests: XCTestCase {
@@ -191,7 +191,7 @@ Use the `/commit` skill (`git ai-commit`). Stage `LoginPerforming.swift` + `Logi
 ### Task 2: ASWebAuthenticationSession browser implementation (app, build-validated)
 
 **Files:**
-- Create: `app/Hoshidukiyo/Auth/ASWebAuthBrowserSession.swift`
+- Create: `app/YoruMimizuku/Auth/ASWebAuthBrowserSession.swift`
 
 (No unit test: `ASWebAuthenticationSession` requires a GUI and user interaction. Verified by `xcodebuild` in Task 5 and human run.)
 
@@ -256,7 +256,7 @@ Commit with the app target in Task 5's build. Suggested message: `Add ASWebAuthe
 ### Task 3: LiveLoginPerformer — real OAuthClient wiring (app, build-validated)
 
 **Files:**
-- Create: `app/Hoshidukiyo/Auth/LiveLoginPerformer.swift`
+- Create: `app/YoruMimizuku/Auth/LiveLoginPerformer.swift`
 
 - [ ] **Step 1: Confirm `URLSessionHTTPClient` initializer**
 
@@ -268,7 +268,7 @@ Read `BlueskyCore/Sources/BlueskyCore/Platform/URLSessionHTTPClient.swift` and n
 import Foundation
 import CryptoKit
 import BlueskyCore
-import HoshidukiyoKit
+import YoruMimizukuKit
 
 /// Live `LoginPerforming`: generates a fresh DPoP P-256 key, wires the real
 /// `OAuthClient` collaborators, runs the OAuth login, and persists the account
@@ -277,7 +277,7 @@ struct LiveLoginPerformer: LoginPerforming {
     let accountManager: AccountManager
     let config: OAuthClientConfig
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .hoshidukiyo) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku) {
         self.accountManager = accountManager
         self.config = config
     }
@@ -322,15 +322,15 @@ Commit with Task 5's build. Suggested message: `Add live login performer wiring 
 ### Task 4: LoginView + RootView + app integration (app, build-validated)
 
 **Files:**
-- Create: `app/Hoshidukiyo/Views/LoginView.swift`
-- Create: `app/Hoshidukiyo/Views/RootView.swift`
-- Modify: `app/Hoshidukiyo/HoshidukiyoApp.swift`
+- Create: `app/YoruMimizuku/Views/LoginView.swift`
+- Create: `app/YoruMimizuku/Views/RootView.swift`
+- Modify: `app/YoruMimizuku/YoruMimizukuApp.swift`
 
 - [ ] **Step 1: Write LoginView**
 
 ```swift
 import SwiftUI
-import HoshidukiyoKit
+import YoruMimizukuKit
 
 /// The login screen: handle input and a sign-in button bound to `LoginViewModel`.
 struct LoginView: View {
@@ -339,7 +339,7 @@ struct LoginView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Hoshidukiyo").font(.title).bold().foregroundStyle(Theme.primaryText)
+            Text("YoruMimizuku").font(.title).bold().foregroundStyle(Theme.primaryText)
             Text("Bluesky にログイン").font(.callout).foregroundStyle(Theme.secondaryText)
 
             TextField("handle (例: alice.bsky.social)", text: $model.handle)
@@ -378,7 +378,7 @@ struct LoginView: View {
 ```swift
 import SwiftUI
 import BlueskyCore
-import HoshidukiyoKit
+import YoruMimizukuKit
 
 /// Chooses the login screen or the main window based on whether an account is
 /// currently stored. Builds the live login stack from the Keychain-backed store.
@@ -389,7 +389,7 @@ struct RootView: View {
     private let accountManager: AccountManager
 
     init() {
-        let storage = KeychainStorage(service: "as.ason.Hoshidukiyo")
+        let storage = KeychainStorage(service: "as.ason.YoruMimizuku")
         let manager = AccountManager(store: AccountStore(storage: storage))
         self.accountManager = manager
         _loginModel = StateObject(
@@ -419,13 +419,13 @@ struct RootView: View {
 > ```
 > Prefer the explicit two-line form for clarity.
 
-- [ ] **Step 3: Update HoshidukiyoApp to host RootView**
+- [ ] **Step 3: Update YoruMimizukuApp to host RootView**
 
 ```swift
 import SwiftUI
 
 @main
-struct HoshidukiyoApp: App {
+struct YoruMimizukuApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -445,7 +445,7 @@ Commit with Task 5's build. Suggested message: `Add login and root views with ac
 
 **Files:**
 - Create: `docs/client-metadata.json`
-- (Regenerate `Hoshidukiyo.xcodeproj` via XcodeGen.)
+- (Regenerate `YoruMimizuku.xcodeproj` via XcodeGen.)
 
 - [ ] **Step 1: Write the canonical client-metadata.json (artifact for ason.as)**
 
@@ -453,8 +453,8 @@ Commit with Task 5's build. Suggested message: `Add login and root views with ac
 
 ```json
 {
-  "client_id": "https://ason.as/hoshidukiyo/client-metadata.json",
-  "client_name": "Hoshidukiyo",
+  "client_id": "https://ason.as/yorumimizuku/client-metadata.json",
+  "client_name": "YoruMimizuku",
   "application_type": "native",
   "dpop_bound_access_tokens": true,
   "grant_types": ["authorization_code", "refresh_token"],
@@ -467,23 +467,23 @@ Commit with Task 5's build. Suggested message: `Add login and root views with ac
 
 - [ ] **Step 2: Regenerate the Xcode project**
 
-Run: `cd /Users/asonas/workspace/hoshidukiyo && xcodegen generate`
-Expected: `Created project at Hoshidukiyo.xcodeproj`. (New source files under `app/Hoshidukiyo/Auth/` and `Views/` are picked up by the `sources: [app/Hoshidukiyo]` glob.)
+Run: `cd /Users/asonas/workspace/yorumimizuku && xcodegen generate`
+Expected: `Created project at YoruMimizuku.xcodeproj`. (New source files under `app/YoruMimizuku/Auth/` and `Views/` are picked up by the `sources: [app/YoruMimizuku]` glob.)
 
 - [ ] **Step 3: Build the app**
 
 Run:
 ```
-xcodebuild build -project /Users/asonas/workspace/hoshidukiyo/Hoshidukiyo.xcodeproj \
-  -scheme Hoshidukiyo -configuration Debug \
-  -derivedDataPath /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/login-integration/build/ \
+xcodebuild build -project /Users/asonas/workspace/yorumimizuku/YoruMimizuku.xcodeproj \
+  -scheme YoruMimizuku -configuration Debug \
+  -derivedDataPath /Users/asonas/workspace/yorumimizuku/.worktrees/feature/login-integration/build/ \
   DEVELOPMENT_TEAM=QYP65434UW
 ```
 Expected: `BUILD SUCCEEDED`. If signing fails, retry with `CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=NO` to confirm compilation independently of signing, and report the signing error separately.
 
 - [ ] **Step 4: Commit everything (app sources + project + client-metadata)**
 
-Use the `/commit` skill. Stage `app/Hoshidukiyo/Auth/ASWebAuthBrowserSession.swift`, `app/Hoshidukiyo/Auth/LiveLoginPerformer.swift`, `app/Hoshidukiyo/Views/LoginView.swift`, `app/Hoshidukiyo/Views/RootView.swift`, `app/Hoshidukiyo/HoshidukiyoApp.swift`, `docs/client-metadata.json`, and the regenerated `Hoshidukiyo.xcodeproj` (note: `.gitignore` ignores `*.xcodeproj` — do NOT force-add it; the project is generated, project.yml is the source of truth). Behavioral change. Suggested message: `Wire login flow into the macOS app`.
+Use the `/commit` skill. Stage `app/YoruMimizuku/Auth/ASWebAuthBrowserSession.swift`, `app/YoruMimizuku/Auth/LiveLoginPerformer.swift`, `app/YoruMimizuku/Views/LoginView.swift`, `app/YoruMimizuku/Views/RootView.swift`, `app/YoruMimizuku/YoruMimizukuApp.swift`, `docs/client-metadata.json`, and the regenerated `YoruMimizuku.xcodeproj` (note: `.gitignore` ignores `*.xcodeproj` — do NOT force-add it; the project is generated, project.yml is the source of truth). Behavioral change. Suggested message: `Wire login flow into the macOS app`.
 
 > If Tasks 2/3/4 were not committed earlier, stage their files here too so the app target compiles as one coherent commit. Prefer one commit for the whole app-integration set since the files only compile together.
 
@@ -497,7 +497,7 @@ Use the `/commit` skill. Stage `app/Hoshidukiyo/Auth/ASWebAuthBrowserSession.swi
 
 ## External Prerequisite（実ログインに必須・コード外）
 
-実際に Bluesky にログインするには、`client_id`（= `https://ason.as/hoshidukiyo/client-metadata.json`）が公開 HTTPS 上に存在する必要がある。`docs/client-metadata.json` を ason.as リポジトリの `/hoshidukiyo/client-metadata.json` として配置・デプロイすること。未配置だと認可サーバが client_id を解決できずログインは PAR 段で失敗する。リダイレクト `as.ason:/callback` は本アプリの `CFBundleURLSchemes`（`as.ason`、project.yml に既存）で受ける。
+実際に Bluesky にログインするには、`client_id`（= `https://ason.as/yorumimizuku/client-metadata.json`）が公開 HTTPS 上に存在する必要がある。`docs/client-metadata.json` を ason.as リポジトリの `/yorumimizuku/client-metadata.json` として配置・デプロイすること。未配置だと認可サーバが client_id を解決できずログインは PAR 段で失敗する。リダイレクト `as.ason:/callback` は本アプリの `CFBundleURLSchemes`（`as.ason`、project.yml に既存）で受ける。
 
 ## Verification（人手・実機）
 

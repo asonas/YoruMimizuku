@@ -114,7 +114,7 @@ import Security
 public struct KeychainStorage: SecureStorage {
     private let service: String
 
-    /// `service` namespaces all items (use the app bundle id, e.g. "as.ason.Hoshidukiyo").
+    /// `service` namespaces all items (use the app bundle id, e.g. "as.ason.YoruMimizuku").
     public init(service: String) {
         self.service = service
     }
@@ -647,5 +647,5 @@ Use the `/commit` skill. Stage `AccountManager.swift` + `AccountManagerTests.swi
 - `ASWebAuthenticationSession` を `BrowserAuthorizationSession` に適合させる Apple 実体（presentation anchor、キャンセルのエラー写像）。アプリターゲットに置く。
 - DPoP 鍵: ログイン時に `P256.Signing.PrivateKey()` を生成 → `rawRepresentation` を `PersistedAccount.dpopPrivateKeyRaw` に保存。復元は `try P256.Signing.PrivateKey(rawRepresentation:)` → `CryptoKitDPoPProvider(privateKey:)`。
 - `OAuthClient` を実コラボレータで組み立てる Apple 配線（`URLSessionHTTPClient` / `OAuthDiscovery(http:)` / `AuthorizationRequestService(sender:)` / `TokenService(sender:)` / `SecRandomBytesGenerator` / ASWebAuth ブラウザ / `crypto.sha256`）。生成した P256 鍵を保持して保存に回す。
-- `KeychainStorage(service:)` の `service` はアプリ bundle id（`as.ason.Hoshidukiyo`）。Keychain 利用には Hardened Runtime + Keychain Sharing entitlement の確認が必要（Plan 9b で project.yml / entitlements を調整）。
-- ログイン UI（handle 入力 → `login` 起動 → `AccountManager.add` → メインウィンドウ）と、`HoshidukiyoApp` が現在アカウント有無で Login/Main を出し分ける統合。
+- `KeychainStorage(service:)` の `service` はアプリ bundle id（`as.ason.YoruMimizuku`）。Keychain 利用には Hardened Runtime + Keychain Sharing entitlement の確認が必要（Plan 9b で project.yml / entitlements を調整）。
+- ログイン UI（handle 入力 → `login` 起動 → `AccountManager.add` → メインウィンドウ）と、`YoruMimizukuApp` が現在アカウント有無で Login/Main を出し分ける統合。

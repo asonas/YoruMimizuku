@@ -23,7 +23,7 @@
 - Test: `BlueskyCore/Tests/BlueskyCoreTests/TokenServiceTests.swift`
 
 **Existing helpers to reuse (do NOT recreate):**
-- `OAuthClientConfig` (`OAuth/OAuthClientConfig.swift`): `clientID` / `redirectURI` / `scope`、`.hoshidukiyo`。
+- `OAuthClientConfig` (`OAuth/OAuthClientConfig.swift`): `clientID` / `redirectURI` / `scope`、`.yoruMimizuku`。
 - `FormURLEncoder.encode(_:) -> Data` (`OAuth/FormURLEncoder.swift`)。
 - `DPoPRequestSender` (`OAuth/DPoPRequestSender.swift`): `init(http:proofBuilder:)`, `send(method:url:accessToken:headers:body:) async throws -> HTTPResponse`。
 - `AuthorizationServerMetadata.tokenEndpoint` (`OAuth/OAuthServerMetadata.swift`、非 Optional)。
@@ -139,22 +139,22 @@ import XCTest
 final class TokenGrantTests: XCTestCase {
     func testAuthorizationCodeGrantParameters() {
         let grant = TokenGrant.authorizationCode(code: "auth-code", codeVerifier: "verifier-1")
-        let params = Dictionary(uniqueKeysWithValues: grant.formParameters(config: .hoshidukiyo))
+        let params = Dictionary(uniqueKeysWithValues: grant.formParameters(config: .yoruMimizuku))
 
         XCTAssertEqual(params["grant_type"], "authorization_code")
         XCTAssertEqual(params["code"], "auth-code")
         XCTAssertEqual(params["code_verifier"], "verifier-1")
         XCTAssertEqual(params["redirect_uri"], "as.ason:/callback")
-        XCTAssertEqual(params["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(params["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
     }
 
     func testRefreshTokenGrantParameters() {
         let grant = TokenGrant.refresh(refreshToken: "rtk-1")
-        let params = Dictionary(uniqueKeysWithValues: grant.formParameters(config: .hoshidukiyo))
+        let params = Dictionary(uniqueKeysWithValues: grant.formParameters(config: .yoruMimizuku))
 
         XCTAssertEqual(params["grant_type"], "refresh_token")
         XCTAssertEqual(params["refresh_token"], "rtk-1")
-        XCTAssertEqual(params["client_id"], "https://ason.as/hoshidukiyo/client-metadata.json")
+        XCTAssertEqual(params["client_id"], "https://ason.as/yorumimizuku/client-metadata.json")
         // No code/redirect_uri on a refresh.
         XCTAssertNil(params["code"])
         XCTAssertNil(params["redirect_uri"])
@@ -270,7 +270,7 @@ final class TokenServiceTests: XCTestCase {
 
         let result = try await service.requestToken(
             metadata: metadata(),
-            config: .hoshidukiyo,
+            config: .yoruMimizuku,
             grant: .authorizationCode(code: "auth-code", codeVerifier: "v")
         )
 
@@ -293,7 +293,7 @@ final class TokenServiceTests: XCTestCase {
         do {
             _ = try await service.requestToken(
                 metadata: metadata(),
-                config: .hoshidukiyo,
+                config: .yoruMimizuku,
                 grant: .refresh(refreshToken: "rtk")
             )
             XCTFail("expected error")
@@ -309,7 +309,7 @@ final class TokenServiceTests: XCTestCase {
         do {
             _ = try await service.requestToken(
                 metadata: metadata(),
-                config: .hoshidukiyo,
+                config: .yoruMimizuku,
                 grant: .refresh(refreshToken: "rtk")
             )
             XCTFail("expected error")

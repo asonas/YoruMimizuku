@@ -1,10 +1,10 @@
-# Hoshidukiyo cmux 風サイドバー再設計プラン
+# YoruMimizuku cmux 風サイドバー再設計プラン
 
 **Goal:** 縦タブサイドバー（ホーム / 通知 / 会話タブ）の見た目と密度を、参照アプリ [cmux](https://github.com/manaflow-ai/cmux) のサイドバーに合わせて作り直す。会話タブを「表示名 + 本文スニペット + `@handle`」のリッチ行にし、選択スタイル・タイトルバー周りも cmux に倣って統合する。
 
 **Architecture:** サイドバーのタブ状態は `WorkspaceModel`（`@MainActor ObservableObject`）が保持し、`MainWindowView` の `NavigationSplitView` がそれを描画する。行コンポーネント `SidebarRow` は表示専用で、テーマ色は `ThemeStore`（`@EnvironmentObject`）から受け取る。会話タブ 1 件は `ConversationTab`（`ThreadViewModel` を所有）。
 
-**Tech Stack:** Swift 6 / SwiftUI / XcodeGen / 対象 macOS 26.0。表示ロジックは `HoshidukiyoKit`、ビューはアプリターゲット `Hoshidukiyo`。
+**Tech Stack:** Swift 6 / SwiftUI / XcodeGen / 対象 macOS 26.0。表示ロジックは `YoruMimizukuKit`、ビューはアプリターゲット `YoruMimizuku`。
 
 このプランは UI レイヤ（サイドバー）のみを対象とし、配色パレット（randoma11y 由来の `ThemeStore`）やタイムライン取得・スレッド取得のロジックは変更しない。
 
@@ -29,9 +29,9 @@ cmux はネイティブ SwiftUI 製。サイドバー行の本体は `Sources/Co
 - アクティブ表示スタイルは `leftRail`（左の細いバー）と `solidFill`（全面塗り）の 2 種。今回参照したスクショは `solidFill`。
 - ウィンドウは大きなタイトル文字を持たない統合タイトルバー。
 
-## 設計方針（cmux → Hoshidukiyo マッピング）
+## 設計方針（cmux → YoruMimizuku マッピング）
 
-| cmux | Hoshidukiyo |
+| cmux | YoruMimizuku |
 | --- | --- |
 | ワークスペース行（title + description + branch） | 会話タブ行（表示名 + 本文スニペット + `@handle`） |
 | ソリッド塗り選択 + 前景反転 | 選択時は `theme.accent` 塗り + 文字を白に固定 |
@@ -44,10 +44,10 @@ cmux はネイティブ SwiftUI 製。サイドバー行の本体は `Sources/Co
 
 ## File Structure
 
-- `app/Hoshidukiyo/Workspace/WorkspaceModel.swift` — `ConversationTab` に `subtitle`(本文) と `handle` を追加（変更）
-- `app/Hoshidukiyo/Views/SidebarView.swift` — `SidebarRow` を cmux 流に再設計（変更）
-- `app/Hoshidukiyo/HoshidukiyoApp.swift` — `.windowStyle(.hiddenTitleBar)` と既定サイズ 940×720（変更）
-- `app/Hoshidukiyo/Diagnostics/FPSOverlay.swift` — オーバーレイ位置を左上→右下へ（変更）
+- `app/YoruMimizuku/Workspace/WorkspaceModel.swift` — `ConversationTab` に `subtitle`(本文) と `handle` を追加（変更）
+- `app/YoruMimizuku/Views/SidebarView.swift` — `SidebarRow` を cmux 流に再設計（変更）
+- `app/YoruMimizuku/YoruMimizukuApp.swift` — `.windowStyle(.hiddenTitleBar)` と既定サイズ 940×720（変更）
+- `app/YoruMimizuku/Diagnostics/FPSOverlay.swift` — オーバーレイ位置を左上→右下へ（変更）
 
 ## 実装タスク（実施済み）
 
@@ -63,7 +63,7 @@ cmux はネイティブ SwiftUI 製。サイドバー行の本体は `Sources/Co
 - [x] **Task 4: FPS オーバーレイの退避**
   - DEBUG 専用オーバーレイを `.topLeading` → `.bottomTrailing` に移し、ブランドと被らないようにした。
 - [x] **Task 5: 検証**
-  - `xcodegen generate` → `xcodebuild build -scheme Hoshidukiyo`（エラーなし）。
+  - `xcodegen generate` → `xcodebuild build -scheme YoruMimizuku`（エラーなし）。
 
 ## 残課題 / 次の判断ポイント
 
@@ -75,9 +75,9 @@ cmux はネイティブ SwiftUI 製。サイドバー行の本体は `Sources/Co
 ## 検証手順
 
 ```bash
-cd /Users/asonas/workspace/hoshidukiyo
+cd /Users/asonas/workspace/yorumimizuku
 xcodegen generate
-xcodebuild build -scheme Hoshidukiyo -project Hoshidukiyo.xcodeproj -destination 'platform=macOS'
+xcodebuild build -scheme YoruMimizuku -project YoruMimizuku.xcodeproj -destination 'platform=macOS'
 ```
 
 GUI での見た目（選択行のソリッド塗り、会話タブの 3 行レイアウト、タイトルバー周り）は実機起動で確認する。

@@ -1,65 +1,65 @@
-# Hoshidukiyo App Shell Implementation Plan
+# YoruMimizuku App Shell Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** ビルドして起動できる最小の macOS ネイティブアプリ `Hoshidukiyo` を立ち上げる。夜フクロウ風の単一カラム UI（上部タブ・モックタイムライン・下部コンポーザ・アカウントチップ）をモックデータで表示し、表示密度 A/B（既定 B）を切り替えられる状態にする。
+**Goal:** ビルドして起動できる最小の macOS ネイティブアプリ `YoruMimizuku` を立ち上げる。夜フクロウ風の単一カラム UI（上部タブ・モックタイムライン・下部コンポーザ・アカウントチップ）をモックデータで表示し、表示密度 A/B（既定 B）を切り替えられる状態にする。
 
-**Architecture:** 表示ロジック（密度・相対時刻・`PostDisplay`）は UI フレームワーク非依存の SPM ターゲット `HoshidukiyoKit`（`BlueskyCore` に依存）に置き `swift test` で検証する。SwiftUI ビューは XcodeGen で定義する macOS アプリターゲット `Hoshidukiyo`（`BlueskyCore` と `HoshidukiyoKit` に依存）に置き、`xcodebuild build` でビルドを検証する。`.xcodeproj` は `project.yml` から生成し、gitignore する。
+**Architecture:** 表示ロジック（密度・相対時刻・`PostDisplay`）は UI フレームワーク非依存の SPM ターゲット `YoruMimizukuKit`（`BlueskyCore` に依存）に置き `swift test` で検証する。SwiftUI ビューは XcodeGen で定義する macOS アプリターゲット `YoruMimizuku`（`BlueskyCore` と `YoruMimizukuKit` に依存）に置き、`xcodebuild build` でビルドを検証する。`.xcodeproj` は `project.yml` から生成し、gitignore する。
 
 **Tech Stack:** Swift 6 / SwiftUI / Swift Package Manager / XcodeGen 2.45.4 / Xcode 26.5 / XCTest。ターゲット macOS 14+。
 
-このプランは設計書 `docs/superpowers/specs/2026-06-04-hoshidukiyo-design.md` の §4.1（`BlueskyMac` アプリ層）・§7（UI: 単一カラム+タブ、投稿行 A/B、コンポーザ、アカウントチップ）に対応する。実際の OAuth・タイムライン取得・ストリームは後続プラン。本プランはモックデータで「動くネイティブアプリの殻」を作る。
+このプランは設計書 `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` の §4.1（`BlueskyMac` アプリ層）・§7（UI: 単一カラム+タブ、投稿行 A/B、コンポーザ、アカウントチップ）に対応する。実際の OAuth・タイムライン取得・ストリームは後続プラン。本プランはモックデータで「動くネイティブアプリの殻」を作る。
 
 ## 前提・作業ルール
 
-- リポジトリ: `/Users/asonas/workspace/hoshidukiyo`（main に Plan 1/2 マージ済み。`BlueskyCore` パッケージあり）
+- リポジトリ: `/Users/asonas/workspace/yorumimizuku`（main に Plan 1/2 マージ済み。`BlueskyCore` パッケージあり）
 - 実装は worktree で：
   ```bash
-  git -C /Users/asonas/workspace/hoshidukiyo wt feature/app-shell
+  git -C /Users/asonas/workspace/yorumimizuku wt feature/app-shell
   ```
-  worktree: `/Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell`。以降の `<wt>` はこのパスを指す。
+  worktree: `/Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell`。以降の `<wt>` はこのパスを指す。
 - コミットは `git ai-commit`（`/commit` スキル）。`git commit` 直接実行は禁止。
 - パッケージのビルド/テスト: `swift test --package-path BlueskyCore`（`<wt>` 内で実行）。
 - アプリのプロジェクト生成: `xcodegen generate --spec <wt>/project.yml --project <wt>`。
-- アプリのビルド検証: `xcodebuild -project <wt>/Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO`（GUI 起動は不要、コンパイル成功を確認する）。
+- アプリのビルド検証: `xcodebuild -project <wt>/YoruMimizuku.xcodeproj -scheme YoruMimizuku -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO`（GUI 起動は不要、コンパイル成功を確認する）。
 - 1テストずつ Red → Green → Refactor。
 
 ## 補足: パッケージ構成のメモ
-既存パッケージのディレクトリ名は `BlueskyCore/` だが、本プランで同パッケージ内に表示ロジック用ターゲット `HoshidukiyoKit` を追加する（1パッケージ・複数プロダクト）。ディレクトリ名と内容が完全一致しない軽微な不整合は許容し、必要なら後のプランでパッケージ名を中立化する（本プランでは行わない）。
+既存パッケージのディレクトリ名は `BlueskyCore/` だが、本プランで同パッケージ内に表示ロジック用ターゲット `YoruMimizukuKit` を追加する（1パッケージ・複数プロダクト）。ディレクトリ名と内容が完全一致しない軽微な不整合は許容し、必要なら後のプランでパッケージ名を中立化する（本プランでは行わない）。
 
 ## File Structure
 
-- `BlueskyCore/Package.swift` — `HoshidukiyoKit` ライブラリターゲットと `HoshidukiyoKitTests` を追加（変更）
-- `BlueskyCore/Sources/HoshidukiyoKit/DisplayDensity.swift` — 表示密度
-- `BlueskyCore/Sources/HoshidukiyoKit/RelativeTimeFormatter.swift` — 相対時刻文字列
-- `BlueskyCore/Sources/HoshidukiyoKit/PostDisplay.swift` — 投稿行の表示モデル＋サンプル
-- `BlueskyCore/Tests/HoshidukiyoKitTests/DisplayDensityTests.swift`
-- `BlueskyCore/Tests/HoshidukiyoKitTests/RelativeTimeFormatterTests.swift`
-- `BlueskyCore/Tests/HoshidukiyoKitTests/PostDisplayTests.swift`
+- `BlueskyCore/Package.swift` — `YoruMimizukuKit` ライブラリターゲットと `YoruMimizukuKitTests` を追加（変更）
+- `BlueskyCore/Sources/YoruMimizukuKit/DisplayDensity.swift` — 表示密度
+- `BlueskyCore/Sources/YoruMimizukuKit/RelativeTimeFormatter.swift` — 相対時刻文字列
+- `BlueskyCore/Sources/YoruMimizukuKit/PostDisplay.swift` — 投稿行の表示モデル＋サンプル
+- `BlueskyCore/Tests/YoruMimizukuKitTests/DisplayDensityTests.swift`
+- `BlueskyCore/Tests/YoruMimizukuKitTests/RelativeTimeFormatterTests.swift`
+- `BlueskyCore/Tests/YoruMimizukuKitTests/PostDisplayTests.swift`
 - `project.yml` — XcodeGen のプロジェクト定義（リポジトリルート）
 - `.gitignore` — `*.xcodeproj` を追加
-- `app/Hoshidukiyo/HoshidukiyoApp.swift` — `@main` SwiftUI App
-- `app/Hoshidukiyo/Views/ContentView.swift` — Task 4 の最小ルート（Task 5 で `MainWindowView` に差し替え）
-- `app/Hoshidukiyo/Views/PostRowView.swift` — 投稿行（密度 A/B）
-- `app/Hoshidukiyo/Views/MainWindowView.swift` — タブ＋リスト＋コンポーザ＋アカウントチップ
-- `app/Hoshidukiyo/Theme.swift` — 色などの最小テーマ定数
+- `app/YoruMimizuku/YoruMimizukuApp.swift` — `@main` SwiftUI App
+- `app/YoruMimizuku/Views/ContentView.swift` — Task 4 の最小ルート（Task 5 で `MainWindowView` に差し替え）
+- `app/YoruMimizuku/Views/PostRowView.swift` — 投稿行（密度 A/B）
+- `app/YoruMimizuku/Views/MainWindowView.swift` — タブ＋リスト＋コンポーザ＋アカウントチップ
+- `app/YoruMimizuku/Theme.swift` — 色などの最小テーマ定数
 
 ---
 
-### Task 1: HoshidukiyoKit ターゲットと DisplayDensity
+### Task 1: YoruMimizukuKit ターゲットと DisplayDensity
 
 **Files:**
 - Modify: `BlueskyCore/Package.swift`
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/DisplayDensity.swift`
-- Create: `BlueskyCore/Tests/HoshidukiyoKitTests/DisplayDensityTests.swift`
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/DisplayDensity.swift`
+- Create: `BlueskyCore/Tests/YoruMimizukuKitTests/DisplayDensityTests.swift`
 
 - [ ] **Step 0: worktree 作成**
 
-Run: `git -C /Users/asonas/workspace/hoshidukiyo wt feature/app-shell`
+Run: `git -C /Users/asonas/workspace/yorumimizuku wt feature/app-shell`
 
 - [ ] **Step 1: Package.swift に新ターゲットを追加**
 
-`BlueskyCore/Package.swift` を次の内容に置き換える（既存 BlueskyCore はそのまま、HoshidukiyoKit と HoshidukiyoKitTests を追加）:
+`BlueskyCore/Package.swift` を次の内容に置き換える（既存 BlueskyCore はそのまま、YoruMimizukuKit と YoruMimizukuKitTests を追加）:
 ```swift
 // swift-tools-version: 6.0
 import PackageDescription
@@ -72,23 +72,23 @@ let package = Package(
     ],
     products: [
         .library(name: "BlueskyCore", targets: ["BlueskyCore"]),
-        .library(name: "HoshidukiyoKit", targets: ["HoshidukiyoKit"])
+        .library(name: "YoruMimizukuKit", targets: ["YoruMimizukuKit"])
     ],
     targets: [
         .target(name: "BlueskyCore"),
-        .target(name: "HoshidukiyoKit", dependencies: ["BlueskyCore"]),
+        .target(name: "YoruMimizukuKit", dependencies: ["BlueskyCore"]),
         .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore"]),
-        .testTarget(name: "HoshidukiyoKitTests", dependencies: ["HoshidukiyoKit"])
+        .testTarget(name: "YoruMimizukuKitTests", dependencies: ["YoruMimizukuKit"])
     ]
 )
 ```
 
 - [ ] **Step 2: 失敗するテストを書く**
 
-Create `BlueskyCore/Tests/HoshidukiyoKitTests/DisplayDensityTests.swift`:
+Create `BlueskyCore/Tests/YoruMimizukuKitTests/DisplayDensityTests.swift`:
 ```swift
 import XCTest
-@testable import HoshidukiyoKit
+@testable import YoruMimizukuKit
 
 final class DisplayDensityTests: XCTestCase {
     func test_hasCompactAndComfortableCases() {
@@ -113,7 +113,7 @@ Expected: FAIL（`DisplayDensity` 未定義でビルドエラー）。
 
 - [ ] **Step 4: 実装**
 
-Create `BlueskyCore/Sources/HoshidukiyoKit/DisplayDensity.swift`:
+Create `BlueskyCore/Sources/YoruMimizukuKit/DisplayDensity.swift`:
 ```swift
 /// How densely a post row is rendered. `compact` is the Yorufukurou-style tight
 /// layout; `comfortable` adds avatars, thumbnails and action counts. Default is
@@ -134,25 +134,25 @@ Expected: PASS（3 テスト）。既存 BlueskyCore テストも壊れていな
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add BlueskyCore/Package.swift BlueskyCore/Sources/HoshidukiyoKit BlueskyCore/Tests/HoshidukiyoKitTests
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add BlueskyCore/Package.swift BlueskyCore/Sources/YoruMimizukuKit BlueskyCore/Tests/YoruMimizukuKitTests
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
-`git ai-commit` が使えない場合は中断して報告。メッセージ例: `Add HoshidukiyoKit target with DisplayDensity`
+`git ai-commit` が使えない場合は中断して報告。メッセージ例: `Add YoruMimizukuKit target with DisplayDensity`
 
 ---
 
 ### Task 2: RelativeTimeFormatter
 
 **Files:**
-- Create: `BlueskyCore/Tests/HoshidukiyoKitTests/RelativeTimeFormatterTests.swift`
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/RelativeTimeFormatter.swift`
+- Create: `BlueskyCore/Tests/YoruMimizukuKitTests/RelativeTimeFormatterTests.swift`
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/RelativeTimeFormatter.swift`
 
 - [ ] **Step 1: 失敗するテストを書く**
 
-Create `BlueskyCore/Tests/HoshidukiyoKitTests/RelativeTimeFormatterTests.swift`:
+Create `BlueskyCore/Tests/YoruMimizukuKitTests/RelativeTimeFormatterTests.swift`:
 ```swift
 import XCTest
-@testable import HoshidukiyoKit
+@testable import YoruMimizukuKit
 
 final class RelativeTimeFormatterTests: XCTestCase {
     let formatter = RelativeTimeFormatter()
@@ -187,7 +187,7 @@ Expected: FAIL（`RelativeTimeFormatter` 未定義）。
 
 - [ ] **Step 3: 実装**
 
-Create `BlueskyCore/Sources/HoshidukiyoKit/RelativeTimeFormatter.swift`:
+Create `BlueskyCore/Sources/YoruMimizukuKit/RelativeTimeFormatter.swift`:
 ```swift
 import Foundation
 
@@ -218,8 +218,8 @@ Expected: PASS。
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add BlueskyCore/Sources/HoshidukiyoKit/RelativeTimeFormatter.swift BlueskyCore/Tests/HoshidukiyoKitTests/RelativeTimeFormatterTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add BlueskyCore/Sources/YoruMimizukuKit/RelativeTimeFormatter.swift BlueskyCore/Tests/YoruMimizukuKitTests/RelativeTimeFormatterTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
 メッセージ例: `Add RelativeTimeFormatter`
 
@@ -228,15 +228,15 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 ### Task 3: PostDisplay モデルとサンプル
 
 **Files:**
-- Create: `BlueskyCore/Tests/HoshidukiyoKitTests/PostDisplayTests.swift`
-- Create: `BlueskyCore/Sources/HoshidukiyoKit/PostDisplay.swift`
+- Create: `BlueskyCore/Tests/YoruMimizukuKitTests/PostDisplayTests.swift`
+- Create: `BlueskyCore/Sources/YoruMimizukuKit/PostDisplay.swift`
 
 - [ ] **Step 1: 失敗するテストを書く**
 
-Create `BlueskyCore/Tests/HoshidukiyoKitTests/PostDisplayTests.swift`:
+Create `BlueskyCore/Tests/YoruMimizukuKitTests/PostDisplayTests.swift`:
 ```swift
 import XCTest
-@testable import HoshidukiyoKit
+@testable import YoruMimizukuKit
 
 final class PostDisplayTests: XCTestCase {
     func test_initStoresAllFields() {
@@ -286,7 +286,7 @@ Expected: FAIL（`PostDisplay` 未定義）。
 
 - [ ] **Step 3: 実装**
 
-Create `BlueskyCore/Sources/HoshidukiyoKit/PostDisplay.swift`:
+Create `BlueskyCore/Sources/YoruMimizukuKit/PostDisplay.swift`:
 ```swift
 import Foundation
 
@@ -376,13 +376,13 @@ Expected: PASS。
 - [ ] **Step 5: 既存テストの非回帰を確認**
 
 Run: `swift test --package-path BlueskyCore`
-Expected: BlueskyCore の 19 テスト＋ HoshidukiyoKit の新規テストがすべて PASS。
+Expected: BlueskyCore の 19 テスト＋ YoruMimizukuKit の新規テストがすべて PASS。
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add BlueskyCore/Sources/HoshidukiyoKit/PostDisplay.swift BlueskyCore/Tests/HoshidukiyoKitTests/PostDisplayTests.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add BlueskyCore/Sources/YoruMimizukuKit/PostDisplay.swift BlueskyCore/Tests/YoruMimizukuKitTests/PostDisplayTests.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
 メッセージ例: `Add PostDisplay model with sample data`
 
@@ -393,12 +393,12 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 **Files:**
 - Create: `project.yml`
 - Modify: `.gitignore`
-- Create: `app/Hoshidukiyo/HoshidukiyoApp.swift`
-- Create: `app/Hoshidukiyo/Views/ContentView.swift`
+- Create: `app/YoruMimizuku/YoruMimizukuApp.swift`
+- Create: `app/YoruMimizuku/Views/ContentView.swift`
 
 - [ ] **Step 1: `.gitignore` に生成物を追加**
 
-`/Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/.gitignore` の末尾に追記（既存行は残す）:
+`/Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/.gitignore` の末尾に追記（既存行は残す）:
 ```
 *.xcodeproj
 ```
@@ -407,7 +407,7 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 
 Create `project.yml`（リポジトリ＝worktree ルート）:
 ```yaml
-name: Hoshidukiyo
+name: YoruMimizuku
 options:
   bundleIdPrefix: as.ason
   deploymentTarget:
@@ -417,50 +417,50 @@ packages:
   BlueskyCore:
     path: BlueskyCore
 targets:
-  Hoshidukiyo:
+  YoruMimizuku:
     type: application
     platform: macOS
     sources:
-      - app/Hoshidukiyo
+      - app/YoruMimizuku
     dependencies:
       - package: BlueskyCore
         product: BlueskyCore
       - package: BlueskyCore
-        product: HoshidukiyoKit
+        product: YoruMimizukuKit
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: as.ason.Hoshidukiyo
-        PRODUCT_NAME: Hoshidukiyo
+        PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizuku
+        PRODUCT_NAME: YoruMimizuku
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         ENABLE_HARDENED_RUNTIME: YES
     info:
-      path: app/Hoshidukiyo/Info.plist
+      path: app/YoruMimizuku/Info.plist
       properties:
-        CFBundleDisplayName: Hoshidukiyo
+        CFBundleDisplayName: YoruMimizuku
         LSMinimumSystemVersion: "14.0"
         CFBundleURLTypes:
-          - CFBundleURLName: as.ason.Hoshidukiyo
+          - CFBundleURLName: as.ason.YoruMimizuku
             CFBundleURLSchemes:
               - as.ason
 schemes:
-  Hoshidukiyo:
+  YoruMimizuku:
     build:
       targets:
-        Hoshidukiyo: all
+        YoruMimizuku: all
     run:
       config: Debug
 ```
 
 - [ ] **Step 3: `@main` アプリと最小ルートビューを作成**
 
-Create `app/Hoshidukiyo/HoshidukiyoApp.swift`:
+Create `app/YoruMimizuku/YoruMimizukuApp.swift`:
 ```swift
 import SwiftUI
 
 @main
-struct HoshidukiyoApp: App {
+struct YoruMimizukuApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -470,12 +470,12 @@ struct HoshidukiyoApp: App {
 }
 ```
 
-Create `app/Hoshidukiyo/Views/ContentView.swift`:
+Create `app/YoruMimizuku/Views/ContentView.swift`:
 ```swift
 import SwiftUI
-import HoshidukiyoKit
+import YoruMimizukuKit
 
-/// Minimal root used to prove the app builds and links HoshidukiyoKit.
+/// Minimal root used to prove the app builds and links YoruMimizukuKit.
 /// Replaced by `MainWindowView` in the next task.
 struct ContentView: View {
     private let posts = PostDisplay.samples(now: Date())
@@ -496,34 +496,34 @@ struct ContentView: View {
 
 Run:
 ```bash
-xcodegen generate --spec /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell
-xcodebuild -project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcodegen generate --spec /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell
+xcodebuild -project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/YoruMimizuku.xcodeproj -scheme YoruMimizuku -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
 ```
-Expected: `xcodegen` が `Hoshidukiyo.xcodeproj` を生成し、`xcodebuild` が `** BUILD SUCCEEDED **` を出力する。これで「ネイティブアプリがビルドできる」状態に到達。
+Expected: `xcodegen` が `YoruMimizuku.xcodeproj` を生成し、`xcodebuild` が `** BUILD SUCCEEDED **` を出力する。これで「ネイティブアプリがビルドできる」状態に到達。
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add project.yml .gitignore app/Hoshidukiyo/HoshidukiyoApp.swift app/Hoshidukiyo/Views/ContentView.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add project.yml .gitignore app/YoruMimizuku/YoruMimizukuApp.swift app/YoruMimizuku/Views/ContentView.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
-メッセージ例: `Add Hoshidukiyo macOS app target via XcodeGen`
+メッセージ例: `Add YoruMimizuku macOS app target via XcodeGen`
 
-注: 生成された `Hoshidukiyo.xcodeproj` は gitignore 済みのためコミットされない（`git status` で追跡対象外であることを確認する）。
+注: 生成された `YoruMimizuku.xcodeproj` は gitignore 済みのためコミットされない（`git status` で追跡対象外であることを確認する）。
 
 ---
 
 ### Task 5: 投稿行（密度A/B）とメインウィンドウ
 
 **Files:**
-- Create: `app/Hoshidukiyo/Theme.swift`
-- Create: `app/Hoshidukiyo/Views/PostRowView.swift`
-- Create: `app/Hoshidukiyo/Views/MainWindowView.swift`
-- Modify: `app/Hoshidukiyo/HoshidukiyoApp.swift`（ルートを `MainWindowView` に差し替え）
+- Create: `app/YoruMimizuku/Theme.swift`
+- Create: `app/YoruMimizuku/Views/PostRowView.swift`
+- Create: `app/YoruMimizuku/Views/MainWindowView.swift`
+- Modify: `app/YoruMimizuku/YoruMimizukuApp.swift`（ルートを `MainWindowView` に差し替え）
 
 - [ ] **Step 1: テーマ定数を作成**
 
-Create `app/Hoshidukiyo/Theme.swift`:
+Create `app/YoruMimizuku/Theme.swift`:
 ```swift
 import SwiftUI
 
@@ -540,10 +540,10 @@ enum Theme {
 
 - [ ] **Step 2: 投稿行ビューを作成**
 
-Create `app/Hoshidukiyo/Views/PostRowView.swift`:
+Create `app/YoruMimizuku/Views/PostRowView.swift`:
 ```swift
 import SwiftUI
-import HoshidukiyoKit
+import YoruMimizukuKit
 
 /// One timeline row, rendered compact (Yorufukurou-tight) or comfortable
 /// (avatars + action counts) per `DisplayDensity`.
@@ -616,10 +616,10 @@ struct PostRowView: View {
 
 - [ ] **Step 3: メインウィンドウビューを作成**
 
-Create `app/Hoshidukiyo/Views/MainWindowView.swift`:
+Create `app/YoruMimizuku/Views/MainWindowView.swift`:
 ```swift
 import SwiftUI
-import HoshidukiyoKit
+import YoruMimizukuKit
 
 /// The single-column main window: account chip, top tab bar, mock timeline,
 /// and a bottom composer placeholder. Density toggle is added in the next step.
@@ -712,12 +712,12 @@ struct MainWindowView: View {
 
 - [ ] **Step 4: アプリのルートを差し替え**
 
-`app/Hoshidukiyo/HoshidukiyoApp.swift` の `ContentView()` を `MainWindowView()` に変更:
+`app/YoruMimizuku/YoruMimizukuApp.swift` の `ContentView()` を `MainWindowView()` に変更:
 ```swift
 import SwiftUI
 
 @main
-struct HoshidukiyoApp: App {
+struct YoruMimizukuApp: App {
     var body: some Scene {
         WindowGroup {
             MainWindowView()
@@ -732,16 +732,16 @@ struct HoshidukiyoApp: App {
 
 Run:
 ```bash
-xcodegen generate --spec /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell
-xcodebuild -project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcodegen generate --spec /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell
+xcodebuild -project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/YoruMimizuku.xcodeproj -scheme YoruMimizuku -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
 ```
 Expected: `** BUILD SUCCEEDED **`。
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add app/Hoshidukiyo
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add app/YoruMimizuku
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
 メッセージ例: `Add Yorufukurou-style main window and post row`
 
@@ -750,7 +750,7 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 ### Task 6: 密度トグル（既定B）と仕上げ
 
 **Files:**
-- Modify: `app/Hoshidukiyo/Views/MainWindowView.swift`（密度切替 UI を追加）
+- Modify: `app/YoruMimizuku/Views/MainWindowView.swift`（密度切替 UI を追加）
 
 - [ ] **Step 1: 密度トグルを追加**
 
@@ -788,21 +788,21 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 
 Run:
 ```bash
-xcodegen generate --spec /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell
-xcodebuild -project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
+xcodegen generate --spec /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/project.yml --project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell
+xcodebuild -project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/YoruMimizuku.xcodeproj -scheme YoruMimizuku -destination 'platform=macOS,arch=arm64' -configuration Debug build CODE_SIGNING_ALLOWED=NO
 ```
 Expected: `** BUILD SUCCEEDED **`。
 
 - [ ] **Step 3: 全パッケージテストの非回帰確認**
 
 Run: `swift test --package-path BlueskyCore`
-Expected: すべて PASS（BlueskyCore + HoshidukiyoKit）。
+Expected: すべて PASS（BlueskyCore + YoruMimizukuKit）。
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell add app/Hoshidukiyo/Views/MainWindowView.swift
-git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commit
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell add app/YoruMimizuku/Views/MainWindowView.swift
+git -C /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell ai-commit
 ```
 メッセージ例: `Add display density toggle to main window`
 
@@ -810,10 +810,10 @@ git -C /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell ai-commi
 
 ビルド成功で完了。手元で起動して見た目を確認する場合:
 ```bash
-open /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/build/Build/Products/Debug/Hoshidukiyo.app 2>/dev/null \
-  || open "$(xcodebuild -project /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/Hoshidukiyo.xcodeproj -scheme Hoshidukiyo -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2}')/Hoshidukiyo.app"
+open /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/build/Build/Products/Debug/YoruMimizuku.app 2>/dev/null \
+  || open "$(xcodebuild -project /Users/asonas/workspace/yorumimizuku/.worktrees/feature/app-shell/YoruMimizuku.xcodeproj -scheme YoruMimizuku -showBuildSettings 2>/dev/null | awk -F' = ' '/ BUILT_PRODUCTS_DIR /{print $2}')/YoruMimizuku.app"
 ```
-あるいは生成済みの `Hoshidukiyo.xcodeproj` を Xcode で開いて Run。
+あるいは生成済みの `YoruMimizuku.xcodeproj` を Xcode で開いて Run。
 
 - [ ] **Step 6: ブランチ仕上げ**
 
@@ -824,7 +824,7 @@ open /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/build/Buil
 ## Self-Review
 
 **1. Spec coverage:**
-- §4.1 `BlueskyMac` アプリ層（SwiftUI、WindowGroup）→ Task 4/5（`HoshidukiyoApp`, `MainWindowView`）。
+- §4.1 `BlueskyMac` アプリ層（SwiftUI、WindowGroup）→ Task 4/5（`YoruMimizukuApp`, `MainWindowView`）。
 - §7.1 ウィンドウ構成（アカウントチップ・上部タブ・単一カラム・下部コンポーザ）→ Task 5（`MainWindowView`）。
 - §7.2 投稿行の密度 A/B、既定 B → Task 1（`DisplayDensity`、default=comfortable）＋ Task 5（`PostRowView` の分岐）＋ Task 6（トグル）。
 - OS バンドル/URL スキーム（OAuth 準備）→ Task 4（`project.yml` の `CFBundleURLTypes` に `as.ason`）。
@@ -836,11 +836,11 @@ open /Users/asonas/workspace/hoshidukiyo/.worktrees/feature/app-shell/build/Buil
 - `DisplayDensity`（`.compact`/`.comfortable`/`.default`）は Task 1 定義、Task 5 `PostRowView` の `switch`、Task 6 Picker の `.tag` で一致。
 - `RelativeTimeFormatter().string(for:now:)` は Task 2 定義、Task 5 `PostRowView` で一致。
 - `PostDisplay`（`id`/`authorDisplayName`/`authorHandle`/`body`/`createdAt`/`contextLabel`/`replyCount`/`repostCount`/`likeCount`）は Task 3 定義、Task 4/5 ビューのプロパティ参照で一致。`samples(now:)` も同様。
-- `project.yml` の依存（`product: BlueskyCore` / `product: HoshidukiyoKit`）は Task 1 の `Package.swift` products と一致。アプリの `import HoshidukiyoKit` が解決可能。
-- アプリのエントリは Task 4 で `ContentView`、Task 5 で `MainWindowView` に差し替え（`HoshidukiyoApp` の body を更新）。整合済み。
+- `project.yml` の依存（`product: BlueskyCore` / `product: YoruMimizukuKit`）は Task 1 の `Package.swift` products と一致。アプリの `import YoruMimizukuKit` が解決可能。
+- アプリのエントリは Task 4 で `ContentView`、Task 5 で `MainWindowView` に差し替え（`YoruMimizukuApp` の body を更新）。整合済み。
 
 ## 次プランへの申し送り
 - 本プランはモックデータの殻。Plan: OAuth（識別子解決・discovery・PAR・PKCE・トークン交換・`use_dpop_nonce` 再試行・`ASWebAuthenticationSession`・Keychain・`AccountManager`）で実ログインを実装し、`MainWindowView` のアカウントチップとサインイン導線を実データに接続する。
 - `project.yml` に登録済みの URL スキーム `as.ason` を OAuth コールバック（`as.ason:/callback`）受けに使う。`ASWebAuthenticationSession` はバンドル化された本アプリで動作する。
 - `PostDisplay` への実データマッピング（`BlueskyCore` の `PostView` → `PostDisplay`）は読み取り API プラン（getTimeline 等）で追加する。
-- パッケージ名 `BlueskyCore` が `HoshidukiyoKit` も含む点は、将来パッケージ名を中立化する際に整理する。
+- パッケージ名 `BlueskyCore` が `YoruMimizukuKit` も含む点は、将来パッケージ名を中立化する際に整理する。
