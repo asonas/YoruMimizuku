@@ -15,7 +15,7 @@ struct MainWindowView: View {
     var accountHandle: String
     var accountAvatarURL: URL?
 
-    @State private var lightboxURL: URL?
+    @State private var lightbox: ImageGallery?
     @State private var showSettings = false
     /// The id of the post j/k navigation currently highlights.
     @State private var focusedPostID: String?
@@ -46,8 +46,8 @@ struct MainWindowView: View {
         // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
         .background { tabShortcuts }
         .overlay {
-            if let lightboxURL {
-                ImageLightboxView(url: lightboxURL) { self.lightboxURL = nil }
+            if let lightbox {
+                ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
             }
         }
         .sheet(isPresented: $showSettings) {
@@ -72,7 +72,7 @@ struct MainWindowView: View {
                     model: tab.model,
                     title: tab.title,
                     now: now,
-                    onImageTap: { lightboxURL = $0 },
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenConversation: { workspace.openConversation($0) },
                     onClose: { workspace.closeConversation(id) }
                 )
@@ -127,7 +127,7 @@ struct MainWindowView: View {
             ForEach(posts) { post in
                 PostRowView(
                     post: post, density: displaySettings.density, now: now,
-                    onImageTap: { lightboxURL = $0 },
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onReplyTap: { _ in workspace.openConversation(post) }
                 )
                 .background(post.id == focusedPostID ? theme.rowHover : .clear)

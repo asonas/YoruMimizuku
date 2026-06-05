@@ -12,9 +12,10 @@ struct PostRowView: View {
     /// Whether to show the "reply to @handle" affordance. Hidden inside the
     /// conversation inspector, where the parent is already on screen.
     var showReplyMarker: Bool = true
-    /// Called with the full-size URL when a thumbnail is tapped, so the host can
-    /// present the lightbox.
-    var onImageTap: (URL) -> Void = { _ in }
+    /// Called when a thumbnail is tapped with every full-size URL in the post and
+    /// the index of the tapped one, so the host can open the lightbox positioned
+    /// on that image and let the viewer page through the rest.
+    var onImageTap: ([URL], Int) -> Void = { _, _ in }
     /// Called with the parent post when the reply marker is tapped, so the host
     /// can open the conversation.
     var onReplyTap: (PostDisplay) -> Void = { _ in }
@@ -159,7 +160,9 @@ struct PostRowView: View {
         .contentShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityLabel(image.alt.isEmpty ? "画像" : image.alt)
         .onTapGesture {
-            if let url = image.fullsizeURL { onImageTap(url) }
+            let urls = post.images.compactMap(\.fullsizeURL)
+            guard let url = image.fullsizeURL, let index = urls.firstIndex(of: url) else { return }
+            onImageTap(urls, index)
         }
     }
 

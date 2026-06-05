@@ -12,7 +12,7 @@ struct ConversationView: View {
 
     let title: String
     let now: Date
-    var onImageTap: (URL) -> Void
+    var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
     var onClose: () -> Void
 
