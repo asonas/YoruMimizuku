@@ -37,9 +37,10 @@ public struct ThemePalette: Equatable, Sendable, Codable {
         text.withOpacity(0.12)
     }
 
-    /// The default warm-stone pair (#44403c background / #fafaf9 text).
+    /// The default monochrome pair (#ffffff background / #1a1a1a text) — a white
+    /// canvas with near-black text for a high-contrast, neutral look.
     public static let `default` = ThemePalette(
-        background: PaletteColor(colorSpace: .sRGB, red: 68 / 255, green: 64 / 255, blue: 60 / 255),
-        text: PaletteColor(colorSpace: .sRGB, red: 250 / 255, green: 250 / 255, blue: 249 / 255)
+        background: PaletteColor(colorSpace: .sRGB, red: 1, green: 1, blue: 1),
+        text: PaletteColor(colorSpace: .sRGB, red: 26 / 255, green: 26 / 255, blue: 26 / 255)
     )
 }

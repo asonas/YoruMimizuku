@@ -2,11 +2,11 @@ import XCTest
 @testable import YoruMimizukuKit
 
 final class ThemePaletteTests: XCTestCase {
-    func test_defaultMatchesStonePalette() {
+    func test_defaultMatchesMonochromePalette() {
         let palette = ThemePalette.default
         XCTAssertEqual(palette.background.colorSpace, .sRGB)
-        XCTAssertEqual(palette.background.red, 68 / 255, accuracy: 0.001)
-        XCTAssertEqual(palette.text.red, 250 / 255, accuracy: 0.001)
+        XCTAssertEqual(palette.background.red, 1, accuracy: 0.001)
+        XCTAssertEqual(palette.text.red, 26 / 255, accuracy: 0.001)
     }
 
     func test_swappedExchangesBackgroundAndText() {
@@ -29,9 +29,9 @@ final class ThemePaletteTests: XCTestCase {
 
     func test_surfaceSitsBetweenBackgroundAndText() {
         let palette = ThemePalette.default
-        // background is dark, text is light, so surface should be slightly lighter than background.
-        XCTAssertGreaterThan(palette.surface.red, palette.background.red)
-        XCTAssertLessThan(palette.surface.red, palette.text.red)
+        // background is light, text is dark, so surface should be slightly darker than background.
+        XCTAssertLessThan(palette.surface.red, palette.background.red)
+        XCTAssertGreaterThan(palette.surface.red, palette.text.red)
     }
 
     func test_blendedTowardMovesComponentsByFraction() {
