@@ -1,5 +1,5 @@
 using Microsoft.UI.Xaml;
-using YoruMimizuku.App.Interop;
+using YoruMimizuku.App.Services;
 
 namespace YoruMimizuku.App;
 
@@ -17,13 +17,21 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += (_, e) =>
+        {
+            AppLog.Write("UnhandledException", e.Exception);
+            // Keep the process alive so the error surfaces in the window instead of
+            // a silent crash + Program Compatibility Assistant.
+            e.Handled = true;
+        };
     }
 
-    protected override async void OnLaunched(LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Configure the Swift core bridge before any feature call.
-        await BridgeClient.Shared.InitializeAsync(Service, ClientId, RedirectUri, Scope);
-
+        AppLog.Write("OnLaunched");
+        // Create and show the window first; the bridge is initialized inside it so
+        // any failure is shown in the UI (and logged) rather than crashing before
+        // a window exists.
         _window = new MainWindow();
         _window.Activate();
     }

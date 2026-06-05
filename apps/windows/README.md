@@ -38,10 +38,17 @@ scripts\windows\stage-bridge.ps1
 
 # 2. Build and run the WinUI app
 dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
-# then run the produced YoruMimizuku.App.exe (unpackaged), e.g. from VS (F5)
+# Self-contained output lands under a win-x64 subfolder:
+.\App\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
 ```
 
 `scripts\windows\ci.ps1` runs the full chain (core build/test + stage + dotnet build).
+
+The project is configured **self-contained** (`SelfContained` +
+`WindowsAppSDKSelfContained`): the .NET runtime and the Windows App SDK 1.5
+runtime are bundled in the output, so the app runs without separately installing
+the Windows App Runtime. Startup/runtime errors are written to
+`%LOCALAPPDATA%\YoruMimizuku\app.log`.
 
 ## OAuth
 

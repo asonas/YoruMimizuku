@@ -1,10 +1,12 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Windows.System;
 using YoruMimizuku.App.Interop;
+using YoruMimizuku.App.Services;
 using YoruMimizuku.App.ViewModels;
 using YoruMimizuku.App.Views;
 
@@ -20,8 +22,35 @@ public sealed partial class MainWindow : Window
         Title = "YoruMimizuku";
         Views.MainWindowAccessor.Current = this;
         _workspace.Changed += OnWorkspaceChanged;
-        ShowLogin();
         WireShortcuts();
+        _ = InitializeAsync();
+    }
+
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            await BridgeClient.Shared.InitializeAsync(App.Service, App.ClientId, App.RedirectUri, App.Scope);
+            ShowLogin();
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("Bridge init failed", ex);
+            ShowFatal($"ブリッジの初期化に失敗しました。\n{ex.Message}\n\nログ: {AppLog.Path}");
+        }
+    }
+
+    private void ShowFatal(string message)
+    {
+        LoginHost.Content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(24),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        LoginHost.Visibility = Visibility.Visible;
+        ShellRoot.Visibility = Visibility.Collapsed;
     }
 
     private async void OnWorkspaceChanged()
