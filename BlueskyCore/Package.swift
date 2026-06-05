@@ -9,7 +9,8 @@ let package = Package(
     ],
     products: [
         .library(name: "BlueskyCore", targets: ["BlueskyCore"]),
-        .library(name: "YoruMimizukuKit", targets: ["YoruMimizukuKit"])
+        .library(name: "YoruMimizukuKit", targets: ["YoruMimizukuKit"]),
+        .library(name: "PlatformApple", targets: ["PlatformApple"])
     ],
     dependencies: [
         // swift-crypto provides an API-compatible `import Crypto` that works on
@@ -22,7 +23,10 @@ let package = Package(
             dependencies: [.product(name: "Crypto", package: "swift-crypto")]
         ),
         .target(name: "YoruMimizukuKit", dependencies: ["BlueskyCore"]),
-        .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore"]),
+        // Apple-only adapters: Keychain (Security), SecRandom (Security), os.signpost logger.
+        // Cross-platform concretes (URLSession HTTP, swift-crypto DPoP) stay in BlueskyCore/Adapters.
+        .target(name: "PlatformApple", dependencies: ["BlueskyCore"]),
+        .testTarget(name: "BlueskyCoreTests", dependencies: ["BlueskyCore", "PlatformApple"]),
         .testTarget(name: "YoruMimizukuKitTests", dependencies: ["YoruMimizukuKit"])
     ]
 )

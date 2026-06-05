@@ -1,4 +1,6 @@
 import Foundation
+import BlueskyCore
+#if canImport(Security)
 import Security
 
 /// Apple `SecureStorage` backed by the Keychain (generic password items keyed by
@@ -64,3 +66,4 @@ public struct KeychainStorage: SecureStorage {
 public enum KeychainError: Error, Equatable {
     case unexpectedStatus(OSStatus)
 }
+#endif

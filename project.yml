@@ -18,6 +18,8 @@ targets:
         product: BlueskyCore
       - package: BlueskyCore
         product: YoruMimizukuKit
+      - package: BlueskyCore
+        product: PlatformApple
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizuku

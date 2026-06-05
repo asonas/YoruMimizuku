@@ -1,5 +1,6 @@
 import XCTest
 @testable import BlueskyCore
+import PlatformApple
 
 final class RandomBytesGeneratorTests: XCTestCase {
     func testSecGeneratorReturnsRequestedLength() {

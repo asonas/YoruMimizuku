@@ -1,6 +1,7 @@
 import SwiftUI
 import BlueskyCore
 import YoruMimizukuKit
+import PlatformApple
 
 /// Chooses the login screen or the main window based on whether an account is
 /// currently stored. Builds the live login stack from the Keychain-backed store.

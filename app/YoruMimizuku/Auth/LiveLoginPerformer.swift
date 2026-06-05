@@ -2,6 +2,7 @@ import Foundation
 import CryptoKit
 import BlueskyCore
 import YoruMimizukuKit
+import PlatformApple
 
 /// Live `LoginPerforming`: generates a fresh DPoP P-256 key, wires the real
 /// `OAuthClient` collaborators, runs the OAuth login, and persists the account
