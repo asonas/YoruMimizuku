@@ -92,6 +92,103 @@ extension PostServiceTests {
 }
 
 extension PostServiceTests {
+    func testLikeSendsCreateRecordWithStrongRefSubject() async throws {
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.like/like1","cid":"bafylike"}
+        """##.utf8))
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("com.atproto.repo.createRecord") }, response: created),
+        ])
+        let service = makeService(http: http)
+
+        let result = try await service.like(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            repo: "did:plc:me",
+            subject: StrongRef(uri: "at://did:plc:alice/app.bsky.feed.post/aaa", cid: "bafypost"),
+            createdAt: "2026-06-05T00:00:00.000Z"
+        )
+
+        XCTAssertEqual(result.response.uri, "at://did:plc:me/app.bsky.feed.like/like1")
+        let req = try XCTUnwrap(http.sentRequests.first { $0.url.absoluteString.contains("createRecord") })
+        XCTAssertEqual(req.method, .post)
+        XCTAssertEqual(req.headers["Authorization"], "DPoP atk")
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(req.body)) as? [String: Any])
+        XCTAssertEqual(json["repo"] as? String, "did:plc:me")
+        XCTAssertEqual(json["collection"] as? String, "app.bsky.feed.like")
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        XCTAssertEqual(record["$type"] as? String, "app.bsky.feed.like")
+        XCTAssertEqual(record["createdAt"] as? String, "2026-06-05T00:00:00.000Z")
+        let subject = try XCTUnwrap(record["subject"] as? [String: Any])
+        XCTAssertEqual(subject["uri"] as? String, "at://did:plc:alice/app.bsky.feed.post/aaa")
+        XCTAssertEqual(subject["cid"] as? String, "bafypost")
+    }
+
+    func testRepostSendsCreateRecordWithRepostCollection() async throws {
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.repost/rp1","cid":"bafyrp"}
+        """##.utf8))
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("com.atproto.repo.createRecord") }, response: created),
+        ])
+        let service = makeService(http: http)
+
+        let result = try await service.repost(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            repo: "did:plc:me",
+            subject: StrongRef(uri: "at://did:plc:alice/app.bsky.feed.post/aaa", cid: "bafypost"),
+            createdAt: "2026-06-05T00:00:00.000Z"
+        )
+
+        XCTAssertEqual(result.response.uri, "at://did:plc:me/app.bsky.feed.repost/rp1")
+        let req = try XCTUnwrap(http.sentRequests.first { $0.url.absoluteString.contains("createRecord") })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(req.body)) as? [String: Any])
+        XCTAssertEqual(json["collection"] as? String, "app.bsky.feed.repost")
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        XCTAssertEqual(record["$type"] as? String, "app.bsky.feed.repost")
+    }
+
+    func testDeleteRecordSendsRepoCollectionRkey() async throws {
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("com.atproto.repo.deleteRecord") },
+                  response: HTTPResponse(statusCode: 200, body: Data("{}".utf8))),
+        ])
+        let service = makeService(http: http)
+
+        let refreshed = try await service.deleteRecord(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            repo: "did:plc:me", collection: "app.bsky.feed.like", rkey: "like1"
+        )
+
+        XCTAssertNil(refreshed)
+        let req = try XCTUnwrap(http.sentRequests.last)
+        XCTAssertEqual(req.method, .post)
+        XCTAssertTrue(req.url.absoluteString.hasSuffix("/xrpc/com.atproto.repo.deleteRecord"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(req.body)) as? [String: Any])
+        XCTAssertEqual(json["repo"] as? String, "did:plc:me")
+        XCTAssertEqual(json["collection"] as? String, "app.bsky.feed.like")
+        XCTAssertEqual(json["rkey"] as? String, "like1")
+    }
+
+    func testDeleteRecordRefreshesOnUnauthorized() async throws {
+        let unauthorized = HTTPResponse(statusCode: 401, body: Data(##"{"error":"invalid_token"}"##.utf8))
+        let metadata = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"issuer":"https://bsky.social","authorization_endpoint":"https://bsky.social/oauth/authorize","token_endpoint":"https://bsky.social/oauth/token"}
+        """##.utf8))
+        let tokens = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"access_token":"atk2","token_type":"DPoP","refresh_token":"rtk2","sub":"did:plc:me"}
+        """##.utf8))
+        let http = SequencedHTTPClient([unauthorized, metadata, tokens, HTTPResponse(statusCode: 200, body: Data("{}".utf8))])
+        let service = makeService(http: http)
+
+        let refreshed = try await service.deleteRecord(
+            pds: pds, issuer: issuer, accessToken: "old", refreshToken: "rtk",
+            repo: "did:plc:me", collection: "app.bsky.feed.repost", rkey: "rp1"
+        )
+
+        XCTAssertEqual(refreshed?.accessToken, "atk2")
+        XCTAssertEqual(http.sentRequests.last?.headers["Authorization"], "DPoP atk2")
+    }
+
     func testCreateReplyBuildsRootAndParentFromParentRecord() async throws {
         // Parent is itself a reply, so its reply.root must be reused as the root.
         let getRecord = HTTPResponse(statusCode: 200, body: Data(##"""

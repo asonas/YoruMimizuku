@@ -31,6 +31,76 @@ public struct PostService: Sendable {
         return (decoded.blob, outcome.refreshed)
     }
 
+    /// Create a record of any collection (`com.atproto.repo.createRecord`). Used by
+    /// the typed `like`/`repost` helpers below; the auth refresh-and-retry is
+    /// handled by `perform`. Returns the created record's uri/cid plus refreshed
+    /// tokens when a refresh occurred.
+    public func createRecord<Record: Encodable & Sendable>(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        repo: String, collection: String, record: Record
+    ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
+        let request = CreateRecordRequest(repo: repo, collection: collection, record: record)
+        let payload = try JSONEncoder().encode(request)
+        let url = pds.appendingPathComponent("xrpc/com.atproto.repo.createRecord")
+        let outcome = try await perform(
+            method: .post, url: url,
+            headers: ["Content-Type": "application/json", "Accept": "application/json"],
+            body: payload, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken
+        )
+        let decoded: CreateRecordResponse = try Self.decode(outcome.response)
+        return (decoded, outcome.refreshed)
+    }
+
+    /// Delete a record (`com.atproto.repo.deleteRecord`), used to undo a like or
+    /// repost. Returns refreshed tokens when a 401 triggered a refresh-and-retry.
+    @discardableResult
+    public func deleteRecord(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        repo: String, collection: String, rkey: String
+    ) async throws -> TokenResponse? {
+        let payload = try JSONEncoder().encode(
+            DeleteRecordRequest(repo: repo, collection: collection, rkey: rkey)
+        )
+        let url = pds.appendingPathComponent("xrpc/com.atproto.repo.deleteRecord")
+        let outcome = try await perform(
+            method: .post, url: url,
+            headers: ["Content-Type": "application/json", "Accept": "application/json"],
+            body: payload, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken
+        )
+        guard (200..<300).contains(outcome.response.statusCode) else {
+            let errorBody = try? JSONDecoder().decode(XRPCErrorResponse.self, from: outcome.response.body)
+            throw XRPCError.requestFailed(status: outcome.response.statusCode, body: errorBody)
+        }
+        return outcome.refreshed
+    }
+
+    /// Like a post: create an `app.bsky.feed.like` whose subject is the post's
+    /// strong ref. The returned `uri` is the like record's AT-URI (its rkey is what
+    /// `deleteRecord` needs to undo the like).
+    public func like(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        repo: String, subject: StrongRef, createdAt: String = Self.timestamp()
+    ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
+        try await createRecord(
+            pds: pds, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken,
+            repo: repo, collection: "app.bsky.feed.like",
+            record: LikeRecordWrite(subject: subject, createdAt: createdAt)
+        )
+    }
+
+    /// Repost a post: create an `app.bsky.feed.repost` whose subject is the post's
+    /// strong ref. The returned `uri` is the repost record's AT-URI.
+    public func repost(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        repo: String, subject: StrongRef, createdAt: String = Self.timestamp()
+    ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
+        try await createRecord(
+            pds: pds, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken,
+            repo: repo, collection: "app.bsky.feed.repost",
+            record: RepostRecordWrite(subject: subject, createdAt: createdAt)
+        )
+    }
+
     /// Create an `app.bsky.feed.post`. Uploads any images first, detects link/tag
     /// facets, resolves `@handle` mentions to DIDs (dropping any that fail), builds
     /// the record, and sends `createRecord`. Threads refreshed tokens across all the

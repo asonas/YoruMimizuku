@@ -141,6 +141,61 @@ public struct PostRecordWrite: Encodable, Equatable, Sendable {
     }
 }
 
+/// A `app.bsky.feed.like` record write: a strong reference to the liked post plus
+/// the like's `createdAt`. Encodes the `$type` discriminator.
+public struct LikeRecordWrite: Encodable, Equatable, Sendable {
+    public let subject: StrongRef
+    public let createdAt: String
+
+    public init(subject: StrongRef, createdAt: String) {
+        self.subject = subject
+        self.createdAt = createdAt
+    }
+
+    enum CodingKeys: String, CodingKey { case type = "$type", subject, createdAt }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode("app.bsky.feed.like", forKey: .type)
+        try c.encode(subject, forKey: .subject)
+        try c.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+/// A `app.bsky.feed.repost` record write: a strong reference to the reposted post
+/// plus the repost's `createdAt`. Encodes the `$type` discriminator.
+public struct RepostRecordWrite: Encodable, Equatable, Sendable {
+    public let subject: StrongRef
+    public let createdAt: String
+
+    public init(subject: StrongRef, createdAt: String) {
+        self.subject = subject
+        self.createdAt = createdAt
+    }
+
+    enum CodingKeys: String, CodingKey { case type = "$type", subject, createdAt }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode("app.bsky.feed.repost", forKey: .type)
+        try c.encode(subject, forKey: .subject)
+        try c.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+/// `com.atproto.repo.deleteRecord` request body identifying the record to remove.
+public struct DeleteRecordRequest: Encodable, Equatable, Sendable {
+    public let repo: String
+    public let collection: String
+    public let rkey: String
+
+    public init(repo: String, collection: String, rkey: String) {
+        self.repo = repo
+        self.collection = collection
+        self.rkey = rkey
+    }
+}
+
 /// `createRecord` request body wrapping a typed record.
 public struct CreateRecordRequest<Record: Encodable>: Encodable {
     public let repo: String
