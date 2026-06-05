@@ -53,6 +53,29 @@ public struct NotificationGroup: Identifiable, Equatable, Sendable {
         self.isRead = isRead
     }
 
+    /// The Bluesky-style summary line, e.g. "aliceおよび他2人があなたの投稿をいいねしました".
+    /// The lead actor's display name leads, the remaining count folds into "および他N人",
+    /// and the verb phrase names what they did to "あなたの投稿" (your post). The relative
+    /// time is rendered separately by the view as a trailing " · 1分".
+    public var actionSummary: String {
+        let lead = actors.first.map { $0.displayName.isEmpty ? $0.handle : $0.displayName } ?? ""
+        let others = max(0, actors.count - 1)
+        let subject = others > 0 ? "\(lead)および他\(others)人" : lead
+        return subject + Self.verbPhrase(for: reason)
+    }
+
+    private static func verbPhrase(for reason: NotificationReason) -> String {
+        switch reason {
+        case .like: return "があなたの投稿をいいねしました"
+        case .repost: return "があなたの投稿をリポストしました"
+        case .follow: return "があなたをフォローしました"
+        case .mention: return "があなたにメンションしました"
+        case .reply: return "があなたの投稿に返信しました"
+        case .quote: return "があなたの投稿を引用しました"
+        case .other: return "のアクティビティがありました"
+        }
+    }
+
     /// Return a copy with the resolved target-post snippet attached.
     public func withSubject(text: String?, imageURL: URL?) -> NotificationGroup {
         NotificationGroup(
