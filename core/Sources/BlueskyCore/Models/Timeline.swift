@@ -195,7 +195,7 @@ private struct FacetFeatureBox: Decodable {
 
 /// A single feature within a facet. Unknown / future feature types decode to
 /// `nil` and are dropped, so a new lexicon feature never breaks decoding.
-public enum FacetFeature: Decodable, Equatable, Sendable {
+public enum FacetFeature: Codable, Equatable, Sendable {
     case link(uri: String)
     case mention(did: String)
     case tag(tag: String)
@@ -222,6 +222,21 @@ public enum FacetFeature: Decodable, Equatable, Sendable {
                 forKey: .type, in: container,
                 debugDescription: "Unsupported facet feature: \(type)"
             )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .link(let uri):
+            try container.encode("app.bsky.richtext.facet#link", forKey: .type)
+            try container.encode(uri, forKey: .uri)
+        case .mention(let did):
+            try container.encode("app.bsky.richtext.facet#mention", forKey: .type)
+            try container.encode(did, forKey: .did)
+        case .tag(let tag):
+            try container.encode("app.bsky.richtext.facet#tag", forKey: .type)
+            try container.encode(tag, forKey: .tag)
         }
     }
 }
