@@ -10,6 +10,7 @@ struct ComposerView: View {
     var onClose: () -> Void
 
     @State private var importing = false
+    @State private var isDropTargeted = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -28,6 +29,7 @@ struct ComposerView: View {
             HStack {
                 Button { importing = true } label: { Image(systemName: "photo.badge.plus") }
                     .disabled(!model.canAddImage)
+                    .help("クリック、または画像をドラッグ&ドロップで添付")
                 Spacer()
                 Text("\(model.remaining)")
                     .font(.callout).monospacedDigit()
@@ -46,6 +48,16 @@ struct ComposerView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [.png, .jpeg],
                       allowsMultipleSelection: true) { result in
             handleImport(result)
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(theme.accent, style: StrokeStyle(lineWidth: 2, dash: [6]))
+                    .allowsHitTesting(false)
+            }
+        }
+        .onDrop(of: [.image, .fileURL], isTargeted: $isDropTargeted) { providers in
+            handleDrop(providers)
         }
     }
 
@@ -74,5 +86,43 @@ struct ComposerView: View {
             guard let encoded = ImageEncoder.encodeForUpload(url: url) else { continue }
             model.images.append(ComposeImage(data: encoded.data, mimeType: encoded.mimeType))
         }
+    }
+
+    /// Accept images dropped onto the sheet. Finder files arrive as file URLs (kept
+    /// as-is when small); images dragged from a browser or other app arrive as raw
+    /// data. Each provider's bytes are encoded off the main actor, then appended on
+    /// the main actor while there is still room (`canAddImage`).
+    private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
+        let model = self.model
+        @Sendable func append(_ encoded: (data: Data, mimeType: String)?) {
+            guard let encoded else { return }
+            Task { @MainActor in
+                guard model.canAddImage else { return }
+                model.images.append(ComposeImage(data: encoded.data, mimeType: encoded.mimeType))
+            }
+        }
+
+        var accepted = false
+        for provider in providers {
+            // Finder image files conform to file-url (and also to image); browser drags
+            // expose a web url plus raw image data. Check file-url specifically so a web
+            // url doesn't shadow the image-data path below.
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                accepted = true
+                _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                    guard let url, url.isFileURL else { return }
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    append(ImageEncoder.encodeForUpload(url: url))
+                }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                accepted = true
+                provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
+                    guard let data else { return }
+                    append(ImageEncoder.encodeForUpload(data: data))
+                }
+            }
+        }
+        return accepted
     }
 }
