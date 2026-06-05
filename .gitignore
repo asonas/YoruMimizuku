@@ -4,5 +4,5 @@
 DerivedData/
 *.xcodeproj
 .swiftpm/
-app/YoruMimizuku/Info.plist
+apps/macos/Info.plist
 build/
