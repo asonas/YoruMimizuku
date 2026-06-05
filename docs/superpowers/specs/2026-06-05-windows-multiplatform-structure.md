@@ -19,7 +19,7 @@ code has been changed yet.
 ## Current Structure Assessment
 
 The existing module split (`BlueskyCore` for platform-independent logic,
-`HoshidukiyoKit` for view models, `app/Hoshidukiyo` for the macOS SwiftUI app)
+`YoruMimizukuKit` for view models, `app/YoruMimizuku` for the macOS SwiftUI app)
 already follows the right principle: OS touchpoints are abstracted behind
 protocols (`SecureStorage`, `DPoPCryptoProvider`, `RandomBytesGenerator`,
 `HTTPClient`). The foundation is sound. The problems are about *where the
@@ -45,7 +45,7 @@ and adapters (OS implementations) are not physically separated.
 
 ### Problem 2: The pure view-model layer leaks `os`
 
-`HoshidukiyoKit/PerfSignpost.swift` and `HoshidukiyoKit/TimelineViewModel.swift`
+`YoruMimizukuKit/PerfSignpost.swift` and `YoruMimizukuKit/TimelineViewModel.swift`
 import `os`. `os.signpost` / `Logger` are Apple-only, so this layer is not
 actually pure. It should depend on a `Logger` protocol, with per-OS adapters
 injected at the edge. (For contrast, `PaletteColor.swift` deliberately avoids
@@ -53,7 +53,7 @@ SwiftUI and is a good model to follow.)
 
 ### Problem 3: `app/` is macOS-only but generically named and singular
 
-`app/Hoshidukiyo` is entirely SwiftUI/AppKit and cannot be reused on Windows.
+`app/YoruMimizuku` is entirely SwiftUI/AppKit and cannot be reused on Windows.
 `project.yml` is macOS-specific. There is no home for a Windows app or for
 Windows platform adapters.
 
@@ -89,13 +89,13 @@ approach is: **expose the Swift core as a C ABI (cdecl) DLL, then call it from
 C# via P/Invoke (`DllImport`).**
 
 - A thin bridge target in the Swift core exposes C-compatible entry points using
-  `@_cdecl("hoshi_login_start")`-style functions, built into `Hoshidukiyo.dll`
+  `@_cdecl("yoru_login_start")`-style functions, built into `YoruMimizuku.dll`
   with `-emit-library`.
 - Return structs and collections (e.g. timeline arrays) are passed as UTF-8 JSON
-  `char*` strings, paired with a `hoshi_free` function for deallocation. This
+  `char*` strings, paired with a `yoru_free` function for deallocation. This
   avoids ABI struct-layout mismatches. Async work is surfaced via a callback
   function pointer or a pollable handle exposed over the C ABI.
-- On the C# side, a wrapper class holds the `[DllImport("Hoshidukiyo.dll")]`
+- On the C# side, a wrapper class holds the `[DllImport("YoruMimizuku.dll")]`
   declarations. The WinUI XAML / view models only ever see that wrapper.
 
 Isolating the bridge into its own Swift target keeps `unsafe` pointer handling
@@ -103,27 +103,32 @@ and C-string lifetime management contained in one place.
 
 ## Target Directory Structure
 
+Decision: **single SPM package** (Option A). The platform adapters are targets
+under `core/Sources/`, not a separate `platform/` package. BlueskyCore purity is
+enforced by the target dependency graph (the `BlueskyCore` target depends on
+nothing platform-specific), and each adapter file is gated with `#if os(...)` so
+the package builds on every OS. Splitting into a separate package is a cheap
+future refactor if it ever becomes warranted (see Open Questions).
+
 ```
-hoshidukiyo/
-├── core/                              # SPM package
+yorumimizuku/
+├── core/                              # single SPM package
 │   ├── Package.swift                  #   add swift-crypto dependency
 │   └── Sources/
 │       ├── BlueskyCore/               # PURE: Foundation only. logic / models / protocols
 │       │   ├── OAuth/  XRPC/  Models/  Account/  DPoP/
 │       │   └── Ports/                 #   protocols: SecureStorage, DPoPCryptoProvider,
 │       │                              #     HTTPClient, RandomBytesGenerator, Logger
-│       ├── HoshidukiyoKit/            # PURE view models. replace `os` with a Logger abstraction
-│       └── HoshidukiyoBridge/         # NEW: C ABI surface (@_cdecl). Windows DLL entry points.
+│       ├── YoruMimizukuKit/            # PURE view models. replace `os` with a Logger abstraction
+│       ├── PlatformApple/             #   Keychain / os.signpost logger. files gated #if os(macOS)
+│       ├── PlatformWindows/           #   Credential Manager (DPAPI) / BCryptGenRandom / logger.
+│       │                              #     files gated #if os(Windows) (import WinSDK)
+│       └── YoruMimizukuBridge/         # NEW: C ABI surface (@_cdecl). Windows DLL entry points.
 │                                      #   The C# P/Invoke boundary. unsafe is confined here.
-├── platform/                          # OS-specific concrete adapters
-│   └── Sources/
-│       ├── PlatformApple/             #   Keychain / os.signpost logger
-│       └── PlatformWindows/           #   Credential Manager (DPAPI) / BCryptGenRandom / logger
-│                                      #     (import WinSDK)
 ├── apps/
-│   ├── macos/                         # move current app/Hoshidukiyo here (SwiftUI + project.yml)
+│   ├── macos/                         # move current app/YoruMimizuku here (SwiftUI + project.yml)
 │   └── windows/                       # NEW: C#/.NET solution
-│       ├── Hoshidukiyo.Windows.sln
+│       ├── YoruMimizuku.Windows.sln
 │       ├── App/                       #   WinUI 3 (XAML + C# view models)
 │       └── Interop/                   #   DllImport wrappers (C# bindings for the Swift DLL)
 ├── docs/  design/                     # unchanged
@@ -131,9 +136,9 @@ hoshidukiyo/
 
 Key relationships:
 
-- **`HoshidukiyoBridge` (new)** is the core of this change. It collects `@_cdecl`
-  functions and, on Windows, builds `Hoshidukiyo.dll` via `-emit-library`. macOS
-  does not use it (the macOS app imports `HoshidukiyoKit` directly) — an
+- **`YoruMimizukuBridge` (new)** is the core of this change. It collects `@_cdecl`
+  functions and, on Windows, builds `YoruMimizuku.dll` via `-emit-library`. macOS
+  does not use it (the macOS app imports `YoruMimizukuKit` directly) — an
   intentionally asymmetric setup. Keeping the bridge as its own target confines
   `unsafe` pointer work and C-string management to one layer.
 - **`apps/windows/Interop/`** is the C# mirror image: it holds the
@@ -150,16 +155,26 @@ matters. Each step is a structural-only change that keeps `cd core && swift test
 (currently `cd BlueskyCore && swift test`) green.
 
 1. Abstract the `os` dependency behind a `Logger` protocol, purifying
-   `HoshidukiyoKit`. Move the macOS implementation into `PlatformApple`.
+   `YoruMimizukuKit`. Move the macOS implementation into `PlatformApple`.
 2. Swap `CryptoKit` for `swift-crypto` (`import Crypto`) and add the
-   `#if canImport(FoundationNetworking)` guard to the URLSession HTTP client. The
-   core is now theoretically compilable on Windows.
+   `#if canImport(FoundationNetworking)` guard to the URLSession HTTP client.
+   Update the test files that import CryptoKit directly
+   (`CryptoKitDPoPProviderTests`, `DPoPProofIntegrationTests`) in the same step.
+   The core is now theoretically *compilable* on Windows — note that this guard
+   only fixes compilation, not runtime behavior (see Open Questions for the
+   URLSession-on-Windows spike).
 3. Move Apple concrete implementations (Keychain, etc.) out of `Platform/` into
-   `platform/PlatformApple`, and collect protocols into `Ports/`.
+   the `core/Sources/PlatformApple` target, and collect protocols into `Ports/`.
+   The tests that
+   exercise these concrete adapters (`CryptoKitDPoPProviderTests`,
+   `URLSessionHTTPClientTests`, `RandomBytesGeneratorTests`) must move alongside
+   them, or `BlueskyCoreTests` must gain a dependency on `PlatformApple`. This is
+   a test-target reorganization, not just a source move — account for it so the
+   "structural-only, stays green" property actually holds.
 4. Confirm macOS behaves identically via the test suite (structural change only,
    behavior unchanged).
-5. Add `HoshidukiyoBridge`, `platform/PlatformWindows`, and `apps/windows` as new
-   additions.
+5. Add `YoruMimizukuBridge`, `core/Sources/PlatformWindows`, and `apps/windows` as
+   new additions.
 
 Each step is committable as a structural-only change, keeping the build green
 throughout.
@@ -167,9 +182,22 @@ throughout.
 ## Open Questions
 
 - Exact async surface over the C ABI (callback function pointer vs. pollable
-  handle) — to be decided when `HoshidukiyoBridge` is implemented.
-- Whether `core/` should remain a single SPM package or split into multiple
-  packages once `platform/` targets exist. Single package is the starting
-  assumption.
+  handle) — to be decided when `YoruMimizukuBridge` is implemented.
+- ~~Single SPM package vs. split packages.~~ **Decided: single package (Option
+  A).** The platform adapters live as targets under `core/Sources/`, gated with
+  `#if os(...)`. Rationale: BlueskyCore purity is already enforced by the target
+  dependency graph, the `#if os(...)` gating is required either way, and one
+  `swift test` / one manifest matches the TDD workflow. Splitting `platform/`
+  into its own SPM package becomes worthwhile only if it grows large, needs
+  independent versioning, or `BlueskyCore` is published standalone — a cheap
+  structural refactor to do later. (Note: a separate `platform/` *directory*
+  sibling to `core/` was rejected because SPM cannot declare a target whose
+  sources live outside the package root, `../platform/...`.)
+- URLSession on Windows: the `FoundationNetworking` guard only guarantees
+  compilation. swift-corelibs-foundation's URLSession (incl. the async
+  `data(for:)` API) has historically been less mature on Windows. Run a runtime
+  connectivity spike before relying on `URLSessionHTTPClient` as the Windows HTTP
+  stack; have a fallback (e.g. an `HTTPClient` adapter over WinHTTP/libcurl) in
+  mind if it does not work end-to-end.
 - Build/packaging pipeline for the Windows DLL + C# solution (out of scope for
   this memo).
