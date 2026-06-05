@@ -51,7 +51,10 @@ struct RootView: View {
                     notifications: notificationsModel,
                     workspace: workspace,
                     accountHandle: currentHandle,
-                    accountAvatarURL: accountAvatarURL
+                    accountAvatarURL: accountAvatarURL,
+                    makeComposer: { parentURI in
+                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParentURI: parentURI)
+                    }
                 )
                 .task(id: currentDID) { await loadAvatar() }
             } else {

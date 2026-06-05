@@ -15,11 +15,15 @@ struct MainWindowView: View {
     @EnvironmentObject private var fontSettings: FontSettingsStore
     var accountHandle: String
     var accountAvatarURL: URL?
+    /// Builds a composer VM for a new post (nil parent) or a reply (parent URI).
+    var makeComposer: @MainActor (String?) -> ComposerViewModel
 
     @State private var lightbox: ImageGallery?
     @State private var showSettings = false
     /// The id of the post j/k navigation currently highlights.
     @State private var focusedPostID: String?
+    /// The composer sheet's view model; non-nil while the sheet is open.
+    @State private var composer: ComposerViewModel?
 
     /// How often the home feed pulls fresh posts while it is on screen.
     private let refreshInterval: Duration = .seconds(30)
@@ -44,6 +48,11 @@ struct MainWindowView: View {
             SettingsView()
                 .environmentObject(theme)
                 .environmentObject(displaySettings)
+                .environmentObject(fontSettings)
+        }
+        .sheet(item: $composer) { model in
+            ComposerView(model: model) { composer = nil }
+                .environmentObject(theme)
                 .environmentObject(fontSettings)
         }
     }
@@ -268,6 +277,12 @@ struct MainWindowView: View {
                 .keyboardShortcut("j", modifiers: [])
             Button("") { focusAdjacentPost(-1) }
                 .keyboardShortcut("k", modifiers: [])
+            Button("") {
+                let vm = makeComposer(nil)
+                vm.onPosted = { composer = nil; Task { await model.refresh() } }
+                composer = vm
+            }
+            .keyboardShortcut("n", modifiers: [])
         }
         .opacity(0)
         .frame(width: 0, height: 0)

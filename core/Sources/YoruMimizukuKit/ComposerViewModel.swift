@@ -5,9 +5,13 @@ import Foundation
 /// submits through an injected `PostSubmitting`. Lives in the kit so its logic is
 /// unit-tested without SwiftUI.
 @MainActor
-public final class ComposerViewModel: ObservableObject {
+public final class ComposerViewModel: ObservableObject, Identifiable {
     public static let maxGraphemes = 300
     public static let maxImages = 4
+
+    /// Stable identity so the composer can drive a `.sheet(item:)`. Marked
+    /// `nonisolated` because `Identifiable`'s `id` requirement is nonisolated.
+    nonisolated public let id = UUID()
 
     @Published public var text: String = ""
     @Published public var images: [ComposeImage] = []
