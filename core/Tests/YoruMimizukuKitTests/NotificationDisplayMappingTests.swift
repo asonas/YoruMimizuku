@@ -50,4 +50,9 @@ final class NotificationDisplayMappingTests: XCTestCase {
         let display = NotificationDisplay(notification(reason: .like, text: nil))
         XCTAssertEqual(display.id, "at://did:plc:bob/app.bsky.feed.like/aaa|cid123")
     }
+
+    func testMapsReasonSubjectToSubjectURI() {
+        let display = NotificationDisplay(notification(reason: .like, text: nil))
+        XCTAssertEqual(display.subjectURI, "at://did:plc:me/app.bsky.feed.post/mine")
+    }
 }

@@ -35,7 +35,7 @@ struct NotificationsView: View {
         }
     }
 
-    private func list(_ items: [NotificationDisplay]) -> some View {
+    private func list(_ items: [NotificationGroup]) -> some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(items) { item in
                 NotificationRowView(item: item, now: now)
@@ -79,15 +79,20 @@ struct NotificationsView: View {
     }
 }
 
-/// One notification row: reason icon, actor avatar, a verb line, an optional post
-/// snippet (for replies/mentions/quotes), and the relative time. Unread rows carry
-/// a faint accent tint.
+/// One notification row: reason icon, the actor avatar(s), a verb line, and the
+/// context of what was reacted to. For likes/reposts the target post snippet is
+/// shown in a quoted box (so you can see which post got the reaction); aggregated
+/// reactions read "Alice 他N人 がいいねしました". For replies/mentions/quotes the
+/// incoming post body is shown instead. Unread rows carry a faint accent tint.
 private struct NotificationRowView: View {
-    let item: NotificationDisplay
+    let item: NotificationGroup
     let now: Date
     @EnvironmentObject private var theme: ThemeStore
 
     private let timeFormatter = RelativeTimeFormatter()
+
+    private var leadActor: NotificationGroup.Actor? { item.actors.first }
+    private var othersCount: Int { max(0, item.actors.count - 1) }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -101,28 +106,30 @@ private struct NotificationRowView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(item.authorDisplayName)
+                    Text(leadActor?.displayName ?? "")
                         .font(.subheadline).fontWeight(.semibold)
                         .foregroundStyle(theme.primaryText)
                         .lineLimit(1)
+                    if othersCount > 0 {
+                        Text("他\(othersCount)人")
+                            .font(.caption).foregroundStyle(theme.tertiaryText)
+                            .lineLimit(1)
+                    }
                     Text(verb)
                         .font(.caption)
                         .foregroundStyle(theme.secondaryText)
                         .lineLimit(1)
                     Spacer(minLength: 4)
-                    Text(timeFormatter.string(for: item.createdAt, now: now))
+                    Text(timeFormatter.string(for: item.latestCreatedAt, now: now))
                         .font(.caption2).foregroundStyle(theme.tertiaryText)
                         .monospacedDigit()
                 }
-                Text("@\(item.authorHandle)")
-                    .font(.caption2).foregroundStyle(theme.tertiaryText)
-                    .lineLimit(1).truncationMode(.tail)
-                if let text = item.text, !text.isEmpty {
-                    Text(text)
-                        .font(.callout).foregroundStyle(theme.secondaryText)
-                        .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 1)
+                if othersCount == 0, let handle = leadActor?.handle {
+                    Text("@\(handle)")
+                        .font(.caption2).foregroundStyle(theme.tertiaryText)
+                        .lineLimit(1).truncationMode(.tail)
                 }
+                context
             }
             Spacer(minLength: 0)
         }
@@ -132,8 +139,63 @@ private struct NotificationRowView: View {
         .background(item.isRead ? Color.clear : theme.accent.opacity(0.06))
     }
 
+    /// The post this notification is about: a quoted snippet of the target post for
+    /// likes/reposts, or the incoming body for replies/mentions/quotes.
+    @ViewBuilder
+    private var context: some View {
+        switch item.reason {
+        case .like, .repost:
+            if let text = item.subjectText, !text.isEmpty {
+                subjectSnippet(text)
+            } else if item.subjectImageURL != nil {
+                subjectSnippet("")
+            }
+        default:
+            if let text = item.text, !text.isEmpty {
+                Text(text)
+                    .font(.callout).foregroundStyle(theme.secondaryText)
+                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 1)
+            }
+        }
+    }
+
+    private func subjectSnippet(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            if let imageURL = item.subjectImageURL {
+                RemoteImage(url: imageURL, maxPointSize: 36) { phase in
+                    if case let .success(image) = phase {
+                        image.resizable().scaledToFill()
+                    } else {
+                        theme.avatarPlaceholder
+                    }
+                }
+                .frame(width: 36, height: 36)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+            if !text.isEmpty {
+                Text(text)
+                    .font(.caption).foregroundStyle(theme.tertiaryText)
+                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("画像")
+                    .font(.caption).foregroundStyle(theme.tertiaryText)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(theme.surface.opacity(0.5))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(theme.hairline, lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.top, 3)
+    }
+
     private var avatar: some View {
-        RemoteImage(url: item.avatarURL, maxPointSize: 30) { phase in
+        RemoteImage(url: leadActor?.avatarURL, maxPointSize: 30) { phase in
             if case let .success(image) = phase {
                 image.resizable().scaledToFill()
             } else {

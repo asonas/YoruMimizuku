@@ -14,6 +14,9 @@ public struct NotificationDisplay: Identifiable, Equatable, Sendable {
     public let text: String?
     public let createdAt: Date
     public let isRead: Bool
+    /// The URI of the post this notification targets (the liked/reposted/replied-to
+    /// post). Absent for follows. Used to fetch the target post's snippet.
+    public let subjectURI: String?
 
     public init(
         id: String,
@@ -23,7 +26,8 @@ public struct NotificationDisplay: Identifiable, Equatable, Sendable {
         avatarURL: URL? = nil,
         text: String? = nil,
         createdAt: Date,
-        isRead: Bool = false
+        isRead: Bool = false,
+        subjectURI: String? = nil
     ) {
         self.id = id
         self.reason = reason
@@ -33,6 +37,7 @@ public struct NotificationDisplay: Identifiable, Equatable, Sendable {
         self.text = text
         self.createdAt = createdAt
         self.isRead = isRead
+        self.subjectURI = subjectURI
     }
 }
 
@@ -50,7 +55,8 @@ extension NotificationDisplay {
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             text: notification.record.text,
             createdAt: PostDisplay.parseISO8601(notification.indexedAt) ?? Date(timeIntervalSince1970: 0),
-            isRead: notification.isRead
+            isRead: notification.isRead,
+            subjectURI: notification.reasonSubject
         )
     }
 }

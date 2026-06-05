@@ -5,10 +5,10 @@ import BlueskyCore
 @MainActor
 final class NotificationsViewModelTests: XCTestCase {
     private final class StubLoader: NotificationsLoading, @unchecked Sendable {
-        var result: Result<[NotificationDisplay], Error>
+        var result: Result<[NotificationGroup], Error>
         private(set) var loadCount = 0
-        init(result: Result<[NotificationDisplay], Error>) { self.result = result }
-        func loadLatest() async throws -> [NotificationDisplay] {
+        init(result: Result<[NotificationGroup], Error>) { self.result = result }
+        func loadLatest() async throws -> [NotificationGroup] {
             loadCount += 1
             return try result.get()
         }
@@ -16,10 +16,13 @@ final class NotificationsViewModelTests: XCTestCase {
 
     private struct StubError: Error {}
 
-    private func sample(id: String) -> NotificationDisplay {
-        NotificationDisplay(
-            id: id, reason: .like, authorDisplayName: "Bob", authorHandle: "bob.bsky.social",
-            createdAt: Date(timeIntervalSince1970: 1_780_574_400)
+    private func sample(id: String) -> NotificationGroup {
+        NotificationGroup(
+            id: id, reason: .like,
+            actors: [.init(displayName: "Bob", handle: "bob.bsky.social", avatarURL: nil)],
+            subjectURI: "at://post/\(id)",
+            latestCreatedAt: Date(timeIntervalSince1970: 1_780_574_400),
+            isRead: false
         )
     }
 

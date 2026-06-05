@@ -4,7 +4,7 @@ import Foundation
 /// provides the live implementation (authenticated XRPC + mapping); tests inject a
 /// stub. Keeps `NotificationsViewModel` free of OS/network concerns.
 public protocol NotificationsLoading: Sendable {
-    func loadLatest() async throws -> [NotificationDisplay]
+    func loadLatest() async throws -> [NotificationGroup]
 }
 
 /// Drives the notifications tab: holds the load state machine. `@MainActor`
@@ -15,7 +15,7 @@ public final class NotificationsViewModel: ObservableObject {
     public enum State: Equatable {
         case idle
         case loading
-        case loaded([NotificationDisplay])
+        case loaded([NotificationGroup])
         case failed(String)
 
         public var isLoading: Bool {
@@ -32,8 +32,8 @@ public final class NotificationsViewModel: ObservableObject {
         self.loader = loader
     }
 
-    /// Convenience accessor for the currently loaded notifications (empty otherwise).
-    public var items: [NotificationDisplay] {
+    /// Convenience accessor for the currently loaded notification groups (empty otherwise).
+    public var items: [NotificationGroup] {
         if case let .loaded(items) = state { return items }
         return []
     }
