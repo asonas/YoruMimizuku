@@ -71,9 +71,8 @@ struct ComposerView: View {
         for url in urls where model.canAddImage {
             guard url.startAccessingSecurityScopedResource() else { continue }
             defer { url.stopAccessingSecurityScopedResource() }
-            guard let data = try? Data(contentsOf: url) else { continue }
-            let mime = url.pathExtension.lowercased() == "png" ? "image/png" : "image/jpeg"
-            model.images.append(ComposeImage(data: data, mimeType: mime))
+            guard let encoded = ImageEncoder.encodeForUpload(url: url) else { continue }
+            model.images.append(ComposeImage(data: encoded.data, mimeType: encoded.mimeType))
         }
     }
 }
