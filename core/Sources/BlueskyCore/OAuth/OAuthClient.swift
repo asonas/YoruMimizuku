@@ -8,6 +8,16 @@ public struct OAuthLoginResult: Equatable, Sendable {
     public let pds: URL
     public let authorizationServerIssuer: String
     public let tokens: TokenResponse
+
+    /// Public so an out-of-module orchestrator (e.g. the Windows C ABI bridge,
+    /// which drives the OAuth steps itself for the WebView2 split flow) can build
+    /// the result from a token exchange.
+    public init(did: String, pds: URL, authorizationServerIssuer: String, tokens: TokenResponse) {
+        self.did = did
+        self.pds = pds
+        self.authorizationServerIssuer = authorizationServerIssuer
+        self.tokens = tokens
+    }
 }
 
 /// Orchestrates the full atproto OAuth login: discovery → PKCE/state → PAR →
