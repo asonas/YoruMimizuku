@@ -78,7 +78,10 @@ public enum FacetDetector {
             let hashUTF16 = bodyRange.location - 1
             let prefix = ns.substring(to: hashUTF16)
             let byteStart = Array(prefix.utf8).count
-            let byteEnd = byteStart + Array(("#" + tag).utf8).count
+            // The marker may be ASCII '#' (1 byte) or full-width '＃' (3 bytes);
+            // measure the actual character so byteEnd stays aligned.
+            let marker = ns.substring(with: NSRange(location: hashUTF16, length: 1))
+            let byteEnd = byteStart + Array((marker + tag).utf8).count
             facets.append(DetectedFacet(byteStart: byteStart, byteEnd: byteEnd, feature: .tag(tag: tag)))
         }
         return facets

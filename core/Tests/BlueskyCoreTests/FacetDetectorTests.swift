@@ -41,6 +41,24 @@ extension FacetDetectorTests {
         XCTAssertEqual(facets[0].byteStart, 4)
         XCTAssertEqual(facets[0].byteEnd, 8)
     }
+
+    func testFullWidthHashtagByteOffsets() {
+        // "＃" (U+FF03) is 3 UTF-8 bytes; "tag" is 3 bytes → byteEnd 6.
+        let facets = FacetDetector.detect(text: "＃tag")
+        XCTAssertEqual(facets.count, 1)
+        XCTAssertEqual(facets[0].feature, .tag(tag: "tag"))
+        XCTAssertEqual(facets[0].byteStart, 0)
+        XCTAssertEqual(facets[0].byteEnd, 6)
+    }
+
+    func testFullWidthHashtagByteOffsetsWithPrefix() {
+        // "a " is 2 bytes, "＃" is 3 bytes, "b" is 1 byte → byteStart 2, byteEnd 6.
+        let facets = FacetDetector.detect(text: "a ＃b")
+        XCTAssertEqual(facets.count, 1)
+        XCTAssertEqual(facets[0].feature, .tag(tag: "b"))
+        XCTAssertEqual(facets[0].byteStart, 2)
+        XCTAssertEqual(facets[0].byteEnd, 6)
+    }
 }
 
 extension FacetDetectorTests {
