@@ -10,8 +10,11 @@ final class SavedFilterStoreTests: XCTestCase {
         XCTAssertEqual(store.filters, [existing])
     }
 
+    // `async` (despite no awaits): swift-corelibs-xctest on Windows cannot invoke
+    // a synchronous `@MainActor throws` test method (it fails to cast the
+    // MainActor-isolated function), but the async path handles it correctly.
     @MainActor
-    func testAddAppendsAndPersists() throws {
+    func testAddAppendsAndPersists() async throws {
         let port = InMemoryFilterStoring()
         let store = SavedFilterStore(port: port)
 
@@ -36,7 +39,7 @@ final class SavedFilterStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testAddUsesJoinedSubqueriesAsNameWhenBlank() throws {
+    func testAddUsesJoinedSubqueriesAsNameWhenBlank() async throws {
         let port = InMemoryFilterStoring()
         let store = SavedFilterStore(port: port)
 
@@ -50,7 +53,7 @@ final class SavedFilterStoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUpdateReplacesByIdAndPersists() throws {
+    func testUpdateReplacesByIdAndPersists() async throws {
         let original = SavedFilter(name: "Swift", terms: [FilterTerm(kind: .hashtag, value: "swift")], combinator: .and)
         let port = InMemoryFilterStoring(initial: [original])
         let store = SavedFilterStore(port: port)
