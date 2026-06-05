@@ -20,6 +20,7 @@ extension PostDisplay {
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             body: post.record.text,
+            bodySegments: RichText.segments(text: post.record.text, facets: post.record.facets),
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),
             contextLabel: contextLabel,
             images: images,

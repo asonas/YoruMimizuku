@@ -127,15 +127,102 @@ public struct ProfileViewBasic: Decodable, Equatable, Sendable {
     }
 }
 
-/// The post record (`app.bsky.feed.post`). Only text and createdAt are modeled
-/// for now; `createdAt` stays a string and is parsed at the display layer.
+/// The post record (`app.bsky.feed.post`). `createdAt` stays a string and is
+/// parsed at the display layer. `facets` carries the rich-text ranges (links,
+/// hashtags, mentions) so the display layer can render them as tappable spans.
 public struct PostRecord: Decodable, Equatable, Sendable {
     public let text: String
     public let createdAt: String
+    public let facets: [Facet]
 
-    public init(text: String, createdAt: String) {
+    public init(text: String, createdAt: String, facets: [Facet] = []) {
         self.text = text
         self.createdAt = createdAt
+        self.facets = facets
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case text
+        case createdAt
+        case facets
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.text = try container.decode(String.self, forKey: .text)
+        self.createdAt = try container.decode(String.self, forKey: .createdAt)
+        self.facets = (try? container.decodeIfPresent([Facet].self, forKey: .facets)) ?? []
+    }
+}
+
+/// A rich-text range (`app.bsky.richtext.facet`). `byteStart` / `byteEnd` are
+/// UTF-8 byte offsets into the post text (NOT character offsets); the display
+/// layer must slice the UTF-8 view to map them back to a substring.
+public struct Facet: Decodable, Equatable, Sendable {
+    public let byteStart: Int
+    public let byteEnd: Int
+    public let features: [FacetFeature]
+
+    public init(byteStart: Int, byteEnd: Int, features: [FacetFeature]) {
+        self.byteStart = byteStart
+        self.byteEnd = byteEnd
+        self.features = features
+    }
+
+    enum CodingKeys: String, CodingKey { case index, features }
+    enum IndexKeys: String, CodingKey { case byteStart, byteEnd }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let index = try container.nestedContainer(keyedBy: IndexKeys.self, forKey: .index)
+        self.byteStart = try index.decode(Int.self, forKey: .byteStart)
+        self.byteEnd = try index.decode(Int.self, forKey: .byteEnd)
+        let boxes = (try? container.decode([FacetFeatureBox].self, forKey: .features)) ?? []
+        self.features = boxes.compactMap(\.feature)
+    }
+}
+
+/// Wrapper that decodes a facet feature tolerantly: an unknown `$type` yields a
+/// nil `feature` rather than throwing, so one unsupported entry never discards
+/// its siblings or fails the whole facet.
+private struct FacetFeatureBox: Decodable {
+    let feature: FacetFeature?
+
+    init(from decoder: Decoder) throws {
+        self.feature = try? FacetFeature(from: decoder)
+    }
+}
+
+/// A single feature within a facet. Unknown / future feature types decode to
+/// `nil` and are dropped, so a new lexicon feature never breaks decoding.
+public enum FacetFeature: Decodable, Equatable, Sendable {
+    case link(uri: String)
+    case mention(did: String)
+    case tag(tag: String)
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case uri, did, tag
+    }
+
+    /// Decoding container that tolerates unknown feature types by representing
+    /// them as nil (filtered out of the parent array).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+        switch type {
+        case "app.bsky.richtext.facet#link":
+            self = .link(uri: try container.decode(String.self, forKey: .uri))
+        case "app.bsky.richtext.facet#mention":
+            self = .mention(did: try container.decode(String.self, forKey: .did))
+        case "app.bsky.richtext.facet#tag":
+            self = .tag(tag: try container.decode(String.self, forKey: .tag))
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .type, in: container,
+                debugDescription: "Unsupported facet feature: \(type)"
+            )
+        }
     }
 }
 

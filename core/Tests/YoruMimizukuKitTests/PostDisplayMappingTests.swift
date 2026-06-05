@@ -151,6 +151,38 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.contextLabel, "Reposted by Bob")
     }
 
+    func testMapsFacetsIntoBodySegments() {
+        let text = "see https://example.com #swift"
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(
+                text: text,
+                createdAt: "2026-06-04T12:00:00.000Z",
+                facets: [
+                    Facet(byteStart: 4, byteEnd: 23, features: [.link(uri: "https://example.com")]),
+                    Facet(byteStart: 24, byteEnd: 30, features: [.tag(tag: "swift")])
+                ]
+            ),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z"
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+
+        XCTAssertEqual(display.body, text)
+        XCTAssertEqual(display.bodySegments.map(\.kind), [.text, .link, .text, .tag])
+        XCTAssertEqual(display.bodySegments[1].url, URL(string: "https://example.com"))
+        XCTAssertEqual(display.bodySegments[3].text, "#swift")
+    }
+
+    func testBodySegmentsFallBackToPlainTextWhenNoFacets() {
+        let display = PostDisplay(FeedViewPost(post: post(text: "plain body")))
+        XCTAssertEqual(display.bodySegments.map(\.kind), [.text])
+        XCTAssertEqual(display.bodySegments.map(\.text), ["plain body"])
+    }
+
     func testParsesFractionalAndWholeSecondTimestamps() {
         let fractional = PostDisplay(FeedViewPost(post: post(createdAt: "2026-06-04T12:00:00.000Z")))
         let whole = PostDisplay(FeedViewPost(post: post(createdAt: "2026-06-04T12:00:00Z")))

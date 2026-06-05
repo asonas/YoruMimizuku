@@ -93,17 +93,33 @@ struct PostRowView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
-            Text(post.body)
+            Text(bodyAttributed)
                 .font(density == .compact ? .callout : .body)
                 .foregroundStyle(theme.primaryText)
+                .tint(theme.accent)
                 .lineSpacing(density == .compact ? 1 : 2)
                 .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
             if !post.images.isEmpty {
                 imageGrid.padding(.top, 3)
             }
             if density == .comfortable {
                 actionBar
             }
+        }
+    }
+
+    /// Build the post body as an `AttributedString` so links, hashtags, and
+    /// mentions render inline and stay tappable (SwiftUI opens `.link` runs via
+    /// the environment's `openURL`). Plain spans keep the body text color.
+    private var bodyAttributed: AttributedString {
+        post.bodySegments.reduce(into: AttributedString()) { result, segment in
+            var run = AttributedString(segment.text)
+            if let url = segment.url {
+                run.link = url
+                run.foregroundColor = theme.accent
+            }
+            result += run
         }
     }
 

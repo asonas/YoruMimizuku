@@ -197,4 +197,69 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertEqual(item.reason?.by.displayName, "Bob")
         XCTAssertEqual(item.reason?.indexedAt, "2026-06-04T11:45:00.000Z")
     }
+
+    func testDecodesRecordFacetsForLinkTagAndMention() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.feed.post",
+          "text": "see https://example.com #swift cc @bob.bsky.social",
+          "createdAt": "2026-06-04T12:00:00Z",
+          "facets": [
+            {
+              "index": { "byteStart": 4, "byteEnd": 23 },
+              "features": [
+                { "$type": "app.bsky.richtext.facet#link", "uri": "https://example.com" }
+              ]
+            },
+            {
+              "index": { "byteStart": 24, "byteEnd": 30 },
+              "features": [
+                { "$type": "app.bsky.richtext.facet#tag", "tag": "swift" }
+              ]
+            },
+            {
+              "index": { "byteStart": 34, "byteEnd": 50 },
+              "features": [
+                { "$type": "app.bsky.richtext.facet#mention", "did": "did:plc:bob" }
+              ]
+            }
+          ]
+        }
+        """##.utf8)
+        let record = try JSONDecoder().decode(PostRecord.self, from: json)
+
+        XCTAssertEqual(record.facets.count, 3)
+        XCTAssertEqual(record.facets[0].byteStart, 4)
+        XCTAssertEqual(record.facets[0].byteEnd, 23)
+        XCTAssertEqual(record.facets[0].features, [.link(uri: "https://example.com")])
+        XCTAssertEqual(record.facets[1].features, [.tag(tag: "swift")])
+        XCTAssertEqual(record.facets[2].features, [.mention(did: "did:plc:bob")])
+    }
+
+    func testRecordWithoutFacetsDecodesToEmpty() throws {
+        let json = Data(##"""
+        { "$type": "app.bsky.feed.post", "text": "plain", "createdAt": "2026-06-04T12:00:00Z" }
+        """##.utf8)
+        let record = try JSONDecoder().decode(PostRecord.self, from: json)
+        XCTAssertEqual(record.facets, [])
+    }
+
+    func testUnknownFacetFeatureIsDropped() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.feed.post",
+          "text": "x",
+          "createdAt": "2026-06-04T12:00:00Z",
+          "facets": [
+            {
+              "index": { "byteStart": 0, "byteEnd": 1 },
+              "features": [ { "$type": "app.bsky.richtext.facet#unknownFuture", "foo": "bar" } ]
+            }
+          ]
+        }
+        """##.utf8)
+        let record = try JSONDecoder().decode(PostRecord.self, from: json)
+        XCTAssertEqual(record.facets.count, 1)
+        XCTAssertEqual(record.facets[0].features, [])
+    }
 }

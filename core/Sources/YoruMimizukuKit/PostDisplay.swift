@@ -40,6 +40,9 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let authorHandle: String
     public let avatarURL: URL?
     public let body: String
+    /// The body split into display spans (plain text plus tappable links,
+    /// hashtags, and mentions). For mock/plain posts this is a single text span.
+    public let bodySegments: [RichTextSegment]
     public let createdAt: Date
     public let contextLabel: String?
     public let images: [PostImage]
@@ -55,6 +58,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         authorHandle: String,
         avatarURL: URL? = nil,
         body: String,
+        bodySegments: [RichTextSegment]? = nil,
         createdAt: Date,
         contextLabel: String? = nil,
         images: [PostImage] = [],
@@ -68,6 +72,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.authorHandle = authorHandle
         self.avatarURL = avatarURL
         self.body = body
+        self.bodySegments = bodySegments ?? RichText.segments(text: body, facets: [])
         self.createdAt = createdAt
         self.contextLabel = contextLabel
         self.images = images
