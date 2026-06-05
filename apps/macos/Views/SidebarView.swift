@@ -2,18 +2,30 @@ import SwiftUI
 import YoruMimizukuKit
 
 /// The cmux-style vertical tab rail: a compact brand header, the pinned
-/// home/notifications tabs, the stack of closable conversation tabs, and an
-/// account footer with the settings entry point.
-///
-/// Visual language mirrors cmux's sidebar: dense text-first rows, a solid-fill
-/// (not tinted) selection that inverts the foreground to white, rounded-6
-/// corners, monospaced metadata, and a hover-revealed close affordance.
+/// home/notifications tabs, the saved filter tabs, the stack of closable
+/// conversation tabs, and an account footer with the settings entry point.
 struct SidebarView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
     var accountHandle: String
     var accountAvatarURL: URL?
     var onOpenSettings: () -> Void
+
+    /// Drives the create/edit sheet. `.new` opens a blank editor; `.edit` prefills
+    /// from an existing filter and preserves its id/createdAt on save.
+    private enum EditorRequest: Identifiable {
+        case new
+        case edit(SavedFilter)
+
+        var id: String {
+            switch self {
+            case .new: return "new"
+            case let .edit(filter): return filter.id.uuidString
+            }
+        }
+    }
+
+    @State private var editorRequest: EditorRequest?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,14 +35,28 @@ struct SidebarView: View {
             accountFooter
         }
         .background(theme.background)
-        // Pull the rail up to the window's top edge; trafficLightInset below keeps the
-        // first tab clear of the controls that float over this corner.
         .ignoresSafeArea(.container, edges: .top)
+        .sheet(item: $editorRequest) { request in
+            editor(for: request).environmentObject(theme)
+        }
     }
 
-    /// Empty top inset that keeps the first tab clear of the traffic-light controls
-    /// (close/minimize/zoom) which float over the sidebar when the title bar is hidden.
-    /// The sidebar carries no brand label.
+    @ViewBuilder
+    private func editor(for request: EditorRequest) -> some View {
+        switch request {
+        case .new:
+            FilterEditorView(name: "", query: "", isEditing: false) { name, query in
+                workspace.addFilter(name: name, query: query)
+            }
+        case let .edit(filter):
+            FilterEditorView(name: filter.name, query: filter.query, isEditing: true) { name, query in
+                workspace.updateFilter(
+                    SavedFilter(id: filter.id, name: name, query: query, createdAt: filter.createdAt)
+                )
+            }
+        }
+    }
+
     private var trafficLightInset: some View {
         Color.clear.frame(height: 28)
     }
@@ -50,6 +76,8 @@ struct SidebarView: View {
                     isSelected: workspace.selection == .notifications
                 ) { workspace.selection = .notifications }
 
+                filterSection
+
                 if !workspace.conversations.isEmpty {
                     sectionLabel("会話")
                     ForEach(workspace.conversations) { tab in
@@ -65,6 +93,41 @@ struct SidebarView: View {
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
+        }
+    }
+
+    /// The "フィルター" section: a header with an add button, then one row per
+    /// saved filter. Always shown so the user can add the first filter.
+    private var filterSection: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 0) {
+                sectionLabel("フィルター")
+                Spacer(minLength: 0)
+                Button { editorRequest = .new } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(theme.tertiaryText)
+                        .padding(.horizontal, 10)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("フィルターを追加")
+            }
+
+            ForEach(workspace.filters) { tab in
+                SidebarRow(
+                    icon: "line.3.horizontal.decrease",
+                    title: tab.title,
+                    meta: tab.query,
+                    isSelected: workspace.selection == .filter(tab.id),
+                    onClose: { workspace.removeFilter(id: tab.id) },
+                    onEdit: {
+                        if let saved = workspace.savedFilter(id: tab.id) {
+                            editorRequest = .edit(saved)
+                        }
+                    }
+                ) { workspace.selection = .filter(tab.id) }
+            }
         }
     }
 
@@ -96,8 +159,6 @@ struct SidebarView: View {
         }
     }
 
-    /// The signed-in account's avatar; falls back to a placeholder fill while the
-    /// profile is still loading or has no avatar.
     private var accountAvatar: some View {
         RemoteImage(url: accountAvatarURL, maxPointSize: 20) { phase in
             if case let .success(image) = phase {
@@ -112,14 +173,10 @@ struct SidebarView: View {
     }
 }
 
-/// A single sidebar tab row in the cmux idiom.
-///
-/// - Pinned navigation rows pass an `icon` and `title` only.
-/// - Conversation rows pass `title` (display name), a `subtitle` (post snippet,
-///   up to two lines), and `meta` (`@handle`, monospaced), plus `onClose`.
-///
-/// Selection paints the whole row with a solid accent fill and switches the
-/// foreground to white; hover shows a faint fill (and the close button).
+/// A single sidebar tab row in the cmux idiom. Navigation rows pass `icon`+`title`;
+/// filter rows add `meta` (the query) plus `onClose`/`onEdit`; conversation rows
+/// add `subtitle`+`meta`+`onClose`. Selection paints a solid accent fill and
+/// switches the foreground to white; hover reveals the edit/close affordances.
 private struct SidebarRow: View {
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
@@ -130,6 +187,7 @@ private struct SidebarRow: View {
     var meta: String? = nil
     let isSelected: Bool
     var onClose: (() -> Void)? = nil
+    var onEdit: (() -> Void)? = nil
     let action: () -> Void
 
     private static let cornerRadius: CGFloat = 6
@@ -178,7 +236,7 @@ private struct SidebarRow: View {
             .background(
                 RoundedRectangle(cornerRadius: Self.cornerRadius).fill(rowBackground)
             )
-            .overlay(alignment: .topTrailing) { closeButton }
+            .overlay(alignment: .topTrailing) { trailingControls }
             .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius))
         }
         .buttonStyle(.plain)
@@ -187,17 +245,29 @@ private struct SidebarRow: View {
     }
 
     @ViewBuilder
-    private var closeButton: some View {
-        if let onClose, isHovered {
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(isSelected ? Color.white.opacity(0.85) : theme.tertiaryText)
-                    .padding(5)
+    private var trailingControls: some View {
+        if isHovered, onEdit != nil || onClose != nil {
+            HStack(spacing: 2) {
+                if let onEdit {
+                    iconButton("pencil", help: "フィルターを編集", action: onEdit)
+                }
+                if let onClose {
+                    iconButton("xmark", help: "タブを閉じる", action: onClose)
+                }
             }
-            .buttonStyle(.plain)
-            .help("タブを閉じる")
+            .padding(2)
         }
+    }
+
+    private func iconButton(_ systemImage: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(isSelected ? Color.white.opacity(0.85) : theme.tertiaryText)
+                .padding(4)
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 
     private var rowBackground: Color {
