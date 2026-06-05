@@ -91,16 +91,9 @@ struct MainWindowView: View {
             if let tab = workspace.conversation(id: id) {
                 ConversationView(
                     model: tab.model,
-                    title: tab.title,
                     now: now,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onOpenConversation: { workspace.openConversation($0) },
-                    onClose: { workspace.closeConversation(id) },
-                    onReply: { parentURI in
-                        let vm = makeComposer(parentURI)
-                        vm.onPosted = { composer = nil }
-                        composer = vm
-                    }
+                    onOpenConversation: { workspace.openConversation($0) }
                 )
                 .id(id)
             } else {
