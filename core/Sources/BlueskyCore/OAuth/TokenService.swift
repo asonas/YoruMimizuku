@@ -32,12 +32,24 @@ public struct TokenService: Sendable {
             body: body
         )
         guard response.statusCode == 200 else {
-            throw OAuthError.tokenRequestFailed(status: response.statusCode)
+            let oauth = Self.parseErrorBody(response.body)
+            throw OAuthError.tokenRequestFailed(
+                status: response.statusCode, error: oauth.error, description: oauth.description
+            )
         }
         do {
             return try JSONDecoder().decode(TokenResponse.self, from: response.body)
         } catch {
             throw OAuthError.malformedDocument("invalid token response")
         }
+    }
+
+    /// Best-effort parse of an RFC 6749 token-error body (`{ "error", "error_description" }`).
+    /// Returns nils for empty or non-JSON bodies so the caller still reports the status.
+    private static func parseErrorBody(_ body: Data) -> (error: String?, description: String?) {
+        guard let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
+            return (nil, nil)
+        }
+        return (json["error"] as? String, json["error_description"] as? String)
     }
 }

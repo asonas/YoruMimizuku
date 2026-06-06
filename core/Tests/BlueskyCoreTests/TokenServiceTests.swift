@@ -47,7 +47,7 @@ final class TokenServiceTests: XCTestCase {
         XCTAssertTrue(sentBody.contains("code_verifier=v"))
     }
 
-    func testExchangeThrowsOnNonSuccessStatus() async {
+    func testExchangeThrowsOnNonSuccessStatusWithoutErrorBody() async {
         let (service, _) = makeService(response: HTTPResponse(statusCode: 400, body: Data("{}".utf8)))
         do {
             _ = try await service.requestToken(
@@ -57,10 +57,37 @@ final class TokenServiceTests: XCTestCase {
             )
             XCTFail("expected error")
         } catch let error as OAuthError {
-            XCTAssertEqual(error, .tokenRequestFailed(status: 400))
+            XCTAssertEqual(error, .tokenRequestFailed(status: 400, error: nil, description: nil))
         } catch {
             XCTFail("unexpected error: \(error)")
         }
+    }
+
+    func testTokenFailureCarriesOAuthErrorFromBody() async {
+        let body = Data(##"""
+        {"error":"invalid_grant","error_description":"refresh token has expired"}
+        """##.utf8)
+        let (service, _) = makeService(response: HTTPResponse(statusCode: 400, body: body))
+        do {
+            _ = try await service.requestToken(
+                metadata: metadata(),
+                config: .yoruMimizuku,
+                grant: .refresh(refreshToken: "rtk")
+            )
+            XCTFail("expected error")
+        } catch let error as OAuthError {
+            XCTAssertEqual(
+                error,
+                .tokenRequestFailed(status: 400, error: "invalid_grant", description: "refresh token has expired")
+            )
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testTokenFailureDescriptionIncludesOAuthError() {
+        let error = OAuthError.tokenRequestFailed(status: 400, error: "invalid_grant", description: "expired")
+        XCTAssertEqual(String(describing: error), "token request failed (400): invalid_grant — expired")
     }
 
     func testRequestTokenThrowsMalformedDocumentOnInvalidTokenEndpoint() async {
