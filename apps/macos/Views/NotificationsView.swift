@@ -11,6 +11,8 @@ struct NotificationsView: View {
     @EnvironmentObject private var theme: ThemeStore
     let now: Date
 
+    private let refreshInterval: Duration = .seconds(30)
+
     var body: some View {
         VStack(spacing: 0) {
             DetailHeader { EmptyView() }
@@ -18,7 +20,18 @@ struct NotificationsView: View {
         }
         .background(theme.canvas)
         .ignoresSafeArea(.container, edges: .top)
-        .task { await model.refresh() }
+        .task { await runNotifications() }
+    }
+
+    /// Load once, then refresh on an interval while on screen, mirroring the home
+    /// feed. SwiftUI cancels this on disappear and re-runs it on return.
+    private func runNotifications() async {
+        await model.refresh()
+        while !Task.isCancelled {
+            try? await Task.sleep(for: refreshInterval)
+            if Task.isCancelled { break }
+            await model.refresh()
+        }
     }
 
     @ViewBuilder
