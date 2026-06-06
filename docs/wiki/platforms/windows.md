@@ -72,6 +72,12 @@ lifetime handling is confined here.
   `{ "ok": false, "error": … }`) the caller frees with `yoru_free`.
 - Async work is bridged to a synchronous return with a semaphore; the C# side
   calls each function on a background thread (`Task.Run`), so the UI never blocks.
+- **Date convention (gotcha):** request JSON is decoded with the default
+  `JSONDecoder` (`deferredToDate`), while response DTOs serialize dates as ISO8601
+  strings by hand. So the C# side must **not** send ISO8601 `Date` fields in a
+  request — they fail to decode and error the whole call. (This was the cause of
+  saved-filter searches silently returning nothing: C# was sending `createdAt`;
+  it now omits it.)
 - `yoru_init` builds the session (PlatformWindows adapters + `URLSessionHTTPClient`
   + swift-crypto DPoP + `AccountManager`). Endpoints mirror the macOS `Live*`
   layer: `yoru_login_begin` / `yoru_login_complete` (split for WebView2),
