@@ -1,4 +1,5 @@
 import Foundation
+import BlueskyCore
 
 /// Loads a page of notifications as UI-ready `NotificationDisplay` values. The app
 /// provides the live implementation (authenticated XRPC + mapping); tests inject a
@@ -45,6 +46,7 @@ public final class NotificationsViewModel: ObservableObject {
             let items = try await loader.loadLatest()
             state = .loaded(items)
         } catch {
+            SessionExpiry.reportIfExpired(error)
             state = .failed(String(describing: error))
         }
     }
@@ -57,8 +59,11 @@ public final class NotificationsViewModel: ObservableObject {
             await load()
             return
         }
-        if let items = try? await loader.loadLatest() {
-            state = .loaded(items)
+        do {
+            state = .loaded(try await loader.loadLatest())
+        } catch {
+            SessionExpiry.reportIfExpired(error)
+            // Keep showing the current notifications.
         }
     }
 }

@@ -59,6 +59,7 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
             isSubmitting = false
             onPosted?()
         } catch {
+            SessionExpiry.reportIfExpired(error)
             isSubmitting = false
             errorMessage = String(describing: error)
         }

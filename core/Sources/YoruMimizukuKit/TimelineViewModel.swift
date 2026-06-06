@@ -117,6 +117,7 @@ public final class TimelineViewModel: ObservableObject {
             state = .loaded(page.posts)
             endInterval("loaded \(page.posts.count) posts")
         } catch {
+            SessionExpiry.reportIfExpired(error)
             state = .failed(String(describing: error))
             endInterval("failed")
         }
@@ -135,6 +136,7 @@ public final class TimelineViewModel: ObservableObject {
             self.cursor = page.cursor
             state = .loaded(Self.merging(current, appending: page.posts))
         } catch {
+            SessionExpiry.reportIfExpired(error)
             // Keep the existing rows; a later scroll or refresh can retry.
         }
     }
@@ -152,6 +154,7 @@ public final class TimelineViewModel: ObservableObject {
             let page = try await loader.loadPage(cursor: nil)
             state = .loaded(Self.merging(page.posts, appending: current))
         } catch {
+            SessionExpiry.reportIfExpired(error)
             // Keep showing the current feed.
         }
     }

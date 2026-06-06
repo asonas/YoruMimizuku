@@ -1,4 +1,5 @@
 import Foundation
+import BlueskyCore
 
 /// Loads a single post's thread as a UI-ready `PostDisplay` whose `replyParent`
 /// is the immediate ancestor (when present). The app provides the live
@@ -76,6 +77,7 @@ public final class ThreadViewModel: ObservableObject {
             let post = try await loader.loadThread(uri: uri)
             state = .loaded(post)
         } catch {
+            SessionExpiry.reportIfExpired(error)
             state = .failed(String(describing: error))
         }
     }

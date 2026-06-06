@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import BlueskyCore
 import YoruMimizukuKit
@@ -62,6 +63,25 @@ struct RootView: View {
         // and glyph selection are correct regardless of UI locale.
         .font(.app(.body))
         .typesettingLanguage(.init(languageCode: .japanese))
+        // A dead refresh token can't be recovered by retrying; drop the account
+        // and return to login (or switch to another stored account).
+        .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
+            handleSessionExpired()
+        }
+    }
+
+    /// Remove the account whose session can no longer be refreshed, then show the
+    /// next stored account or the login screen.
+    private func handleSessionExpired() {
+        guard let did = currentDID else { return }
+        try? accountManager.remove(did: did)
+        let remaining = (try? accountManager.allDIDs()) ?? []
+        if let next = remaining.first {
+            try? accountManager.switchTo(did: next)
+            currentDID = next
+        } else {
+            currentDID = nil
+        }
     }
 
     private var currentHandle: String {
