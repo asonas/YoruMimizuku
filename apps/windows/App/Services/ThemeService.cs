@@ -24,9 +24,44 @@ public sealed class ThemeService
         var resources = Application.Current.Resources;
         resources["AppBackgroundBrush"] = new SolidColorBrush(background);
         resources["AppTextBrush"] = new SolidColorBrush(text);
+        // Blend neutral text shades from the pair so they read on any background.
+        resources["AppSecondaryTextBrush"] = new SolidColorBrush(Blend(text, background, 0.30));
+        resources["AppTertiaryTextBrush"] = new SolidColorBrush(Blend(text, background, 0.50));
+        resources["AppHairlineBrush"] = new SolidColorBrush(WithAlpha(text, 0x1A));
+        resources["AppRowHoverBrush"] = new SolidColorBrush(WithAlpha(text, 0x0D));
+        AppSettings.Shared.ThemePair = $"{Hex(background)}|{Hex(text)}";
     }
 
-    public void Reset() => Apply(DefaultBackground, DefaultText);
+    public void Reset()
+    {
+        AppSettings.Shared.ThemePair = null;
+        Apply(DefaultBackground, DefaultText);
+        AppSettings.Shared.ThemePair = null;
+    }
+
+    /// Apply the persisted palette (or the default) at startup.
+    public void ApplySaved()
+    {
+        var pair = AppSettings.Shared.ThemePair;
+        if (pair is { } p && p.Split('|') is { Length: 2 } parts)
+        {
+            Apply(HexToColor(parts[0]), HexToColor(parts[1]));
+        }
+        else
+        {
+            Apply(DefaultBackground, DefaultText);
+        }
+    }
+
+    private static Color Blend(Color a, Color b, double t) => Color.FromArgb(
+        255,
+        (byte)(a.R + (b.R - a.R) * t),
+        (byte)(a.G + (b.G - a.G) * t),
+        (byte)(a.B + (b.B - a.B) * t));
+
+    private static Color WithAlpha(Color c, byte a) => Color.FromArgb(a, c.R, c.G, c.B);
+
+    private static string Hex(Color c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
 
     /// <summary>
     /// Extract the first two hex colours from a randoma11y URL (background then

@@ -5,13 +5,13 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:YoruMimizuku.App.ViewModels">
 
-    <Grid>
+    <Grid Background="{ThemeResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left">
+        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent">
             <AppBarButton Icon="Refresh" Label="更新" Click="OnRefreshClick" />
             <AppBarButton Icon="Add" Label="投稿" Click="OnComposeClick" />
         </CommandBar>
@@ -21,45 +21,107 @@
                   ItemsSource="{x:Bind Vm.Posts, Mode=OneWay}"
                   SelectionMode="Single"
                   IsItemClickEnabled="True"
-                  ItemClick="OnPostClick">
+                  ItemClick="OnPostClick"
+                  ContainerContentChanging="OnContainerContentChanging">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Margin" Value="0" />
+                    <Setter Property="MinHeight" Value="0" />
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PostItem">
-                    <Grid Padding="4,8" ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-
-                        <PersonPicture Grid.Column="0" Width="40" Height="40"
-                                       ProfilePicture="{x:Bind AvatarUrl}" />
-
-                        <StackPanel Grid.Column="1" Spacing="2">
-                            <TextBlock Text="{x:Bind ContextLabel}" Opacity="0.6" FontSize="12"
-                                       Visibility="{x:Bind IsReply}" />
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{x:Bind AuthorDisplayName}" FontWeight="SemiBold" />
-                                <TextBlock Text="{x:Bind AuthorHandle}" Opacity="0.6" />
-                                <TextBlock Text="{x:Bind CreatedAt}" Opacity="0.5" FontSize="12" />
+                    <Border BorderBrush="{ThemeResource AppHairlineBrush}" BorderThickness="0,0,0,1" Padding="16,11">
+                        <StackPanel Spacing="3">
+                            <!-- Repost / context header -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="53,0,0,0"
+                                        Visibility="{x:Bind ContextVisibility}">
+                                <FontIcon Glyph="&#xE8EE;" FontSize="11" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                <TextBlock Text="{x:Bind ContextLabel}" FontSize="12" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                             </StackPanel>
-                            <TextBlock Text="{x:Bind Body}" TextWrapping="Wrap" />
-                            <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,4,0,0">
-                                <TextBlock Text="{x:Bind ReplyCount}" Opacity="0.7" />
-                                <Button Background="Transparent" BorderThickness="0" Padding="2"
-                                        Click="OnRepostClick" Tag="{x:Bind}">
-                                    <TextBlock Text="{x:Bind RepostCount, Mode=OneWay}" />
-                                </Button>
-                                <Button Background="Transparent" BorderThickness="0" Padding="2"
-                                        Click="OnLikeClick" Tag="{x:Bind}">
-                                    <TextBlock Text="{x:Bind LikeCount, Mode=OneWay}" />
-                                </Button>
-                            </StackPanel>
+                            <!-- Reply marker -->
+                            <TextBlock Text="{x:Bind ReplyMarkerText}" Margin="53,0,0,0" FontSize="12"
+                                       Foreground="{ThemeResource AppAccentBrush}" Visibility="{x:Bind ReplyVisibility}" />
+
+                            <Grid ColumnSpacing="11">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <PersonPicture Grid.Column="0" Width="42" Height="42" VerticalAlignment="Top"
+                                               ProfilePicture="{x:Bind Avatar}" />
+
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{x:Bind AuthorDisplayName}" FontWeight="SemiBold"
+                                                   Foreground="{ThemeResource AppTextBrush}" />
+                                        <TextBlock Text="{x:Bind AuthorHandleAt}" FontSize="12"
+                                                   Foreground="{ThemeResource AppTertiaryTextBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind RelativeTime}" FontSize="12"
+                                                   Foreground="{ThemeResource AppTertiaryTextBrush}"
+                                                   FontFamily="Consolas" />
+                                    </StackPanel>
+
+                                    <!-- Rich body (facets) populated in OnContainerContentChanging -->
+                                    <RichTextBlock x:Name="BodyRich" Foreground="{ThemeResource AppTextBrush}"
+                                                   IsTextSelectionEnabled="True" />
+
+                                    <!-- Image grid populated in OnContainerContentChanging -->
+                                    <Grid x:Name="ImagesHost" Visibility="{x:Bind ImagesVisibility}" Margin="0,3,0,0"
+                                          ColumnSpacing="5" RowSpacing="5" HorizontalAlignment="Left" MaxWidth="440" />
+
+                                    <!-- Action bar -->
+                                    <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
+                                        <Button Click="OnReplyClick" Tag="{x:Bind}" Background="Transparent"
+                                                BorderThickness="0" Padding="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon Glyph="&#xE8BD;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                                <TextBlock Text="{x:Bind ReplyCount}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Click="OnRepostClick" Tag="{x:Bind}" Background="Transparent"
+                                                BorderThickness="0" Padding="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon Glyph="{x:Bind RepostGlyph, Mode=OneWay}" FontSize="13" Foreground="{x:Bind RepostBrush, Mode=OneWay}" />
+                                                <TextBlock Text="{x:Bind RepostCount, Mode=OneWay}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Click="OnLikeClick" Tag="{x:Bind}" Background="Transparent"
+                                                BorderThickness="0" Padding="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                <FontIcon Glyph="{x:Bind LikeGlyph, Mode=OneWay}" FontSize="13" Foreground="{x:Bind LikeBrush, Mode=OneWay}" />
+                                                <TextBlock Text="{x:Bind LikeCount, Mode=OneWay}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
-                    </Grid>
+                    </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
 
-        <ProgressRing Grid.Row="1" x:Name="Spinner" IsActive="{x:Bind Vm.IsLoading, Mode=OneWay}"
+        <ProgressRing Grid.Row="1" IsActive="{x:Bind Vm.IsLoading, Mode=OneWay}"
                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <!-- Image lightbox overlay -->
+        <Grid x:Name="Lightbox" Grid.RowSpan="2" Background="#E6000000" Visibility="Collapsed"
+              Tapped="OnLightboxTapped" IsTabStop="True">
+            <Image x:Name="LightboxImage" Stretch="Uniform" Margin="40" />
+            <Button x:Name="LightboxPrev" Content="&#xE76B;" FontFamily="Segoe MDL2 Assets"
+                    HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0"
+                    Click="OnLightboxPrev" />
+            <Button x:Name="LightboxNext" Content="&#xE76C;" FontFamily="Segoe MDL2 Assets"
+                    HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,16,16,0"
+                    Click="OnLightboxNext" />
+            <Button Content="&#xE711;" FontFamily="Segoe MDL2 Assets"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,16,0"
+                    Click="OnLightboxClose" />
+        </Grid>
     </Grid>
 </UserControl>

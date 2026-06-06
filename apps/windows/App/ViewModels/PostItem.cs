@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
 
@@ -26,7 +28,29 @@ public sealed class PostItem : ObservableObject
     public ReplyParentDto? ReplyParent { get; }
     public int ReplyCount { get; }
     public bool HasImages => Images.Count > 0;
+    public bool HasContext => !string.IsNullOrEmpty(ContextLabel);
     public bool IsReply => ReplyParent is not null;
+    public string RelativeTime => Services.RelativeTime.Format(CreatedAt);
+    public string ReplyMarkerText => ReplyParent is { } p ? $"@{p.AuthorHandle} への返信" : "";
+    public string AuthorHandleAt => "@" + AuthorHandle;
+
+    public ImageSource? Avatar => AvatarUrl is { Length: > 0 } u
+        ? new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new System.Uri(u)) : null;
+
+    public Visibility ContextVisibility => HasContext ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ReplyVisibility => IsReply ? Visibility.Visible : Visibility.Collapsed;
+    public Visibility ImagesVisibility => HasImages ? Visibility.Visible : Visibility.Collapsed;
+
+    // Action-bar glyphs/brushes (Segoe MDL2): like heart, repost two-arrows.
+    public string LikeGlyph => IsLiked ? "\uEB52" : "\uEB51";
+    public Brush LikeBrush => Brush(IsLiked ? "AppLikeBrush" : "AppTertiaryTextBrush");
+    public string RepostGlyph => "\uE8EE";
+    public Brush RepostBrush => Brush(IsReposted ? "AppAccentBrush" : "AppTertiaryTextBrush");
+
+    private static Brush Brush(string key) => (Brush)Application.Current.Resources[key];
+
+    private void NotifyLike() { OnPropertyChanged(nameof(IsLiked)); OnPropertyChanged(nameof(LikeGlyph)); OnPropertyChanged(nameof(LikeBrush)); }
+    private void NotifyRepost() { OnPropertyChanged(nameof(IsReposted)); OnPropertyChanged(nameof(RepostGlyph)); OnPropertyChanged(nameof(RepostBrush)); }
 
     private int _repostCount;
     public int RepostCount { get => _repostCount; private set => SetProperty(ref _repostCount, value); }
@@ -65,14 +89,14 @@ public sealed class PostItem : ObservableObject
         if (IsLiked)
         {
             var record = _viewerLikeUri!;
-            _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); OnPropertyChanged(nameof(IsLiked));
+            _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike();
             if (record != "pending:like") { try { await BridgeClient.Shared.UnlikeAsync(record); } catch { } }
         }
         else
         {
-            _viewerLikeUri = "pending:like"; LikeCount += 1; OnPropertyChanged(nameof(IsLiked));
+            _viewerLikeUri = "pending:like"; LikeCount += 1; NotifyLike();
             try { var r = await BridgeClient.Shared.LikeAsync(Id, Cid); _viewerLikeUri = r.RecordUri; }
-            catch { _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); OnPropertyChanged(nameof(IsLiked)); }
+            catch { _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike(); }
         }
     }
 
@@ -81,14 +105,14 @@ public sealed class PostItem : ObservableObject
         if (IsReposted)
         {
             var record = _viewerRepostUri!;
-            _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); OnPropertyChanged(nameof(IsReposted));
+            _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost();
             if (record != "pending:repost") { try { await BridgeClient.Shared.UnrepostAsync(record); } catch { } }
         }
         else
         {
-            _viewerRepostUri = "pending:repost"; RepostCount += 1; OnPropertyChanged(nameof(IsReposted));
+            _viewerRepostUri = "pending:repost"; RepostCount += 1; NotifyRepost();
             try { var r = await BridgeClient.Shared.RepostAsync(Id, Cid); _viewerRepostUri = r.RecordUri; }
-            catch { _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); OnPropertyChanged(nameof(IsReposted)); }
+            catch { _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost(); }
         }
     }
 }

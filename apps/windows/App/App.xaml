@@ -8,6 +8,19 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Semantic brushes mirroring the macOS "Nocturne" palette. The
+                 background/text pair is updated at runtime by ThemeService
+                 (randoma11y / monochrome). Accent, like (star), and hairline stay
+                 fixed and monochrome by default. -->
+            <SolidColorBrush x:Key="AppBackgroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="AppTextBrush" Color="#111111" />
+            <SolidColorBrush x:Key="AppSecondaryTextBrush" Color="#6B6B6B" />
+            <SolidColorBrush x:Key="AppTertiaryTextBrush" Color="#9A9A9A" />
+            <SolidColorBrush x:Key="AppAccentBrush" Color="#595959" />
+            <SolidColorBrush x:Key="AppLikeBrush" Color="#C99A2E" />
+            <SolidColorBrush x:Key="AppHairlineBrush" Color="#1A000000" />
+            <SolidColorBrush x:Key="AppRowHoverBrush" Color="#0D000000" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

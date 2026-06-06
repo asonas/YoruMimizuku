@@ -15,12 +15,16 @@ namespace YoruMimizuku.App;
 public sealed partial class MainWindow : Window
 {
     private readonly WorkspaceViewModel _workspace = new();
+    // Guards the NavigationView selection while we rebuild it in code, so the
+    // programmatic selection does not re-enter OnNavSelectionChanged.
+    private bool _syncing;
 
     public MainWindow()
     {
         InitializeComponent();
         Title = "YoruMimizuku";
         Views.MainWindowAccessor.Current = this;
+        AppIcon.TrySetWindowIcon(this);
         _workspace.Changed += OnWorkspaceChanged;
         WireShortcuts();
         _ = InitializeAsync();
@@ -30,33 +34,26 @@ public sealed partial class MainWindow : Window
     {
         try
         {
+            ThemeService.Shared.ApplySaved();
             await BridgeClient.Shared.InitializeAsync(App.Service, App.ClientId, App.RedirectUri, App.Scope);
-            ShowLogin();
+
+            // Restore the persisted session (DPAPI): skip the login screen if an
+            // account is already stored.
+            var account = await BridgeClient.Shared.CurrentAccountAsync();
+            if (account is not null)
+            {
+                EnterShell(account);
+            }
+            else
+            {
+                ShowLogin();
+            }
         }
         catch (Exception ex)
         {
             AppLog.Write("Bridge init failed", ex);
             ShowFatal($"ブリッジの初期化に失敗しました。\n{ex.Message}\n\nログ: {AppLog.Path}");
         }
-    }
-
-    private void ShowFatal(string message)
-    {
-        LoginHost.Content = new TextBlock
-        {
-            Text = message,
-            TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(24),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        LoginHost.Visibility = Visibility.Visible;
-        ShellRoot.Visibility = Visibility.Collapsed;
-    }
-
-    private async void OnWorkspaceChanged()
-    {
-        BuildTabs();
-        await ShowSelectedAsync();
     }
 
     private void ShowLogin()
@@ -71,24 +68,107 @@ public sealed partial class MainWindow : Window
     private async void OnAuthenticated(string did)
     {
         LoginHost.Content = null;
+        var account = await BridgeClient.Shared.CurrentAccountAsync();
+        EnterShell(account);
+    }
+
+    private void EnterShell(AccountDto? account)
+    {
         LoginHost.Visibility = Visibility.Collapsed;
         ShellRoot.Visibility = Visibility.Visible;
         BuildTabs();
-        await ShowSelectedAsync();
+        _ = ShowSelectedAsync();
+        _ = LoadAccountFooterAsync(account);
+    }
+
+    private async Task LoadAccountFooterAsync(AccountDto? account)
+    {
+        if (account is null) return;
+        AccountHandle.Text = account.Handle is { Length: > 0 } h ? "@" + h : account.Did;
+        AccountFooter.Visibility = Visibility.Visible;
+        try
+        {
+            var avatar = await BridgeClient.Shared.AvatarAsync();
+            if (avatar.AvatarUrl is { Length: > 0 } url)
+            {
+                AccountAvatar.ProfilePicture = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(url));
+            }
+        }
+        catch (Exception ex) { AppLog.Write("avatar load failed", ex); }
+    }
+
+    private void OnWorkspaceChanged()
+    {
+        BuildTabs();
+        _ = ShowSelectedAsync();
     }
 
     private void BuildTabs()
     {
+        _syncing = true;
         Nav.MenuItems.Clear();
         foreach (var tab in _workspace.Tabs)
         {
-            Nav.MenuItems.Add(new NavigationViewItem { Content = tab.Title, Tag = tab });
+            Nav.MenuItems.Add(MakeNavItem(tab));
         }
-        Nav.SelectedItem = Nav.MenuItems.FirstOrDefault();
+        var selected = Nav.MenuItems
+            .OfType<NavigationViewItem>()
+            .FirstOrDefault(i => ReferenceEquals(i.Tag, _workspace.Selected));
+        Nav.SelectedItem = selected ?? Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault();
+        _syncing = false;
     }
+
+    private NavigationViewItem MakeNavItem(WorkspaceTab tab)
+    {
+        var item = new NavigationViewItem { Tag = tab, Icon = IconFor(tab.Kind) };
+        var closable = tab.Kind is WorkspaceTabKind.Conversation or WorkspaceTabKind.Filter;
+        if (!closable)
+        {
+            item.Content = tab.Title;
+            return item;
+        }
+
+        // Title plus a hover close button for conversation / filter tabs.
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var title = new TextBlock { Text = tab.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(title, 0);
+        var close = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE711", FontSize = 11 },
+            Background = null,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(4),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        close.Click += (_, _) =>
+        {
+            if (tab.Kind == WorkspaceTabKind.Conversation) _workspace.CloseConversation(tab.Id);
+            else _workspace.RemoveFilter(tab.Id);
+        };
+        Grid.SetColumn(close, 1);
+        grid.Children.Add(title);
+        grid.Children.Add(close);
+        item.Content = grid;
+        return item;
+    }
+
+    private static IconElement IconFor(WorkspaceTabKind kind) => new FontIcon
+    {
+        Glyph = kind switch
+        {
+            WorkspaceTabKind.Home => "\uE80F",            // Home
+            WorkspaceTabKind.Notifications => "\uEA8F",   // Ringer
+            WorkspaceTabKind.Filter => "\uE71C",          // Filter
+            WorkspaceTabKind.Conversation => "\uE8BD",    // Message
+            _ => "\uE80F"
+        }
+    };
 
     private async void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
+        if (_syncing) return;
         if (args.IsSettingsSelected)
         {
             ContentHost.Content = new SettingsView();
@@ -96,12 +176,18 @@ public sealed partial class MainWindow : Window
         }
         if (args.SelectedItem is NavigationViewItem { Tag: WorkspaceTab tab })
         {
-            _workspace.Selected = tab;
-            await ShowSelectedAsync();
+            if (ReferenceEquals(tab, _workspace.Selected))
+            {
+                await ShowSelectedAsync();
+            }
+            else
+            {
+                _workspace.Selected = tab; // fires Changed -> BuildTabs + ShowSelectedAsync
+            }
         }
     }
 
-    private async System.Threading.Tasks.Task ShowSelectedAsync()
+    private async Task ShowSelectedAsync()
     {
         var tab = _workspace.Selected;
         switch (tab.Kind)
@@ -133,31 +219,29 @@ public sealed partial class MainWindow : Window
 
     private void WireShortcuts()
     {
-        // Ctrl+Shift+J / Ctrl+Shift+K cycle the sidebar tabs.
-        AddAccelerator(VirtualKey.J, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () =>
-        {
-            _workspace.SelectNextTab();
-            SyncNavSelection();
-        });
-        AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () =>
-        {
-            _workspace.SelectPreviousTab();
-            SyncNavSelection();
-        });
-    }
-
-    private void SyncNavSelection()
-    {
-        var item = Nav.MenuItems
-            .OfType<NavigationViewItem>()
-            .FirstOrDefault(i => ReferenceEquals(i.Tag, _workspace.Selected));
-        if (item is not null) Nav.SelectedItem = item;
+        AddAccelerator(VirtualKey.J, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
+            () => _workspace.SelectNextTab());
+        AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
+            () => _workspace.SelectPreviousTab());
     }
 
     private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
     {
         var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
         accelerator.Invoked += (_, e) => { e.Handled = true; action(); };
-        if (RootGrid is { } grid) grid.KeyboardAccelerators.Add(accelerator);
+        RootGrid.KeyboardAccelerators.Add(accelerator);
+    }
+
+    private void ShowFatal(string message)
+    {
+        LoginHost.Content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(24),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        LoginHost.Visibility = Visibility.Visible;
+        ShellRoot.Visibility = Visibility.Collapsed;
     }
 }

@@ -5,20 +5,31 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls">
 
-    <Grid x:Name="RootGrid">
+    <Grid x:Name="RootGrid" Background="{ThemeResource AppBackgroundBrush}">
         <!-- Login gate; swapped for the main shell after authentication. -->
         <ContentControl x:Name="LoginHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
 
         <Grid x:Name="ShellRoot" Visibility="Collapsed">
             <muxc:NavigationView
                 x:Name="Nav"
-                PaneDisplayMode="LeftCompact"
+                PaneDisplayMode="Left"
+                OpenPaneLength="220"
                 IsBackButtonVisible="Collapsed"
                 IsSettingsVisible="True"
                 SelectionChanged="OnNavSelectionChanged">
-                <muxc:NavigationView.MenuItems>
-                    <!-- Tab items are generated in code-behind from WorkspaceViewModel.Tabs. -->
-                </muxc:NavigationView.MenuItems>
+
+                <muxc:NavigationView.PaneFooter>
+                    <Grid x:Name="AccountFooter" Padding="12,8" ColumnSpacing="8" Visibility="Collapsed">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture x:Name="AccountAvatar" Grid.Column="0" Width="28" Height="28" />
+                        <TextBlock x:Name="AccountHandle" Grid.Column="1" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Opacity="0.8" />
+                    </Grid>
+                </muxc:NavigationView.PaneFooter>
+
                 <ContentControl x:Name="ContentHost"
                                 HorizontalContentAlignment="Stretch"
                                 VerticalContentAlignment="Stretch" />
