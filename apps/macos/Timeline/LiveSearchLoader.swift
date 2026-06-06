@@ -35,7 +35,7 @@ struct LiveSearchLoader: TimelineLoading {
     private func runQuery(_ query: String, cursor: String?) async throws -> (posts: [PostDisplay], cursor: String?) {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = SearchService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
         let result = try await service.searchPosts(
             pds: context.account.pds,

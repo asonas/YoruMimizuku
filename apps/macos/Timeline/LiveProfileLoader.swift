@@ -18,7 +18,7 @@ struct LiveProfileLoader {
     func loadCurrentAvatar() async throws -> URL? {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = ProfileService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
 
         let result = try await service.getProfile(

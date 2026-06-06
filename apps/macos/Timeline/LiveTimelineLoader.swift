@@ -20,7 +20,7 @@ struct LiveTimelineLoader: TimelineLoading {
     func loadPage(cursor: String?) async throws -> TimelinePage {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = TimelineService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
 
         let signposter = PerfSignpost.timeline

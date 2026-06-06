@@ -17,7 +17,7 @@ struct LiveThreadLoader: ThreadLoading {
     func loadThread(uri: String) async throws -> PostDisplay {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = ThreadService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
 
         let result = try await service.getPostThread(

@@ -12,11 +12,13 @@ public struct PostService: Sendable {
     private let sender: DPoPRequestSender
     private let metadataResolver: OAuthMetadataResolver
     private let config: OAuthClientConfig
+    private let refreshGate: RefreshGate
 
-    public init(sender: DPoPRequestSender, metadataResolver: OAuthMetadataResolver, config: OAuthClientConfig) {
+    public init(sender: DPoPRequestSender, metadataResolver: OAuthMetadataResolver, config: OAuthClientConfig, refreshGate: RefreshGate = RefreshGate()) {
         self.sender = sender
         self.metadataResolver = metadataResolver
         self.config = config
+        self.refreshGate = refreshGate
     }
 
     public func uploadBlob(
@@ -238,10 +240,15 @@ public struct PostService: Sendable {
     }
 
     private func refresh(issuer: URL, refreshToken: String) async throws -> TokenResponse {
-        let metadata = try await metadataResolver.authorizationServer(issuer: issuer)
-        return try await TokenService(sender: sender).requestToken(
-            metadata: metadata, config: config, grant: .refresh(refreshToken: refreshToken)
-        )
+        let metadataResolver = self.metadataResolver
+        let sender = self.sender
+        let config = self.config
+        return try await refreshGate.refresh(using: refreshToken) {
+            let metadata = try await metadataResolver.authorizationServer(issuer: issuer)
+            return try await TokenService(sender: sender).requestToken(
+                metadata: metadata, config: config, grant: .refresh(refreshToken: refreshToken)
+            )
+        }
     }
 
     static func decode<T: Decodable>(_ response: HTTPResponse) throws -> T {

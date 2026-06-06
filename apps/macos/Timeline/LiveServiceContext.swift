@@ -12,6 +12,9 @@ struct LiveServiceContext {
     let sender: DPoPRequestSender
     let metadataResolver: OAuthMetadataResolver
     let config: OAuthClientConfig
+    /// Shared refresh coalescer so concurrent loaders never race to consume the
+    /// same single-use refresh token.
+    let refreshGate: RefreshGate
     private let accountManager: AccountManager
 
     enum ContextError: Error { case noCurrentAccount, invalidIssuer }
@@ -32,6 +35,7 @@ struct LiveServiceContext {
         )
         self.metadataResolver = OAuthMetadataResolver(http: http)
         self.config = config
+        self.refreshGate = accountManager.refreshGate
         self.accountManager = accountManager
     }
 

@@ -60,6 +60,6 @@ struct LivePostInteractor: PostInteracting {
     }
 
     private func service(_ context: LiveServiceContext) -> PostService {
-        PostService(sender: context.sender, metadataResolver: context.metadataResolver, config: context.config)
+        PostService(sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate)
     }
 }

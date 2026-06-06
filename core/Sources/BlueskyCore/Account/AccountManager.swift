@@ -5,9 +5,13 @@ import Foundation
 /// Token refresh and its scheduling are out of scope for this layer.
 public struct AccountManager: Sendable {
     private let store: AccountStore
+    /// Shared across every service so concurrent pollers coalesce their token
+    /// refreshes instead of racing to consume the same single-use refresh token.
+    public let refreshGate: RefreshGate
 
-    public init(store: AccountStore) {
+    public init(store: AccountStore, refreshGate: RefreshGate = RefreshGate()) {
         self.store = store
+        self.refreshGate = refreshGate
     }
 
     /// Persist a login result (with its DPoP key) and make it the current account.

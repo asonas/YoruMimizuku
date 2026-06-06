@@ -19,7 +19,7 @@ struct LiveNotificationsLoader: NotificationsLoading {
     func loadLatest() async throws -> [NotificationGroup] {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = NotificationsService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
 
         let result = try await service.listNotifications(
@@ -51,7 +51,7 @@ struct LiveNotificationsLoader: NotificationsLoading {
 
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = PostsService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
 
         var posts: [String: PostView] = [:]

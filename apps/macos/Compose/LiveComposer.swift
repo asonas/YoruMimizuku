@@ -16,7 +16,7 @@ struct LiveComposer: PostSubmitting {
     func submit(_ draft: PostDraft) async throws -> PostResult {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = PostService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config
+            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
         let images = draft.images.map { (data: $0.data, mimeType: $0.mimeType, alt: $0.alt) }
         let result = try await service.createPost(

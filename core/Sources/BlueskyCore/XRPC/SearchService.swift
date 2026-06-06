@@ -10,15 +10,18 @@ public struct SearchService: Sendable {
     private let sender: DPoPRequestSender
     private let metadataResolver: OAuthMetadataResolver
     private let config: OAuthClientConfig
+    private let refreshGate: RefreshGate
 
     public init(
         sender: DPoPRequestSender,
         metadataResolver: OAuthMetadataResolver,
-        config: OAuthClientConfig
+        config: OAuthClientConfig,
+        refreshGate: RefreshGate = RefreshGate()
     ) {
         self.sender = sender
         self.metadataResolver = metadataResolver
         self.config = config
+        self.refreshGate = refreshGate
     }
 
     /// Fetch a page of search results for `query`. Returns the decoded response
@@ -55,10 +58,15 @@ public struct SearchService: Sendable {
     }
 
     private func refresh(issuer: URL, refreshToken: String) async throws -> TokenResponse {
-        let metadata = try await metadataResolver.authorizationServer(issuer: issuer)
-        return try await TokenService(sender: sender).requestToken(
-            metadata: metadata, config: config, grant: .refresh(refreshToken: refreshToken)
-        )
+        let metadataResolver = self.metadataResolver
+        let sender = self.sender
+        let config = self.config
+        return try await refreshGate.refresh(using: refreshToken) {
+            let metadata = try await metadataResolver.authorizationServer(issuer: issuer)
+            return try await TokenService(sender: sender).requestToken(
+                metadata: metadata, config: config, grant: .refresh(refreshToken: refreshToken)
+            )
+        }
     }
 
     static func searchURL(pds: URL, query: String, limit: Int, cursor: String?, sort: String? = nil) throws -> URL {
