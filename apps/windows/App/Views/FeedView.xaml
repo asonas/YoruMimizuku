@@ -109,6 +109,10 @@
         <ProgressRing Grid.Row="1" IsActive="{x:Bind Vm.IsLoading, Mode=OneWay}"
                       HorizontalAlignment="Center" VerticalAlignment="Center" />
 
+        <TextBlock Grid.Row="1" Text="{x:Bind Vm.ErrorMessage, Mode=OneWay}"
+                   Foreground="#CC3333" TextWrapping="Wrap" Margin="24"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+
         <!-- Image lightbox overlay -->
         <Grid x:Name="Lightbox" Grid.RowSpan="2" Background="#E6000000" Visibility="Collapsed"
               Tapped="OnLightboxTapped" IsTabStop="True">

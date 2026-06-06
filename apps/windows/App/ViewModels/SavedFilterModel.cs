@@ -74,13 +74,16 @@ public sealed class SavedFilterModel
                 ["value"] = t.Value
             });
         }
+        // Note: createdAt is intentionally omitted. The Swift SavedFilter decoder
+        // (default JSONDecoder, .deferredToDate) would reject an ISO8601 string,
+        // failing the whole request; createdAt is irrelevant to search anyway, and
+        // SavedFilter tolerates its absence (decodeIfPresent).
         return new JsonObject
         {
             ["id"] = Id.ToString(),
             ["name"] = Name,
             ["terms"] = terms,
-            ["combinator"] = Combinator == FilterCombinator.Or ? "or" : "and",
-            ["createdAt"] = CreatedAt.ToString("o")
+            ["combinator"] = Combinator == FilterCombinator.Or ? "or" : "and"
         };
     }
 }
