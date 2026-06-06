@@ -7,3 +7,4 @@ Recent activity: `grep "^## \[" log.md | tail -5`.
 ## [2026-06-06] ingest | Windows support shipped (PlatformWindows, YoruMimizukuBridge DLL, apps/windows WinUI 3). Updated windows page from planned to implemented, refreshed overview structure, and reconciled AGENTS.md. Sources: apps/windows/README.md, core/Package.swift.
 ## [2026-06-06] ingest | Windows follow-up: documented build-app.ps1 / make-appicon.ps1 and the RelativeTime.cs / AppIcon.cs services (RelativeTime mirrors the Swift formatter) on the windows page. macos.md notes swift-crypto + the SignpostTracing port are landed.
 ## [2026-06-06] tooling | Fixed the wiki CLI to normalize CRLF so lint/index work on Windows checkouts.
+## [2026-06-06] ingest | Documented token-refresh coalescing (RefreshGate) and session-expiry re-login (SessionExpiry) on the oauth-flow page, after fixing the concurrent-refresh invalid_grant bug.
