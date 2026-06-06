@@ -11,7 +11,7 @@ struct LoginView: View {
         VStack(spacing: 18) {
             VStack(spacing: 6) {
                 Text("✦").font(.system(size: 30)).foregroundStyle(theme.star)
-                Text("星月夜")
+                Text("YoruMimizuku")
                     .font(.appSize(34, weight: .semibold))
                     .foregroundStyle(theme.primaryText)
                 Text("Bluesky にログイン")
