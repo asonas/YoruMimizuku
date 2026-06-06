@@ -101,3 +101,19 @@ xcrun notarytool store-credentials "$NOTARY_PROFILE" --team-id "$TEAM_ID"
 description = "Set MARKETING_VERSION in project.yml, bump the build number, and regenerate"
 usage = 'arg "version" help="New marketing version, e.g. 0.2.0"'
 run = './scripts/bump-version.sh "$usage_version"'
+
+[tasks."wiki:lint"]
+description = "Validate docs/wiki frontmatter, [[links]], and source paths"
+run = "swift run --quiet --package-path tools/wiki wiki lint"
+
+[tasks."wiki:index"]
+description = "Regenerate docs/wiki/index.md from page frontmatter"
+run = "swift run --quiet --package-path tools/wiki wiki index"
+
+[tasks."wiki:check"]
+description = "Lint the wiki and verify index.md is up to date (CI / pre-commit)"
+run = "swift run --quiet --package-path tools/wiki wiki check"
+
+[tasks."wiki:install-hooks"]
+description = "Point git at the committed hooks in scripts/hooks (wiki pre-commit)"
+run = "git config core.hooksPath scripts/hooks"

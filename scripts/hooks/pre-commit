@@ -1,0 +1,28 @@
+#!/bin/sh
+# Wiki bookkeeping hook. Runs only when docs/wiki/** is staged.
+# Validates the wiki and regenerates docs/wiki/index.md, re-staging it if it changed.
+# Deterministic only — it never generates prose (that is an agent's job; see docs/wiki/conventions.md).
+#
+# Install once with: mise run wiki:install-hooks
+# Portable across macOS and Windows (runs under Git's bundled sh).
+
+set -eu
+
+# Anything staged under docs/wiki/ ?
+if ! git diff --cached --name-only | grep -q '^docs/wiki/'; then
+    exit 0
+fi
+
+if ! command -v swift >/dev/null 2>&1; then
+    echo "pre-commit: swift not found; skipping wiki lint/index. Run 'mise run wiki:check' before pushing." >&2
+    exit 0
+fi
+
+echo "pre-commit: validating docs/wiki ..."
+swift run --quiet --package-path tools/wiki wiki lint
+swift run --quiet --package-path tools/wiki wiki index
+
+if ! git diff --quiet -- docs/wiki/index.md; then
+    git add docs/wiki/index.md
+    echo "pre-commit: regenerated docs/wiki/index.md and staged it."
+fi
