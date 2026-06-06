@@ -6,6 +6,8 @@ sources:
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
   - core/Package.swift
+  - apps/windows/App/Services/RelativeTime.cs
+  - scripts/windows/build-app.ps1
 ---
 
 # Platform — Windows
@@ -41,18 +43,23 @@ apps/windows/App
 ├── Mvvm/            ObservableObject + AsyncRelayCommand
 ├── ViewModels/      Login / Timeline / Thread / Notifications / Composer / Workspace / SavedFilter
 ├── Views/           XAML: Login (WebView2 OAuth), Feed, Notifications, Conversation, Composer, Settings
-├── Services/        AppSettings, ThemeService (randoma11y)
+├── Services/        AppSettings, ThemeService (randoma11y), RelativeTime, AppIcon
 └── MainWindow       NavigationView shell, tab cycling (Ctrl+Shift+J/K), login gate
 ```
 
 - **OAuth** runs in a WebView2 control (the Windows counterpart to macOS's `ASWebAuthenticationSession`; [[oauth-flow]]).
 - The view-model surface mirrors macOS (timeline / thread / notifications / composer / saved filters), driven through the bridge rather than `YoruMimizukuKit` directly.
+- **Relative timestamps** are formatted by `Services/RelativeTime.cs`, deliberately mirroring the Swift `RelativeTimeFormatter` ("now" / "30s" / "2m" / "3h" / "2d") so the Windows timeline reads like the macOS one ([[timeline-streaming]]).
+- The window / taskbar icon is set by `Services/AppIcon.cs` from a bundled `.ico` generated off the shared macOS owl icon.
 
 ## Build & packaging
 
 ```powershell
 scripts\windows\stage-bridge.ps1        # build the bridge DLL + stage it (with the Swift runtime) into App/native
-dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
+scripts\windows\build-app.ps1           # one-shot: stop running instance, build self-contained x64, print the exe path
+                                        #   add -StageBridge to rebuild the Swift bridge first (after core/ changes)
+scripts\windows\make-appicon.ps1        # regenerate App/Assets/AppIcon.ico from the shared macOS owl PNG
+dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug   # or build the solution directly
 ```
 
 `scripts/windows/ci.ps1` runs the Windows CI path. Prerequisites: Swift Windows toolchain, .NET 8 SDK, Visual Studio 2022 (C++ workload + Windows App SDK / WinUI 3), and the Edge WebView2 runtime (`apps/windows/README.md`).
