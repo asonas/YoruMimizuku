@@ -33,16 +33,19 @@ yorumimizuku/
 │       ├── BlueskyCore/          # pure logic: OAuth / DPoP / XRPC / Models / Account / RichText
 │       │   └── Ports/            #   protocols for side effects (SecureStorage, HTTPClient, ...)
 │       ├── YoruMimizukuKit/       # display logic & view models (depends on BlueskyCore)
-│       └── PlatformApple/        # Apple-only impls (Keychain / os logger, #if os(macOS))
+│       ├── PlatformApple/        # Apple-only impls (Keychain / os logger, #if os(macOS))
+│       ├── PlatformWindows/      # Windows impls (DPAPI / BCryptGenRandom, #if os(Windows))
+│       └── YoruMimizukuBridge/    # C ABI DLL (@_cdecl) called from the Windows C# app
 ├── apps/
-│   └── macos/                    # SwiftUI app (Auth / Workspace / Compose / Views / Timeline ...)
+│   ├── macos/                    # SwiftUI app (Auth / Workspace / Compose / Views / Timeline ...)
+│   └── windows/                  # WinUI 3 / C# / .NET 8 app (P/Invoke over the bridge DLL)
 ├── docs/
 │   ├── superpowers/{specs,plans} # ground-truth sources (this wiki's citations)
 │   └── wiki/                     # this derived documentation layer
 └── design/app-icon/
 ```
 
-The planned `YoruMimizukuBridge` (C ABI boundary), `PlatformWindows`, and `apps/windows` (C#/WinUI) for Windows do not exist yet. See [[windows]].
+Both the macOS app and the Windows pieces (`PlatformWindows`, the `YoruMimizukuBridge` C ABI DLL, and the C#/WinUI 3 app under `apps/windows`) now exist. See [[windows]].
 
 ## v1 scope
 

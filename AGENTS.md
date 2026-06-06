@@ -38,9 +38,12 @@ yorumimizuku/
 │       ├── BlueskyCore/        #   OAuth(PKCE+DPoP) / DPoP / XRPC / Models / Account / RichText
 │       │   └── Ports/          #     protocols for side effects (SecureStorage, HTTPClient, ...)
 │       ├── YoruMimizukuKit/     #   View models and display logic (depends on BlueskyCore)
-│       └── PlatformApple/      #   Apple-only impls (Keychain / os logger, #if os(macOS))
+│       ├── PlatformApple/      #   Apple-only impls (Keychain / os logger, #if os(macOS))
+│       ├── PlatformWindows/    #   Windows impls (DPAPI / BCryptGenRandom, #if os(Windows))
+│       └── YoruMimizukuBridge/  #   C ABI DLL (@_cdecl) called from the Windows C# app
 ├── apps/
-│   └── macos/                  # macOS app (SwiftUI): Auth / Workspace / Compose / Views / Timeline ...
+│   ├── macos/                  # macOS app (SwiftUI): Auth / Workspace / Compose / Views / Timeline ...
+│   └── windows/                # WinUI 3 / C# / .NET 8 app (P/Invoke over the bridge DLL)
 ├── tools/wiki/                 # SPM CLI that lints and rebuilds the docs/wiki index
 ├── docs/
 │   ├── client-metadata.json    #   OAuth client metadata (public)
@@ -49,14 +52,17 @@ yorumimizuku/
 └── design/app-icon/            # App icon sources (SVG / generation script)
 ```
 
-> The Windows targets described in `docs/wiki/platforms/windows.md` (`PlatformWindows`, `YoruMimizukuBridge`, `apps/windows`) are planned and do not exist yet.
+> Windows support has landed. For the architecture (Swift core + C ABI bridge DLL + WinUI 3 frontend) and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
 
 ### Module Split
 
-- `BlueskyCore` (SPM library): platform-independent logic — networking, OAuth, XRPC, token refresh. Shared with future targets such as iOS / Windows.
+- `BlueskyCore` (SPM library): platform-independent logic — networking, OAuth, XRPC, token refresh. Shared across macOS and Windows.
 - `YoruMimizukuKit` (SPM library): view models and display logic. Depends on `BlueskyCore`.
 - `PlatformApple` (SPM library): Apple-framework concrete implementations of the core ports (Keychain, logger), gated `#if os(macOS)`.
+- `PlatformWindows` (SPM library): Windows concrete implementations of the core ports (DPAPI secure storage, `BCryptGenRandom`), gated `#if os(Windows)`.
+- `YoruMimizukuBridge` (SPM dynamic library): C ABI (`@_cdecl`) surface built into `YoruMimizukuBridge.dll`, called from the Windows app via P/Invoke with UTF-8 JSON.
 - `apps/macos` (macOS app target): SwiftUI views and the wiring of Apple-specific pieces such as ASWebAuthenticationSession.
+- `apps/windows` (WinUI 3 / C# / .NET 8 app): calls the Swift core through the bridge DLL; OAuth runs in WebView2.
 
 ## Setup and Build
 
