@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import YoruMimizukuKit
 
@@ -24,7 +25,12 @@ struct MainWindowView: View {
     /// The composer sheet's view model; non-nil while the sheet is open.
     @State private var composer: ComposerViewModel?
 
-    private let now = Date()
+    /// The reference "now" for every relative timestamp ("32m") in the window.
+    /// Driven by `clock` below so the displayed ages advance; a captured constant
+    /// would freeze and the times would never update.
+    @State private var now = Date()
+    /// Ticks once a second on the main run loop to refresh `now`.
+    private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
@@ -36,6 +42,7 @@ struct MainWindowView: View {
         }
         // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
         .background { tabShortcuts }
+        .onReceive(clock) { now = $0 }
         .overlay {
             if let lightbox {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
