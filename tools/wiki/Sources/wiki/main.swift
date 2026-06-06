@@ -26,6 +26,15 @@ func fail(_ message: String) -> Never {
     exit(1)
 }
 
+// Read a file with line endings normalized to "\n". Windows checkouts may use
+// CRLF, which would otherwise break the "---" frontmatter detection and make the
+// index comparison always look stale; normalizing keeps the tool identical on
+// macOS and Windows.
+func readNormalized(_ path: String) -> String {
+    let raw = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+    return raw.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+}
+
 let fm = FileManager.default
 let root = fm.currentDirectoryPath
 let wikiDir = root + "/docs/wiki"
@@ -68,7 +77,7 @@ func extractLinks(_ body: String) -> [String] {
 // `sources:` list of subsequent `  - item` lines. Good enough for our own pages.
 func parse(_ path: String) -> Page {
     let basename = (path as NSString).lastPathComponent.replacingOccurrences(of: ".md", with: "")
-    let content = (try? String(contentsOfFile: path, encoding: .utf8)) ?? ""
+    let content = readNormalized(path)
     let lines = content.components(separatedBy: "\n")
 
     guard lines.first == "---", let end = lines.dropFirst().firstIndex(of: "---") else {
@@ -170,7 +179,7 @@ func runLint() {
 func runIndex(check: Bool) {
     let generated = generateIndex()
     let indexPath = wikiDir + "/index.md"
-    let current = (try? String(contentsOfFile: indexPath, encoding: .utf8)) ?? ""
+    let current = readNormalized(indexPath)
     if check {
         if current == generated {
             print("wiki: index.md is up to date")
