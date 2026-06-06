@@ -14,7 +14,7 @@ This page is the entry point so that any agent reading this repository (Claude /
 
 ## What the app is
 
-YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6), with iOS and eventually Windows / Android in view (`docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`).
+YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6) and now also Windows (a C#/WinUI 3 app over a shared Swift core), with iOS / Android still in view (`docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, [[windows]]).
 
 The reference implementation is the same author's Ruby terminal client `tempest` (`/Users/asonas/ghq/github.com/asonas/tempest`). Its proven logic for XRPC, token refresh, multi-account, Jetstream, and facet detection serves as the blueprint, but this is a high-quality Swift reimplementation, not a port.
 
@@ -34,18 +34,20 @@ yorumimizuku/
 │       │   └── Ports/            #   protocols for side effects (SecureStorage, HTTPClient, ...)
 │       ├── YoruMimizukuKit/       # display logic & view models (depends on BlueskyCore)
 │       ├── PlatformApple/        # Apple-only impls (Keychain / os logger, #if os(macOS))
-│       ├── PlatformWindows/      # Windows impls (DPAPI / BCryptGenRandom, #if os(Windows))
-│       └── YoruMimizukuBridge/    # C ABI DLL (@_cdecl) called from the Windows C# app
+│       ├── PlatformWindows/      # Windows-only impls (DPAPI / BCryptGenRandom, #if canImport(WinSDK))
+│       └── YoruMimizukuBridge/   # C ABI (@_cdecl) DLL surface for the WinUI app
 ├── apps/
 │   ├── macos/                    # SwiftUI app (Auth / Workspace / Compose / Views / Timeline ...)
-│   └── windows/                  # WinUI 3 / C# / .NET 8 app (P/Invoke over the bridge DLL)
+│   └── windows/                  # WinUI 3 (C#/.NET 8) app: Interop (P/Invoke) + MVVM + XAML
 ├── docs/
 │   ├── superpowers/{specs,plans} # ground-truth sources (this wiki's citations)
 │   └── wiki/                     # this derived documentation layer
 └── design/app-icon/
 ```
 
-Both the macOS app and the Windows pieces (`PlatformWindows`, the `YoruMimizukuBridge` C ABI DLL, and the C#/WinUI 3 app under `apps/windows`) now exist. See [[windows]].
+Both macOS and Windows are implemented: `PlatformWindows`, `YoruMimizukuBridge`
+(C ABI DLL), and `apps/windows` (C#/WinUI 3) now exist and the Windows app runs.
+See [[windows]].
 
 ## v1 scope
 

@@ -9,7 +9,7 @@ sources:
 
 # Platform — macOS
 
-macOS is the first and currently the only working target (SwiftUI / Swift 6). The app lives in `apps/macos` and depends on `YoruMimizukuKit` directly; it does not use the C ABI bridge that Windows will need (an intentionally asymmetric setup, see [[windows]]).
+macOS is the first target (SwiftUI / Swift 6). Windows is now implemented too, as a C#/WinUI 3 app over a C ABI bridge ([[windows]]); the macOS app instead depends on `YoruMimizukuKit` directly and does not use the bridge (an intentionally asymmetric setup).
 
 ## Build
 
@@ -30,8 +30,8 @@ OS touchpoints from the core's ports are implemented in `core/Sources/PlatformAp
 
 - **Secure storage**: Keychain via `import Security`. Holds OAuth access/refresh tokens and the DPoP P-256 private key, per-DID ([[oauth-flow]]).
 - **Random bytes**: `SecRandomCopyBytes` (`import Security`).
-- **Crypto (DPoP)**: currently `CryptoKit`. The Windows plan migrates this to `swift-crypto` (`import Crypto`) so a single shared implementation covers both OSes (`2026-06-05-windows-multiplatform-structure.md`).
-- **HTTP**: `URLSession` (the cross-platform plan adds a `#if canImport(FoundationNetworking)` guard).
+- **Crypto (DPoP)**: now `swift-crypto` (`import Crypto`), a single shared implementation across macOS and Windows (`2026-06-05-windows-multiplatform-structure.md`). The concrete `CryptoKitDPoPProvider` lives in `BlueskyCore/Adapters`, not in `PlatformApple`.
+- **HTTP**: `URLSession` with a `#if canImport(FoundationNetworking)` guard, shared with Windows (`URLSessionHTTPClient` in `BlueskyCore/Adapters`).
 - **Browser authorization**: `ASWebAuthenticationSession` (wired in `apps/macos/Auth`), opening the OAuth authorize endpoint and catching the `as.ason:/callback` redirect.
 - **OS notifications**: `UNUserNotificationCenter` for banners; the Dock badge shows the unread count. A background polling actor periodically calls `getUnreadCount` / `listNotifications`; permission is requested on first use.
 
@@ -42,4 +42,7 @@ Secrets go to the Keychain; settings/state are Codable files under Application S
 ## Windows / iOS / Android
 
 - The macOS target deliberately bypasses `YoruMimizukuBridge`.
-- One purity caveat called out by the Windows memo: `YoruMimizukuKit` currently imports `os` (`PerfSignpost.swift`, `TimelineViewModel.swift`). That leaks an Apple-only dependency; the plan abstracts it behind a `Logger` protocol with per-OS adapters, moving the macOS implementation into `PlatformApple`. Until then the "pure" layer is not strictly pure on non-Apple platforms ([[windows]]).
+- The earlier purity leak (`YoruMimizukuKit` importing `os`) is resolved: the
+  signpost dependency is abstracted behind a `SignpostTracing` port, with the
+  `os.signpost` implementation in `PlatformApple` and a no-op elsewhere, so the
+  view-model layer is platform-pure ([[windows]]).

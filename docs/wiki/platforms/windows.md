@@ -8,36 +8,30 @@ sources:
   - core/Package.swift
   - apps/windows/App/Services/RelativeTime.cs
   - scripts/windows/build-app.ps1
+  - README.md
 ---
 
 # Platform — Windows
 
-Status: **implemented (initial client landed)**. The repo now ships a Windows front end: a **native Swift core shared across platforms, with a C#/WinUI 3 (.NET 8) frontend that calls the Swift core through a C ABI DLL bridge** (`apps/windows/README.md`). This realizes the direction set in `2026-06-05-windows-multiplatform-structure.md`. The Swift core builds and tests on Windows; the macOS build is unaffected ([[macos]]).
+Status: **implemented and running**. The Swift core builds and tests on Windows,
+a C ABI bridge (`YoruMimizukuBridge.dll`) exposes it, and a WinUI 3 (C#/.NET 8)
+app drives the UI. The app runs self-contained and signs in via OAuth end to end
+(`2026-06-05-windows-multiplatform-structure.md`, `apps/windows/README.md`).
 
-This page matters for cross-machine context: the Windows build runs on a different machine / agent, so it reconstructs the same picture from this wiki and the repo.
+This page matters for cross-machine context: the Windows build runs on a
+different machine / agent, so it reconstructs the same picture from this wiki.
 
-## Swift core on Windows
+## Architecture (as built)
 
-The non-UI core runs on Windows:
-
-- **Officially supported toolchain.** `swift build` / `swift test` work directly; Swift 6 strict concurrency carries over unchanged. Install with `winget install --id Swift.Toolchain` (`apps/windows/README.md`).
-- **Foundation split absorbed.** Networking uses `FoundationNetworking`, gated by `#if canImport(FoundationNetworking)`.
-- **swift-crypto for DPoP.** `Package.swift` depends on `swift-crypto` (`from: 3.0.0`); `import Crypto` is API-compatible with CryptoKit on Apple and works on Windows, so the DPoP provider (P-256 + SHA-256) is a single shared implementation in `BlueskyCore/Adapters` (`core/Package.swift`).
-- **Windows secure storage.** `core/Sources/PlatformWindows` provides `DPAPISecureStorage` (DPAPI, the Keychain equivalent) and `BCryptRandomBytesGenerator` (`BCryptGenRandom`) via `import WinSDK`. Covered by a `PlatformWindowsTests` test target.
-
-## C# ↔ Swift bridge (as built)
-
-The Swift core is exposed as a C ABI DLL and called from C# via P/Invoke.
-
-- `core/Sources/YoruMimizukuBridge` is a **dynamic library target** producing `YoruMimizukuBridge.dll`, with `@_cdecl("yoru_...")` entry points (`Bridge.swift`, `BridgeOperations.swift`, `CABI.swift`). It depends on `BlueskyCore`, `YoruMimizukuKit`, and `PlatformWindows`. `unsafe` pointer / C-string lifetime handling is confined here.
-- Data crosses the boundary as **UTF-8 JSON `char*`** with a paired free function, avoiding ABI struct-layout mismatches.
-- On the C# side, `apps/windows/App/Interop` holds the P/Invoke layer: `NativeMethods` (`DllImport`), `BridgeClient` (the JSON facade), and `Dtos`. The rest of the app only touches `Interop`. `App.xaml.cs` initializes the bridge (`yoru_init`) at launch.
-
-## WinUI 3 app (apps/windows)
-
-A WinUI 3 / C# / .NET 8 app (`apps/windows/YoruMimizuku.Windows.sln`):
+Swift core shared across platforms, with a **C#/WinUI 3 frontend calling the Swift
+core through a C ABI (cdecl) DLL** via P/Invoke. The pure logic and all mapping
+(`PostDisplay`, `NotificationGroup`, `RichText`, filter subqueries) stay in
+`BlueskyCore` / `YoruMimizukuKit`; C# is a thin MVVM + XAML layer ([[overview]]).
 
 ```
+core/Sources/
+├── PlatformWindows/       # DPAPI SecureStorage + BCryptGenRandom, #if canImport(WinSDK)
+└── YoruMimizukuBridge/    # C ABI (@_cdecl) surface, built as a dynamic library (DLL)
 apps/windows/App
 ├── Interop/         P/Invoke (NativeMethods), JSON facade (BridgeClient), DTOs
 ├── Mvvm/            ObservableObject + AsyncRelayCommand
@@ -47,25 +41,96 @@ apps/windows/App
 └── MainWindow       NavigationView shell, tab cycling (Ctrl+Shift+J/K), login gate
 ```
 
-- **OAuth** runs in a WebView2 control (the Windows counterpart to macOS's `ASWebAuthenticationSession`; [[oauth-flow]]).
-- The view-model surface mirrors macOS (timeline / thread / notifications / composer / saved filters), driven through the bridge rather than `YoruMimizukuKit` directly.
-- **Relative timestamps** are formatted by `Services/RelativeTime.cs`, deliberately mirroring the Swift `RelativeTimeFormatter` ("now" / "30s" / "2m" / "3h" / "2d") so the Windows timeline reads like the macOS one ([[timeline-streaming]]).
-- The window / taskbar icon is set by `Services/AppIcon.cs` from a bundled `.ico` generated off the shared macOS owl icon.
+## PlatformWindows (OS adapters)
 
-## Build & packaging
+The Apple-only ports get Windows equivalents under `core/Sources/PlatformWindows`
+(gated `#if canImport(WinSDK)`), covered by a `PlatformWindowsTests` target:
+
+- **Secure storage**: `DPAPISecureStorage` — `CryptProtectData` / `CryptUnprotectData`
+  (per-user) persisting each value as an encrypted file under Application Support.
+  DPAPI rather than Credential Manager because the account blob (OAuth tokens + the
+  DPoP key) exceeds the Credential Manager per-item size limit. This is what makes
+  login survive a relaunch ([[oauth-flow]]).
+- **Random bytes**: `BCryptRandomBytesGenerator` — `BCryptGenRandom`.
+- Linked Win32 libs: `bcrypt`, `crypt32` (see `core/Package.swift`).
+
+Crypto and HTTP need no OS split: `CryptoKitDPoPProvider` uses `import Crypto`
+(swift-crypto, `from: 3.0.0` in `core/Package.swift`, with an `@unchecked Sendable`
+wrapper since swift-crypto's P256 key is not `Sendable` off Apple), and
+`URLSessionHTTPClient` carries the `#if canImport(FoundationNetworking)` guard.
+Both concretes live in `BlueskyCore/Adapters`.
+
+## YoruMimizukuBridge (C ABI)
+
+A dynamic-library target (`Bridge.swift`, `BridgeOperations.swift`, `CABI.swift`)
+whose `@_cdecl("yoru_…")` functions are the P/Invoke boundary, all guarded
+`#if canImport(WinSDK)` (macOS bypasses the bridge). `unsafe` pointer / C-string
+lifetime handling is confined here.
+
+- Every entry point takes one UTF-8 JSON request string and returns a newly
+  allocated UTF-8 JSON response (`{ "ok": true, "data": … }` or
+  `{ "ok": false, "error": … }`) the caller frees with `yoru_free`.
+- Async work is bridged to a synchronous return with a semaphore; the C# side
+  calls each function on a background thread (`Task.Run`), so the UI never blocks.
+- `yoru_init` builds the session (PlatformWindows adapters + `URLSessionHTTPClient`
+  + swift-crypto DPoP + `AccountManager`). Endpoints mirror the macOS `Live*`
+  layer: `yoru_login_begin` / `yoru_login_complete` (split for WebView2),
+  `yoru_account_current/list/switch/remove`, `yoru_timeline_load`,
+  `yoru_thread_load`, `yoru_notifications_load`, `yoru_search_load`,
+  `yoru_post_create`, `yoru_post_like/unlike/repost/unrepost`, `yoru_profile_avatar`.
+
+## apps/windows (WinUI 3)
+
+- `Interop/`: `NativeMethods` (`DllImport`), `BridgeClient` (JSON facade + Task
+  wrappers), and DTOs mirroring the bridge payloads. The rest of the app only
+  touches `Interop`.
+- C# MVVM view models mirror `YoruMimizukuKit`: Timeline / Thread / Notifications /
+  Login / Composer / Workspace / SavedFilter (+ `PostItem` with optimistic like/repost).
+- Views: WebView2 OAuth login, a feed (facet-aware rich text, image grid + lightbox,
+  relative timestamps, like/repost/reply icons, infinite scroll, 30s refresh, j/k,
+  n-to-compose, per-post separators), conversation (ancestor + re-anchor),
+  notifications, composer, settings; a cmux-style `NavigationView` vertical-tab
+  shell with `Ctrl+Shift+J/K` cycling, closable tabs, and an account footer.
+- **OAuth via WebView2** (the Windows counterpart to macOS's
+  `ASWebAuthenticationSession`, [[oauth-flow]]): `yoru_login_begin` returns the
+  authorize URL, the app loads it in an embedded `WebView2`, intercepts the
+  `as.ason:` redirect, and calls `yoru_login_complete` to finish the token
+  exchange — no custom URI-scheme registration needed.
+- **Relative timestamps** are formatted by `Services/RelativeTime.cs`, deliberately
+  mirroring the Swift `RelativeTimeFormatter` ("now" / "30s" / "2m" / "3h" / "2d")
+  so the Windows timeline reads like the macOS one ([[timeline-streaming]]). The
+  window / taskbar icon is set by `Services/AppIcon.cs` from a bundled `.ico`
+  generated off the shared macOS owl icon.
+- Theme (randoma11y / monochrome), display density, and font size persist to a JSON
+  file (not `ApplicationData.Current`, which is unavailable to an unpackaged app).
+- Self-contained: `SelfContained` + `WindowsAppSDKSelfContained` bundle the .NET and
+  Windows App SDK runtimes, so no separate runtime install is required.
+
+## Build (Windows)
+
+Swift toolchain for Windows (`winget install --id Swift.Toolchain`) + .NET 8 SDK +
+a Visual Studio C++ workload. Helpers under `scripts/windows/` (`apps/windows/README.md`):
 
 ```powershell
-scripts\windows\stage-bridge.ps1        # build the bridge DLL + stage it (with the Swift runtime) into App/native
-scripts\windows\build-app.ps1           # one-shot: stop running instance, build self-contained x64, print the exe path
-                                        #   add -StageBridge to rebuild the Swift bridge first (after core/ changes)
-scripts\windows\make-appicon.ps1        # regenerate App/Assets/AppIcon.ico from the shared macOS owl PNG
-dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug   # or build the solution directly
+scripts\windows\build.ps1            # swift build (core)
+scripts\windows\test.ps1             # swift test  (core)
+scripts\windows\stage-bridge.ps1     # build the bridge DLL + stage it (+ Swift runtime)
+scripts\windows\build-app.ps1        # stop running instance, build self-contained x64, print the exe
+                                     #   add -StageBridge to rebuild the Swift bridge first (after core/ changes)
+scripts\windows\make-appicon.ps1     # regenerate App/Assets/AppIcon.ico from the shared macOS owl PNG
+scripts\windows\ci.ps1               # full chain: core build/test -> stage -> dotnet build
 ```
 
-`scripts/windows/ci.ps1` runs the Windows CI path. Prerequisites: Swift Windows toolchain, .NET 8 SDK, Visual Studio 2022 (C++ workload + Windows App SDK / WinUI 3), and the Edge WebView2 runtime (`apps/windows/README.md`).
+A `@MainActor` XCTest caveat: swift-corelibs-xctest on Windows cannot invoke a
+synchronous `@MainActor` test method, so such tests are marked `async`.
 
-## Notes / remaining work
+## Resolved / open questions
 
-- The single-SPM-package decision held: platform adapters are targets under `core/Sources/`, gated `#if os(...)`, and BlueskyCore purity is enforced by the target dependency graph.
-- The earlier "URLSession on Windows maturity" open question is settled enough that the core builds and tests on Windows; watch for runtime networking edge cases and keep a WinHTTP / libcurl `HTTPClient` adapter in mind as a fallback if they surface.
-- Signing / installer packaging for distribution is not covered here.
+- **URLSession on Windows**: resolved — the app makes real HTTPS calls to bsky.social
+  at runtime (login + timeline work), so the WinHTTP/libcurl fallback is not needed.
+- **Async surface over the C ABI**: settled on synchronous-blocking entry points
+  invoked on a C# background thread (callback pointers were the alternative).
+- The single-SPM-package decision held: platform adapters are targets under
+  `core/Sources/`, gated `#if os(...)` / `#if canImport(WinSDK)`, and BlueskyCore
+  purity is enforced by the target dependency graph.
+- **MSIX packaging** for distribution remains future work; development runs unpackaged.

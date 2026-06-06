@@ -39,11 +39,11 @@ yorumimizuku/
 │       │   └── Ports/          #     protocols for side effects (SecureStorage, HTTPClient, ...)
 │       ├── YoruMimizukuKit/     #   View models and display logic (depends on BlueskyCore)
 │       ├── PlatformApple/      #   Apple-only impls (Keychain / os logger, #if os(macOS))
-│       ├── PlatformWindows/    #   Windows impls (DPAPI / BCryptGenRandom, #if os(Windows))
-│       └── YoruMimizukuBridge/  #   C ABI DLL (@_cdecl) called from the Windows C# app
+│       ├── PlatformWindows/    #   Windows-only impls (DPAPI / BCryptGenRandom, #if canImport(WinSDK))
+│       └── YoruMimizukuBridge/ #   C ABI (@_cdecl) DLL surface for the WinUI app
 ├── apps/
 │   ├── macos/                  # macOS app (SwiftUI): Auth / Workspace / Compose / Views / Timeline ...
-│   └── windows/                # WinUI 3 / C# / .NET 8 app (P/Invoke over the bridge DLL)
+│   └── windows/                # Windows app (WinUI 3 / C#): Interop (P/Invoke) + MVVM + XAML
 ├── tools/wiki/                 # SPM CLI that lints and rebuilds the docs/wiki index
 ├── docs/
 │   ├── client-metadata.json    #   OAuth client metadata (public)
@@ -52,7 +52,7 @@ yorumimizuku/
 └── design/app-icon/            # App icon sources (SVG / generation script)
 ```
 
-> Windows support has landed. For the architecture (Swift core + C ABI bridge DLL + WinUI 3 frontend) and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
+> Windows support has landed. The Windows targets (`PlatformWindows`, `YoruMimizukuBridge`, `apps/windows`) are implemented and the WinUI 3 app runs. For the architecture (Swift core + C ABI bridge DLL + WinUI 3 frontend) and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
 
 ### Module Split
 
