@@ -1,7 +1,7 @@
 ---
 title: Platform — Windows
 type: platform
-updated: 2026-06-06
+updated: 2026-06-07
 sources:
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
@@ -97,6 +97,10 @@ lifetime handling is confined here.
   n-to-compose, per-post separators), conversation (ancestor + re-anchor),
   notifications, composer, settings; a cmux-style `NavigationView` vertical-tab
   shell with `Ctrl+Shift+J/K` cycling, closable tabs, and an account footer.
+- The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
+  **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
+  `(uri, cid)` as the quote target plus a read-only preview, matching the macOS
+  repost/quote popover ([[compose-post]]).
 - **OAuth via WebView2** (the Windows counterpart to macOS's
   `ASWebAuthenticationSession`, [[oauth-flow]]): `yoru_login_begin` returns the
   authorize URL, the app loads it in an embedded `WebView2`, intercepts the
@@ -129,6 +133,18 @@ scripts\windows\ci.ps1               # full chain: core build/test -> stage -> d
 
 A `@MainActor` XCTest caveat: swift-corelibs-xctest on Windows cannot invoke a
 synchronous `@MainActor` test method, so such tests are marked `async`.
+
+## Distribution
+
+`scripts\windows\release.ps1` publishes the app self-contained for `win-x64`
+(bundling the .NET + Windows App SDK runtimes, the bridge DLL, and the Swift
+runtime) and zips it into `build/` — "download, extract, run", with only the Edge
+WebView2 runtime as a prerequisite. The macOS side ships a signed + notarized DMG;
+the Windows analogue is this ZIP today, with MSIX as the eventual installable form.
+Code signing is decoupled (optional `-Thumbprint` / `-CertPath` on `release.ps1`):
+unsigned builds get a one-time SmartScreen prompt, and Windows has no free
+notarization equivalent to macOS — a trusted signature needs a paid (or
+free-for-OSS) Authenticode cert, deferred for now.
 
 ## Resolved / open questions
 

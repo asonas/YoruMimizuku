@@ -50,6 +50,28 @@ runtime are bundled in the output, so the app runs without separately installing
 the Windows App Runtime. Startup/runtime errors are written to
 `%LOCALAPPDATA%\YoruMimizuku\app.log`.
 
+## Distribution
+
+`scripts\windows\release.ps1` produces a distributable, self-contained ZIP under
+`build/` (the .NET and Windows App SDK runtimes, the bridge DLL, and the Swift
+runtime are all bundled):
+
+```powershell
+scripts\windows\release.ps1 -Version 0.4.0
+# add -StageBridge to rebuild the Swift bridge (release) first, after core/ changes
+# -> build\YoruMimizuku-win-x64-0.4.0.zip   ("download, extract, run")
+```
+
+The only runtime prerequisite is the Edge **WebView2 runtime** (preinstalled on
+Windows 11 and most Windows 10), needed for OAuth sign-in.
+
+Code signing is **optional and decoupled** so it can be added later without
+changing anything else: pass `-Thumbprint <sha1>` (a cert in the store) or
+`-CertPath <pfx> -CertPassword <pw>` and the app binaries are Authenticode-signed
+before zipping. With no cert the ZIP is unsigned and Windows shows a one-time
+SmartScreen "more info -> run". (Windows has no free notarization equivalent to
+macOS; a publicly trusted signature needs a paid/again-free-for-OSS cert.)
+
 ## OAuth
 
 Login uses the spec's WebView2 flow: `yoru_login_begin` returns the authorization
