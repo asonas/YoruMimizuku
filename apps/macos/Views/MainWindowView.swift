@@ -99,6 +99,7 @@ struct MainWindowView: View {
                 onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                 onOpenConversation: { workspace.openConversation($0) },
                 onCompose: { compose(refreshing: model) },
+                onReply: { openReplyComposer($0, refreshing: model) },
                 onQuote: { openQuoteComposer($0, refreshing: model) }
             )
         case .notifications:
@@ -110,6 +111,7 @@ struct MainWindowView: View {
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenConversation: { workspace.openConversation($0) },
                     onCompose: { compose(refreshing: tab.model) },
+                    onReply: { openReplyComposer($0, refreshing: tab.model) },
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) }
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
@@ -137,6 +139,14 @@ struct MainWindowView: View {
     /// feed that was visible so the new post can surface.
     private func compose(refreshing model: TimelineViewModel) {
         let vm = makeComposer(nil)
+        vm.onPosted = { composer = nil; Task { await model.refresh() } }
+        composer = vm
+    }
+
+    /// Open the composer replying to `post`; on success dismiss it and refresh the
+    /// feed that was visible so the reply count and any surfaced reply update.
+    private func openReplyComposer(_ post: PostDisplay, refreshing model: TimelineViewModel) {
+        let vm = makeComposer(post.id)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
     }

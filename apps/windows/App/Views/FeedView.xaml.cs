@@ -200,11 +200,11 @@ public sealed partial class FeedView : UserControl
         if (sender is MenuFlyoutItem { Tag: PostItem item }) await OpenQuoteComposer(item);
     }
 
-    private void OnReplyClick(object sender, RoutedEventArgs e)
+    private async void OnReplyClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: PostItem item })
         {
-            _workspace.OpenConversation(item.Id, item.AuthorDisplayName, item.Body);
+            await OpenReplyComposer(item);
         }
     }
 
@@ -247,6 +247,13 @@ public sealed partial class FeedView : UserControl
     private async void OpenComposer()
     {
         var dialog = new ComposerDialog { XamlRoot = XamlRoot };
+        var posted = await dialog.ShowComposeAsync();
+        if (posted) await Vm.RefreshAsync();
+    }
+
+    private async Task OpenReplyComposer(PostItem item)
+    {
+        var dialog = new ComposerDialog(replyParentUri: item.Id) { XamlRoot = XamlRoot };
         var posted = await dialog.ShowComposeAsync();
         if (posted) await Vm.RefreshAsync();
     }

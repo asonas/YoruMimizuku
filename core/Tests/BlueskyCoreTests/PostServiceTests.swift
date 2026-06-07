@@ -245,6 +245,40 @@ extension PostServiceTests {
         XCTAssertEqual(parent["uri"] as? String, "at://did:plc:bob/app.bsky.feed.post/parent")
     }
 
+    func testCreateReplySendsFacetsOnReplyRecord() async throws {
+        let profile = HTTPResponse(statusCode: 200, body: Data(##"{"did":"did:plc:alice"}"##.utf8))
+        let getRecord = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:bob/app.bsky.feed.post/parent","cid":"bafyparent","value":{}}
+        """##.utf8))
+        let created = HTTPResponse(statusCode: 200, body: Data(##"""
+        {"uri":"at://did:plc:me/app.bsky.feed.post/new","cid":"bafynew"}
+        """##.utf8))
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("app.bsky.actor.getProfile") }, response: profile),
+            .init(matches: { $0.absoluteString.contains("getRecord") }, response: getRecord),
+            .init(matches: { $0.absoluteString.contains("createRecord") }, response: created),
+        ])
+        let service = makeService(http: http)
+
+        _ = try await service.createPost(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk",
+            did: "did:plc:me", text: "@alice.bsky.social #swift https://x.io",
+            images: [], replyParentURI: "at://did:plc:bob/app.bsky.feed.post/parent"
+        )
+
+        let createReq = try XCTUnwrap(http.sentRequests.first { $0.url.absoluteString.contains("createRecord") })
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(createReq.body)) as? [String: Any])
+        let record = try XCTUnwrap(json["record"] as? [String: Any])
+        XCTAssertNotNil(record["reply"])
+        let facets = try XCTUnwrap(record["facets"] as? [[String: Any]])
+        let types = facets.compactMap { ($0["features"] as? [[String: Any]])?.first?["$type"] as? String }
+        XCTAssertEqual(types, [
+            "app.bsky.richtext.facet#mention",
+            "app.bsky.richtext.facet#tag",
+            "app.bsky.richtext.facet#link",
+        ])
+    }
+
     func testCreatePostRefreshesOnUnauthorizedCreateRecord() async throws {
         let unauthorized = HTTPResponse(statusCode: 401, body: Data(##"{"error":"invalid_token"}"##.utf8))
         let metadata = HTTPResponse(statusCode: 200, body: Data(##"""

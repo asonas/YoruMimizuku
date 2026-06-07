@@ -18,6 +18,8 @@ struct FeedView: View {
     var onOpenConversation: (PostDisplay) -> Void
     /// Optional n-key new-post handler; when nil the shortcut is omitted.
     var onCompose: (() -> Void)? = nil
+    /// Opens the reply composer for the tapped post.
+    var onReply: (PostDisplay) -> Void = { _ in }
     /// Opens the quote composer for a post (from the repost menu).
     var onQuote: (PostDisplay) -> Void = { _ in }
 
@@ -68,7 +70,13 @@ struct FeedView: View {
                         focusedPostID = post.id
                         onImageTap(urls, index)
                     },
-                    onReplyTap: { _ in onOpenConversation(post) },
+                    onReplyTap: { target in
+                        if target.id == post.id {
+                            onReply(post)
+                        } else {
+                            onOpenConversation(target)
+                        }
+                    },
                     onSelect: { focusedPostID = post.id },
                     onLike: { Task { await model.toggleLike(post) } },
                     onRepost: { Task { await model.toggleRepost(post) } },
