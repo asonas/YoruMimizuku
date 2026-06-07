@@ -53,8 +53,10 @@ the Windows App Runtime. Startup/runtime errors are written to
 ## Distribution
 
 `scripts\windows\release.ps1` produces a distributable, self-contained ZIP under
-`build/` (the .NET and Windows App SDK runtimes, the bridge DLL, and the Swift
-runtime are all bundled):
+`build/`. The ZIP root contains only a small `YoruMimizuku.exe` launcher plus an
+`app/` directory; the actual WinUI app, .NET and Windows App SDK runtimes, the
+bridge DLL, Swift runtime DLLs, and satellite resource folders all live under
+`app/`:
 
 ```powershell
 scripts\windows\release.ps1 -Version 0.4.0

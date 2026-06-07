@@ -139,12 +139,15 @@ synchronous `@MainActor` test method, so such tests are marked `async`.
 `scripts\windows\release.ps1` publishes the app self-contained for `win-x64`
 (bundling the .NET + Windows App SDK runtimes, the bridge DLL, and the Swift
 runtime) and zips it into `build/` — "download, extract, run", with only the Edge
-WebView2 runtime as a prerequisite. The macOS side ships a signed + notarized DMG;
-the Windows analogue is this ZIP today, with MSIX as the eventual installable form.
-Code signing is decoupled (optional `-Thumbprint` / `-CertPath` on `release.ps1`):
-unsigned builds get a one-time SmartScreen prompt, and Windows has no free
-notarization equivalent to macOS — a trusted signature needs a paid (or
-free-for-OSS) Authenticode cert, deferred for now.
+WebView2 runtime as a prerequisite. The ZIP root contains a small
+`YoruMimizuku.exe` launcher and an `app/` payload directory; the dependency DLLs
+and satellite resource folders stay under `app/` so the extracted root stays tidy.
+The macOS side ships a signed + notarized DMG; the Windows analogue is this ZIP
+today, with MSIX as the eventual installable form. Code signing is decoupled
+(optional `-Thumbprint` / `-CertPath` on `release.ps1`): unsigned builds get a
+one-time SmartScreen prompt, and Windows has no free notarization equivalent to
+macOS — a trusted signature needs a paid (or free-for-OSS) Authenticode cert,
+deferred for now.
 
 ## Resolved / open questions
 
