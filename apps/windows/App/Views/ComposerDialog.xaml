@@ -23,6 +23,13 @@
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
         </ItemsControl>
+        <Border x:Name="QuotePreview" Visibility="Collapsed"
+                BorderBrush="{ThemeResource AppHairlineBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="10">
+            <TextBlock x:Name="QuotePreviewText" TextWrapping="Wrap" MaxLines="4"
+                       TextTrimming="CharacterEllipsis"
+                       Foreground="{ThemeResource AppTertiaryTextBrush}" />
+        </Border>
         <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed" />
     </StackPanel>
 </ContentDialog>

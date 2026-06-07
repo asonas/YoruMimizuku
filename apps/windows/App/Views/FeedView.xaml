@@ -83,12 +83,25 @@
                                                 <TextBlock Text="{x:Bind ReplyCount}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Click="OnRepostClick" Tag="{x:Bind}" Background="Transparent"
-                                                BorderThickness="0" Padding="2">
+                                        <Button Background="Transparent" BorderThickness="0" Padding="2">
                                             <StackPanel Orientation="Horizontal" Spacing="5">
                                                 <FontIcon Glyph="{x:Bind RepostGlyph, Mode=OneWay}" FontSize="13" Foreground="{x:Bind RepostBrush, Mode=OneWay}" />
                                                 <TextBlock Text="{x:Bind RepostCount, Mode=OneWay}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                                             </StackPanel>
+                                            <Button.Flyout>
+                                                <MenuFlyout>
+                                                    <MenuFlyoutItem Text="{x:Bind RepostActionText, Mode=OneWay}" Click="OnRepostMenuClick" Tag="{x:Bind}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <FontIcon Glyph="&#xE8EE;" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                    <MenuFlyoutItem Text="引用" Click="OnQuoteMenuClick" Tag="{x:Bind}">
+                                                        <MenuFlyoutItem.Icon>
+                                                            <FontIcon Glyph="&#xE90A;" />
+                                                        </MenuFlyoutItem.Icon>
+                                                    </MenuFlyoutItem>
+                                                </MenuFlyout>
+                                            </Button.Flyout>
                                         </Button>
                                         <Button Click="OnLikeClick" Tag="{x:Bind}" Background="Transparent"
                                                 BorderThickness="0" Padding="2">

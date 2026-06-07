@@ -47,10 +47,13 @@ public sealed class PostItem : ObservableObject
     public string RepostGlyph => "\uE8EE";
     public Brush RepostBrush => Brush(IsReposted ? "AppAccentBrush" : "AppTertiaryTextBrush");
 
+    // Label for the repost menu's first item: cancel when already reposted, otherwise repost.
+    public string RepostActionText => IsReposted ? "リポストを取り消す" : "リポスト";
+
     private static Brush Brush(string key) => (Brush)Application.Current.Resources[key];
 
     private void NotifyLike() { OnPropertyChanged(nameof(IsLiked)); OnPropertyChanged(nameof(LikeGlyph)); OnPropertyChanged(nameof(LikeBrush)); }
-    private void NotifyRepost() { OnPropertyChanged(nameof(IsReposted)); OnPropertyChanged(nameof(RepostGlyph)); OnPropertyChanged(nameof(RepostBrush)); }
+    private void NotifyRepost() { OnPropertyChanged(nameof(IsReposted)); OnPropertyChanged(nameof(RepostGlyph)); OnPropertyChanged(nameof(RepostBrush)); OnPropertyChanged(nameof(RepostActionText)); }
 
     private int _repostCount;
     public int RepostCount { get => _repostCount; private set => SetProperty(ref _repostCount, value); }

@@ -1,26 +1,28 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-06-06
+updated: 2026-06-07
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
 ---
 
 # Composing Posts
 
-The app posts to Bluesky. In addition to body text, it supports RichText posts with URLs (link facets), hashtags (tag facets), and mentions (mention facets), plus image posts (up to 4, each with alt text). Both top-level posts and replies are supported. Facets follow `app.bsky.richtext.facet` and express ranges with **UTF-8 byte offsets**. The detection logic is a Swift reimplementation of tempest's proven algorithm (`lib/tempest/post.rb`) (`2026-06-05-yorumimizuku-compose-post-design.md`).
+The app posts to Bluesky. In addition to body text, it supports RichText posts with URLs (link facets), hashtags (tag facets), and mentions (mention facets), plus image posts (up to 4, each with alt text). Both top-level posts and replies are supported, and any post can be **quoted** (a record embed). Facets follow `app.bsky.richtext.facet` and express ranges with **UTF-8 byte offsets**. The detection logic is a Swift reimplementation of tempest's proven algorithm (`lib/tempest/post.rb`) (`2026-06-05-yorumimizuku-compose-post-design.md`).
 
 ## Scope
 
-Included: top-level posts (`createRecord` / `app.bsky.feed.post`), replies (carrying the conversation root and parent refs), automatic facet detection (link / tag / mention), image posts (`uploadBlob` → `app.bsky.embed.images`), a 300-grapheme limit with a remaining counter, and submit-state management.
+Included: top-level posts (`createRecord` / `app.bsky.feed.post`), replies (carrying the conversation root and parent refs), quote posts (`app.bsky.embed.record`, or `app.bsky.embed.recordWithMedia` when images accompany the quote), automatic facet detection (link / tag / mention), image posts (`uploadBlob` → `app.bsky.embed.images`), a 300-grapheme limit with a remaining counter, and submit-state management.
 
-Excluded: external embeds (OGP link cards), quote posts, video, draft saving / scheduling / threads, post editing (atproto has no edit), and a `langs` UI input.
+Excluded: external embeds (OGP link cards), video, draft saving / scheduling / threads, post editing (atproto has no edit), and a `langs` UI input.
+
+> Note: the design spec originally listed quote posts as out of scope (`2026-06-05-yorumimizuku-compose-post-design.md` §"含まないもの"). They have since been implemented in the core and both front ends, so this page documents the shipped behavior; the spec text predates that change.
 
 ## Module responsibility boundaries
 
 - `FacetDetector` (`BlueskyCore/RichText`, pure): takes a string and returns link / tag as completed facets, and mentions as candidates (the `@handle` byte range + the handle string). Network-independent and unit-tested.
-- `PostService` (`BlueskyCore/XRPC`, network): resolves candidate mention handles to DIDs via `getProfile` and converts only the resolved ones into mention facets. Combines with link/tag, sorts by byte start, assembles the record, and sends. If images exist, it `uploadBlob`s first.
-- `ComposerViewModel` (`YoruMimizukuKit`, VM): input state, character count, and submit-ability only. It holds no facet detection or networking and delegates to `PostSubmitting`.
+- `PostService` (`BlueskyCore/XRPC`, network): resolves candidate mention handles to DIDs via `getProfile` and converts only the resolved ones into mention facets. Combines with link/tag, sorts by byte start, assembles the record, and sends. If images exist, it `uploadBlob`s first. A quote target becomes a `StrongRef` (uri + cid) in the record's embed slot: `app.bsky.embed.record` alone, or `app.bsky.embed.recordWithMedia` when images are also attached (`PostWrite.swift` `PostEmbedWrite`).
+- `ComposerViewModel` (`YoruMimizukuKit`, VM): input state, character count, and submit-ability only. It holds no facet detection or networking and delegates to `PostSubmitting`. It optionally carries a `quotedPost`; a quote with no body text is still submittable (quoting alone is valid).
 - `LiveComposer` (`apps/macos/Compose`, wiring): assembles the sender / metadataResolver via `LiveServiceContext`, calls `PostService`, and persists refreshed tokens.
 
 ## Facet detection (key points)
@@ -44,4 +46,4 @@ Up to 4. Each image is sent to `uploadBlob` as binary with its image MIME, yield
 
 ## UI entry points
 
-The composer is shown as a sheet. On the home view, `n` (no modifier) opens a new post and a post row's reply button opens a reply. On `uploadBlob` failure the whole post is aborted (no partial send); a mention DID-resolution failure is non-fatal and the post continues with plain text.
+The composer is shown as a sheet. On the home view, `n` (no modifier) opens a new post and a post row's reply button opens a reply. A post row's repost button does not toggle directly: it opens a small menu offering **リポスト** (toggle the repost; "リポストを取り消す" when already reposted) and **引用** (open the composer as a quote of that post). The quote composer shows a read-only preview of the post being quoted. This repost/quote menu is present on both [[macos]] (a popover) and [[windows]] (a `MenuFlyout`). On `uploadBlob` failure the whole post is aborted (no partial send); a mention DID-resolution failure is non-fatal and the post continues with plain text.

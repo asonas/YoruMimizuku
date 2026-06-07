@@ -14,12 +14,17 @@ public sealed partial class ComposerDialog : ContentDialog
     private readonly ComposerViewModel _vm;
     private bool _posted;
 
-    public ComposerDialog(string? replyParentUri = null, (string Uri, string Cid)? quote = null)
+    public ComposerDialog(string? replyParentUri = null, (string Uri, string Cid)? quote = null, string? quotePreview = null)
     {
         _vm = new ComposerViewModel(replyParentUri, quote);
         InitializeComponent();
         if (replyParentUri is not null) Title = "返信";
         else if (quote is not null) Title = "引用投稿";
+        if (quotePreview is not null)
+        {
+            QuotePreviewText.Text = quotePreview;
+            QuotePreview.Visibility = Visibility.Visible;
+        }
         PrimaryButtonClick += OnPrimaryClick;
         UpdateCounter();
     }

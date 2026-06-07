@@ -1,7 +1,7 @@
 ---
 title: Wiki Index
 type: index
-updated: 2026-06-06
+updated: 2026-06-07
 sources: []
 ---
 
