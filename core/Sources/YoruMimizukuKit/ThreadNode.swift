@@ -32,6 +32,8 @@ public struct ThreadNode: Identifiable, Equatable, Sendable {
             let deeper = depth < maxDepth
                 ? build(replies: child.replies, depth: depth + 1, maxDepth: maxDepth)
                 : []
+            // A reply node needs no replyParent: its ancestor context is the anchor itself,
+            // expressed by tree position (depth) rather than a per-post parent chain.
             return ThreadNode(
                 post: PostDisplay(postView: child.post),
                 replies: deeper,

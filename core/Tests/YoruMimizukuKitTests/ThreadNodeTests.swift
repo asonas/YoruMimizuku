@@ -18,6 +18,11 @@ final class ThreadNodeTests: XCTestCase {
         ThreadViewPost(post: post(uri, handle: handle), parent: nil, replies: replies)
     }
 
+    func testEmptyRepliesReturnsEmptyTree() {
+        let anchor = node("anchor", handle: "a")  // no replies
+        XCTAssertTrue(ThreadNode.childTree(of: anchor, maxDepth: 3).isEmpty)
+    }
+
     func testMultipleChildrenPreserveServerOrder() {
         let anchor = node("anchor", handle: "a", replies: [
             node("b", handle: "b"),
