@@ -4,6 +4,7 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
