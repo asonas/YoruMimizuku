@@ -45,10 +45,17 @@ public final class TimelineViewModel: ObservableObject {
     /// True while an older page is being appended, used to show a footer spinner
     /// and to coalesce repeated infinite-scroll triggers into one request.
     @Published public private(set) var isLoadingMore = false
+    /// Count of posts newer than the last item the viewer saw on this tab. Drives
+    /// the sidebar badge. Always 0 while the tab is active.
+    @Published public private(set) var unreadCount = 0
 
     /// Cursor for the next older page; nil before the first load and once the
     /// feed has been exhausted.
     private var cursor: String?
+    /// The head post id at the moment the tab was last seen; the unread boundary.
+    private var lastSeenTopID: String?
+    /// True while this tab is the selected one. Active tabs keep their unread at 0.
+    private var isActive = false
     private let loader: TimelineLoading
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
@@ -115,6 +122,7 @@ public final class TimelineViewModel: ObservableObject {
             let page = try await loader.loadPage(cursor: nil)
             cursor = page.cursor
             state = .loaded(page.posts)
+            onItemsChanged()
             endInterval("loaded \(page.posts.count) posts")
         } catch {
             SessionExpiry.reportIfExpired(error)
@@ -153,9 +161,35 @@ public final class TimelineViewModel: ObservableObject {
         do {
             let page = try await loader.loadPage(cursor: nil)
             state = .loaded(Self.merging(page.posts, appending: current))
+            onItemsChanged()
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current feed.
+        }
+    }
+
+    /// Mark every loaded post as seen: the head becomes the unread boundary and the
+    /// count drops to zero. Called when the tab is shown.
+    public func markSeen() {
+        lastSeenTopID = posts.first?.id
+        unreadCount = 0
+    }
+
+    /// Set whether this tab is the selected one. Activating marks it seen so the
+    /// active tab never shows a badge for posts the viewer is looking at.
+    public func setActive(_ active: Bool) {
+        isActive = active
+        if active { markSeen() }
+    }
+
+    /// Recompute the unread count after the post list changed. On the very first
+    /// load (no boundary yet) the existing posts are treated as seen.
+    private func onItemsChanged() {
+        if lastSeenTopID == nil { lastSeenTopID = posts.first?.id }
+        if isActive {
+            markSeen()
+        } else {
+            unreadCount = UnreadCounter.unread(ids: posts.map(\.id), since: lastSeenTopID)
         }
     }
 

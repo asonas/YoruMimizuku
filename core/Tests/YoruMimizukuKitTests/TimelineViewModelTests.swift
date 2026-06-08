@@ -224,4 +224,51 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.posts.map(\.id), ["p1"])
     }
+
+    func testInitialUnreadCountIsZero() {
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([])))
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testFirstLoadTreatsExistingPostsAsSeen() async {
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([sample(id: "p1"), sample(id: "p2")])))
+        await vm.load()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testRefreshAddsToUnreadWhenInactive() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p2"), sample(id: "p3")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1")], cursor: "c0"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()      // baseline: head is p2
+        await vm.refresh()   // p0, p1 land above p2
+        XCTAssertEqual(vm.unreadCount, 2)
+    }
+
+    func testMarkSeenResetsUnread() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p2")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1")], cursor: "c0"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+        await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 2)
+        vm.markSeen()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testActiveTabStaysAtZeroOnRefresh() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p2")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1"), sample(id: "p2")], cursor: "c0"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+        vm.setActive(true)
+        await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
 }
