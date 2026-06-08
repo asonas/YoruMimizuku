@@ -16,6 +16,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[filters]], [[windows]]
+- note: Windows structured filters reached parity with macOS for OR pagination. `yoru_search_load` now decodes/returns `CompositeCursor` for multi-subquery OR filters, skips exhausted subqueries on follow-up pages, merges each page newest-first, and preserves infinite scroll. The support matrix now marks Windows saved-search filters full.
+
+## 2026-06-08 ingest
+
 - updated: [[timeline-streaming]]
 - sources: `2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.6, `2026-06-08-phase-d-conversation-child-tree.md`
 - note: Phase D landed — the macOS conversation view now renders the descendant reply tree below the anchor. Added a "Conversation view (ancestors + reply tree)" section (tolerant `replies` decode skipping notFound/blocked, `depth=6` fetch, `ThreadNode.childTree(maxDepth:3)`, `ConversationThread`, indented render + 「さらに表示」 re-anchor) and a "Conversation child reply tree" feature row (macos full / windows none — Windows shows ancestors + re-anchor only). Documented that reply-node like/repost stay inert until re-anchored.

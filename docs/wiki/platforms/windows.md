@@ -119,9 +119,9 @@ lifetime handling is confined here.
 - Saved-filter tabs call `yoru_search_load` with the structured
   `terms` + `combinator` JSON shape used by the Swift core. The WinUI shell has
   a multi-row AND/OR editor, edit/remove affordances, hashtag-link creation, and
-  per-account JSON persistence. OR filters are still limited because the bridge
-  merges only the first page of each OR subquery and does not yet return a
-  `CompositeCursor` for infinite scroll parity ([[filters]]).
+  per-account JSON persistence. OR filters page with the same `CompositeCursor`
+  shape as macOS: the bridge carries one cursor per subquery, skips exhausted
+  subqueries, and merges each page newest-first ([[filters]]).
 - Author tabs are implemented: avatar taps in feeds and conversations derive the
   actor DID from the post AT-URI, notification actors open by handle, and
   `AuthorView` renders a profile header over a reused feed loaded through

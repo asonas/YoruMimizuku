@@ -44,7 +44,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Saved-search filters (structured terms, AND/OR) | ○ | △ | − | − |
+| Saved-search filters (structured terms, AND/OR) | ○ | ○ | − | − |
 
 ## [[notifications]] — Notifications
 
@@ -78,7 +78,6 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows, each with its own active account; the WinUI app is single-window today ([[windows]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach up to 4 PNG/JPEG files and sends image bytes through `yoru_post_create`, but the current WinUI dialog has no alt-text editor, drag/drop, or downsampling/re-encode path yet ([[windows]]).
-- **Saved-search filters (structured terms, AND/OR)** ([[filters]]): Windows has the multi-row AND/OR editor and per-account JSON persistence, but OR search over the bridge still returns only the merged first page (no CompositeCursor infinite-scroll parity yet) ([[windows]]).
 - **OS banner + unread badge** ([[notifications]]): Windows now keeps a local unread count for the Notifications navigation row via 30s polling, but has no OS toast or taskbar-badge surfacing yet ([[windows]], [[macos]]).
 - **Browser authorization** ([[oauth-flow]]): macOS uses ASWebAuthenticationSession; Windows embeds WebView2 and intercepts the as.ason: redirect. Same OAuth result, different mechanism ([[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]]).

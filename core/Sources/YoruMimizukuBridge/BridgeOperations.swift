@@ -359,7 +359,7 @@ enum BridgeOps {
             let result = try await service.searchPosts(
                 pds: ctx.account.pds, issuer: ctx.issuer,
                 accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken,
-                query: queries[0], cursor: cursor
+                query: queries[0], cursor: cursor, sort: "latest"
             )
             try ctx.persist(result.refreshed)
             return TimelinePageDTO(
@@ -368,21 +368,38 @@ enum BridgeOps {
             )
         }
 
-        // OR: fetch the first page of each subquery and merge newest-first, deduped.
-        var merged: [PostDisplay] = []
-        var seenIDs = Set<String>()
-        for query in queries {
+        let decoded = CompositeCursor.decode(cursor)
+        let isFirstPage = decoded == nil
+        let composite = decoded ?? CompositeCursor(cursors: Array(repeating: nil, count: queries.count))
+        let cursors = composite.cursors.count == queries.count
+            ? composite.cursors
+            : Array(repeating: nil, count: queries.count)
+
+        var pages: [[PostDisplay]] = []
+        var nextCursors: [String?] = []
+        var accessToken = ctx.account.accessToken
+        for (index, query) in queries.enumerated() {
+            let subCursor = cursors[index]
+            if !isFirstPage && subCursor == nil {
+                pages.append([])
+                nextCursors.append(nil)
+                continue
+            }
             let result = try await service.searchPosts(
                 pds: ctx.account.pds, issuer: ctx.issuer,
-                accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken, query: query
+                accessToken: accessToken, refreshToken: ctx.account.refreshToken,
+                query: query, cursor: subCursor, sort: "latest"
             )
             try ctx.persist(result.refreshed)
-            for view in result.response.posts where seenIDs.insert(view.uri).inserted {
-                merged.append(PostDisplay(postView: view))
-            }
+            if let refreshed = result.refreshed { accessToken = refreshed.accessToken }
+            pages.append(result.response.posts.map { PostDisplay(postView: $0) })
+            nextCursors.append(result.response.cursor)
         }
-        merged.sort { $0.createdAt > $1.createdAt }
-        return TimelinePageDTO(posts: merged.map(PostDisplayDTO.init), cursor: nil)
+        let merged = FilterSearchMerge.merge(pages)
+        return TimelinePageDTO(
+            posts: merged.map(PostDisplayDTO.init),
+            cursor: CompositeCursor(cursors: nextCursors).encoded()
+        )
     }
 
     // -- Compose --
