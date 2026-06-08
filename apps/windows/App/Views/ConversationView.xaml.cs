@@ -21,7 +21,7 @@ public sealed partial class ConversationView : UserControl
         _vm = vm;
         _workspace = workspace;
         InitializeComponent();
-        WireShortcuts();
+        KeyDown += OnConversationKeyDown;
     }
 
     public async Task LoadAsync()
@@ -87,10 +87,19 @@ public sealed partial class ConversationView : UserControl
         }
     }
 
-    private void WireShortcuts()
+    private async void OnConversationKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        AddAccelerator(VirtualKey.F, ToggleFocusedLikeAsync);
-        AddAccelerator(VirtualKey.O, OpenFocusedPermalinkAsync);
+        switch (e.Key)
+        {
+            case VirtualKey.F:
+                await ToggleFocusedLikeAsync();
+                e.Handled = true;
+                break;
+            case VirtualKey.O:
+                await OpenFocusedPermalinkAsync();
+                e.Handled = true;
+                break;
+        }
     }
 
     private async Task ToggleFocusedLikeAsync()
@@ -123,10 +132,4 @@ public sealed partial class ConversationView : UserControl
         }
     }
 
-    private void AddAccelerator(VirtualKey key, System.Func<Task> action)
-    {
-        var accelerator = new KeyboardAccelerator { Key = key, Modifiers = VirtualKeyModifiers.None };
-        accelerator.Invoked += async (_, e) => { e.Handled = true; await action(); };
-        KeyboardAccelerators.Add(accelerator);
-    }
 }

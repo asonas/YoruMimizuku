@@ -33,7 +33,7 @@ public sealed partial class FeedView : UserControl
         _refreshTimer.Tick += async (_, _) => await Vm.RefreshAsync();
         Loaded += OnLoaded;
         Unloaded += (_, _) => _refreshTimer.Stop();
-        WireShortcuts();
+        KeyDown += OnFeedKeyDown;
     }
 
     public async Task LoadAsync()
@@ -223,6 +223,22 @@ public sealed partial class FeedView : UserControl
         }
     }
 
+    private void OnAuthorClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: PostItem item })
+        {
+            _workspace.OpenAuthor(item);
+        }
+    }
+
+    private void OnReplyMarkerClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: PostItem { ReplyParent: { } parent } })
+        {
+            _workspace.OpenConversation(parent.Id, parent.AuthorDisplayName, parent.Body);
+        }
+    }
+
     private void OnPostClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is PostItem item)
@@ -233,16 +249,43 @@ public sealed partial class FeedView : UserControl
 
     // -- Keyboard --
 
-    private void WireShortcuts()
+    private async void OnFeedKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        AddAccelerator(VirtualKey.J, VirtualKeyModifiers.None, MoveFocusDown);
-        AddAccelerator(VirtualKey.K, VirtualKeyModifiers.None, MoveFocusUp);
-        AddAccelerator(VirtualKey.N, VirtualKeyModifiers.None, OpenComposer);
-        AddAccelerator(VirtualKey.F, VirtualKeyModifiers.None, ToggleFocusedLikeAsync);
-        AddAccelerator(VirtualKey.O, VirtualKeyModifiers.None, OpenFocusedPermalinkAsync);
-        AddAccelerator(VirtualKey.Escape, VirtualKeyModifiers.None, CloseLightbox);
-        AddAccelerator(VirtualKey.Left, VirtualKeyModifiers.None, () => { if (Lightbox.Visibility == Visibility.Visible) OnLightboxPrev(this, new RoutedEventArgs()); });
-        AddAccelerator(VirtualKey.Right, VirtualKeyModifiers.None, () => { if (Lightbox.Visibility == Visibility.Visible) OnLightboxNext(this, new RoutedEventArgs()); });
+        switch (e.Key)
+        {
+            case VirtualKey.J:
+                MoveFocusDown();
+                e.Handled = true;
+                break;
+            case VirtualKey.K:
+                MoveFocusUp();
+                e.Handled = true;
+                break;
+            case VirtualKey.N:
+                OpenComposer();
+                e.Handled = true;
+                break;
+            case VirtualKey.F:
+                await ToggleFocusedLikeAsync();
+                e.Handled = true;
+                break;
+            case VirtualKey.O:
+                await OpenFocusedPermalinkAsync();
+                e.Handled = true;
+                break;
+            case VirtualKey.Escape:
+                CloseLightbox();
+                e.Handled = true;
+                break;
+            case VirtualKey.Left when Lightbox.Visibility == Visibility.Visible:
+                OnLightboxPrev(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case VirtualKey.Right when Lightbox.Visibility == Visibility.Visible:
+                OnLightboxNext(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+        }
     }
 
     private PostItem? FocusedPost => PostsList.SelectedItem as PostItem;
@@ -311,20 +354,6 @@ public sealed partial class FeedView : UserControl
         {
             await Launcher.LaunchUriAsync(uri);
         }
-    }
-
-    private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
-    {
-        var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
-        accelerator.Invoked += (_, e) => { e.Handled = true; action(); };
-        KeyboardAccelerators.Add(accelerator);
-    }
-
-    private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Func<Task> action)
-    {
-        var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
-        accelerator.Invoked += async (_, e) => { e.Handled = true; await action(); };
-        KeyboardAccelerators.Add(accelerator);
     }
 
     private static bool TryUri(string? value, out Uri uri)

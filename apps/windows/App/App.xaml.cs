@@ -32,7 +32,9 @@ public partial class App : Application
         // Create and show the window first; the bridge is initialized inside it so
         // any failure is shown in the UI (and logged) rather than crashing before
         // a window exists.
-        _window = new MainWindow();
+        var mainWindow = new MainWindow();
+        mainWindow.RestoreSavedWindowWidth();
+        _window = mainWindow;
         _window.Activate();
     }
 }

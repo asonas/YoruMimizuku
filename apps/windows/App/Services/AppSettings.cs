@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Globalization;
 
 namespace YoruMimizuku.App.Services;
 
@@ -39,7 +40,13 @@ public sealed class AppSettings
     public double FontSize
     {
         get => double.TryParse(Get("fontSize"), out var d) ? d : 14.0;
-        set => Set("fontSize", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        set => Set("fontSize", value.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public double? WindowWidth
+    {
+        get => double.TryParse(Get("windowWidth"), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
+        set => Set("windowWidth", value?.ToString(CultureInfo.InvariantCulture));
     }
 
     /// Persisted theme as "RRGGBB|RRGGBB" (background|text); null = default palette.

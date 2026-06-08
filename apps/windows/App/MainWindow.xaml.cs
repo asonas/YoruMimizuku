@@ -5,12 +5,15 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml.Media;
 using Windows.System;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Services;
 using YoruMimizuku.App.ViewModels;
 using YoruMimizuku.App.Views;
+using CoreVirtualKeyStates = Windows.UI.Core.CoreVirtualKeyStates;
 
 namespace YoruMimizuku.App;
 
@@ -24,6 +27,9 @@ public sealed partial class MainWindow : Window
     // Guards the NavigationView selection while we rebuild it in code, so the
     // programmatic selection does not re-enter OnNavSelectionChanged.
     private bool _syncing;
+    private int _contentRequest;
+    private bool _restoringWindowWidth;
+    private AppWindow? _appWindow;
     private SavedFilterStore? _filterStore;
 
     public MainWindow()
@@ -32,6 +38,12 @@ public sealed partial class MainWindow : Window
         Title = "YoruMimizuku";
         Views.MainWindowAccessor.Current = this;
         AppIcon.TrySetWindowIcon(this);
+        if (CurrentAppWindow() is not null)
+        {
+            _appWindow!.Changed += OnAppWindowChanged;
+        }
+        SizeChanged += OnWindowSizeChanged;
+        Closed += (_, _) => SaveWindowWidth();
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
         _notifications.PropertyChanged += (_, e) =>
@@ -39,7 +51,7 @@ public sealed partial class MainWindow : Window
             if (e.PropertyName == nameof(NotificationsViewModel.UnreadCount)) BuildTabs();
         };
         _notificationsTimer.Tick += async (_, _) => await _notifications.RefreshAsync();
-        WireShortcuts();
+        RootGrid.KeyDown += OnRootKeyDown;
         _ = InitializeAsync();
     }
 
@@ -76,6 +88,61 @@ public sealed partial class MainWindow : Window
         LoginHost.Content = login;
         LoginHost.Visibility = Visibility.Visible;
         ShellRoot.Visibility = Visibility.Collapsed;
+    }
+
+    private AppWindow? CurrentAppWindow()
+    {
+        try
+        {
+            if (_appWindow is not null) return _appWindow;
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            var id = Win32Interop.GetWindowIdFromWindow(hwnd);
+            _appWindow = AppWindow.GetFromWindowId(id);
+            if (_appWindow is not null)
+            {
+                _appWindow.Changed -= OnAppWindowChanged;
+                _appWindow.Changed += OnAppWindowChanged;
+            }
+            return _appWindow;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("resolve app window failed", ex);
+            return null;
+        }
+    }
+
+    public void RestoreSavedWindowWidth()
+    {
+        // TODO: This width-only restore path is still unreliable in WinUI 3.
+        // Replace it with robust window placement restore (Win32 placement APIs, or
+        // AppWindow placement persistence once exposed by this Windows App SDK).
+        var width = AppSettings.Shared.WindowWidth;
+        if (width is null || width < 480) return;
+        if (CurrentAppWindow() is not { } appWindow) return;
+        _restoringWindowWidth = true;
+        appWindow.Resize(new Windows.Graphics.SizeInt32(
+            (int)Math.Round(width.Value),
+            Math.Max(appWindow.Size.Height, 480)));
+        DispatcherQueue.TryEnqueue(() => _restoringWindowWidth = false);
+    }
+
+    private void SaveWindowWidth()
+    {
+        if (CurrentAppWindow() is not { } appWindow) return;
+        AppSettings.Shared.WindowWidth = Math.Max(480, appWindow.Size.Width);
+    }
+
+    private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
+    {
+        if (!args.DidSizeChange || _restoringWindowWidth) return;
+        AppSettings.Shared.WindowWidth = Math.Max(480, sender.Size.Width);
+    }
+
+    private void OnWindowSizeChanged(object sender, WindowSizeChangedEventArgs args)
+    {
+        if (_restoringWindowWidth) return;
+        AppSettings.Shared.WindowWidth = Math.Max(480, args.Size.Width);
     }
 
     private async void OnAuthenticated(string did)
@@ -253,6 +320,7 @@ public sealed partial class MainWindow : Window
         if (_syncing) return;
         if (args.IsSettingsSelected)
         {
+            _contentRequest++;
             ContentHost.Content = new SettingsView();
             return;
         }
@@ -264,6 +332,12 @@ public sealed partial class MainWindow : Window
         }
         if (args.SelectedItem is NavigationViewItem { Tag: WorkspaceTab tab })
         {
+            if (!_workspace.Tabs.Contains(tab))
+            {
+                BuildTabs();
+                await ShowSelectedAsync();
+                return;
+            }
             if (ReferenceEquals(tab, _workspace.Selected))
             {
                 await ShowSelectedAsync();
@@ -291,54 +365,65 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowSelectedAsync()
     {
+        var request = ++_contentRequest;
         var tab = _workspace.Selected;
         _notifications.SetActive(tab.Kind == WorkspaceTabKind.Notifications);
         switch (tab.Kind)
         {
             case WorkspaceTabKind.Home:
                 var feed = new FeedView(TimelineViewModel.Home(), _workspace);
-                ContentHost.Content = feed;
                 await feed.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = feed;
                 break;
             case WorkspaceTabKind.Notifications:
                 var notifications = new NotificationsView(_workspace, _notifications);
-                ContentHost.Content = notifications;
                 await notifications.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = notifications;
                 break;
             case WorkspaceTabKind.Filter when tab.Filter is { } filter:
                 var search = new FeedView(
                     new TimelineViewModel(cursor => BridgeClient.Shared.SearchLoadAsync(filter.ToBridgeJson(), cursor)),
                     _workspace);
-                ContentHost.Content = search;
                 await search.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = search;
                 break;
             case WorkspaceTabKind.Conversation when tab.ConversationAnchor is { } anchor:
                 var conversation = new ConversationView(new ThreadViewModel(anchor), _workspace);
-                ContentHost.Content = conversation;
                 await conversation.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = conversation;
                 break;
             case WorkspaceTabKind.Author when tab.Author is { } author:
                 var authorView = new AuthorView(author, _workspace);
-                ContentHost.Content = authorView;
                 await authorView.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = authorView;
                 break;
         }
     }
 
-    private void WireShortcuts()
+    private bool IsCurrentContentRequest(int request, WorkspaceTab tab) =>
+        request == _contentRequest &&
+        ReferenceEquals(tab, _workspace.Selected) &&
+        _workspace.Tabs.Contains(tab);
+
+    private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        AddAccelerator(VirtualKey.J, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
-            () => _workspace.SelectNextTab());
-        AddAccelerator(VirtualKey.K, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
-            () => _workspace.SelectPreviousTab());
+        if (!IsCtrlShiftDown()) return;
+        switch (e.Key)
+        {
+            case VirtualKey.J:
+                _workspace.SelectNextTab();
+                e.Handled = true;
+                break;
+            case VirtualKey.K:
+                _workspace.SelectPreviousTab();
+                e.Handled = true;
+                break;
+        }
     }
 
-    private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
-    {
-        var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
-        accelerator.Invoked += (_, e) => { e.Handled = true; action(); };
-        RootGrid.KeyboardAccelerators.Add(accelerator);
-    }
+    private static bool IsCtrlShiftDown() =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down) &&
+        InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
 
     private void ShowFatal(string message)
     {

@@ -126,8 +126,10 @@ public sealed class WorkspaceViewModel : ObservableObject
         var tab = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Conversation && t.Id == id);
         if (tab is null) return;
         var index = Tabs.IndexOf(tab);
+        var wasSelected = Selected == tab;
         Tabs.Remove(tab);
-        if (Selected == tab) Selected = Tabs[Math.Max(0, index - 1)];
+        if (wasSelected) Selected = Tabs[Math.Max(0, index - 1)];
+        else Changed?.Invoke();
     }
 
     public void OpenAuthor(PostItem post)
@@ -158,9 +160,10 @@ public sealed class WorkspaceViewModel : ObservableObject
         var tab = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Author && t.Id == id);
         if (tab is null) return;
         var index = Tabs.IndexOf(tab);
+        var wasSelected = Selected == tab;
         Tabs.Remove(tab);
-        if (Selected == tab) Selected = Tabs[Math.Max(0, index - 1)];
-        Changed?.Invoke();
+        if (wasSelected) Selected = Tabs[Math.Max(0, index - 1)];
+        else Changed?.Invoke();
     }
 
     /// <summary>Create-or-select a hashtag filter tab (used when tapping a #tag in a post).</summary>
