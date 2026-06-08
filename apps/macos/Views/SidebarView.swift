@@ -96,6 +96,18 @@ struct SidebarView: View {
                         ) { workspace.selection = .conversation(tab.id) }
                     }
                 }
+
+                if !workspace.authors.isEmpty {
+                    sectionLabel("ユーザー")
+                    ForEach(workspace.authors) { tab in
+                        SidebarRow(
+                            title: tab.title,
+                            meta: "@\(tab.handle)",
+                            isSelected: workspace.selection == .author(tab.id),
+                            onClose: { workspace.closeAuthor(tab.id) }
+                        ) { workspace.selection = .author(tab.id) }
+                    }
+                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
