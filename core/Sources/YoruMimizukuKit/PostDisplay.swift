@@ -46,6 +46,12 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     /// The body split into display spans (plain text plus tappable links,
     /// hashtags, and mentions). For mock/plain posts this is a single text span.
     public let bodySegments: [RichTextSegment]
+    /// The body rendered once as an `AttributedString`: link spans carry a `.link`
+    /// attribute; color is left to the view's `.tint` so this stays theme-independent.
+    /// Precomputed here (not in the row's `body`) so scrolling does not rebuild it
+    /// per frame — the per-render rebuild was the top self-weight leaf
+    /// (`s_strFromUTF8WithSub`, UTF-8 conversion) in Time Profiler.
+    public let bodyAttributedString: AttributedString
     public let createdAt: Date
     public let contextLabel: String?
     public let images: [PostImage]
@@ -90,7 +96,9 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.authorHandle = authorHandle
         self.avatarURL = avatarURL
         self.body = body
-        self.bodySegments = bodySegments ?? RichText.segments(text: body, facets: [])
+        let segments = bodySegments ?? RichText.segments(text: body, facets: [])
+        self.bodySegments = segments
+        self.bodyAttributedString = Self.attributedBody(from: segments)
         self.createdAt = createdAt
         self.contextLabel = contextLabel
         self.images = images
@@ -100,6 +108,18 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.likeCount = likeCount
         self.viewerLikeURI = viewerLikeURI
         self.viewerRepostURI = viewerRepostURI
+    }
+
+    /// Build the body's display string from its segments. Link spans carry a
+    /// `.link` attribute only; the foreground color is intentionally omitted so the
+    /// result is theme-independent and can be precomputed once — the view tints
+    /// links via `.tint(theme.accent)`.
+    static func attributedBody(from segments: [RichTextSegment]) -> AttributedString {
+        segments.reduce(into: AttributedString()) { result, segment in
+            var run = AttributedString(segment.text)
+            if let url = segment.url { run.link = url }
+            result += run
+        }
     }
 
     /// Sentinel URIs used while a like / repost is in flight: `isLiked` /

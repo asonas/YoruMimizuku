@@ -79,6 +79,25 @@ final class PostDisplayTests: XCTestCase {
         XCTAssertEqual(post.repostCount, 1)
     }
 
+    func test_bodyAttributedString_concatenatesSegmentsAndCarriesLinks() {
+        let url = URL(string: "https://example.com")!
+        let segments = [
+            RichTextSegment(id: 0, kind: .text, text: "hello ", url: nil),
+            RichTextSegment(id: 1, kind: .link, text: "example.com", url: url),
+        ]
+        let post = PostDisplay(
+            id: "p", authorDisplayName: "a", authorHandle: "a",
+            body: "hello example.com", bodySegments: segments, createdAt: Date()
+        )
+
+        let attributed = post.bodyAttributedString
+
+        XCTAssertEqual(String(attributed.characters), "hello example.com")
+        let linkRuns = attributed.runs.filter { $0.link != nil }
+        XCTAssertEqual(linkRuns.count, 1)
+        XCTAssertEqual(linkRuns.first?.link, url)
+    }
+
     func test_samples_returnNonEmptyDeterministicData() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let samples = PostDisplay.samples(now: now)
