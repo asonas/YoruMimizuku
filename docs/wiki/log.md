@@ -18,6 +18,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-08 ingest
 
 - updated: [[macos]]
+- note: Inline images now respect their aspect ratio. A single attached image was center-cropped to a fixed height (`scaledToFill` at 240pt), so wide images overflowed/protruded to the left and tall images were heavily clipped. The core now decodes the embed's `aspectRatio` (`app.bsky.embed.images#view`) onto `EmbedImage`/`ImageAspectRatio` and carries it to the view as `PostImage.aspectRatio` (width/height; nil when absent). `PostRowView` lays a lone image out at that ratio, clamped to `[0.7, 5.0]`, so wide images show in full and tall ones fill width with only a slight crop; multi-image posts keep the fixed-height grid. Added an "Inline images respect their aspect ratio" subsection.
+
+## 2026-06-08 ingest
+
+- updated: [[macos]]
 - note: Fixed post-body links vanishing on focus. Root cause: `.textSelection(.enabled)` and tappable `.link` runs are mutually incompatible on macOS SwiftUI — the link spans render blank when the row re-lays-out (focus toggling its background), so URLs disappeared and could not be clicked. Removed `.textSelection(.enabled)` from the body `Text` (links win; copy-link covers sharing). Also corrected the precompute note: link color is re-applied per render on the row's `bodyAttributed` (run-attribute mutation only, no UTF-8 re-conversion), not left to `.tint`. Added a "Body links are not selectable text" subsection.
 
 ## 2026-06-08 feature

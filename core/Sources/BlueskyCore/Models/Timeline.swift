@@ -117,17 +117,31 @@ public struct PostEmbed: Decodable, Equatable, Sendable {
     }
 }
 
+/// The pixel dimensions of an embedded image (`app.bsky.embed.defs#aspectRatio`),
+/// used to lay the image out at its true proportions before it has loaded.
+public struct ImageAspectRatio: Decodable, Equatable, Sendable {
+    public let width: Int
+    public let height: Int
+
+    public init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+}
+
 /// One image in an `app.bsky.embed.images#view`: a thumbnail and full-size URL
-/// plus its alt text.
+/// plus its alt text and (optionally) its source aspect ratio.
 public struct EmbedImage: Decodable, Equatable, Sendable {
     public let thumb: String
     public let fullsize: String
     public let alt: String
+    public let aspectRatio: ImageAspectRatio?
 
-    public init(thumb: String, fullsize: String, alt: String) {
+    public init(thumb: String, fullsize: String, alt: String, aspectRatio: ImageAspectRatio? = nil) {
         self.thumb = thumb
         self.fullsize = fullsize
         self.alt = alt
+        self.aspectRatio = aspectRatio
     }
 }
 
