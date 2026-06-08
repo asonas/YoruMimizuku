@@ -147,6 +147,12 @@ final class ThreadResponseTests: XCTestCase {
                 "notFound": true
               },
               {
+                "$type": "app.bsky.feed.defs#blockedPost",
+                "uri": "at://did:plc:blk/app.bsky.feed.post/blk",
+                "blocked": true,
+                "author": { "did": "did:plc:blocker" }
+              },
+              {
                 "$type": "app.bsky.feed.defs#threadViewPost",
                 "post": {
                   "uri": "at://did:plc:d/app.bsky.feed.post/d",
@@ -163,7 +169,7 @@ final class ThreadResponseTests: XCTestCase {
 
         let response = try JSONDecoder().decode(ThreadResponse.self, from: body)
 
-        // notFound child dropped: B and D remain, in server order.
+        // notFound and blocked children dropped: B and D remain, in server order.
         XCTAssertEqual(response.thread.replies.count, 2)
         XCTAssertEqual(response.thread.replies[0].post.author.handle, "bob.bsky.social")
         XCTAssertEqual(response.thread.replies[1].post.author.handle, "dave.bsky.social")

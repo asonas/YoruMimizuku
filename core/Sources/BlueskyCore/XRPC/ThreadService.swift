@@ -23,9 +23,10 @@ public struct ThreadService: Sendable {
         self.refreshGate = refreshGate
     }
 
-    /// Fetch the thread for `uri`, decoding the focused post and its immediate
-    /// parent. Returns freshly issued tokens when a refresh occurred so the caller
-    /// can persist them; `refreshed` is nil when the access token was still valid.
+    /// Fetch the thread for `uri`, returning the focused post with its full ancestor
+    /// chain AND its descendant reply tree. Returns freshly issued tokens when a
+    /// refresh occurred so the caller can persist them; `refreshed` is nil when the
+    /// access token was still valid.
     public func getPostThread(
         pds: URL,
         issuer: URL,

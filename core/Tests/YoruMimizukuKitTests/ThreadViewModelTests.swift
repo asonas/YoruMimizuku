@@ -43,6 +43,20 @@ final class ThreadViewModelTests: XCTestCase {
         )
     }
 
+    func testToggleLikePreservesReplies() async {
+        let focus = sample(id: "reply")
+        let child = ThreadNode(post: sample(id: "child"), replies: [], depth: 0)
+        let thread = ConversationThread(focus: focus, replies: [child])
+        let vm = ThreadViewModel(loader: StubLoader(result: .success(thread)), uri: "reply", interactor: FakeInteractor())
+        await vm.load()
+
+        await vm.toggleLike(focus)
+
+        guard case let .loaded(updated) = vm.state else { return XCTFail("expected loaded") }
+        XCTAssertEqual(updated.replies.count, 1, "the child reply tree must survive a focus like")
+        XCTAssertEqual(updated.replies.first?.id, "child")
+    }
+
     func testInitialStateIsIdle() {
         let thread = ConversationThread(focus: sample(id: "x"), replies: [])
         let vm = ThreadViewModel(loader: StubLoader(result: .success(thread)), uri: "x")

@@ -147,10 +147,11 @@ struct ConversationView: View {
             Rectangle()
                 .fill(theme.divider)
                 .frame(width: 2)
-            // Phase D: like/repost on reply nodes are intentionally inert — the view model
-            // only mutates the focused post. Tapping a reply row re-anchors the tab (which
-            // reloads it as a focus). Unlike parentBlock (interactiveActions: false), the
-            // action bar stays visible so users can still see counts.
+            // Phase D: like/repost on a reply node are intentionally inert — the view model
+            // only mutates the focused post. Per-reply re-anchoring by row tap is out of
+            // Phase D scope; re-anchoring is available on truncated subtrees via the
+            // "さらに表示" button below. Unlike parentBlock (interactiveActions: false),
+            // reply rows keep the action bar visible for visual consistency with the focus row.
             PostRowView(
                 post: node.post, density: displaySettings.density, now: now,
                 showReplyMarker: false, onImageTap: onImageTap,

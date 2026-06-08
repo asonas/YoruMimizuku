@@ -22,8 +22,8 @@ public protocol ThreadLoading: Sendable {
     func loadThread(uri: String) async throws -> ConversationThread
 }
 
-/// Drives one conversation tab: fetches the focused post and its immediate parent
-/// so the parent can be opened in a new tab, climbing the reply tree recursively.
+/// Drives one conversation tab: loads the focused post (with its full ancestor chain
+/// via `replyParent`) plus the descendant reply tree as a `ConversationThread`.
 /// `@MainActor` because it is bound to SwiftUI; the network work happens in the
 /// injected loader.
 @MainActor
