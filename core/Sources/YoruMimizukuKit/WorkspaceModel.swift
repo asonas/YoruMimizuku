@@ -86,6 +86,7 @@ public final class FilterTab: Identifiable {
         title = edited.name
         filter = edited
         if queriesChanged {
+            model.stopPolling()
             model = makeModel(edited)
         }
     }

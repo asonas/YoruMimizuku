@@ -136,6 +136,28 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.selection, .home)
     }
 
+    func testEditingFilterQueryStopsOldModelPolling() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "Swift", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+        let tab = model.filters[0]
+        let oldModel = tab.model
+        oldModel.startPolling(every: .seconds(30))
+        XCTAssertTrue(oldModel.isPolling)
+
+        guard let saved = model.savedFilter(id: tab.id) else { return XCTFail("expected saved filter") }
+        let edited = SavedFilter(
+            id: saved.id,
+            name: saved.name,
+            terms: [FilterTerm(kind: .keyword, value: "rust")],
+            combinator: saved.combinator,
+            createdAt: saved.createdAt
+        )
+        model.updateFilter(edited)
+
+        XCTAssertFalse(tab.model === oldModel)
+        XCTAssertFalse(oldModel.isPolling)
+    }
+
     func testRestoreThenReopenRoundTrips() async {
         // Simulate a relaunch: persist with one model, restore with a fresh one
         // backed by the same store.

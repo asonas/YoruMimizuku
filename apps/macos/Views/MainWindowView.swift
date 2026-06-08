@@ -54,6 +54,10 @@ struct MainWindowView: View {
         .onChange(of: workspace.filters.map(\.id)) { _, _ in
             for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
         }
+        .onChange(of: workspace.filters.map(\.contentKey)) { _, _ in
+            for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
+            syncActiveTab()
+        }
         .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
         .overlay {
             if let lightbox {

@@ -187,6 +187,9 @@ public final class TimelineViewModel: ObservableObject {
         }
     }
 
+    /// True while the periodic refresh loop is running.
+    public var isPolling: Bool { pollingTask != nil }
+
     /// Stop the refresh loop. Called when a filter tab is closed.
     public func stopPolling() {
         pollingTask?.cancel()
