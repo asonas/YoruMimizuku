@@ -190,12 +190,21 @@ struct FeedView: View {
         }
     }
 
+    /// The post j/k focus currently sits on, if any.
+    private var focusedPost: PostDisplay? {
+        model.posts.first { $0.id == focusedPostID }
+    }
+
     private var postNavShortcuts: some View {
         ZStack {
             Button("") { focusAdjacentPost(1) }
                 .keyboardShortcut("j", modifiers: [])
             Button("") { focusAdjacentPost(-1) }
                 .keyboardShortcut("k", modifiers: [])
+            Button("") {
+                if let post = focusedPost { Task { await model.toggleLike(post) } }
+            }
+            .keyboardShortcut("f", modifiers: [])
             if let onCompose {
                 Button("") { onCompose() }
                     .keyboardShortcut("n", modifiers: [])
