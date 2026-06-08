@@ -29,7 +29,7 @@ The density model is UI-framework-agnostic so it can be unit-tested: `DisplayDen
 
 ## Tabs (sources)
 
-A tab is one of the seven v1 sources (home / notifications / custom feed / list / author / search / thread). Every tab runs under the window's active account, and the tab composition is persisted per window (`2026-06-04-yorumimizuku-design.md` §7.3). The data behind each tab is abstracted by the `TimelineSource` protocol — see [[timeline-streaming]].
+A tab is one of the seven v1 sources (home / notifications / custom feed / list / author / search / thread). Every tab runs under the window's active account, and the tab composition is persisted per window (`2026-06-04-yorumimizuku-design.md` §7.3). The data behind each tab is abstracted by the `TimelineSource` protocol — see [[timeline-streaming]]. Tapping a user's avatar opens a view-only author tab for that user, deduplicated by DID and not persisted — see [[author-tab]].
 
 ## Sidebar / tab UI
 

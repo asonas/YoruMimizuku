@@ -11,6 +11,13 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: [[2026-06-08-phase-c-author-tab]] (plan)
+- created: [[author-tab]]
+- updated: [[app-shell]]
+- note: Ingested Phase C — the author (user) tab. Tapping a user's avatar in the home feed, a filter feed, a notification row, a conversation, or an author feed opens a view-only tab: a profile header (avatar / display name / @handle / bio-when-available) over that user's `app.bsky.feed.getAuthorFeed` posts (`filter=posts_and_author_threads`). New `WorkspaceTab.author(UUID)` backed by an ephemeral `AuthorTab` (reused `TimelineViewModel` via `LiveAuthorFeedLoader`/`AuthorFeedService`, plus `ProfileHeaderViewModel` via `LiveAuthorProfileLoader`/`ProfileService`). Deduped by DID, no unread badge, not persisted; polled only while the active selection. Documented two accepted limitations: bio is nil (ProfileViewBasic has no description), and notification-opened tabs dedupe by handle (no DID on `NotificationGroup.Actor`) while post-opened tabs dedupe by DID. Also noted `ATURI.repo(_:)` was added to derive the author DID from a post's AT-URI (Phase B was not merged). Cross-linked from [[app-shell]].
+
+## 2026-06-08 ingest
+
 - updated: [[macos]]
 - note: Documented the timeline rendering decision — the feed uses SwiftUI `List` rather than `ScrollView { LazyVStack }`. A blank gap appeared below rows because LazyVStack keeps a stale estimated slot height that normal body re-renders (the per-second `now` tick) never revisit; it only collapses on a forced re-layout (scroll / scene-phase change). The gap was independent of text length, width, AttributedString vs plain text, `.fixedSize`, and `.textSelection`. A plain VStack was rejected (~98% CPU, ~1 GB memory); `List` measures variable heights correctly and recycles rows. Recorded the neutralizing modifiers and the j/k scroll path. Implementation in `apps/macos/Views/FeedView.swift`.
 
