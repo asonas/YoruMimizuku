@@ -26,7 +26,12 @@ public final class NotificationsViewModel: ObservableObject {
     }
 
     @Published public private(set) var state: State = .idle
+    /// Count of notification groups newer than the last the viewer saw. Drives the
+    /// sidebar badge. Always 0 while the tab is active.
+    @Published public private(set) var unreadCount = 0
 
+    private var lastSeenTopID: String?
+    private var isActive = false
     private let loader: NotificationsLoading
 
     public init(loader: NotificationsLoading) {
@@ -45,6 +50,7 @@ public final class NotificationsViewModel: ObservableObject {
         do {
             let items = try await loader.loadLatest()
             state = .loaded(items)
+            onItemsChanged()
         } catch {
             SessionExpiry.reportIfExpired(error)
             state = .failed(String(describing: error))
@@ -61,9 +67,32 @@ public final class NotificationsViewModel: ObservableObject {
         }
         do {
             state = .loaded(try await loader.loadLatest())
+            onItemsChanged()
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current notifications.
+        }
+    }
+
+    /// Mark every loaded notification as seen and reset the badge to zero.
+    public func markSeen() {
+        lastSeenTopID = items.first?.id
+        unreadCount = 0
+    }
+
+    /// Set whether this tab is the selected one; activating marks it seen.
+    public func setActive(_ active: Bool) {
+        isActive = active
+        if active { markSeen() }
+    }
+
+    /// Recompute the unread count; the first load's notifications are treated as seen.
+    private func onItemsChanged() {
+        if lastSeenTopID == nil { lastSeenTopID = items.first?.id }
+        if isActive {
+            markSeen()
+        } else {
+            unreadCount = UnreadCounter.unread(ids: items.map(\.id), since: lastSeenTopID)
         }
     }
 }

@@ -54,4 +54,45 @@ final class NotificationsViewModelTests: XCTestCase {
         }
         XCTAssertEqual(vm.items, [])
     }
+
+    func testInitialUnreadCountIsZero() {
+        let vm = NotificationsViewModel(loader: StubLoader(result: .success([])))
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testFirstLoadTreatsExistingNotificationsAsSeen() async {
+        let vm = NotificationsViewModel(loader: StubLoader(result: .success([sample(id: "n1"), sample(id: "n2")])))
+        await vm.load()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testRefreshAddsToUnreadWhenInactive() async {
+        let loader = StubLoader(result: .success([sample(id: "n2")]))
+        let vm = NotificationsViewModel(loader: loader)
+        await vm.load()                                   // baseline: head is n2
+        loader.result = .success([sample(id: "n0"), sample(id: "n1"), sample(id: "n2")])
+        await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 2)
+    }
+
+    func testMarkSeenResetsUnread() async {
+        let loader = StubLoader(result: .success([sample(id: "n2")]))
+        let vm = NotificationsViewModel(loader: loader)
+        await vm.load()
+        loader.result = .success([sample(id: "n0"), sample(id: "n2")])
+        await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 1)
+        vm.markSeen()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
+
+    func testActiveTabStaysAtZeroOnRefresh() async {
+        let loader = StubLoader(result: .success([sample(id: "n2")]))
+        let vm = NotificationsViewModel(loader: loader)
+        await vm.load()
+        vm.setActive(true)
+        loader.result = .success([sample(id: "n0"), sample(id: "n2")])
+        await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 0)
+    }
 }
