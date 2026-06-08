@@ -5,6 +5,9 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
+  - apps/windows/App/ViewModels/ComposerViewModel.cs
+  - apps/windows/App/Views/ComposerDialog.xaml
+  - apps/windows/App/Views/ComposerDialog.xaml.cs
 features:
   - name: Post / reply / quote (facets, mention resolution)
     macos: full
@@ -13,10 +16,10 @@ features:
     android: planned
   - name: Image attachment (up to 4, alt text)
     macos: full
-    windows: unknown
+    windows: limited
     ios: planned
     android: planned
-    note: "The macOS composer uploads up to 4 images; whether the WinUI composer wires image attachment through yoru_post_create is not documented — verify against apps/windows ([[windows]])."
+    note: "Windows can attach up to 4 PNG/JPEG files and sends image bytes through `yoru_post_create`, but the current WinUI dialog has no alt-text editor, drag/drop, or downsampling/re-encode path yet ([[windows]])."
 ---
 
 # Composing Posts
@@ -56,6 +59,8 @@ For replies, before sending, the parent URI is resolved via `getRecord` to fill 
 ## Image upload
 
 Up to 4. Each image is sent to `uploadBlob` as binary with its image MIME, yielding a `BlobRef` (`{ $type: "blob", ref: { $link: <cid> }, mimeType, size }`). Resizing / re-encoding / the 1 MB cap is handled app-side (downscaling on the macOS side if needed, considering the existing `ImageDownsampler`); the core only receives bytes and MIME.
+
+On [[windows]], `ComposerViewModel` mirrors the core image payload (`dataBase64`, `mimeType`, `alt`) and caps attachments at 4. The current `ComposerDialog` uses a `FileOpenPicker` for PNG/JPEG files and shows thumbnails before calling `yoru_post_create`; it does not yet expose an alt-text field, drag-and-drop attach, WIC downsampling, or upload re-encode (`apps/windows/App/ViewModels/ComposerViewModel.cs`, `apps/windows/App/Views/ComposerDialog.xaml.cs`, `apps/windows/README.md`).
 
 ## UI entry points
 

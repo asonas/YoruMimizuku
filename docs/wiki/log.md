@@ -27,6 +27,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[compose-post]], [[filters]], [[windows]]
+- note: Resolved the remaining Windows `?` cells in [[support-matrix]]. The WinUI composer does send up to 4 PNG/JPEG image attachments through `yoru_post_create`, but image posting is marked limited because the dialog has no alt-text editor, drag/drop attach, WIC downsampling, or upload re-encode yet. Structured filters are also marked limited: `SavedFilterModel` serializes `terms` + `combinator` to `yoru_search_load`, while the current visible entry point creates single hashtag filter tabs from tapped tags rather than a full multi-row AND/OR editor.
+
+## 2026-06-08 ingest
+
 - updated: [[macos]]
 - note: Fixed post-body links vanishing on focus. Root cause: `.textSelection(.enabled)` and tappable `.link` runs are mutually incompatible on macOS SwiftUI — the link spans render blank when the row re-lays-out (focus toggling its background), so URLs disappeared and could not be clicked. Removed `.textSelection(.enabled)` from the body `Text` (links win; copy-link covers sharing). Also corrected the precompute note: link color is re-applied per render on the row's `bodyAttributed` (run-attribute mutation only, no UTF-8 re-conversion), not left to `.tint`. Added a "Body links are not selectable text" subsection.
 

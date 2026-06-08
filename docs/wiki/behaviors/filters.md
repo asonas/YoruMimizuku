@@ -7,13 +7,16 @@ sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-structured-filters-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-filter-tabs.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-structured-filters.md
+  - apps/windows/App/ViewModels/SavedFilterModel.cs
+  - apps/windows/App/ViewModels/WorkspaceViewModel.cs
+  - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Saved-search filters (structured terms, AND/OR)
     macos: full
-    windows: unknown
+    windows: limited
     ios: planned
     android: planned
-    note: "Windows exposes a SavedFilter view model and yoru_search_load, but parity of the structured multi-term AND/OR editor with macOS is not documented — verify against apps/windows ([[windows]])."
+    note: "Windows serializes structured `terms` + `combinator` to `yoru_search_load`, but the visible WinUI entry point only creates hashtag filter tabs from tapped tags; the full multi-row AND/OR editor is not present yet ([[windows]])."
 ---
 
 # Saved-Search Filters
@@ -40,6 +43,8 @@ The filter was later normalized into **multiple typed condition rows + an AND/OR
 - **OR**: run `searchPosts(sort: "latest")` per condition and merge client-side by descending `createdAt`, deduplicated by URI. Infinite scroll is preserved with a `CompositeCursor` (an array of per-subquery cursors aligned to the subquery order), JSON-encoded into `TimelinePage.cursor`.
 
 The pure functions (`SavedFilter.subqueries`, the OR merge, and the `CompositeCursor` codec) live in `YoruMimizukuKit` and are unit-tested; the real network is handled by the app-side `LiveSearchLoader`. `SearchService.searchPosts` gained a backward-compatible `sort` argument.
+
+On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and serializes it to the bridge JSON consumed by `yoru_search_load`; the Swift side still computes the actual subqueries. The current WinUI shell can open saved-filter tabs and create/select a single hashtag filter when the user taps a hashtag in a post, but it does not yet expose the macOS-style editor for arbitrary multi-row keyword/user/hashtag/mention terms or choosing AND versus OR (`apps/windows/App/ViewModels/SavedFilterModel.cs`, `apps/windows/App/ViewModels/WorkspaceViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
 
 ## Known limitations
 

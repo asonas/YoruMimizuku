@@ -1,12 +1,18 @@
 ---
 title: Platform — Windows
 type: platform
-updated: 2026-06-07
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
   - core/Package.swift
   - apps/windows/App/Services/RelativeTime.cs
+  - apps/windows/App/ViewModels/ComposerViewModel.cs
+  - apps/windows/App/Views/ComposerDialog.xaml
+  - apps/windows/App/Views/ComposerDialog.xaml.cs
+  - apps/windows/App/ViewModels/SavedFilterModel.cs
+  - apps/windows/App/ViewModels/WorkspaceViewModel.cs
+  - apps/windows/App/MainWindow.xaml.cs
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
   - README.md
@@ -98,6 +104,16 @@ lifetime handling is confined here.
   n-to-compose, per-post separators), conversation (ancestor + re-anchor),
   notifications, composer, settings; a cmux-style `NavigationView` vertical-tab
   shell with `Ctrl+Shift+J/K` cycling, closable tabs, and an account footer.
+- The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
+  attachments through `yoru_post_create`. It serializes `dataBase64`, `mimeType`,
+  and `alt`, but the visible dialog currently exposes only file picking and
+  thumbnails; no alt-text editor, drag/drop attach, WIC downsampling, or upload
+  re-encode UI is present yet ([[compose-post]]).
+- Saved-filter tabs call `yoru_search_load` with the structured
+  `terms` + `combinator` JSON shape used by the Swift core. The current WinUI
+  entry point creates/selects a single hashtag filter from tapped hashtag links;
+  it does not yet expose the full macOS-style multi-row AND/OR editor
+  ([[filters]]).
 - The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
   **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS
