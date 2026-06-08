@@ -4,7 +4,9 @@ import YoruMimizukuKit
 
 struct PostRowView: View {
     let post: PostDisplay
+    let now: Date
     var isFocused = false
+    var onImageTap: (([URL], Int) -> Void)?
     var onOpenThread: ((PostDisplay) -> Void)?
     var onOpenAuthor: ((String, String, String?, URL?) -> Void)?
     var onReply: ((PostDisplay) -> Void)?
@@ -34,11 +36,7 @@ struct PostRowView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    if let label = post.contextLabel {
-                        Text(label)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    metaLine
                     Text(post.bodyAttributedString)
                         .font(.body)
                         .textSelection(.enabled)
@@ -54,12 +52,25 @@ struct PostRowView: View {
         .onTapGesture { onOpenThread?(post) }
     }
 
+    private var metaLine: some View {
+        HStack(spacing: 6) {
+            if let label = post.contextLabel {
+                Text(label)
+            }
+            Text(RelativeTimeFormatter().string(for: post.createdAt, now: now))
+                .monospacedDigit()
+            Spacer(minLength: 0)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
     @ViewBuilder
     private var imageGrid: some View {
         if !post.images.isEmpty {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: min(2, post.images.count)), spacing: 6) {
                 ForEach(post.images) { image in
-                    AsyncImage(url: image.thumbURL) { phase in
+                    AsyncImage(url: image.fullsizeURL ?? image.thumbURL) { phase in
                         switch phase {
                         case let .success(content):
                             content.resizable().scaledToFill()
@@ -71,9 +82,17 @@ struct PostRowView: View {
                     }
                     .frame(height: post.images.count == 1 ? 260 : 150)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .contentShape(RoundedRectangle(cornerRadius: 12))
+                    .onTapGesture { openLightbox(at: image) }
                 }
             }
         }
+    }
+
+    private func openLightbox(at image: PostImage) {
+        let urls = post.images.compactMap(\.fullsizeURL)
+        guard let url = image.fullsizeURL, let index = urls.firstIndex(of: url) else { return }
+        onImageTap?(urls, index)
     }
 
     private var actionBar: some View {

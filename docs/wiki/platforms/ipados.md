@@ -44,10 +44,12 @@ active account and tab set, while secure account data and the shared
 The shell uses `NavigationSplitView` with a touch-first sidebar. Home,
 notifications, saved search tabs, author tabs, and conversation tabs are available.
 Rows expose visible reply, repost, like, quote, copy-link, and open-in-browser
-actions; hardware keyboard shortcuts are also available for `j` / `k` / `n` /
-`f` / `o` where they make sense. Copying uses `UIPasteboard`, and opening a
-permalink uses SwiftUI's `openURL` (`apps/ipados/Views/PostRowView.swift`,
-`apps/ipados/Views/RootView.swift`).
+actions. Hardware-keyboard parity is also wired without visible toolbar clutter:
+`j` / `k` move timeline focus, `f` likes the focused post, `o` opens it in the
+browser, and `n` opens compose. Copying uses `UIPasteboard`, opening a permalink
+uses SwiftUI's `openURL`, and hashtag links open saved-search tabs
+(`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
+`apps/ipados/Views/TimelineListView.swift`).
 
 Compose is presented as a sheet. It supports top-level posts, replies, quote
 posts, and up to four image attachments through `PhotosPicker`; images are
@@ -59,10 +61,24 @@ compressed to JPEG on the app side before the shared `PostService` uploads them
 - Jetstream live updates are not wired on iPadOS yet. The shell starts 30-second
   polling for home and notifications; foreground live sockets and background
   backfill are future work.
+- The macOS settings surface is not present. Theme, custom font, and display
+  density A/B are implemented in the macOS app, but the current iPadOS views use
+  the default SwiftUI styling and do not apply the shared display-density model.
+- Timeline rows now show relative timestamps, support row focus for hardware
+  keyboard actions, intercept hashtag links into saved-search tabs, and open a
+  full-screen image lightbox. They still use a simpler visual style than macOS and
+  do not have the macOS hover-performance layer.
+- Conversation tabs show the focused post, its ancestor chain, descendant replies,
+  and a 「さらに表示」 re-anchor cue for capped reply branches. The iPad visual
+  treatment is simpler than macOS, but the navigation behavior is now represented.
+- Notifications now show reason icons, relative timestamps, actor taps, and unread
+  row tint. They still use a compact summary list and do not implement the macOS
+  actor expansion UI.
 - OS banners and app badge updates are limited. The in-app notifications tab and
   sidebar badges work while the app is active, but background polling is not a
   reliable iPadOS notification strategy.
 - Saved search creation is present as a simple keyword search tab. The full
   structured filter editor from macOS is not yet replicated in the iPad UI.
-- The image grid renders inline thumbnails, but there is no dedicated lightbox
-  yet.
+- Compose is functional, including `PhotosPicker`, JPEG re-encoding, alt text,
+  replies, and quotes. It does not yet mirror every macOS affordance such as file
+  import, drag-and-drop attach, or the richer row-style quote preview.

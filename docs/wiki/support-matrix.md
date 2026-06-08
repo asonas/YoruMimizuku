@@ -25,7 +25,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
 | Multiple windows | ○ | × | △ | − |
-| Display density A / B | ○ | ○ | ○ | − |
+| Display density A / B | ○ | ○ | × | − |
 
 ## [[author-tab]] — Author (User) Tab
 
@@ -67,7 +67,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Timeline load / refresh / infinite scroll | ○ | ○ | ○ | − |
 | Jetstream live updates (home / list) | ○ | × | × | − |
-| Rich text + image grid / lightbox rendering | ○ | ○ | △ | − |
+| Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
 | Conversation child reply tree | ○ | × | ○ | − |
@@ -78,10 +78,10 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]]).
+- **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
 - **OS banner + unread badge** ([[notifications]]): Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]]).
-- **Rich text + image grid / lightbox rendering** ([[timeline-streaming]]): iPadOS renders rich text and inline image grids, but there is no dedicated lightbox yet ([[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).

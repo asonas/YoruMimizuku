@@ -149,8 +149,11 @@ private struct MainShellView: View {
     let makeComposer: (String?, PostDisplay?) -> ComposerViewModel
 
     @Environment(\.openURL) private var openURL
+    @State private var lightbox: ImageGallery?
     @State private var composer: ComposerViewModel?
+    @State private var now = Date()
     @State private var searchText = ""
+    private let clock = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationSplitView {
@@ -236,9 +239,22 @@ private struct MainShellView: View {
         } detail: {
             detail
         }
+        .environment(\.openURL, OpenURLAction { url in
+            if let tag = RichText.hashtag(from: url) {
+                workspace.openHashtagFilter(tag: tag)
+                return .handled
+            }
+            return .systemAction
+        })
+        .overlay {
+            if let lightbox {
+                ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
+            }
+        }
         .sheet(item: $composer) { model in
             ComposerView(model: model)
         }
+        .onReceive(clock) { now = $0 }
         .task {
             timelineModel.startPolling(every: .seconds(30))
             notificationsModel.startPolling(every: .seconds(30))
@@ -259,6 +275,8 @@ private struct MainShellView: View {
             TimelineListView(
                 model: timelineModel,
                 title: "Home",
+                now: now,
+                onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                 onOpenThread: workspace.openConversation,
                 onOpenAuthor: openAuthor,
                 onReply: { post in composer = makeComposer(post.id, nil) },
@@ -267,12 +285,25 @@ private struct MainShellView: View {
                 onOpenPermalink: openPermalink
             )
         case .notifications:
-            NotificationsListView(model: notificationsModel)
+            NotificationsListView(
+                model: notificationsModel,
+                now: now,
+                onOpenAuthor: { actor in
+                    workspace.openAuthor(
+                        did: actor.handle,
+                        handle: actor.handle,
+                        displayName: actor.displayName,
+                        avatarURL: actor.avatarURL
+                    )
+                }
+            )
         case let .filter(id):
             if let tab = workspace.filter(id: id) {
                 TimelineListView(
                     model: tab.model,
                     title: tab.title,
+                    now: now,
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenThread: workspace.openConversation,
                     onOpenAuthor: openAuthor,
                     onReply: { post in composer = makeComposer(post.id, nil) },
@@ -287,6 +318,8 @@ private struct MainShellView: View {
             if let tab = workspace.conversation(id: id) {
                 ConversationView(
                     model: tab.model,
+                    now: now,
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenThread: workspace.openConversation,
                     onOpenAuthor: openAuthor,
                     onReply: { post in composer = makeComposer(post.id, nil) },
@@ -304,6 +337,8 @@ private struct MainShellView: View {
                     TimelineListView(
                         model: tab.model,
                         title: tab.title,
+                        now: now,
+                        onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                         onOpenThread: workspace.openConversation,
                         onOpenAuthor: openAuthor,
                         onReply: { post in composer = makeComposer(post.id, nil) },

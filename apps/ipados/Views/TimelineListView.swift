@@ -4,6 +4,8 @@ import YoruMimizukuKit
 struct TimelineListView: View {
     @ObservedObject var model: TimelineViewModel
     let title: String
+    let now: Date
+    var onImageTap: ([URL], Int) -> Void
     var onOpenThread: (PostDisplay) -> Void
     var onOpenAuthor: (String, String, String?, URL?) -> Void
     var onReply: (PostDisplay) -> Void
@@ -21,15 +23,19 @@ struct TimelineListView: View {
                     .task { await model.load() }
             case let .failed(message):
                 ContentUnavailableView("読み込みに失敗しました", systemImage: "exclamationmark.triangle", description: Text(message))
-                    .toolbar {
+                    .overlay(alignment: .bottom) {
                         Button("再試行") { Task { await model.load() } }
+                            .buttonStyle(.borderedProminent)
+                            .padding()
                     }
             case let .loaded(posts):
                 List {
                     ForEach(posts) { post in
                         PostRowView(
                             post: post,
+                            now: now,
                             isFocused: focusedPostID == post.id,
+                            onImageTap: onImageTap,
                             onOpenThread: onOpenThread,
                             onOpenAuthor: onOpenAuthor,
                             onReply: onReply,
@@ -57,46 +63,12 @@ struct TimelineListView: View {
                 }
                 .listStyle(.plain)
                 .refreshable { await model.refresh() }
-                .toolbar {
-                    Button {
-                        Task { await model.refresh() }
-                    } label: {
-                        Label("更新", systemImage: "arrow.clockwise")
-                    }
-                }
             }
         }
         .navigationTitle(title)
-        .toolbar {
-            Button {
-                moveFocus(delta: -1)
-            } label: {
-                Label("前へ", systemImage: "chevron.up")
-            }
-            .keyboardShortcut("k", modifiers: [])
-
-            Button {
-                moveFocus(delta: 1)
-            } label: {
-                Label("次へ", systemImage: "chevron.down")
-            }
-            .keyboardShortcut("j", modifiers: [])
-
-            Button {
-                if let post = focusedPost {
-                    Task { await model.toggleLike(post) }
-                }
-            } label: {
-                Label("いいね", systemImage: "heart")
-            }
-            .keyboardShortcut("f", modifiers: [])
-
-            Button {
-                if let post = focusedPost { onOpenPermalink(post) }
-            } label: {
-                Label("ブラウザ", systemImage: "safari")
-            }
-            .keyboardShortcut("o", modifiers: [])
+        .background { keyboardShortcuts }
+        .onChange(of: model.state) { _, _ in
+            if focusedPostID == nil { focusedPostID = model.posts.first?.id }
         }
     }
 
@@ -110,5 +82,28 @@ struct TimelineListView: View {
         let currentIndex = focusedPostID.flatMap { id in posts.firstIndex { $0.id == id } } ?? 0
         let next = min(max(currentIndex + delta, 0), posts.count - 1)
         focusedPostID = posts[next].id
+        if focusedPostID == posts.last?.id, model.canLoadMore {
+            Task { await model.loadMore() }
+        }
+    }
+
+    private var keyboardShortcuts: some View {
+        ZStack {
+            Button("") { moveFocus(delta: -1) }
+                .keyboardShortcut("k", modifiers: [])
+            Button("") { moveFocus(delta: 1) }
+                .keyboardShortcut("j", modifiers: [])
+            Button("") {
+                if let post = focusedPost { Task { await model.toggleLike(post) } }
+            }
+            .keyboardShortcut("f", modifiers: [])
+            Button("") {
+                if let post = focusedPost { onOpenPermalink(post) }
+            }
+            .keyboardShortcut("o", modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
     }
 }

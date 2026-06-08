@@ -23,8 +23,9 @@ features:
   - name: Display density A / B
     macos: full
     windows: full
-    ios: full
+    ios: none
     android: planned
+    note: "The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]])."
 ---
 
 # App Shell (Window, Tabs, Sidebar)
@@ -62,6 +63,6 @@ Open questions carried in the plan: whether navigation rows show an unread badge
 
 On [[ipados]], the shell is a separate SwiftUI implementation under
 `apps/ipados`. It uses `NavigationSplitView`, visible touch actions, and a simple
-search-field path to create saved-search tabs. Hardware keyboard shortcuts are
-available for parity, but hover-only affordances are not used
-(`2026-06-08-yorumimizuku-ipados-design.md` §6).
+search-field path to create saved-search tabs. Hover-only affordances are not
+used, and the macOS settings surface (theme / font / display density) is not
+replicated yet (`2026-06-08-yorumimizuku-ipados-design.md` §6, [[ipados]]).

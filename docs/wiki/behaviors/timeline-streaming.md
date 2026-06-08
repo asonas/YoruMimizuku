@@ -27,9 +27,8 @@ features:
   - name: Rich text + image grid / lightbox rendering
     macos: full
     windows: full
-    ios: limited
+    ios: full
     android: planned
-    note: "iPadOS renders rich text and inline image grids, but there is no dedicated lightbox yet ([[ipados]])."
   - name: Keyboard navigation & post actions (j/k, n, f, o)
     macos: full
     windows: full
@@ -77,10 +76,12 @@ Every interactive post row also carries a copy-link action: a `link` icon in the
 On [[windows]], `FeedView` now binds `j` / `k` / `n` / `f` / `o`: `f` toggles the selected row's like through the existing optimistic `PostItem.ToggleLikeAsync`, and `o` opens the shared bridge-built permalink in the default browser. Feed rows and the conversation focus row both show the copy-link action; it calls `yoru_post_permalink`, which wraps the shared `PostPermalink.url(id:authorHandle:)`, then writes the URL to the WinUI clipboard (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Views/ConversationView.xaml.cs`).
 
 On [[ipados]], rows expose visible touch actions for reply, repost, like, quote,
-copy permalink, and open permalink. The hardware keyboard path keeps the same
-`j` / `k` / `n` / `f` / `o` shortcuts where applicable; copy uses `UIPasteboard`
-and browser opening uses SwiftUI `openURL` (`apps/ipados/Views/PostRowView.swift`,
-`apps/ipados/Views/TimelineListView.swift`).
+copy permalink, and open permalink. The hardware-keyboard path is wired without
+toolbar-only controls: `j` / `k` move focus, `f` likes the focused post, `o` opens
+its permalink, and `n` opens compose. Copy uses `UIPasteboard`, browser opening
+uses SwiftUI `openURL`, and hashtag links are intercepted into saved-search tabs
+(`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/TimelineListView.swift`,
+`apps/ipados/Views/RootView.swift`).
 
 ## Conversation view (ancestors + reply tree)
 
@@ -92,6 +93,8 @@ Only the anchor post is mutable: `ThreadViewModel.toggleLike` / `toggleRepost` a
 
 The iPadOS conversation view reuses the shared `ThreadViewModel` and
 `ConversationThread` shape, rendering the focus post and descendant reply tree in
-a `List` under `apps/ipados/Views/ConversationView.swift`.
+a `List` under `apps/ipados/Views/ConversationView.swift`. It now includes the
+focused post's ancestor chain and a 「さらに表示」 re-anchor cue for reply nodes whose
+subtree was capped, matching the macOS conversation-navigation behavior.
 
 The window, tabs, and the vertical-tab sidebar that host these sources are described in [[app-shell]].

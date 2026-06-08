@@ -11,6 +11,16 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[ipados]], [[timeline-streaming]]
+- note: iPadOS closed several macOS parity gaps. Timeline rows now show relative timestamps, support hidden j/k/f/o keyboard actions, open a full-screen image lightbox, and intercept hashtag links into saved-search tabs. Conversation tabs now include ancestors and a 「さらに表示」 re-anchor cue for capped reply branches. Notifications gained reason icons, relative timestamps, actor taps, and unread tint. Remaining iPadOS gaps are settings/theme/font/density UI, Jetstream live updates, OS-level notifications, full structured-filter editing, and some composer affordances.
+
+## 2026-06-08 ingest
+
+- updated: [[ipados]], [[app-shell]], [[timeline-streaming]]
+- note: Corrected the iPadOS/macOS parity story after comparing the current SwiftUI implementations. The iPad app is functional but thinner than macOS: no settings/theme/font/density UI, no j/k focused-row navigation or f/o focused-post shortcuts, no timeline lightbox/relative-time/focus layer, simplified notifications, and a simpler conversation view without ancestors/connectors/show-more re-anchor. The support matrix now marks iOS display density as none, keyboard/post shortcuts as limited, and conversation child tree as limited.
+
+## 2026-06-08 ingest
+
 - sources: `2026-06-08-macos-compose-notification-followups.md`
 - updated: [[compose-post]], [[notifications]]
 - note: Added planned macOS follow-ups requested from the product backlog: reply composers should preview the replied-to post (avatar, user name, body start), submit loading should replace the Post button instead of resizing the sheet, `Command-Return` / `Control-Return` should submit, and target-post snippets in notifications (notably likes) should open the post's conversation tab.
