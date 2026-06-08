@@ -33,7 +33,8 @@ final class TimelineResponseTests: XCTestCase {
                 {
                   "thumb": "https://cdn.example/thumb1.jpg",
                   "fullsize": "https://cdn.example/full1.jpg",
-                  "alt": "a cat"
+                  "alt": "a cat",
+                  "aspectRatio": { "width": 1600, "height": 900 }
                 },
                 {
                   "thumb": "https://cdn.example/thumb2.jpg",
@@ -106,6 +107,21 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertEqual(images[0].fullsize, "https://cdn.example/full1.jpg")
         XCTAssertEqual(images[0].alt, "a cat")
         XCTAssertEqual(images[1].alt, "")
+    }
+
+    func testDecodesImageAspectRatio() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        let images = try XCTUnwrap(response.feed[0].post.embed?.images)
+
+        XCTAssertEqual(images[0].aspectRatio?.width, 1600)
+        XCTAssertEqual(images[0].aspectRatio?.height, 900)
+    }
+
+    func testImageWithoutAspectRatioHasNilAspectRatio() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        let images = try XCTUnwrap(response.feed[0].post.embed?.images)
+
+        XCTAssertNil(images[1].aspectRatio)
     }
 
     func testPostWithoutEmbedHasNilEmbed() throws {

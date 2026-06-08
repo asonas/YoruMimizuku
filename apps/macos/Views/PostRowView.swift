@@ -157,47 +157,77 @@ struct PostRowView: View {
     }
 
 
+    private var imageMaxWidth: CGFloat { density == .compact ? 320 : 440 }
+
     @ViewBuilder
     private var imageGrid: some View {
-        let columns = post.images.count == 1 ? 1 : 2
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: columns),
-            spacing: 5
-        ) {
-            ForEach(post.images) { image in
-                thumbnail(image)
+        // A lone image is laid out at its true aspect ratio (see `singleImage`); two
+        // or more share the fixed-height cover-cropped grid where uniform tiles read
+        // better than mismatched proportions.
+        if post.images.count == 1, let image = post.images.first {
+            singleImage(image)
+        } else {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 2),
+                spacing: 5
+            ) {
+                ForEach(post.images) { image in
+                    thumbnail(image, height: 140, maxPointSize: 220)
+                }
             }
+            .frame(maxWidth: imageMaxWidth, alignment: .leading)
         }
-        .frame(maxWidth: density == .compact ? 320 : 440, alignment: .leading)
     }
 
-    private func thumbnail(_ image: PostImage) -> some View {
-        let single = post.images.count == 1
-        return RemoteImage(url: image.thumbURL, maxPointSize: single ? 440 : 220) { phase in
-            switch phase {
-            case .success(let loaded):
-                loaded.resizable().scaledToFill()
-            case .failure:
-                theme.surface.overlay(
-                    Image(systemName: "photo").foregroundStyle(theme.secondaryText)
-                )
-            case .empty:
-                theme.surface.overlay(ProgressView().controlSize(.small))
-            }
+    /// A single attached image, sized to its real aspect ratio so wide images show
+    /// in full (no left/right crop or overflow) and tall images fill the column
+    /// width with only a slight crop. The ratio is clamped so an extreme panorama or
+    /// portrait can't make the row absurdly short or tall; within the clamp the image
+    /// fills its box exactly (cover == contain), so a crop only ever touches the
+    /// clamped extreme. The decode size follows the box's longer edge to stay sharp.
+    private func singleImage(_ image: PostImage) -> some View {
+        let ratio = min(max(image.aspectRatio ?? 4.0 / 3.0, 0.7), 5.0)
+        let decodeEdge = max(imageMaxWidth, imageMaxWidth / ratio)
+        return RemoteImage(url: image.thumbURL, maxPointSize: decodeEdge) { phase in
+            imagePhaseContent(phase)
+        }
+        .aspectRatio(ratio, contentMode: .fit)
+        .frame(maxWidth: imageMaxWidth, alignment: .leading)
+        .clipped()
+        .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
+    }
+
+    private func thumbnail(_ image: PostImage, height: CGFloat, maxPointSize: CGFloat) -> some View {
+        RemoteImage(url: image.thumbURL, maxPointSize: maxPointSize) { phase in
+            imagePhaseContent(phase)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: single ? 240 : 140)
+        .frame(height: height)
         .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
-        .contentShape(RoundedRectangle(cornerRadius: 10))
-        .accessibilityLabel(image.alt.isEmpty ? "画像" : image.alt)
-        .onTapGesture {
-            onSelect()
-            let urls = post.images.compactMap(\.fullsizeURL)
-            guard let url = image.fullsizeURL, let index = urls.firstIndex(of: url) else { return }
-            onImageTap(urls, index)
+        .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
+    }
+
+    /// The loaded / failed / loading appearance shared by single and grid thumbnails.
+    @ViewBuilder
+    private func imagePhaseContent(_ phase: RemoteImagePhase) -> some View {
+        switch phase {
+        case .success(let loaded):
+            loaded.resizable().scaledToFill()
+        case .failure:
+            theme.surface.overlay(
+                Image(systemName: "photo").foregroundStyle(theme.secondaryText)
+            )
+        case .empty:
+            theme.surface.overlay(ProgressView().controlSize(.small))
         }
+    }
+
+    /// Open the lightbox positioned on `image`, moving keyboard focus to this row.
+    private func openLightbox(at image: PostImage) {
+        onSelect()
+        let urls = post.images.compactMap(\.fullsizeURL)
+        guard let url = image.fullsizeURL, let index = urls.firstIndex(of: url) else { return }
+        onImageTap(urls, index)
     }
 
     private var authorLine: some View {
@@ -318,5 +348,23 @@ struct PostRowView: View {
     ) -> some View {
         Label(text, systemImage: systemImage)
             .foregroundStyle(active ? (activeColor ?? theme.accent) : theme.tertiaryText)
+    }
+}
+
+/// Shared chrome for inline post thumbnails: rounded corners, a hairline border, a
+/// tappable shape, and an accessibility label. Reused by the single-image and grid
+/// thumbnails so their framing stays the only difference between them.
+private struct ThumbnailChrome: ViewModifier {
+    @EnvironmentObject private var theme: ThemeStore
+    let alt: String
+    let onTap: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 10))
+            .accessibilityLabel(alt.isEmpty ? "画像" : alt)
+            .onTapGesture(perform: onTap)
     }
 }

@@ -62,6 +62,10 @@ The remaining cost (NSTableView row layout, `AG::Graph` updates) is structural t
 
 The post body `Text` does **not** use `.textSelection(.enabled)`. On macOS, a selectable `Text` and tappable `.link` runs are mutually incompatible: with both, the link spans render blank the moment the row re-lays-out (e.g. when j/k focus toggles the row background), so URLs vanish on focus and become unclickable. Tappable links win over body selection — sharing a post is covered by the copy-link action ([[timeline-streaming]]) (`apps/macos/Views/PostRowView.swift`).
 
+### Inline images respect their aspect ratio
+
+A lone attached image is laid out at its true aspect ratio rather than a fixed-height center crop, so a wide image shows in full (no left/right crop and no horizontal overflow) and a tall image fills the column width with only a slight crop. The source ratio comes from the embed's `aspectRatio` (`app.bsky.embed.images#view`), which the core now decodes onto `EmbedImage` and carries to the view as `PostImage.aspectRatio` (width / height; nil when the embed omits it). The view clamps that ratio to `[0.7, 5.0]` so an extreme panorama or portrait can't make the row absurdly short or tall — within the clamp the image fills its box exactly (cover equals contain, so a crop only ever touches the clamped extreme), and the decode size follows the box's longer edge to stay sharp. Two or more images keep the fixed-height cover-cropped grid, where uniform tiles read better than mismatched proportions (`apps/macos/Views/PostRowView.swift`, `PostDisplay.swift`, `Timeline.swift`).
+
 ## App icon
 
 The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`2026-06-04-yorumimizuku-app-icon-design.md`, `2026-06-04-yorumimizuku-app-icon.md`). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).

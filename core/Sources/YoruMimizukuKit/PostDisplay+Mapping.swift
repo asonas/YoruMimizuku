@@ -11,7 +11,10 @@ extension PostDisplay {
             PostImage(
                 thumbURL: URL(string: image.thumb),
                 fullsizeURL: URL(string: image.fullsize),
-                alt: image.alt
+                alt: image.alt,
+                aspectRatio: image.aspectRatio.flatMap { ratio in
+                    ratio.height > 0 ? Double(ratio.width) / Double(ratio.height) : nil
+                }
             )
         }
         self.init(

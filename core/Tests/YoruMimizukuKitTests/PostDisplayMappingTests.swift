@@ -89,6 +89,28 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.avatarURL, URL(string: "https://cdn.example/alice.jpg"))
     }
 
+    func testMapsImageAspectRatio() {
+        let embed = PostEmbed(images: [
+            EmbedImage(thumb: "https://cdn.example/t1.jpg", fullsize: "https://cdn.example/f1.jpg", alt: "wide",
+                       aspectRatio: ImageAspectRatio(width: 1600, height: 900)),
+            EmbedImage(thumb: "https://cdn.example/t2.jpg", fullsize: "https://cdn.example/f2.jpg", alt: "no ratio")
+        ])
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(text: "look", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            embed: embed
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+
+        XCTAssertEqual(display.images[0].aspectRatio ?? 0, 1600.0 / 900.0, accuracy: 0.0001)
+        XCTAssertNil(display.images[1].aspectRatio)
+    }
+
     func testMapsImageEmbed() {
         let embed = PostEmbed(images: [
             EmbedImage(thumb: "https://cdn.example/t1.jpg", fullsize: "https://cdn.example/f1.jpg", alt: "cat"),

@@ -6,13 +6,18 @@ public struct PostImage: Identifiable, Equatable, Sendable {
     public let thumbURL: URL?
     public let fullsizeURL: URL?
     public let alt: String
+    /// The source image's width / height, when the embed reports it, so the row can
+    /// lay the image out at its true proportions before the bytes load. Nil when the
+    /// embed omits the aspect ratio.
+    public let aspectRatio: Double?
 
     public var id: String { (fullsizeURL?.absoluteString ?? thumbURL?.absoluteString ?? "") + "|" + alt }
 
-    public init(thumbURL: URL?, fullsizeURL: URL?, alt: String) {
+    public init(thumbURL: URL?, fullsizeURL: URL?, alt: String, aspectRatio: Double? = nil) {
         self.thumbURL = thumbURL
         self.fullsizeURL = fullsizeURL
         self.alt = alt
+        self.aspectRatio = aspectRatio
     }
 }
 
