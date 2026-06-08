@@ -1,7 +1,7 @@
 ---
 title: YoruMimizuku Overview
 type: overview
-updated: 2026-06-06
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -20,7 +20,7 @@ The reference implementation is the same author's Ruby terminal client `tempest`
 
 ## Architectural backbone
 
-OS-dependent side effects (Keychain, crypto, WebSocket, HTTP, browser authorization, OS notifications) are all isolated behind protocols (ports), keeping the pure logic (OAuth state machine, Jetstream decoding, Codable models, facet parsing, stores) OS-independent. This is the foundation for cross-platform reach (`2026-06-04-yorumimizuku-design.md` §4.2, [[macos]] / [[windows]]).
+OS-dependent side effects (Keychain, crypto, WebSocket, HTTP, browser authorization, OS notifications) are all isolated behind protocols (ports), keeping the pure logic (OAuth state machine, Jetstream decoding, Codable models, facet parsing, stores) OS-independent. This is the foundation for cross-platform reach; the full ports-and-adapters breakdown is in [[architecture]] (`2026-06-04-yorumimizuku-design.md` §4, [[macos]] / [[windows]]).
 
 ## Actual directory layout
 
@@ -53,12 +53,20 @@ See [[windows]].
 
 OAuth auth, multi-account, automatic token refresh; a single column with tabs for 7 sources (home / notifications / custom feed / list / author / search / thread); Jetstream live updates for home and lists; full write path (post / reply / like / repost / image attach); notifications (in-app tab + OS banner + Dock badge); multiple windows; and display density A/B (`2026-06-04-yorumimizuku-design.md` §2).
 
+## Architecture & reference
+
+- [[architecture]] — the ports-and-adapters backbone (two layers, six OS ports, core modules, concurrency)
+- [[glossary]] — AT Protocol / OAuth terms used across the wiki
+
 ## Behaviors
 
+- [[app-shell]] — window, top tabs, vertical sidebar, multi-window, display density A/B
 - [[oauth-flow]] — OAuth (PKCE + DPoP) login flow and token management
+- [[accounts]] — multi-account persistence and per-window account switching
 - [[timeline-streaming]] — timeline fetching, Jetstream live updates, and fallback
 - [[compose-post]] — posting (facet detection, images, replies)
 - [[filters]] — saved-search filters (structured terms and AND/OR)
+- [[notifications]] — in-app tab, OS banner, and Dock badge
 
 ## Platforms
 
