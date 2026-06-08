@@ -33,7 +33,16 @@ actor ImageDownsampler {
 
     init() {
         let config = URLSessionConfiguration.default
-        config.urlCache = URLCache(memoryCapacity: 16 << 20, diskCapacity: 256 << 20, diskPath: "yorumimizuku-images")
+        // The legacy `diskPath:` initializer resolves the bare name against the
+        // filesystem root on modern macOS (it tried to open /yorumimizuku-images/
+        // Cache.db and failed), which silently disabled the on-disk cache and
+        // spammed SQLite "unopened database" errors on every request. The
+        // `directory:` initializer takes a real URL; point it at a subdirectory of
+        // the user's Caches so the disk cache actually works.
+        let cacheDirectory = FileManager.default
+            .urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("yorumimizuku-images", isDirectory: true)
+        config.urlCache = URLCache(memoryCapacity: 16 << 20, diskCapacity: 256 << 20, directory: cacheDirectory)
         config.requestCachePolicy = .returnCacheDataElseLoad
         session = URLSession(configuration: config)
         cache.totalCostLimit = 64 << 20 // ~64 MB of decoded bitmaps
