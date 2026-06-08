@@ -9,9 +9,11 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
-## 2026-06-08 ingest
+## 2026-06-08 feature
 
-- sources: [[2026-06-08-phase-c-author-tab]] (plan)
+- created: [[support-matrix]] (generated)
+- updated: [[conventions]], [[overview]], [[accounts]], [[app-shell]], [[author-tab]], [[compose-post]], [[filters]], [[notifications]], [[oauth-flow]], [[timeline-streaming]]
+- note: Added a generated platform support matrix (star chart). Each behavior page now carries a `features:` frontmatter block (per-feature, four platforms macos/windows/ios/android, status full/differs/limited/none/planned/unknown → ○/△/×/−/?), and `support-matrix.md` (type `matrix`) is generated from those blocks by the wiki tool (`wiki matrix`), grouped per source page with a closing Notes section. The wiki CLI gained `matrix` / `matrix --check`; lint now requires every behavior page to declare complete feature statuses and a `note` for any differs/limited/none/unknown cell, so adding or changing a behavior forces a matrix update. Wired `wiki:matrix` into mise, `wiki check`, and the pre-commit hook. Recorded the known Windows gaps from the current wiki: Jetstream live, multiple windows, OS notification banner/badge, copy-permalink, and the author tab are macOS-only (×); browser authorization differs (WebView2 vs ASWebAuthenticationSession, △); f/o keyboard shortcuts are macOS-only (△); image attachment and structured-filter parity on Windows are unverified (?).
 - created: [[author-tab]]
 - updated: [[app-shell]]
 - note: Ingested Phase C — the author (user) tab. Tapping a user's avatar in the home feed, a filter feed, a notification row, a conversation, or an author feed opens a view-only tab: a profile header (avatar / display name / @handle / bio-when-available) over that user's `app.bsky.feed.getAuthorFeed` posts (`filter=posts_and_author_threads`). New `WorkspaceTab.author(UUID)` backed by an ephemeral `AuthorTab` (reused `TimelineViewModel` via `LiveAuthorFeedLoader`/`AuthorFeedService`, plus `ProfileHeaderViewModel` via `LiveAuthorProfileLoader`/`ProfileService`). Deduped by DID, no unread badge, not persisted; polled only while the active selection. Documented two accepted limitations: bio is nil (ProfileViewBasic has no description), and notification-opened tabs dedupe by handle (no DID on `NotificationGroup.Actor`) while post-opened tabs dedupe by DID. Also noted `ATURI.repo(_:)` was added to derive the author DID from a post's AT-URI (Phase B was not merged). Cross-linked from [[app-shell]].
