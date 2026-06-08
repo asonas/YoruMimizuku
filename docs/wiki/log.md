@@ -14,6 +14,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 - updated: [[macos]]
 - note: Fixed post-body links vanishing on focus. Root cause: `.textSelection(.enabled)` and tappable `.link` runs are mutually incompatible on macOS SwiftUI — the link spans render blank when the row re-lays-out (focus toggling its background), so URLs disappeared and could not be clicked. Removed `.textSelection(.enabled)` from the body `Text` (links win; copy-link covers sharing). Also corrected the precompute note: link color is re-applied per render on the row's `bodyAttributed` (run-attribute mutation only, no UTF-8 re-conversion), not left to `.tint`. Added a "Body links are not selectable text" subsection.
 
+## 2026-06-08 feature
+
+- created: [[support-matrix]] (generated)
+- updated: [[conventions]], [[overview]], [[accounts]], [[app-shell]], [[author-tab]], [[compose-post]], [[filters]], [[notifications]], [[oauth-flow]], [[timeline-streaming]]
+- note: Added a generated platform support matrix (star chart). Each behavior page now carries a `features:` frontmatter block (per-feature, four platforms macos/windows/ios/android, status full/differs/limited/none/planned/unknown → ○/△/×/−/?), and `support-matrix.md` (type `matrix`) is generated from those blocks by the wiki tool (`wiki matrix`), grouped per source page with a closing Notes section. The wiki CLI gained `matrix` / `matrix --check`; lint now requires every behavior page to declare complete feature statuses and a `note` for any differs/limited/none/unknown cell, so adding or changing a behavior forces a matrix update. Wired `wiki:matrix` into mise, `wiki check`, and the pre-commit hook. Recorded the known Windows gaps from the current wiki: Jetstream live, multiple windows, OS notification banner/badge, copy-permalink, and the author tab are macOS-only (×); browser authorization differs (WebView2 vs ASWebAuthenticationSession, △); f/o keyboard shortcuts are macOS-only (△); image attachment and structured-filter parity on Windows are unverified (?).
+
 ## 2026-06-08 ingest
 
 - sources: [[2026-06-08-phase-c-author-tab]] (plan)

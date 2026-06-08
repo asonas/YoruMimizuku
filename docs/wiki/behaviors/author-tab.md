@@ -5,6 +5,13 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/plans/2026-06-08-phase-c-author-tab.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+features:
+  - name: Author (user) tab
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "The author tab (tap an avatar to open a view-only profile over getAuthorFeed) is a macOS Phase C feature; the WinUI view-model set (Timeline / Thread / Notifications / Login / Composer / Workspace / SavedFilter) has no author counterpart, so it is not present on Windows ([[windows]])."
 ---
 
 # Author (User) Tab

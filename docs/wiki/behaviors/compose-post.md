@@ -1,10 +1,22 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-06-07
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
+features:
+  - name: Post / reply / quote (facets, mention resolution)
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: Image attachment (up to 4, alt text)
+    macos: full
+    windows: unknown
+    ios: planned
+    android: planned
+    note: "The macOS composer uploads up to 4 images; whether the WinUI composer wires image attachment through yoru_post_create is not documented — verify against apps/windows ([[windows]])."
 ---
 
 # Composing Posts

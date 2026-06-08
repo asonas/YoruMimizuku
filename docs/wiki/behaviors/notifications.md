@@ -4,6 +4,18 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+features:
+  - name: In-app notifications tab
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: OS banner + unread badge
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "macOS surfaces new items as UNUserNotificationCenter banners and a Dock badge from a background polling actor; the Windows app has the in-app tab but no OS toast / taskbar-badge surfacing yet ([[windows]], [[macos]])."
 ---
 
 # Notifications
