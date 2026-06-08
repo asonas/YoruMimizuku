@@ -9,6 +9,8 @@ sources:
   - docs/superpowers/plans/2026-06-05-yorumimizuku-structured-filters.md
   - apps/windows/App/ViewModels/SavedFilterModel.cs
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
+  - apps/windows/App/Views/FilterEditorDialog.xaml.cs
+  - apps/windows/App/Services/SavedFilterStore.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Saved-search filters (structured terms, AND/OR)
@@ -16,7 +18,7 @@ features:
     windows: limited
     ios: planned
     android: planned
-    note: "Windows serializes structured `terms` + `combinator` to `yoru_search_load`, but the visible WinUI entry point only creates hashtag filter tabs from tapped tags; the full multi-row AND/OR editor is not present yet ([[windows]])."
+    note: "Windows has the multi-row AND/OR editor and per-account JSON persistence, but OR search over the bridge still returns only the merged first page (no CompositeCursor infinite-scroll parity yet) ([[windows]])."
 ---
 
 # Saved-Search Filters
@@ -44,7 +46,7 @@ The filter was later normalized into **multiple typed condition rows + an AND/OR
 
 The pure functions (`SavedFilter.subqueries`, the OR merge, and the `CompositeCursor` codec) live in `YoruMimizukuKit` and are unit-tested; the real network is handled by the app-side `LiveSearchLoader`. `SearchService.searchPosts` gained a backward-compatible `sort` argument.
 
-On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and serializes it to the bridge JSON consumed by `yoru_search_load`; the Swift side still computes the actual subqueries. The current WinUI shell can open saved-filter tabs and create/select a single hashtag filter when the user taps a hashtag in a post, but it does not yet expose the macOS-style editor for arbitrary multi-row keyword/user/hashtag/mention terms or choosing AND versus OR (`apps/windows/App/ViewModels/SavedFilterModel.cs`, `apps/windows/App/ViewModels/WorkspaceViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
+On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and serializes it to the bridge JSON consumed by `yoru_search_load`; the Swift side computes the subqueries. The WinUI shell now has `FilterEditorDialog` for arbitrary multi-row keyword/user/hashtag/mention terms, AND/OR selection, editing existing filters, hashtag-tap creation, and per-account JSON persistence under LocalAppData. The remaining parity gap is OR pagination: the bridge merges the first page of each OR subquery and returns `cursor: nil`, while macOS preserves infinite scroll with `CompositeCursor` (`apps/windows/App/Views/FilterEditorDialog.xaml.cs`, `apps/windows/App/Services/SavedFilterStore.cs`, `core/Sources/YoruMimizukuBridge/BridgeOperations.swift`).
 
 ## Known limitations
 

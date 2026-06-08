@@ -12,6 +12,12 @@ sources:
   - apps/windows/App/Views/ComposerDialog.xaml.cs
   - apps/windows/App/ViewModels/SavedFilterModel.cs
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
+  - apps/windows/App/ViewModels/AuthorViewModel.cs
+  - apps/windows/App/ViewModels/NotificationsViewModel.cs
+  - apps/windows/App/Views/AuthorView.xaml.cs
+  - apps/windows/App/Views/FilterEditorDialog.xaml.cs
+  - apps/windows/App/Views/FeedView.xaml.cs
+  - apps/windows/App/Views/ConversationView.xaml.cs
   - apps/windows/App/MainWindow.xaml.cs
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
@@ -89,8 +95,9 @@ lifetime handling is confined here.
   + swift-crypto DPoP + `AccountManager`). Endpoints mirror the macOS `Live*`
   layer: `yoru_login_begin` / `yoru_login_complete` (split for WebView2),
   `yoru_account_current/list/switch/remove`, `yoru_timeline_load`,
-  `yoru_thread_load`, `yoru_notifications_load`, `yoru_search_load`,
-  `yoru_post_create`, `yoru_post_like/unlike/repost/unrepost`, `yoru_profile_avatar`.
+  `yoru_author_feed_load`, `yoru_thread_load`, `yoru_notifications_load`,
+  `yoru_search_load`, `yoru_post_create`, `yoru_post_like/unlike/repost/unrepost`,
+  `yoru_post_permalink`, `yoru_profile_avatar`, `yoru_profile_load`.
 
 ## apps/windows (WinUI 3)
 
@@ -110,10 +117,22 @@ lifetime handling is confined here.
   thumbnails; no alt-text editor, drag/drop attach, WIC downsampling, or upload
   re-encode UI is present yet ([[compose-post]]).
 - Saved-filter tabs call `yoru_search_load` with the structured
-  `terms` + `combinator` JSON shape used by the Swift core. The current WinUI
-  entry point creates/selects a single hashtag filter from tapped hashtag links;
-  it does not yet expose the full macOS-style multi-row AND/OR editor
-  ([[filters]]).
+  `terms` + `combinator` JSON shape used by the Swift core. The WinUI shell has
+  a multi-row AND/OR editor, edit/remove affordances, hashtag-link creation, and
+  per-account JSON persistence. OR filters are still limited because the bridge
+  merges only the first page of each OR subquery and does not yet return a
+  `CompositeCursor` for infinite scroll parity ([[filters]]).
+- Author tabs are implemented: avatar taps in feeds and conversations derive the
+  actor DID from the post AT-URI, notification actors open by handle, and
+  `AuthorView` renders a profile header over a reused feed loaded through
+  `yoru_author_feed_load` / `yoru_profile_load` ([[author-tab]]).
+- Timeline rows support the Windows parity shortcuts: j/k focus, n compose,
+  f toggles like, o opens the focused post's bsky.app permalink, and the link
+  action copies that permalink to the clipboard. Conversation focus rows support
+  f/o/copy too ([[timeline-streaming]]).
+- The notifications navigation row has a local unread badge driven by 30-second
+  polling and cleared when the tab becomes active. OS toast notifications and a
+  taskbar badge are still not implemented ([[notifications]]).
 - The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
   **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS

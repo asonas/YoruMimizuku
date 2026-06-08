@@ -20,6 +20,16 @@ final class PostPermalinkTests: XCTestCase {
         )
     }
 
+    func testRawPostFieldsBuildHandleURL() {
+        XCTAssertEqual(
+            PostPermalink.url(
+                id: "at://did:plc:me/app.bsky.feed.post/3kabc123",
+                authorHandle: "alice.bsky.social"
+            ),
+            URL(string: "https://bsky.app/profile/alice.bsky.social/post/3kabc123")
+        )
+    }
+
     func testInvalidHandleFallsBackToDID() {
         let p = post(id: "at://did:plc:me/app.bsky.feed.post/3kabc123", handle: "handle.invalid")
         XCTAssertEqual(

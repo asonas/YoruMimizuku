@@ -148,10 +148,27 @@ struct NotificationGroupDTO: Encodable {
     }
 }
 
+struct ProfileDTO: Encodable {
+    let did: String
+    let handle: String
+    let displayName: String?
+    let avatarUrl: String?
+    let bio: String?
+
+    init(_ p: ProfileViewBasic) {
+        did = p.did
+        handle = p.handle
+        displayName = p.displayName
+        avatarUrl = p.avatar
+        bio = nil
+    }
+}
+
 struct PostResultDTO: Encodable { let uri: String; let cid: String }
 struct LoginBeginDTO: Encodable { let pendingId: String; let authUrl: String; let callbackScheme: String }
 struct AvatarDTO: Encodable { let avatarUrl: String? }
 struct RecordRefDTO: Encodable { let recordUri: String }
+struct PermalinkDTO: Encodable { let url: String? }
 struct EmptyDTO: Encodable { let done = true }
 
 enum ISO8601 {
@@ -247,6 +264,22 @@ enum BridgeOps {
         let result = try await service.getTimeline(
             pds: ctx.account.pds, issuer: ctx.issuer,
             accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken, cursor: cursor
+        )
+        try ctx.persist(result.refreshed)
+        return TimelinePageDTO(
+            posts: result.response.feed.map { PostDisplayDTO(PostDisplay($0)) },
+            cursor: result.response.cursor
+        )
+    }
+
+    static func authorFeedLoad(actor: String, cursor: String?) async throws -> TimelinePageDTO {
+        let rt = try BridgeRuntime.require()
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let service = AuthorFeedService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config)
+        let result = try await service.getAuthorFeed(
+            pds: ctx.account.pds, issuer: ctx.issuer,
+            accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken,
+            actor: actor, cursor: cursor, filter: "posts_and_author_threads"
         )
         try ctx.persist(result.refreshed)
         return TimelinePageDTO(
@@ -411,6 +444,10 @@ enum BridgeOps {
         return EmptyDTO()
     }
 
+    static func permalink(id: String, authorHandle: String) throws -> PermalinkDTO {
+        PermalinkDTO(url: PostPermalink.url(id: id, authorHandle: authorHandle)?.absoluteString)
+    }
+
     // -- Profile --
 
     static func avatar() async throws -> AvatarDTO {
@@ -423,6 +460,18 @@ enum BridgeOps {
         )
         try ctx.persist(result.refreshed)
         return AvatarDTO(avatarUrl: result.response.avatar)
+    }
+
+    static func profile(actor: String) async throws -> ProfileDTO {
+        let rt = try BridgeRuntime.require()
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let service = ProfileService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config)
+        let result = try await service.getProfile(
+            pds: ctx.account.pds, issuer: ctx.issuer,
+            accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken, actor: actor
+        )
+        try ctx.persist(result.refreshed)
+        return ProfileDTO(result.response)
     }
 }
 

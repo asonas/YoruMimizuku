@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace YoruMimizuku.App.Interop;
 
@@ -44,6 +45,8 @@ public sealed record PostDisplayDto(
 
 public sealed record TimelinePageDto(List<PostDisplayDto> Posts, string? Cursor);
 
+public sealed record ProfileDto(string Did, string Handle, string? DisplayName, string? AvatarUrl, string? Bio);
+
 public sealed record NotificationActorDto(string DisplayName, string Handle, string? AvatarUrl);
 
 public sealed record NotificationGroupDto(
@@ -55,7 +58,10 @@ public sealed record NotificationGroupDto(
     string? SubjectImageUrl,
     string? Text,
     string LatestCreatedAt,
-    bool IsRead);
+    bool IsRead)
+{
+    public NotificationActorDto? LeadActor => Actors.FirstOrDefault();
+}
 
 public sealed record PostResultDto(string Uri, string Cid);
 
@@ -64,3 +70,5 @@ public sealed record LoginBeginDto(string PendingId, string AuthUrl, string Call
 public sealed record AvatarDto(string? AvatarUrl);
 
 public sealed record RecordRefDto(string RecordUri);
+
+public sealed record PermalinkDto(string? Url);

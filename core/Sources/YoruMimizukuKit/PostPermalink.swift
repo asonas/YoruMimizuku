@@ -10,10 +10,14 @@ import BlueskyCore
 /// neither a usable handle nor a DID is available.
 public enum PostPermalink {
     public static func url(for post: PostDisplay) -> URL? {
-        guard let rkey = ATURI.rkey(post.id) else { return nil }
-        let handle = post.authorHandle
+        url(id: post.id, authorHandle: post.authorHandle)
+    }
+
+    public static func url(id: String, authorHandle: String) -> URL? {
+        guard let rkey = ATURI.rkey(id) else { return nil }
+        let handle = authorHandle
         let usableHandle = (!handle.isEmpty && handle != "handle.invalid") ? handle : nil
-        guard let profile = usableHandle ?? ATURI.repo(post.id) else { return nil }
+        guard let profile = usableHandle ?? ATURI.repo(id) else { return nil }
         return URL(string: "https://bsky.app/profile/\(profile)/post/\(rkey)")
     }
 }

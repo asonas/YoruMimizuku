@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ContentDialog
+    x:Class="YoruMimizuku.App.Views.FilterEditorDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    PrimaryButtonText="保存"
+    SecondaryButtonText="キャンセル"
+    DefaultButton="Primary">
+
+    <StackPanel Spacing="12" Width="520">
+        <StackPanel Spacing="4">
+            <TextBlock Text="名前" FontSize="12" Opacity="0.7" />
+            <TextBox x:Name="NameBox" PlaceholderText="例: Swift界隈" TextChanged="OnEditorChanged" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock Text="結合" FontSize="12" Opacity="0.7" />
+            <ComboBox x:Name="CombinatorBox" SelectionChanged="OnEditorChanged" HorizontalAlignment="Left">
+                <ComboBoxItem Content="すべて満たす（AND）" Tag="and" />
+                <ComboBoxItem Content="いずれか（OR）" Tag="or" />
+            </ComboBox>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock Text="条件" FontSize="12" Opacity="0.7" />
+            <StackPanel x:Name="TermsPanel" Spacing="8" />
+            <Button Content="条件を追加" Click="OnAddTermClick" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed" />
+    </StackPanel>
+</ContentDialog>

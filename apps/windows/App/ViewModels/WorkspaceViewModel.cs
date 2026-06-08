@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using YoruMimizuku.App.Mvvm;
+using YoruMimizuku.App.Services;
 
 namespace YoruMimizuku.App.ViewModels;
 
-public enum WorkspaceTabKind { Home, Notifications, Filter, Conversation }
+public enum WorkspaceTabKind { Home, Notifications, Filter, Conversation, Author }
 
 public sealed class WorkspaceTab : ObservableObject
 {
@@ -15,11 +17,12 @@ public sealed class WorkspaceTab : ObservableObject
     public string? Subtitle { get; }
     public SavedFilterModel? Filter { get; }
     public string? ConversationAnchor { get; }
+    public AuthorViewModel? Author { get; }
 
     public WorkspaceTab(WorkspaceTabKind kind, string id, string title, string? subtitle = null,
-        SavedFilterModel? filter = null, string? anchor = null)
+        SavedFilterModel? filter = null, string? anchor = null, AuthorViewModel? author = null)
     {
-        Kind = kind; Id = id; Title = title; Subtitle = subtitle; Filter = filter; ConversationAnchor = anchor;
+        Kind = kind; Id = id; Title = title; Subtitle = subtitle; Filter = filter; ConversationAnchor = anchor; Author = author;
     }
 }
 
@@ -35,6 +38,7 @@ public sealed class WorkspaceViewModel : ObservableObject
     /// <summary>Raised when tabs or the selection change so the shell can rebuild
     /// the navigation pane and show the selected tab's content.</summary>
     public event Action? Changed;
+    public event Action? FiltersChanged;
 
     private WorkspaceTab _selected;
     public WorkspaceTab Selected
@@ -55,11 +59,46 @@ public sealed class WorkspaceViewModel : ObservableObject
         _selected = HomeTab;
     }
 
+    public IReadOnlyList<SavedFilterModel> Filters => Tabs
+        .Where(t => t.Kind == WorkspaceTabKind.Filter && t.Filter is not null)
+        .Select(t => t.Filter!)
+        .ToList();
+
+    public void LoadFilters(IEnumerable<SavedFilterModel> filters)
+    {
+        foreach (var tab in Tabs.Where(t => t.Kind == WorkspaceTabKind.Filter).ToList())
+        {
+            Tabs.Remove(tab);
+        }
+        foreach (var filter in filters)
+        {
+            Tabs.Add(FilterTab(filter));
+        }
+        if (Selected.Kind == WorkspaceTabKind.Filter)
+        {
+            Selected = HomeTab;
+        }
+        Changed?.Invoke();
+    }
+
     public void AddFilter(SavedFilterModel filter)
     {
-        var tab = new WorkspaceTab(WorkspaceTabKind.Filter, filter.Id.ToString(), filter.DisplayName, filter.Summary, filter: filter);
+        var tab = FilterTab(filter);
         Tabs.Add(tab);
+        FiltersChanged?.Invoke();
         Selected = tab;
+    }
+
+    public void UpdateFilter(SavedFilterModel filter)
+    {
+        var existing = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Filter && t.Id == filter.Id.ToString());
+        if (existing is null) return;
+        var index = Tabs.IndexOf(existing);
+        var replacement = FilterTab(filter);
+        Tabs[index] = replacement;
+        if (Selected == existing) Selected = replacement;
+        FiltersChanged?.Invoke();
+        Changed?.Invoke();
     }
 
     public void RemoveFilter(string id)
@@ -69,6 +108,8 @@ public sealed class WorkspaceViewModel : ObservableObject
         var index = Tabs.IndexOf(tab);
         Tabs.Remove(tab);
         if (Selected == tab) Selected = Tabs[Math.Max(0, index - 1)];
+        FiltersChanged?.Invoke();
+        Changed?.Invoke();
     }
 
     public void OpenConversation(string anchorUri, string title, string? subtitle)
@@ -89,6 +130,39 @@ public sealed class WorkspaceViewModel : ObservableObject
         if (Selected == tab) Selected = Tabs[Math.Max(0, index - 1)];
     }
 
+    public void OpenAuthor(PostItem post)
+    {
+        var actor = AtUri.Repo(post.Id);
+        if (actor is null) return;
+        OpenAuthor(actor, post.AuthorHandle, post.AuthorDisplayName, post.AvatarUrl);
+    }
+
+    public void OpenAuthor(string actor, string handle, string displayName, string? avatarUrl)
+    {
+        var existing = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Author && t.Author?.Actor == actor);
+        if (existing is not null) { Selected = existing; return; }
+        var author = new AuthorViewModel(actor, handle, displayName, avatarUrl);
+        var title = string.IsNullOrWhiteSpace(displayName) ? "@" + handle : displayName;
+        var tab = new WorkspaceTab(
+            WorkspaceTabKind.Author,
+            "author-" + Guid.NewGuid(),
+            title,
+            "@" + handle,
+            author: author);
+        Tabs.Add(tab);
+        Selected = tab;
+    }
+
+    public void CloseAuthor(string id)
+    {
+        var tab = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Author && t.Id == id);
+        if (tab is null) return;
+        var index = Tabs.IndexOf(tab);
+        Tabs.Remove(tab);
+        if (Selected == tab) Selected = Tabs[Math.Max(0, index - 1)];
+        Changed?.Invoke();
+    }
+
     /// <summary>Create-or-select a hashtag filter tab (used when tapping a #tag in a post).</summary>
     public void OpenHashtagFilter(string tag)
     {
@@ -107,6 +181,9 @@ public sealed class WorkspaceViewModel : ObservableObject
         };
         AddFilter(filter);
     }
+
+    private static WorkspaceTab FilterTab(SavedFilterModel filter) =>
+        new(WorkspaceTabKind.Filter, filter.Id.ToString(), filter.DisplayName, filter.Summary, filter: filter);
 
     public void SelectNextTab() => Cycle(1);
     public void SelectPreviousTab() => Cycle(-1);

@@ -42,6 +42,9 @@ internal static class NativeMethods
     internal static extern IntPtr yoru_timeline_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_author_feed_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
+    [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_thread_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
@@ -66,7 +69,13 @@ internal static class NativeMethods
     internal static extern IntPtr yoru_post_unrepost([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_post_permalink([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
+    [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_profile_avatar([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
+    [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_profile_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     /// <summary>Marshal the returned UTF-8 pointer to a managed string and free it.</summary>
     internal static string Consume(IntPtr ptr)

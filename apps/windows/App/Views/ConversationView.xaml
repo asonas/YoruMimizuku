@@ -17,11 +17,32 @@
 
             <Border x:Name="FocusedCard" BorderThickness="2,0,0,0" Padding="10,2">
                 <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock x:Name="FocusedAuthor" FontWeight="SemiBold" />
-                        <TextBlock x:Name="FocusedHandle" Opacity="0.6" />
-                    </StackPanel>
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <PersonPicture x:Name="FocusedAvatar" Grid.Column="0" Width="36" Height="36"
+                                       Tapped="OnFocusedAvatarTapped" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <TextBlock x:Name="FocusedAuthor" FontWeight="SemiBold" />
+                            <TextBlock x:Name="FocusedHandle" Opacity="0.6" />
+                        </StackPanel>
+                    </Grid>
                     <TextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
+                        <Button x:Name="LikeButton" Click="OnFocusedLikeClick" Background="Transparent"
+                                BorderThickness="0" Padding="2" ToolTipService.ToolTip="いいね">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <FontIcon x:Name="LikeGlyph" FontSize="13" />
+                                <TextBlock x:Name="LikeCount" />
+                            </StackPanel>
+                        </Button>
+                        <Button Click="OnFocusedCopyLinkClick" Background="Transparent"
+                                BorderThickness="0" Padding="2" ToolTipService.ToolTip="リンクをコピー">
+                            <FontIcon Glyph="&#xE71B;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

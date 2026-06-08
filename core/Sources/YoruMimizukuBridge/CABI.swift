@@ -24,10 +24,13 @@ private struct HandleReq: Decodable, Sendable { let handle: String }
 private struct LoginCompleteReq: Decodable, Sendable { let pendingId: String; let callbackUrl: String }
 private struct DidReq: Decodable, Sendable { let did: String }
 private struct CursorReq: Decodable, Sendable { let cursor: String? }
+private struct ActorFeedReq: Decodable, Sendable { let actor: String; let cursor: String? }
+private struct ActorReq: Decodable, Sendable { let actor: String }
 private struct UriReq: Decodable, Sendable { let uri: String }
 private struct SearchReq: Decodable, Sendable { let filter: SavedFilter; let cursor: String? }
 private struct LikeReq: Decodable, Sendable { let uri: String; let cid: String }
 private struct RecordReq: Decodable, Sendable { let recordUri: String }
+private struct PermalinkReq: Decodable, Sendable { let id: String; let authorHandle: String }
 private struct ImageReq: Decodable, Sendable { let dataBase64: String; let mimeType: String; let alt: String }
 private struct QuoteReq: Decodable, Sendable { let uri: String; let cid: String }
 private struct DraftReq: Decodable, Sendable {
@@ -171,6 +174,11 @@ public func yoru_timeline_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutableP
     handleAsync(input, CursorReq.self) { try await BridgeOps.timelineLoad(cursor: $0.cursor) }
 }
 
+@_cdecl("yoru_author_feed_load")
+public func yoru_author_feed_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleAsync(input, ActorFeedReq.self) { try await BridgeOps.authorFeedLoad(actor: $0.actor, cursor: $0.cursor) }
+}
+
 @_cdecl("yoru_thread_load")
 public func yoru_thread_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, UriReq.self) { try await BridgeOps.threadLoad(uri: $0.uri) }
@@ -215,9 +223,21 @@ public func yoru_post_unrepost(_ input: UnsafePointer<CChar>?) -> UnsafeMutableP
     }
 }
 
+@_cdecl("yoru_post_permalink")
+public func yoru_post_permalink(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleSync(input, PermalinkReq.self) {
+        try BridgeOps.permalink(id: $0.id, authorHandle: $0.authorHandle)
+    }
+}
+
 @_cdecl("yoru_profile_avatar")
 public func yoru_profile_avatar(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, EmptyReq.self) { _ in try await BridgeOps.avatar() }
+}
+
+@_cdecl("yoru_profile_load")
+public func yoru_profile_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleAsync(input, ActorReq.self) { try await BridgeOps.profile(actor: $0.actor) }
 }
 
 /// Wrapper so `accountCurrent` (which is optional) encodes as `{ "account": ... }`.

@@ -7,6 +7,10 @@ sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
   - docs/superpowers/plans/2026-06-08-phase-d-conversation-child-tree.md
+  - apps/windows/App/Views/FeedView.xaml
+  - apps/windows/App/Views/FeedView.xaml.cs
+  - apps/windows/App/Views/ConversationView.xaml
+  - apps/windows/App/Views/ConversationView.xaml.cs
 features:
   - name: Timeline load / refresh / infinite scroll
     macos: full
@@ -26,16 +30,14 @@ features:
     android: planned
   - name: Keyboard navigation & post actions (j/k, n, f, o)
     macos: full
-    windows: limited
+    windows: full
     ios: planned
     android: planned
-    note: "Windows supports j/k navigation and n-to-compose; the f (like) and o (open-in-browser) shortcuts are macOS-only so far ([[windows]])."
   - name: Copy post permalink
     macos: full
-    windows: none
+    windows: full
     ios: planned
     android: planned
-    note: "The copy-permalink action-bar icon is macOS-only; the Windows feed shows like/repost/reply but no copy-link action yet ([[windows]])."
   - name: Conversation child reply tree
     macos: full
     windows: none
@@ -69,6 +71,8 @@ Custom feed / search / author / notifications are server-computed or target non-
 The feed acts on the *focused* post — the row that `j` / `k` navigation currently sits on. Pressing **f** toggles the like on the focused post (through the same optimistic `TimelineViewModel.toggleLike` used by the action bar), and **o** opens it in the default browser; both are no-ops when no post is focused. The conversation view binds the same `f` / `o` shortcuts to its anchor (focused) post (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.3).
 
 Every interactive post row also carries a copy-link action: a `link` icon in the action bar copies the post's public permalink to the clipboard. The permalink is `https://bsky.app/profile/{handle-or-did}/post/{rkey}`, assembled by the pure, unit-tested `PostPermalink.url(for:)` helper in `YoruMimizukuKit` (backed by `ATURI.repo` / `ATURI.rkey` in `BlueskyCore`); it prefers the author handle and falls back to the author DID when the handle is empty or the sentinel `handle.invalid`. The icon appears only on interactive rows, so the non-interactive ancestor rows in the conversation view do not show it (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.4).
+
+On [[windows]], `FeedView` now binds `j` / `k` / `n` / `f` / `o`: `f` toggles the selected row's like through the existing optimistic `PostItem.ToggleLikeAsync`, and `o` opens the shared bridge-built permalink in the default browser. Feed rows and the conversation focus row both show the copy-link action; it calls `yoru_post_permalink`, which wraps the shared `PostPermalink.url(id:authorHandle:)`, then writes the URL to the WinUI clipboard (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Views/ConversationView.xaml.cs`).
 
 ## Conversation view (ancestors + reply tree)
 

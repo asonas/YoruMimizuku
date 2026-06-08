@@ -31,7 +31,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Author (user) tab | ○ | × | − | − |
+| Author (user) tab | ○ | ○ | − | − |
 
 ## [[compose-post]] — Composing Posts
 
@@ -51,7 +51,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | In-app notifications tab | ○ | ○ | − | − |
-| OS banner + unread badge | ○ | × | − | − |
+| OS banner + unread badge | ○ | △ | − | − |
 
 ## [[oauth-flow]] — Authentication (OAuth + DPoP)
 
@@ -68,8 +68,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Timeline load / refresh / infinite scroll | ○ | ○ | − | − |
 | Jetstream live updates (home / list) | ○ | × | − | − |
 | Rich text + image grid / lightbox rendering | ○ | ○ | − | − |
-| Keyboard navigation & post actions (j/k, n, f, o) | ○ | △ | − | − |
-| Copy post permalink | ○ | × | − | − |
+| Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | − | − |
+| Copy post permalink | ○ | ○ | − | − |
 | Conversation child reply tree | ○ | × | − | − |
 
 ## Notes
@@ -77,12 +77,9 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows, each with its own active account; the WinUI app is single-window today ([[windows]]).
-- **Author (user) tab** ([[author-tab]]): The author tab (tap an avatar to open a view-only profile over getAuthorFeed) is a macOS Phase C feature; the WinUI view-model set (Timeline / Thread / Notifications / Login / Composer / Workspace / SavedFilter) has no author counterpart, so it is not present on Windows ([[windows]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach up to 4 PNG/JPEG files and sends image bytes through `yoru_post_create`, but the current WinUI dialog has no alt-text editor, drag/drop, or downsampling/re-encode path yet ([[windows]]).
-- **Saved-search filters (structured terms, AND/OR)** ([[filters]]): Windows serializes structured `terms` + `combinator` to `yoru_search_load`, but the visible WinUI entry point only creates hashtag filter tabs from tapped tags; the full multi-row AND/OR editor is not present yet ([[windows]]).
-- **OS banner + unread badge** ([[notifications]]): macOS surfaces new items as UNUserNotificationCenter banners and a Dock badge from a background polling actor; the Windows app has the in-app tab but no OS toast / taskbar-badge surfacing yet ([[windows]], [[macos]]).
+- **Saved-search filters (structured terms, AND/OR)** ([[filters]]): Windows has the multi-row AND/OR editor and per-account JSON persistence, but OR search over the bridge still returns only the merged first page (no CompositeCursor infinite-scroll parity yet) ([[windows]]).
+- **OS banner + unread badge** ([[notifications]]): Windows now keeps a local unread count for the Notifications navigation row via 30s polling, but has no OS toast or taskbar-badge surfacing yet ([[windows]], [[macos]]).
 - **Browser authorization** ([[oauth-flow]]): macOS uses ASWebAuthenticationSession; Windows embeds WebView2 and intercepts the as.ason: redirect. Same OAuth result, different mechanism ([[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]]).
-- **Keyboard navigation & post actions (j/k, n, f, o)** ([[timeline-streaming]]): Windows supports j/k navigation and n-to-compose; the f (like) and o (open-in-browser) shortcuts are macOS-only so far ([[windows]]).
-- **Copy post permalink** ([[timeline-streaming]]): The copy-permalink action-bar icon is macOS-only; the Windows feed shows like/repost/reply but no copy-link action yet ([[windows]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): The macOS conversation view renders the descendant reply tree below the anchor; the Windows conversation view shows the ancestor chain + re-anchor only, not the child tree yet ([[windows]]).

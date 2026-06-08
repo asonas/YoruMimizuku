@@ -4,6 +4,8 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - apps/windows/App/ViewModels/NotificationsViewModel.cs
+  - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: In-app notifications tab
     macos: full
@@ -12,10 +14,10 @@ features:
     android: planned
   - name: OS banner + unread badge
     macos: full
-    windows: none
+    windows: limited
     ios: planned
     android: planned
-    note: "macOS surfaces new items as UNUserNotificationCenter banners and a Dock badge from a background polling actor; the Windows app has the in-app tab but no OS toast / taskbar-badge surfacing yet ([[windows]], [[macos]])."
+    note: "Windows now keeps a local unread count for the Notifications navigation row via 30s polling, but has no OS toast or taskbar-badge surfacing yet ([[windows]], [[macos]])."
 ---
 
 # Notifications
@@ -30,6 +32,6 @@ The Notifications tab fetches `listNotifications` and groups items by kind (like
 
 A background polling actor periodically calls `getUnreadCount` / `listNotifications`, surfaces anything new since the last seen marker as an `UNUserNotificationCenter` banner, and sets the Dock badge to the unread count. Notification permission is requested on first use. The polling interval is configurable (default 30–60s) with backoff to avoid over-polling (`2026-06-04-yorumimizuku-design.md` §9). `UNUserNotificationCenter` is one of the six OS-touchpoint ports (see [[architecture]]); the Apple specifics are on the [[macos]] page.
 
-## Sidebar unread badge (open question)
+## Sidebar / navigation unread badge
 
-Whether the sidebar's navigation rows (home / notifications) show a numeric unread badge — as the reference app cmux does — is an open question carried in [[app-shell]], to be settled alongside this notification work.
+The app also has an in-app unread badge path. On Windows, `NotificationsViewModel` keeps a local `UnreadCount` using the same "items above the last seen top item" rule as `UnreadCounter`, and `MainWindow` refreshes notifications every 30 seconds while the shell is open. Selecting the Notifications tab calls `SetActive(true)` / `MarkSeen()` and clears the badge; leaving the tab lets the next poll accumulate a count on the NavigationView row. This is not an OS toast or taskbar badge, so the support matrix marks Windows limited until those OS surfaces exist (`apps/windows/App/ViewModels/NotificationsViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).

@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.ViewModels;
@@ -190,6 +191,11 @@ public sealed partial class FeedView : UserControl
         if (sender is Button { Tag: PostItem item }) await item.ToggleLikeAsync();
     }
 
+    private async void OnCopyLinkClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: PostItem item }) await CopyPermalinkAsync(item);
+    }
+
     private async void OnRepostMenuClick(object sender, RoutedEventArgs e)
     {
         if (sender is MenuFlyoutItem { Tag: PostItem item }) await item.ToggleRepostAsync();
@@ -208,6 +214,15 @@ public sealed partial class FeedView : UserControl
         }
     }
 
+    private void OnAvatarTapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: PostItem item })
+        {
+            e.Handled = true;
+            _workspace.OpenAuthor(item);
+        }
+    }
+
     private void OnPostClick(object sender, ItemClickEventArgs e)
     {
         if (e.ClickedItem is PostItem item)
@@ -223,10 +238,14 @@ public sealed partial class FeedView : UserControl
         AddAccelerator(VirtualKey.J, VirtualKeyModifiers.None, MoveFocusDown);
         AddAccelerator(VirtualKey.K, VirtualKeyModifiers.None, MoveFocusUp);
         AddAccelerator(VirtualKey.N, VirtualKeyModifiers.None, OpenComposer);
+        AddAccelerator(VirtualKey.F, VirtualKeyModifiers.None, ToggleFocusedLikeAsync);
+        AddAccelerator(VirtualKey.O, VirtualKeyModifiers.None, OpenFocusedPermalinkAsync);
         AddAccelerator(VirtualKey.Escape, VirtualKeyModifiers.None, CloseLightbox);
         AddAccelerator(VirtualKey.Left, VirtualKeyModifiers.None, () => { if (Lightbox.Visibility == Visibility.Visible) OnLightboxPrev(this, new RoutedEventArgs()); });
         AddAccelerator(VirtualKey.Right, VirtualKeyModifiers.None, () => { if (Lightbox.Visibility == Visibility.Visible) OnLightboxNext(this, new RoutedEventArgs()); });
     }
+
+    private PostItem? FocusedPost => PostsList.SelectedItem as PostItem;
 
     private void MoveFocusDown()
     {
@@ -266,10 +285,45 @@ public sealed partial class FeedView : UserControl
         if (posted) await Vm.RefreshAsync();
     }
 
+    private async Task ToggleFocusedLikeAsync()
+    {
+        if (FocusedPost is { } post) await post.ToggleLikeAsync();
+    }
+
+    private async Task OpenFocusedPermalinkAsync()
+    {
+        if (FocusedPost is { } post) await OpenPermalinkAsync(post);
+    }
+
+    private async Task CopyPermalinkAsync(PostItem post)
+    {
+        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        if (permalink.Url is not { Length: > 0 } url) return;
+        var data = new DataPackage();
+        data.SetText(url);
+        Clipboard.SetContent(data);
+    }
+
+    private async Task OpenPermalinkAsync(PostItem post)
+    {
+        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        if (permalink.Url is { Length: > 0 } url && Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            await Launcher.LaunchUriAsync(uri);
+        }
+    }
+
     private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
     {
         var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
         accelerator.Invoked += (_, e) => { e.Handled = true; action(); };
+        KeyboardAccelerators.Add(accelerator);
+    }
+
+    private void AddAccelerator(VirtualKey key, VirtualKeyModifiers modifiers, Func<Task> action)
+    {
+        var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
+        accelerator.Invoked += async (_, e) => { e.Handled = true; await action(); };
         KeyboardAccelerators.Add(accelerator);
     }
 

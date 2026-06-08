@@ -67,6 +67,9 @@ public sealed class BridgeClient
     public Task<TimelinePageDto> TimelineLoadAsync(string? cursor = null) =>
         CallAsync<TimelinePageDto>(NativeMethods.yoru_timeline_load, new { cursor })!;
 
+    public Task<TimelinePageDto> AuthorFeedLoadAsync(string actor, string? cursor = null) =>
+        CallAsync<TimelinePageDto>(NativeMethods.yoru_author_feed_load, new { actor, cursor })!;
+
     public Task<PostDisplayDto> ThreadLoadAsync(string uri) =>
         CallAsync<PostDisplayDto>(NativeMethods.yoru_thread_load, new { uri })!;
 
@@ -96,10 +99,16 @@ public sealed class BridgeClient
     public Task UnrepostAsync(string recordUri) =>
         CallVoidAsync(NativeMethods.yoru_post_unrepost, new { recordUri });
 
+    public Task<PermalinkDto> PostPermalinkAsync(string id, string authorHandle) =>
+        CallAsync<PermalinkDto>(NativeMethods.yoru_post_permalink, new { id, authorHandle })!;
+
     // -- Profile --
 
     public Task<AvatarDto> AvatarAsync() =>
         CallAsync<AvatarDto>(NativeMethods.yoru_profile_avatar, new { })!;
+
+    public Task<ProfileDto> ProfileAsync(string actor) =>
+        CallAsync<ProfileDto>(NativeMethods.yoru_profile_load, new { actor })!;
 
     // -- Plumbing --
 

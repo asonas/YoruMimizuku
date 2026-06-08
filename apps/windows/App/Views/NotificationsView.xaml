@@ -14,7 +14,8 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <PersonPicture Grid.Column="0" Width="32" Height="32" />
+                        <PersonPicture Grid.Column="0" Width="32" Height="32"
+                                       Tag="{x:Bind}" Tapped="OnActorAvatarTapped" />
                         <StackPanel Grid.Column="1" Spacing="2">
                             <TextBlock Text="{x:Bind Reason}" FontWeight="SemiBold" />
                             <TextBlock Text="{x:Bind SubjectText}" Opacity="0.7" TextWrapping="Wrap"

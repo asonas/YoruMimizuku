@@ -27,6 +27,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[author-tab]], [[filters]], [[timeline-streaming]], [[notifications]], [[windows]]
+- note: Documented Windows parity work for the support matrix gaps. Windows now has author tabs via `yoru_author_feed_load` / `yoru_profile_load`, feed/conversation f/o shortcuts, copy-permalink through shared `PostPermalink`, a multi-row AND/OR filter editor with per-account JSON persistence, and a local Notifications navigation unread badge. Remaining Windows limitations: OR filter pagination still lacks CompositeCursor parity, and notification OS toast/taskbar badge surfacing is not implemented yet.
+
+## 2026-06-08 ingest
+
 - updated: [[compose-post]], [[filters]], [[windows]]
 - note: Resolved the remaining Windows `?` cells in [[support-matrix]]. The WinUI composer does send up to 4 PNG/JPEG image attachments through `yoru_post_create`, but image posting is marked limited because the dialog has no alt-text editor, drag/drop attach, WIC downsampling, or upload re-encode yet. Structured filters are also marked limited: `SavedFilterModel` serializes `terms` + `combinator` to `yoru_search_load`, while the current visible entry point creates single hashtag filter tabs from tapped tags rather than a full multi-row AND/OR editor.
 

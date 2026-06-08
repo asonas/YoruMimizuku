@@ -52,7 +52,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <PersonPicture Grid.Column="0" Width="42" Height="42" VerticalAlignment="Top"
-                                               ProfilePicture="{x:Bind Avatar}" />
+                                               ProfilePicture="{x:Bind Avatar}" Tag="{x:Bind}"
+                                               Tapped="OnAvatarTapped" />
 
                                 <StackPanel Grid.Column="1" Spacing="4">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -110,6 +111,11 @@
                                                 <FontIcon Glyph="{x:Bind LikeGlyph, Mode=OneWay}" FontSize="13" Foreground="{x:Bind LikeBrush, Mode=OneWay}" />
                                                 <TextBlock Text="{x:Bind LikeCount, Mode=OneWay}" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                                             </StackPanel>
+                                        </Button>
+                                        <Button Click="OnCopyLinkClick" Tag="{x:Bind}" Background="Transparent"
+                                                ToolTipService.ToolTip="リンクをコピー"
+                                                BorderThickness="0" Padding="2">
+                                            <FontIcon Glyph="&#xE71B;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                                         </Button>
                                     </StackPanel>
                                 </StackPanel>
