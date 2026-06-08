@@ -13,20 +13,21 @@ Maintain the git-versioned LLM-wiki at `docs/wiki/`. This is the cross-machine k
 
 1. Read `docs/wiki/conventions.md` for the page format and rules.
 2. Read the changed raw source(s) under `docs/superpowers/specs/` or `plans/`.
-3. Update or create the affected page(s) under `docs/wiki/` (`overview.md`, `behaviors/`, `platforms/`). Keep prose accurate, add inline citations, set `sources` and `updated`, and use basename wikilinks like `[[oauth-flow]]`.
+3. Update or create the affected page(s) under `docs/wiki/` (`overview.md`, `behaviors/`, `platforms/`). Keep prose accurate, add inline citations, set `sources` and `updated`, and use basename wikilinks like `[[oauth-flow]]`. On a `behavior` page, update its `features:` platform status (and `note`) when the change affects what works on which platform — this feeds the generated support matrix (see the "Platform support matrix" section in conventions).
 4. Update cross-references on related pages.
 5. Append a one-line entry to `docs/wiki/log.md`.
 
-## Lint + rebuild-index (deterministic — run the tool)
+## Lint + rebuild (deterministic — run the tool)
 
 After editing, run:
 
 ```bash
-mise run wiki:lint     # validate frontmatter, [[links]], source paths
+mise run wiki:lint     # validate frontmatter, [[links]], source paths, feature blocks
+mise run wiki:matrix   # regenerate docs/wiki/support-matrix.md
 mise run wiki:index    # regenerate docs/wiki/index.md
 ```
 
-Fix anything lint reports. Never hand-edit `index.md`. The pre-commit hook (`mise run wiki:install-hooks`) runs these automatically when `docs/wiki/**` is staged, but run them yourself so problems surface before commit.
+Fix anything lint reports. Never hand-edit `index.md` or `support-matrix.md`. The pre-commit hook (`mise run wiki:install-hooks`) runs these automatically when `docs/wiki/**` is staged, but run them yourself so problems surface before commit.
 
 ## Query
 

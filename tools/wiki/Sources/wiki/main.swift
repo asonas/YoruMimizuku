@@ -1,14 +1,37 @@
 import Foundation
 
 // Maintenance CLI for docs/wiki. Subcommands:
-//   wiki lint            validate frontmatter, [[links]], and source paths
+//   wiki lint            validate frontmatter, [[links]], source paths, and feature blocks
 //   wiki index           regenerate docs/wiki/index.md from page frontmatter
 //   wiki index --check   fail if index.md is not up to date (no write)
+//   wiki matrix          regenerate docs/wiki/support-matrix.md from behavior `features:` blocks
+//   wiki matrix --check  fail if support-matrix.md is not up to date (no write)
+//   wiki check           lint + verify index.md and support-matrix.md are up to date (CI / pre-commit)
 //
 // Run from the repo root. Foundation only, so it behaves the same on macOS and Windows.
 
-let typeOrder = ["overview", "concept", "behavior", "platform", "reference", "meta"]
+let typeOrder = ["overview", "concept", "behavior", "platform", "matrix", "reference", "meta"]
 let sourcedTypes: Set<String> = ["overview", "concept", "behavior", "platform"]
+
+// Platform support matrix vocabulary. The `features:` frontmatter on each behavior
+// page records a per-platform status; these map to the marks shown in the matrix.
+let platforms = ["macos", "windows", "ios", "android"]
+let statusSymbol: [String: String] = [
+    "full": "○",      // supported, same behavior as the reference platform
+    "differs": "△",   // supported but behaves differently per OS
+    "limited": "△",   // partial implementation / limited UX
+    "none": "×",      // not supported / not implemented
+    "planned": "−",   // planned or out of scope for now
+    "unknown": "?",   // not yet verified against the platform's app
+]
+// A status other than full/planned needs a `note` explaining why (the "理由を残す" rule).
+let needsNoteStatuses: Set<String> = ["differs", "limited", "none", "unknown"]
+
+struct Feature {
+    var name: String = ""
+    var statuses: [String: String] = [:]
+    var note: String?
+}
 
 struct Page {
     let relPath: String
@@ -17,6 +40,7 @@ struct Page {
     let type: String?
     let updated: String?
     let sources: [String]
+    let features: [Feature]
     let links: [String]
     let hasFrontmatter: Bool
 }
@@ -73,8 +97,30 @@ func extractLinks(_ body: String) -> [String] {
         .map { ns.substring(with: $0.range(at: 1)).trimmingCharacters(in: .whitespaces) }
 }
 
+func unquote(_ s: String) -> String {
+    if s.count >= 2, s.hasPrefix("\""), s.hasSuffix("\"") {
+        return String(s.dropFirst().dropLast())
+    }
+    return s
+}
+
+// Apply one `key: value` line to a feature (used for both the `- name:` item line
+// and the indented attribute lines below it).
+func applyFeatureField(_ feature: inout Feature, _ kv: String) {
+    guard let colon = kv.firstIndex(of: ":") else { return }
+    let key = kv[..<colon].trimmingCharacters(in: .whitespaces)
+    let value = unquote(kv[kv.index(after: colon)...].trimmingCharacters(in: .whitespaces))
+    switch key {
+    case "name": feature.name = value
+    case "note": feature.note = value
+    case "macos", "windows", "ios", "android": feature.statuses[key] = value
+    default: break
+    }
+}
+
 // Minimal frontmatter parser: a leading `---` block of `key: value` lines, with a
-// `sources:` list of subsequent `  - item` lines. Good enough for our own pages.
+// `sources:` list of `  - item` lines and a `features:` list of `  - name: ...`
+// items each followed by 4-space-indented attribute lines. Good enough for our pages.
 func parse(_ path: String) -> Page {
     let basename = (path as NSString).lastPathComponent.replacingOccurrences(of: ".md", with: "")
     let content = readNormalized(path)
@@ -83,39 +129,58 @@ func parse(_ path: String) -> Page {
     guard lines.first == "---", let end = lines.dropFirst().firstIndex(of: "---") else {
         let body = content
         return Page(relPath: relativize(path), basename: basename, title: nil, type: nil,
-                    updated: nil, sources: [], links: extractLinks(body), hasFrontmatter: false)
+                    updated: nil, sources: [], features: [], links: extractLinks(body),
+                    hasFrontmatter: false)
     }
 
     var title: String?, type: String?, updated: String?
     var sources: [String] = []
-    var inSources = false
+    var features: [Feature] = []
+    var block = ""  // "", "sources", or "features"
+
     for line in lines[1..<end] {
-        if line.hasPrefix("- ") || line.hasPrefix("  - ") {
-            if inSources {
-                let item = line.drop(while: { $0 == " " }).dropFirst(2)
-                sources.append(item.trimmingCharacters(in: .whitespaces))
-            }
+        // A feature item: "  - name: ..." (or any first key, by convention `name`).
+        if block == "features", line.hasPrefix("  - ") {
+            var feature = Feature()
+            let kv = line.drop(while: { $0 == " " }).dropFirst(2)
+            applyFeatureField(&feature, String(kv))
+            features.append(feature)
+            continue
+        }
+        // A feature attribute: a 4-space-indented "key: value" under the current item.
+        if block == "features", line.hasPrefix("    "), !features.isEmpty {
+            applyFeatureField(&features[features.count - 1], line.trimmingCharacters(in: .whitespaces))
+            continue
+        }
+        // A sources item.
+        if block == "sources", line.hasPrefix("- ") || line.hasPrefix("  - ") {
+            let item = line.drop(while: { $0 == " " }).dropFirst(2)
+            sources.append(item.trimmingCharacters(in: .whitespaces))
             continue
         }
         guard let colon = line.firstIndex(of: ":") else { continue }
         let key = line[..<colon].trimmingCharacters(in: .whitespaces)
         let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
-        inSources = false
         switch key {
-        case "title": title = value
-        case "type": type = value
-        case "updated": updated = value
-        case "sources": inSources = true
-        default: break
+        case "title": title = value; block = ""
+        case "type": type = value; block = ""
+        case "updated": updated = value; block = ""
+        case "sources": block = "sources"
+        case "features": block = "features"
+        default: block = ""
         }
     }
 
     let body = lines[(end + 1)...].joined(separator: "\n")
     return Page(relPath: relativize(path), basename: basename, title: title, type: type,
-                updated: updated, sources: sources, links: extractLinks(body), hasFrontmatter: true)
+                updated: updated, sources: sources, features: features,
+                links: extractLinks(body), hasFrontmatter: true)
 }
 
 let pages = markdownFiles(in: wikiDir).map(parse)
+// `index.md` and `log.md` are generated/log files excluded from the catalog. The
+// generated `support-matrix.md` is kept in `listed` so it is linted and appears in
+// the index like any other page.
 let listed = pages.filter { $0.basename != "index" && $0.basename != "log" }
 let knownBasenames = Set(pages.map { $0.basename })
 
@@ -138,6 +203,40 @@ func generateIndex() -> String {
         for page in (groups[type] ?? []).sorted(by: { $0.basename < $1.basename }) {
             out += "- [[\(page.basename)]] — \(page.title ?? page.basename)\n"
         }
+    }
+    return out
+}
+
+func generateMatrix() -> String {
+    let behaviorPages = listed.filter { $0.type == "behavior" }.sorted { $0.basename < $1.basename }
+    let maxUpdated = behaviorPages.compactMap { $0.updated }.max()
+        ?? (listed.compactMap { $0.updated }.max() ?? "")
+
+    var out = "---\ntitle: Platform Support Matrix\ntype: matrix\nupdated: \(maxUpdated)\nsources: []\n---\n\n"
+    out += "# Platform Support Matrix\n\n"
+    out += "_Generated by `mise run wiki:matrix`. Do not edit by hand._\n\n"
+    out += "At-a-glance support of each feature across platforms. It is generated from the "
+    out += "`features:` frontmatter on the behavior pages, so to change a cell edit the source "
+    out += "page (linked in each section heading), not this file.\n\n"
+    out += "Legend: ○ supported (same behavior) · △ limited or OS-specific difference (see Notes) · "
+    out += "× not supported · − planned / out of scope · ? unverified. "
+    out += "Source statuses map as `full`→○, `differs`/`limited`→△, `none`→×, `planned`→−, `unknown`→?.\n"
+
+    let header = "\n| Feature | macOS | Windows | iOS | Android |\n|---|:--:|:--:|:--:|:--:|\n"
+    var notes: [String] = []
+    for page in behaviorPages {
+        out += "\n## [[\(page.basename)]] — \(page.title ?? page.basename)\n" + header
+        for feature in page.features {
+            let cells = platforms.map { statusSymbol[feature.statuses[$0] ?? ""] ?? "?" }
+            out += "| \(feature.name) | \(cells[0]) | \(cells[1]) | \(cells[2]) | \(cells[3]) |\n"
+            if let note = feature.note, !note.isEmpty {
+                notes.append("- **\(feature.name)** ([[\(page.basename)]]): \(note)")
+            }
+        }
+    }
+    if !notes.isEmpty {
+        out += "\n## Notes\n\nWhy a cell is limited (△), differs, unsupported (×), or unverified (?):\n\n"
+        out += notes.joined(separator: "\n") + "\n"
     }
     return out
 }
@@ -167,6 +266,33 @@ func runLint() {
         for link in page.links where !knownBasenames.contains(link) {
             errors.append("\(p): unresolved wikilink [[\(link)]]")
         }
+
+        // Behavior pages must declare a platform-support `features:` block so the
+        // support matrix stays complete — adding/changing a behavior forces an update.
+        if page.type == "behavior" {
+            if page.features.isEmpty {
+                errors.append("\(p): a 'behavior' page must declare at least one 'features:' entry (feeds the support matrix)")
+            }
+            for (i, feature) in page.features.enumerated() {
+                let label = feature.name.isEmpty ? "feature[\(i)]" : "feature '\(feature.name)'"
+                if feature.name.isEmpty {
+                    errors.append("\(p): \(label): missing 'name'")
+                }
+                for plat in platforms {
+                    guard let status = feature.statuses[plat] else {
+                        errors.append("\(p): \(label): missing status for '\(plat)'")
+                        continue
+                    }
+                    if statusSymbol[status] == nil {
+                        errors.append("\(p): \(label): invalid status '\(status)' for '\(plat)' (use full/differs/limited/none/planned/unknown)")
+                    }
+                }
+                let flagged = platforms.contains { needsNoteStatuses.contains(feature.statuses[$0] ?? "") }
+                if flagged, (feature.note ?? "").isEmpty {
+                    errors.append("\(p): \(label): a differs/limited/none/unknown status requires a 'note' explaining why")
+                }
+            }
+        }
     }
 
     if errors.isEmpty {
@@ -176,22 +302,22 @@ func runLint() {
     }
 }
 
-func runIndex(check: Bool) {
-    let generated = generateIndex()
-    let indexPath = wikiDir + "/index.md"
-    let current = readNormalized(indexPath)
+func runGenerated(name: String, task: String, generate: () -> String, check: Bool) {
+    let generated = generate()
+    let path = wikiDir + "/" + name
+    let current = readNormalized(path)
     if check {
         if current == generated {
-            print("wiki: index.md is up to date")
+            print("wiki: \(name) is up to date")
         } else {
-            fail("wiki: index.md is stale — run `mise run wiki:index`")
+            fail("wiki: \(name) is stale — run `mise run wiki:\(task)`")
         }
     } else {
         if current == generated {
-            print("wiki: index.md already up to date")
+            print("wiki: \(name) already up to date")
         } else {
-            try? generated.write(toFile: indexPath, atomically: true, encoding: .utf8)
-            print("wiki: regenerated index.md")
+            try? generated.write(toFile: path, atomically: true, encoding: .utf8)
+            print("wiki: regenerated \(name)")
         }
     }
 }
@@ -201,10 +327,13 @@ switch args.first {
 case "lint":
     runLint()
 case "index":
-    runIndex(check: args.contains("--check"))
+    runGenerated(name: "index.md", task: "index", generate: generateIndex, check: args.contains("--check"))
+case "matrix":
+    runGenerated(name: "support-matrix.md", task: "matrix", generate: generateMatrix, check: args.contains("--check"))
 case "check":
     runLint()
-    runIndex(check: true)
+    runGenerated(name: "support-matrix.md", task: "matrix", generate: generateMatrix, check: true)
+    runGenerated(name: "index.md", task: "index", generate: generateIndex, check: true)
 default:
-    fail("usage: wiki <lint|index [--check]|check>")
+    fail("usage: wiki <lint|index [--check]|matrix [--check]|check>")
 }

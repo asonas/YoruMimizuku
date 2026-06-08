@@ -72,3 +72,4 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 
 - [[macos]] — current state of the macOS build and Apple-only implementations
 - [[windows]] — Windows support plan (Swift core + C#/WinUI bridge)
+- [[support-matrix]] — at-a-glance star chart of which feature works on which platform (○ / △ / × / − / ?), generated from each behavior page's `features:` block

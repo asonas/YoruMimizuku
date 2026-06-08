@@ -110,8 +110,12 @@ run = "swift run --quiet --package-path tools/wiki wiki lint"
 description = "Regenerate docs/wiki/index.md from page frontmatter"
 run = "swift run --quiet --package-path tools/wiki wiki index"
 
+[tasks."wiki:matrix"]
+description = "Regenerate docs/wiki/support-matrix.md from behavior `features:` blocks"
+run = "swift run --quiet --package-path tools/wiki wiki matrix"
+
 [tasks."wiki:check"]
-description = "Lint the wiki and verify index.md is up to date (CI / pre-commit)"
+description = "Lint the wiki and verify index.md and support-matrix.md are up to date (CI / pre-commit)"
 run = "swift run --quiet --package-path tools/wiki wiki check"
 
 [tasks."wiki:install-hooks"]

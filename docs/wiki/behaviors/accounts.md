@@ -5,6 +5,12 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-account-persistence.md
+features:
+  - name: Multi-account persistence & switching
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
 ---
 
 # Accounts (Multi-Account Persistence)

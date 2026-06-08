@@ -6,6 +6,35 @@ sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
+features:
+  - name: Timeline load / refresh / infinite scroll
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: Jetstream live updates (home / list)
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]])."
+  - name: Rich text + image grid / lightbox rendering
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: Keyboard navigation & post actions (j/k, n, f, o)
+    macos: full
+    windows: limited
+    ios: planned
+    android: planned
+    note: "Windows supports j/k navigation and n-to-compose; the f (like) and o (open-in-browser) shortcuts are macOS-only so far ([[windows]])."
+  - name: Copy post permalink
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "The copy-permalink action-bar icon is macOS-only; the Windows feed shows like/repost/reply but no copy-link action yet ([[windows]])."
 ---
 
 # Timeline Fetching and Streaming

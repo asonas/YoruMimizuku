@@ -1,7 +1,7 @@
 ---
 title: Authentication (OAuth + DPoP)
 type: behavior
-updated: 2026-06-06
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-discovery.md
@@ -13,6 +13,23 @@ sources:
   - docs/superpowers/plans/2026-06-04-yorumimizuku-login-integration.md
   - core/Sources/BlueskyCore/OAuth/RefreshGate.swift
   - core/Sources/BlueskyCore/OAuth/SessionExpiry.swift
+features:
+  - name: OAuth login (PKCE + DPoP)
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: Browser authorization
+    macos: full
+    windows: differs
+    ios: planned
+    android: planned
+    note: "macOS uses ASWebAuthenticationSession; Windows embeds WebView2 and intercepts the as.ason: redirect. Same OAuth result, different mechanism ([[windows]])."
+  - name: Token refresh & session recovery
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
 ---
 
 # Authentication (OAuth + DPoP)

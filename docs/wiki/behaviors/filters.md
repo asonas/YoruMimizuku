@@ -1,12 +1,19 @@
 ---
 title: Saved-Search Filters
 type: behavior
-updated: 2026-06-06
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-filter-tabs-design.md
   - docs/superpowers/specs/2026-06-05-yorumimizuku-structured-filters-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-filter-tabs.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-structured-filters.md
+features:
+  - name: Saved-search filters (structured terms, AND/OR)
+    macos: full
+    windows: unknown
+    ios: planned
+    android: planned
+    note: "Windows exposes a SavedFilter view model and yoru_search_load, but parity of the structured multi-term AND/OR editor with macOS is not documented — verify against apps/windows ([[windows]])."
 ---
 
 # Saved-Search Filters

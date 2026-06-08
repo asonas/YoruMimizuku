@@ -6,6 +6,23 @@ sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-shell.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
+features:
+  - name: Tabbed single-column shell (sidebar / tabs)
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
+  - name: Multiple windows
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "macOS opens multiple SwiftUI WindowGroup windows, each with its own active account; the WinUI app is single-window today ([[windows]])."
+  - name: Display density A / B
+    macos: full
+    windows: full
+    ios: planned
+    android: planned
 ---
 
 # App Shell (Window, Tabs, Sidebar)
