@@ -4,6 +4,7 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
@@ -11,14 +12,14 @@ features:
   - name: In-app notifications tab
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: OS banner + unread badge
     macos: full
     windows: limited
-    ios: planned
+    ios: limited
     android: planned
-    note: "Windows now keeps a local unread count for the Notifications navigation row via 30s polling, but has no OS toast or taskbar-badge surfacing yet ([[windows]], [[macos]])."
+    note: "Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]])."
 ---
 
 # Notifications
@@ -36,3 +37,8 @@ A background polling actor periodically calls `getUnreadCount` / `listNotificati
 ## Sidebar / navigation unread badge
 
 The app also has an in-app unread badge path. On Windows, `NotificationsViewModel` keeps a local `UnreadCount` using the same "items above the last seen top item" rule as `UnreadCounter`, and `MainWindow` refreshes notifications every 30 seconds while the shell is open. Selecting the Notifications tab calls `SetActive(true)` / `MarkSeen()` and clears the badge; leaving the tab lets the next poll accumulate a count on the NavigationView row. This is not an OS toast or taskbar badge, so the support matrix marks Windows limited until those OS surfaces exist (`apps/windows/App/ViewModels/NotificationsViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
+
+On [[ipados]], `NotificationsViewModel` drives the in-app tab and sidebar badge
+through foreground polling. The MVP intentionally does not promise background
+polling-based banners; push notifications would need a separate design
+(`2026-06-08-yorumimizuku-ipados-design.md` §9).

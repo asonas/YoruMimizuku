@@ -4,6 +4,7 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-discovery.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-par-authz-url.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-pkce-dpop-sender.md
@@ -17,18 +18,18 @@ features:
   - name: OAuth login (PKCE + DPoP)
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: Browser authorization
     macos: full
     windows: differs
-    ios: planned
+    ios: differs
     android: planned
-    note: "macOS uses ASWebAuthenticationSession; Windows embeds WebView2 and intercepts the as.ason: redirect. Same OAuth result, different mechanism ([[windows]])."
+    note: "macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]])."
   - name: Token refresh & session recovery
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
 ---
 
@@ -73,3 +74,8 @@ A successful login is persisted per-DID and managed by `AccountManager`; each wi
 ## Where it lives in the core
 
 The OAuth state machine, DPoP proof generation, and identity resolution live in `core/Sources/BlueskyCore` (`OAuth/` / `DPoP/`); Apple-only implementations such as the Keychain are separated into `PlatformApple` ([[macos]]). Tests avoid the real network and verify against `URLProtocol` stubs / fakes (§11).
+
+On [[ipados]], login uses the same client metadata and redirect URI, but the
+browser adapter lives under `apps/ipados/Auth` so it can return a `UIWindow`
+presentation anchor for `ASWebAuthenticationSession`
+(`2026-06-08-yorumimizuku-ipados-design.md` §7).

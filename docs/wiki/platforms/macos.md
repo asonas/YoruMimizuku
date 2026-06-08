@@ -5,13 +5,14 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-app-icon-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-icon.md
 ---
 
 # Platform — macOS
 
-macOS is the first target (SwiftUI / Swift 6). Windows is now implemented too, as a C#/WinUI 3 app over a C ABI bridge ([[windows]]); the macOS app instead depends on `YoruMimizukuKit` directly and does not use the bridge (an intentionally asymmetric setup).
+macOS is the first target (SwiftUI / Swift 6). Windows is implemented as a C#/WinUI 3 app over a C ABI bridge ([[windows]]), and iPadOS is implemented as a separate SwiftUI target over the same Swift core ([[ipados]]). The macOS app depends on `YoruMimizukuKit` directly and does not use the bridge (an intentionally asymmetric setup).
 
 ## Build
 
@@ -70,9 +71,12 @@ A lone attached image is laid out at its true aspect ratio rather than a fixed-h
 
 The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`2026-06-04-yorumimizuku-app-icon-design.md`, `2026-06-04-yorumimizuku-app-icon.md`). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).
 
-## Windows / iOS / Android
+## Windows / iPadOS / Android
 
 - The macOS target deliberately bypasses `YoruMimizukuBridge`.
+- The iPadOS target also bypasses `YoruMimizukuBridge`; it has its own touch-first
+  SwiftUI views under `apps/ipados` while sharing `BlueskyCore`,
+  `YoruMimizukuKit`, and `PlatformApple` ([[ipados]]).
 - The earlier purity leak (`YoruMimizukuKit` importing `os`) is resolved: the
   signpost dependency is abstracted behind a `SignpostTracing` port, with the
   `os.signpost` implementation in `PlatformApple` and a no-op elsewhere, so the

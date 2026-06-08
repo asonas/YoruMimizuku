@@ -5,6 +5,7 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/plans/2026-06-08-phase-c-author-tab.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - core/Sources/YoruMimizukuBridge/BridgeOperations.swift
   - apps/windows/App/ViewModels/AuthorViewModel.cs
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
@@ -14,7 +15,7 @@ features:
   - name: Author (user) tab
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
 ---
 
@@ -33,6 +34,11 @@ Because `PostDisplay` carries no DID field, the author's DID is derived from the
 The tab is a profile header (avatar, display name, `@handle`, and bio when available) above the user's `app.bsky.feed.getAuthorFeed` posts, fetched with `filter=posts_and_author_threads`. The header captures the tapped avatar's basics so it renders instantly, then loads the full profile in the background; a failed profile load keeps the initial snapshot rather than surfacing an error, because the header is cosmetic. The feed reuses `FeedView`, so j/k focus, infinite scroll, and the post action affordances come along unchanged. The tab is strictly view-only — there is no follow or edit control (`2026-06-08-phase-c-author-tab.md` Tasks 1, 2, 7).
 
 On [[windows]], `yoru_author_feed_load` exposes `AuthorFeedService.getAuthorFeed` over the C ABI and `yoru_profile_load` exposes `ProfileService.getProfile`. `AuthorViewModel` owns the profile snapshot plus a reused `TimelineViewModel` over `BridgeClient.AuthorFeedLoadAsync`, and `AuthorView` renders the profile header above a nested `FeedView`. Feed and conversation avatars derive the DID from the post AT-URI; notification actors still open by handle because the grouped notification actor DTO has no DID, matching the accepted limitation below (`core/Sources/YoruMimizukuBridge/BridgeOperations.swift`, `apps/windows/App/ViewModels/AuthorViewModel.cs`, `apps/windows/App/Views/AuthorView.xaml.cs`).
+
+On [[ipados]], post rows use the same AT-URI DID derivation and call
+`WorkspaceModel.openAuthor(...)`; the author tab renders a small SwiftUI profile
+header above a reused `TimelineListView` (`apps/ipados/Views/PostRowView.swift`,
+`apps/ipados/Views/RootView.swift`).
 
 ## Architecture and lifecycle
 

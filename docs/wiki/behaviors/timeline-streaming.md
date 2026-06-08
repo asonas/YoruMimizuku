@@ -5,6 +5,7 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
   - docs/superpowers/plans/2026-06-08-phase-d-conversation-child-tree.md
   - apps/windows/App/Views/FeedView.xaml
@@ -15,35 +16,36 @@ features:
   - name: Timeline load / refresh / infinite scroll
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: Jetstream live updates (home / list)
     macos: full
     windows: none
-    ios: planned
+    ios: none
     android: planned
-    note: "The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]])."
+    note: "Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]])."
   - name: Rich text + image grid / lightbox rendering
     macos: full
     windows: full
-    ios: planned
+    ios: limited
     android: planned
+    note: "iPadOS renders rich text and inline image grids, but there is no dedicated lightbox yet ([[ipados]])."
   - name: Keyboard navigation & post actions (j/k, n, f, o)
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: Copy post permalink
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: Conversation child reply tree
     macos: full
     windows: none
-    ios: planned
+    ios: full
     android: planned
-    note: "The macOS conversation view renders the descendant reply tree below the anchor; the Windows conversation view shows the ancestor chain + re-anchor only, not the child tree yet ([[windows]])."
+    note: "macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]])."
 ---
 
 # Timeline Fetching and Streaming
@@ -74,6 +76,12 @@ Every interactive post row also carries a copy-link action: a `link` icon in the
 
 On [[windows]], `FeedView` now binds `j` / `k` / `n` / `f` / `o`: `f` toggles the selected row's like through the existing optimistic `PostItem.ToggleLikeAsync`, and `o` opens the shared bridge-built permalink in the default browser. Feed rows and the conversation focus row both show the copy-link action; it calls `yoru_post_permalink`, which wraps the shared `PostPermalink.url(id:authorHandle:)`, then writes the URL to the WinUI clipboard (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Views/ConversationView.xaml.cs`).
 
+On [[ipados]], rows expose visible touch actions for reply, repost, like, quote,
+copy permalink, and open permalink. The hardware keyboard path keeps the same
+`j` / `k` / `n` / `f` / `o` shortcuts where applicable; copy uses `UIPasteboard`
+and browser opening uses SwiftUI `openURL` (`apps/ipados/Views/PostRowView.swift`,
+`apps/ipados/Views/TimelineListView.swift`).
+
 ## Conversation view (ancestors + reply tree)
 
 A conversation tab loads one post's thread through `app.bsky.feed.getPostThread` and renders three bands top-to-bottom: the focused post's **ancestor chain** (oldest first, each tappable to re-anchor the tab on it), the **focused anchor** itself (left-marked as current, fully interactive), and the focused post's **descendant reply tree**. The ancestor chain follows the recursive `replyParent` links the fetch hydrates; the reply tree comes from the post's descendants in the same response (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.6).
@@ -81,5 +89,9 @@ A conversation tab loads one post's thread through `app.bsky.feed.getPostThread`
 To populate the tree, `getPostThread` is asked for descendants (`depth=6`, deeper than the rendered cap so there is headroom for future depth and for the re-anchor cue). `ThreadViewPost` decodes its `replies` array tolerantly: a `notFoundPost` / `blockedPost` element has no `post`, so it is dropped (via the `ReplyNodeBox` wrapper, mirroring the `FacetFeatureBox` idiom) while the server's order is preserved. A pure, unit-tested `ThreadNode.childTree(of:maxDepth:)` in `YoruMimizukuKit` maps those descendants into a depth-tagged tree capped at `maxDepth: 3`; the loader hands the view both the focus and the tree as a single `ConversationThread` value. `ConversationView` renders each reply node as an indented `PostRowView` (inset by depth, with a left connector line); a node whose subtree was cut at the cap but still reports replies shows a **「さらに表示」** button that re-anchors the tab on it (reusing the same re-anchor path as an ancestor tap).
 
 Only the anchor post is mutable: `ThreadViewModel.toggleLike` / `toggleRepost` act on the focus alone, so the action bar on a reply node is intentionally inert until that reply is re-anchored as a new focus (a deliberate Phase D scope choice). Re-anchoring by tapping an arbitrary reply row is not wired yet — re-anchoring is available on ancestors and on the 「さらに表示」 cue (`2026-06-08-phase-d-conversation-child-tree.md`).
+
+The iPadOS conversation view reuses the shared `ThreadViewModel` and
+`ConversationThread` shape, rendering the focus post and descendant reply tree in
+a `List` under `apps/ipados/Views/ConversationView.swift`.
 
 The window, tabs, and the vertical-tab sidebar that host these sources are described in [[app-shell]].

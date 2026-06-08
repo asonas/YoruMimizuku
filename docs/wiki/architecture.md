@@ -4,6 +4,7 @@ type: concept
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-core-foundation.md
 ---
 
@@ -14,7 +15,7 @@ The structural decision that makes YoruMimizuku cross-platform is a clean split 
 ## Two layers
 
 - **`BlueskyCore`** (Swift Package, UI-independent): holds the AT Protocol logic purely, with no dependency on SwiftUI / AppKit / UIKit. It targets macOS / iOS and is designed so the same package can later reach Windows / Android (`2026-06-04-yorumimizuku-design.md` §4.1).
-- **The app layer** (SwiftUI on macOS / WinUI 3 on Windows): a thin UI that sits on top of the core. The display models and view-model logic live one step in, in `YoruMimizukuKit`, so they stay unit-testable independent of the UI framework.
+- **The app layer** (SwiftUI on macOS / iPadOS, WinUI 3 on Windows): a thin UI that sits on top of the core. The display models and view-model logic live one step in, in `YoruMimizukuKit`, so they stay unit-testable independent of the UI framework.
 
 ## The six ports
 
@@ -39,7 +40,7 @@ Networking, streams, and stores are `actor`-based for thread safety. Each tab's 
 
 ## How the platforms attach
 
-The ports are realized per platform: `PlatformApple` provides the Apple adapters (`#if os(macOS)`), and on Windows `PlatformWindows` provides DPAPI / `BCryptGenRandom` adapters, reached from a C# WinUI app through a C ABI bridge DLL. Those platform specifics are in [[macos]] and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in the Keychain (`2026-06-04-yorumimizuku-design.md` §10).
+The ports are realized per platform: `PlatformApple` provides the Apple adapters used by macOS and iPadOS, and on Windows `PlatformWindows` provides DPAPI / `BCryptGenRandom` adapters, reached from a C# WinUI app through a C ABI bridge DLL. Those platform specifics are in [[macos]], [[ipados]], and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in secure storage (`2026-06-04-yorumimizuku-design.md` §10, `2026-06-08-yorumimizuku-ipados-design.md` §4).
 
 ## Image loading & caching (macOS app layer)
 

@@ -5,6 +5,7 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-filter-tabs-design.md
   - docs/superpowers/specs/2026-06-05-yorumimizuku-structured-filters-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-filter-tabs.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-structured-filters.md
   - apps/windows/App/ViewModels/SavedFilterModel.cs
@@ -16,8 +17,9 @@ features:
   - name: Saved-search filters (structured terms, AND/OR)
     macos: full
     windows: full
-    ios: planned
+    ios: limited
     android: planned
+    note: "iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]])."
 ---
 
 # Saved-Search Filters
@@ -46,6 +48,12 @@ The filter was later normalized into **multiple typed condition rows + an AND/OR
 The pure functions (`SavedFilter.subqueries`, the OR merge, and the `CompositeCursor` codec) live in `YoruMimizukuKit` and are unit-tested; the real network is handled by the app-side `LiveSearchLoader`. `SearchService.searchPosts` gained a backward-compatible `sort` argument.
 
 On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and serializes it to the bridge JSON consumed by `yoru_search_load`; the Swift side computes the subqueries. The WinUI shell has `FilterEditorDialog` for arbitrary multi-row keyword/user/hashtag/mention terms, AND/OR selection, editing existing filters, hashtag-tap creation, and per-account JSON persistence under LocalAppData. OR pagination now uses the same `CompositeCursor` shape as macOS: the bridge decodes per-subquery cursors, skips exhausted subqueries on follow-up pages, merges new pages newest-first, and returns the next encoded cursor (`apps/windows/App/Views/FilterEditorDialog.xaml.cs`, `apps/windows/App/Services/SavedFilterStore.cs`, `core/Sources/YoruMimizukuBridge/BridgeOperations.swift`).
+
+On [[ipados]], saved-search tabs use the same `SavedFilterStore`,
+`TimelineViewModel`, and `LiveSearchLoader`, but the first touch UI only creates a
+single keyword term from the sidebar search field. The persisted shape is still
+the structured `SavedFilter`, so adding the full editor later does not require a
+data migration (`apps/ipados/Views/RootView.swift`).
 
 ## Known limitations
 

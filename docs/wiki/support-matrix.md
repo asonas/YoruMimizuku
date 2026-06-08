@@ -17,68 +17,71 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Multi-account persistence & switching | ○ | ○ | − | − |
+| Multi-account persistence & switching | ○ | ○ | ○ | − |
 
 ## [[app-shell]] — App Shell (Window, Tabs, Sidebar)
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Tabbed single-column shell (sidebar / tabs) | ○ | ○ | − | − |
-| Multiple windows | ○ | × | − | − |
-| Display density A / B | ○ | ○ | − | − |
+| Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
+| Multiple windows | ○ | × | △ | − |
+| Display density A / B | ○ | ○ | ○ | − |
 
 ## [[author-tab]] — Author (User) Tab
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Author (user) tab | ○ | ○ | − | − |
+| Author (user) tab | ○ | ○ | ○ | − |
 
 ## [[compose-post]] — Composing Posts
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Post / reply / quote (facets, mention resolution) | ○ | ○ | − | − |
-| Image attachment (up to 4, alt text) | ○ | △ | − | − |
+| Post / reply / quote (facets, mention resolution) | ○ | ○ | ○ | − |
+| Image attachment (up to 4, alt text) | ○ | △ | ○ | − |
 
 ## [[filters]] — Saved-Search Filters
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Saved-search filters (structured terms, AND/OR) | ○ | ○ | − | − |
+| Saved-search filters (structured terms, AND/OR) | ○ | ○ | △ | − |
 
 ## [[notifications]] — Notifications
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| In-app notifications tab | ○ | ○ | − | − |
-| OS banner + unread badge | ○ | △ | − | − |
+| In-app notifications tab | ○ | ○ | ○ | − |
+| OS banner + unread badge | ○ | △ | △ | − |
 
 ## [[oauth-flow]] — Authentication (OAuth + DPoP)
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| OAuth login (PKCE + DPoP) | ○ | ○ | − | − |
-| Browser authorization | ○ | △ | − | − |
-| Token refresh & session recovery | ○ | ○ | − | − |
+| OAuth login (PKCE + DPoP) | ○ | ○ | ○ | − |
+| Browser authorization | ○ | △ | △ | − |
+| Token refresh & session recovery | ○ | ○ | ○ | − |
 
 ## [[timeline-streaming]] — Timeline Fetching and Streaming
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Timeline load / refresh / infinite scroll | ○ | ○ | − | − |
-| Jetstream live updates (home / list) | ○ | × | − | − |
-| Rich text + image grid / lightbox rendering | ○ | ○ | − | − |
-| Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | − | − |
-| Copy post permalink | ○ | ○ | − | − |
-| Conversation child reply tree | ○ | × | − | − |
+| Timeline load / refresh / infinite scroll | ○ | ○ | ○ | − |
+| Jetstream live updates (home / list) | ○ | × | × | − |
+| Rich text + image grid / lightbox rendering | ○ | ○ | △ | − |
+| Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
+| Copy post permalink | ○ | ○ | ○ | − |
+| Conversation child reply tree | ○ | × | ○ | − |
 
 ## Notes
 
 Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
-- **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows, each with its own active account; the WinUI app is single-window today ([[windows]]).
-- **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach up to 4 PNG/JPEG files and sends image bytes through `yoru_post_create`, but the current WinUI dialog has no alt-text editor, drag/drop, or downsampling/re-encode path yet ([[windows]]).
-- **OS banner + unread badge** ([[notifications]]): Windows now keeps a local unread count for the Notifications navigation row via 30s polling, but has no OS toast or taskbar-badge surfacing yet ([[windows]], [[macos]]).
-- **Browser authorization** ([[oauth-flow]]): macOS uses ASWebAuthenticationSession; Windows embeds WebView2 and intercepts the as.ason: redirect. Same OAuth result, different mechanism ([[windows]]).
-- **Jetstream live updates (home / list)** ([[timeline-streaming]]): The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]]).
-- **Conversation child reply tree** ([[timeline-streaming]]): The macOS conversation view renders the descendant reply tree below the anchor; the Windows conversation view shows the ancestor chain + re-anchor only, not the child tree yet ([[windows]]).
+- **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
+- **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]]).
+- **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
+- **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
+- **OS banner + unread badge** ([[notifications]]): Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]]).
+- **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
+- **Jetstream live updates (home / list)** ([[timeline-streaming]]): Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]]).
+- **Rich text + image grid / lightbox rendering** ([[timeline-streaming]]): iPadOS renders rich text and inline image grids, but there is no dedicated lightbox yet ([[ipados]]).
+- **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).

@@ -4,24 +4,26 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-shell.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
 features:
   - name: Tabbed single-column shell (sidebar / tabs)
     macos: full
     windows: full
-    ios: planned
+    ios: differs
     android: planned
+    note: "iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]])."
   - name: Multiple windows
     macos: full
     windows: none
-    ios: planned
+    ios: differs
     android: planned
-    note: "macOS opens multiple SwiftUI WindowGroup windows, each with its own active account; the WinUI app is single-window today ([[windows]])."
+    note: "macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]])."
   - name: Display density A / B
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
 ---
 
@@ -57,3 +59,9 @@ The vertical-tab sidebar (home / notifications / conversations / filters) keeps 
 - The accent color is left to `ThemeStore` (cmux's `#0091FF` is not forced); only the selected row fixes "accent fill + white text".
 
 Open questions carried in the plan: whether navigation rows show an unread badge (tied to [[notifications]]), and how much metadata a conversation row should carry.
+
+On [[ipados]], the shell is a separate SwiftUI implementation under
+`apps/ipados`. It uses `NavigationSplitView`, visible touch actions, and a simple
+search-field path to create saved-search tabs. Hardware keyboard shortcuts are
+available for parity, but hover-only affordances are not used
+(`2026-06-08-yorumimizuku-ipados-design.md` §6).

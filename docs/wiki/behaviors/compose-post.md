@@ -4,6 +4,7 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
@@ -12,14 +13,14 @@ features:
   - name: Post / reply / quote (facets, mention resolution)
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
   - name: Image attachment (up to 4, alt text)
     macos: full
     windows: limited
-    ios: planned
+    ios: full
     android: planned
-    note: "Windows can attach up to 4 PNG/JPEG files and sends image bytes through `yoru_post_create`, but the current WinUI dialog has no alt-text editor, drag/drop, or downsampling/re-encode path yet ([[windows]])."
+    note: "Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]])."
 ---
 
 # Composing Posts
@@ -61,6 +62,11 @@ For replies, before sending, the parent URI is resolved via `getRecord` to fill 
 Up to 4. Each image is sent to `uploadBlob` as binary with its image MIME, yielding a `BlobRef` (`{ $type: "blob", ref: { $link: <cid> }, mimeType, size }`). Resizing / re-encoding / the 1 MB cap is handled app-side (downscaling on the macOS side if needed, considering the existing `ImageDownsampler`); the core only receives bytes and MIME.
 
 On [[windows]], `ComposerViewModel` mirrors the core image payload (`dataBase64`, `mimeType`, `alt`) and caps attachments at 4. The current `ComposerDialog` uses a `FileOpenPicker` for PNG/JPEG files and shows thumbnails before calling `yoru_post_create`; it does not yet expose an alt-text field, drag-and-drop attach, WIC downsampling, or upload re-encode (`apps/windows/App/ViewModels/ComposerViewModel.cs`, `apps/windows/App/Views/ComposerDialog.xaml.cs`, `apps/windows/README.md`).
+
+On [[ipados]], compose is a sheet backed by the same `ComposerViewModel` and
+`LiveComposer`. `PhotosPicker` loads images from the photo library, the app
+compresses them to JPEG before upload, and each attachment has an alt-text field
+(`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`).
 
 ## UI entry points
 

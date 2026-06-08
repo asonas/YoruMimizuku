@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: as.ason
   deploymentTarget:
     macOS: "15.0"
+    iOS: "17.0"
   createIntermediateGroups: true
 packages:
   BlueskyCore:
@@ -40,10 +41,49 @@ targets:
           - CFBundleURLName: as.ason.YoruMimizuku
             CFBundleURLSchemes:
               - as.ason
+  YoruMimizukuPad:
+    type: application
+    platform: iOS
+    sources:
+      - apps/ipados
+    dependencies:
+      - package: BlueskyCore
+        product: BlueskyCore
+      - package: BlueskyCore
+        product: YoruMimizukuKit
+      - package: BlueskyCore
+        product: PlatformApple
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizukuPad
+        PRODUCT_NAME: YoruMimizuku
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        DEVELOPMENT_TEAM: QYP65434UW
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: apps/ipados/Info.plist
+      properties:
+        CFBundleDisplayName: YoruMimizuku
+        CFBundleURLTypes:
+          - CFBundleURLName: as.ason.YoruMimizukuPad
+            CFBundleURLSchemes:
+              - as.ason
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
 schemes:
   YoruMimizuku:
     build:
       targets:
         YoruMimizuku: all
+    run:
+      config: Debug
+  YoruMimizukuPad:
+    build:
+      targets:
+        YoruMimizukuPad: all
     run:
       config: Debug

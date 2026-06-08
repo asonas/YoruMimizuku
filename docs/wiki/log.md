@@ -11,6 +11,13 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: `2026-06-08-yorumimizuku-ipados-design.md`
+- created: [[ipados]]
+- updated: [[overview]], [[architecture]], [[macos]], [[accounts]], [[app-shell]], [[author-tab]], [[compose-post]], [[filters]], [[notifications]], [[oauth-flow]], [[timeline-streaming]]
+- note: Added the dedicated iPadOS target to the wiki. iPadOS imports `BlueskyCore` / `YoruMimizukuKit` / `PlatformApple` directly (no bridge), with touch-first SwiftUI views under `apps/ipados`. Marked iOS support full for OAuth, accounts, core timeline loading, compose, author tabs, copy permalink, keyboard/post actions, and conversation reply trees; limited/differs for shell mechanics, structured filters, notifications, and rich image rendering; none for Jetstream live updates until the iPad app wires foreground live streams.
+
+## 2026-06-08 ingest
+
 - updated: [[architecture]]
 - note: Documented the macOS image loading & caching pipeline (code-derived, no spec) — `RemoteImage` over the `ImageDownsampler` actor: thumbnail downsample sized to the view, in-memory decoded `NSCache`, request coalescing, and an on-disk `URLCache`. Prompted by a scroll-performance pass that fixed the disk cache (the legacy `URLCache(diskPath:)` resolved to the filesystem root, failed to open, and disabled disk caching while spamming SQLite errors); now created with the `directory:` initializer. The other changes in that pass (cached ISO8601 formatters, lazy font-family enumeration, hover-highlight extracted into an isolated layer so scrolling skips row re-typeset, `PostRowView: Equatable`) are internal performance work with no user-facing behavior change and are not separately ingested.
 

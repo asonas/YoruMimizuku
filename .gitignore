@@ -5,4 +5,5 @@ DerivedData/
 *.xcodeproj
 .swiftpm/
 apps/macos/Info.plist
+apps/ipados/Info.plist
 build/

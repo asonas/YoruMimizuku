@@ -5,6 +5,7 @@ updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - AGENTS.md
 ---
 
@@ -14,7 +15,7 @@ This page is the entry point so that any agent reading this repository (Claude /
 
 ## What the app is
 
-YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6) and now also Windows (a C#/WinUI 3 app over a shared Swift core), with iOS / Android still in view (`docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, [[windows]]).
+YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6), now also Windows (a C#/WinUI 3 app over a shared Swift core), and has a dedicated iPadOS SwiftUI target that reuses the same core/kit layers (`docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, [[windows]], [[ipados]]).
 
 The reference implementation is the same author's Ruby terminal client `tempest` (`/Users/asonas/ghq/github.com/asonas/tempest`). Its proven logic for XRPC, token refresh, multi-account, Jetstream, and facet detection serves as the blueprint, but this is a high-quality Swift reimplementation, not a port.
 
@@ -38,6 +39,7 @@ yorumimizuku/
 │       └── YoruMimizukuBridge/   # C ABI (@_cdecl) DLL surface for the WinUI app
 ├── apps/
 │   ├── macos/                    # SwiftUI app (Auth / Workspace / Compose / Views / Timeline ...)
+│   ├── ipados/                   # SwiftUI iPadOS app (dedicated touch-first UI over the shared core)
 │   └── windows/                  # WinUI 3 (C#/.NET 8) app: Interop (P/Invoke) + MVVM + XAML
 ├── docs/
 │   ├── superpowers/{specs,plans} # ground-truth sources (this wiki's citations)
@@ -45,9 +47,10 @@ yorumimizuku/
 └── design/app-icon/
 ```
 
-Both macOS and Windows are implemented: `PlatformWindows`, `YoruMimizukuBridge`
-(C ABI DLL), and `apps/windows` (C#/WinUI 3) now exist and the Windows app runs.
-See [[windows]].
+macOS, iPadOS, and Windows are implemented. macOS and iPadOS import the Swift
+packages directly through Apple adapters; Windows reaches the same core through
+`YoruMimizukuBridge` (C ABI DLL) and `apps/windows` (C#/WinUI 3). See [[macos]],
+[[ipados]], and [[windows]].
 
 ## v1 scope
 
@@ -71,5 +74,6 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 ## Platforms
 
 - [[macos]] — current state of the macOS build and Apple-only implementations
+- [[ipados]] — dedicated iPadOS target and touch-first SwiftUI app
 - [[windows]] — Windows support plan (Swift core + C#/WinUI bridge)
 - [[support-matrix]] — at-a-glance star chart of which feature works on which platform (○ / △ / × / − / ?), generated from each behavior page's `features:` block

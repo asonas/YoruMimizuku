@@ -4,12 +4,13 @@ type: behavior
 updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-account-persistence.md
 features:
   - name: Multi-account persistence & switching
     macos: full
     windows: full
-    ios: planned
+    ios: full
     android: planned
 ---
 
@@ -36,3 +37,7 @@ Three pieces, from low to high level (`2026-06-04-yorumimizuku-account-persisten
 ## Per-window active account
 
 The account model is per-window, not global. A window holds one active account, and its tabs operate under that account; the top-right switcher changes the window's account. Opening a second window with a different account lets you read two accounts side by side. Because every account's session is already cached in the Keychain, switching is immediate (`2026-06-04-yorumimizuku-design.md` §8). The window/tab frame that surfaces the switcher is in [[app-shell]]. The design follows tempest's per-DID / accounts-index approach.
+
+On [[ipados]], the same rule is applied per scene: each iPad scene owns its active
+account and `WorkspaceModel`, while the secure account store and shared
+`RefreshGate` remain below that scene boundary (`2026-06-08-yorumimizuku-ipados-design.md` §5).
