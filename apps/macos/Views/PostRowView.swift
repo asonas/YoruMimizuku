@@ -114,16 +114,21 @@ struct PostRowView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
-            // Body is precomputed on `PostDisplay` (links carry `.link`); the row
-            // no longer rebuilds the AttributedString per render. Link color comes
-            // from `.tint(theme.accent)` below rather than a baked foreground color.
-            Text(post.bodyAttributedString)
+            // The body's characters (the costly UTF-8 build) are precomputed on
+            // `PostDisplay`; here we only re-apply the link color, which mutates run
+            // attributes without rebuilding the string.
+            //
+            // No `.textSelection(.enabled)`: on macOS a selectable `Text` and
+            // tappable `.link` runs are mutually incompatible — once the row
+            // re-lays-out (e.g. focus toggling its background) the link spans render
+            // blank, so URLs vanish on focus and become unclickable. Links win over
+            // body selection here; the copy-link action covers sharing a post.
+            Text(bodyAttributed)
                 .font(.app(density == .compact ? .callout : .body))
                 .foregroundStyle(theme.primaryText)
                 .tint(theme.accent)
                 .lineSpacing(density == .compact ? 1 : 2)
                 .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
             if !post.images.isEmpty {
                 imageGrid.padding(.top, 3)
             }
@@ -135,6 +140,20 @@ struct PostRowView: View {
                 }
             }
         }
+    }
+
+    /// The precomputed body with link spans tinted to the accent color. Starting
+    /// from `post.bodyAttributedString` keeps the expensive character build cached
+    /// on `PostDisplay`; coloring lives here because the color is theme-derived and
+    /// only touches run attributes. Iterating `attributed.runs` reads a snapshot
+    /// taken before the first mutation (copy-on-write), so it is safe to mutate
+    /// `attributed` inside the loop.
+    private var bodyAttributed: AttributedString {
+        var attributed = post.bodyAttributedString
+        for run in attributed.runs where run.link != nil {
+            attributed[run.range].foregroundColor = theme.accent
+        }
+        return attributed
     }
 
 
