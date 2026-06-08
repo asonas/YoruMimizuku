@@ -78,9 +78,9 @@ Visual Studio C++ workload. Helper scripts live in `scripts/windows`:
 # Build the Swift core bridge DLL and stage it (+ Swift runtime) into the app
 scripts\windows\stage-bridge.ps1
 
-# Build the WinUI app (self-contained: bundles the .NET and Windows App SDK runtimes)
+# Build the WinUI app (framework-dependent: needs the .NET 10 + Windows App SDK runtimes installed)
 dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
-# -> App\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
+# -> App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
 ```
 
 See [`apps/windows/README.md`](apps/windows/README.md) for details. `scripts\windows\ci.ps1`

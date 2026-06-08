@@ -8,6 +8,7 @@ sources:
   - core/Package.swift
   - apps/windows/App/Services/RelativeTime.cs
   - scripts/windows/build-app.ps1
+  - scripts/windows/release.ps1
   - README.md
 ---
 
@@ -113,19 +114,25 @@ lifetime handling is confined here.
   generated off the shared macOS owl icon.
 - Theme (randoma11y / monochrome), display density, and font size persist to a JSON
   file (not `ApplicationData.Current`, which is unavailable to an unpackaged app).
-- Self-contained: `SelfContained` + `WindowsAppSDKSelfContained` bundle the .NET and
-  Windows App SDK runtimes, so no separate runtime install is required.
+- Targets **.NET 10** + **Windows App SDK 2.1.3**, framework-dependent
+  (`SelfContained=false` + `WindowsAppSDKSelfContained=false`): the .NET 10 Desktop
+  and Windows App SDK runtimes are kept out of the build (the user installs both
+  once). On a missing runtime the app prompts on first run — the .NET apphost shows
+  a download dialog, and `WindowsAppSDKBootstrapAutoInitializeOptions_OnNoMatch_ShowUI`
+  makes the Windows App SDK bootstrapper prompt for the Windows App Runtime. This
+  was chosen over self-contained to fit the distribution under the Tangled artifact
+  size limit (see Distribution).
 
 ## Build (Windows)
 
-Swift toolchain for Windows (`winget install --id Swift.Toolchain`) + .NET 8 SDK +
+Swift toolchain for Windows (`winget install --id Swift.Toolchain`) + .NET 10 SDK +
 a Visual Studio C++ workload. Helpers under `scripts/windows/` (`apps/windows/README.md`):
 
 ```powershell
 scripts\windows\build.ps1            # swift build (core)
 scripts\windows\test.ps1             # swift test  (core)
 scripts\windows\stage-bridge.ps1     # build the bridge DLL + stage it (+ Swift runtime)
-scripts\windows\build-app.ps1        # stop running instance, build self-contained x64, print the exe
+scripts\windows\build-app.ps1        # stop running instance, build framework-dependent x64, print the exe
                                      #   add -StageBridge to rebuild the Swift bridge first (after core/ changes)
 scripts\windows\make-appicon.ps1     # regenerate App/Assets/AppIcon.ico from the shared macOS owl PNG
 scripts\windows\ci.ps1               # full chain: core build/test -> stage -> dotnet build
@@ -136,18 +143,27 @@ synchronous `@MainActor` test method, so such tests are marked `async`.
 
 ## Distribution
 
-`scripts\windows\release.ps1` publishes the app self-contained for `win-x64`
-(bundling the .NET + Windows App SDK runtimes, the bridge DLL, and the Swift
-runtime) and zips it into `build/` — "download, extract, run", with only the Edge
-WebView2 runtime as a prerequisite. The ZIP root contains a small
-`YoruMimizuku.exe` launcher and an `app/` payload directory; the dependency DLLs
-and satellite resource folders stay under `app/` so the extracted root stays tidy.
-The macOS side ships a signed + notarized DMG; the Windows analogue is this ZIP
-today, with MSIX as the eventual installable form. Code signing is decoupled
-(optional `-Thumbprint` / `-CertPath` on `release.ps1`): unsigned builds get a
-one-time SmartScreen prompt, and Windows has no free notarization equivalent to
-macOS — a trusted signature needs a paid (or free-for-OSS) Authenticode cert,
-deferred for now.
+`scripts\windows\release.ps1` publishes the app (**.NET 10** + **Windows App SDK
+2.1.3**) **framework-dependent** for `win-x64` (neither the .NET 10 Desktop runtime
+nor the Windows App SDK runtime is bundled), lays out a small top-level
+`YoruMimizuku.exe` launcher plus an `app/` payload directory (the app, the bridge
+DLL, the Swift runtime, and the remaining dependency DLLs), and zips it into
+`build/`. It also strips the Windows ML / AI stack that Windows App SDK 2.x bundles
+by default (`onnxruntime.dll`, `DirectML.dll`, the `AI.MachineLearning` projection —
+~16 MB zipped) since the app uses no ML APIs and there is no supported opt-out
+(microsoft/WindowsAppSDK#5969). Dropping the two bundled runtimes plus the ML stack
+shrinks the ZIP from ~90 MB (self-contained) to **~40 MB** — chosen specifically so
+it fits as a Tangled tag artifact, which is stored as an atproto blob (default PDS
+blob limit ~50 MB; a 60 MB self-contained build was rejected). The trade-off is that
+the user installs the **.NET 10 Desktop Runtime** and the **Windows App Runtime 2.1**
+once (plus the Edge WebView2 runtime for OAuth); the app prompts and links to the
+downloads on first run if any is missing. The macOS side ships a
+signed + notarized DMG; the Windows analogue is this ZIP today, with MSIX as the
+eventual installable form. Code signing is decoupled (optional `-Thumbprint` /
+`-CertPath` on `release.ps1`): the launcher + app binaries are signed before
+zipping; unsigned builds get a one-time SmartScreen prompt, and Windows has no
+free notarization equivalent to macOS — a trusted signature needs a paid (or
+free-for-OSS) Authenticode cert, deferred for now.
 
 ## Resolved / open questions
 

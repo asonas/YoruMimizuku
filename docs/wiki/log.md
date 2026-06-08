@@ -51,6 +51,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-07 ingest
 
 - updated: [[windows]]
+- note: Windows distribution switched to a framework-dependent ZIP (~40 MB) to fit the Tangled tag-artifact size limit (~50 MB atproto blob; a 60 MB self-contained build was rejected). Bumped to .NET 10 + Windows App SDK 2.1.3 and set `SelfContained=false` + `WindowsAppSDKSelfContained=false`; the user installs the .NET 10 Desktop and Windows App 2.1 runtimes once, and the app prompts on first run if missing (.NET apphost dialog + `WindowsAppSDKBootstrapAutoInitializeOptions_OnNoMatch_ShowUI`). `release.ps1` strips the WASDK 2.x Windows ML stack (`onnxruntime`/`DirectML`/`AI.MachineLearning`, ~16 MB zipped; no opt-out per WindowsAppSDK#5969) and resolves the publish dir TFM-agnostically. The launcher + `app/` ZIP layout is retained.
+
+## 2026-06-07 ingest
+
+- updated: [[windows]]
 - note: Windows release ZIP layout now uses a top-level `YoruMimizuku.exe` launcher with the self-contained WinUI payload under `app/`, keeping dependency DLLs and satellite resource folders out of the extracted root.
 
 ## 2026-06-07 ingest
