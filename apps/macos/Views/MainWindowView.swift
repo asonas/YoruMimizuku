@@ -1,5 +1,6 @@
 import Combine
 import SwiftUI
+import BlueskyCore
 import YoruMimizukuKit
 
 /// The main window: a cmux-style vertical tab rail (home, notifications, filter,
@@ -122,10 +123,16 @@ struct MainWindowView: View {
                 onOpenConversation: { workspace.openConversation($0) },
                 onCompose: { compose(refreshing: model) },
                 onReply: { openReplyComposer($0, refreshing: model) },
-                onQuote: { openQuoteComposer($0, refreshing: model) }
+                onQuote: { openQuoteComposer($0, refreshing: model) },
+                onOpenAuthor: { openAuthor(for: $0) }
             )
         case .notifications:
-            NotificationsView(model: notifications, now: now)
+            NotificationsView(
+                model: notifications, now: now,
+                onOpenAuthor: { actor in
+                    workspace.openAuthor(did: actor.handle, handle: actor.handle, displayName: actor.displayName, avatarURL: actor.avatarURL)
+                }
+            )
         case let .filter(id):
             if let tab = workspace.filter(id: id) {
                 FeedView(
@@ -134,7 +141,8 @@ struct MainWindowView: View {
                     onOpenConversation: { workspace.openConversation($0) },
                     onCompose: { compose(refreshing: tab.model) },
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
-                    onQuote: { openQuoteComposer($0, refreshing: tab.model) }
+                    onQuote: { openQuoteComposer($0, refreshing: tab.model) },
+                    onOpenAuthor: { openAuthor(for: $0) }
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -148,13 +156,36 @@ struct MainWindowView: View {
                     model: tab.model,
                     now: now,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onOpenConversation: { workspace.openConversation($0) }
+                    onOpenConversation: { workspace.openConversation($0) },
+                    onOpenAuthor: { openAuthor(for: $0) }
+                )
+                .id(id)
+            } else {
+                Color.clear.background(theme.canvas)
+            }
+        case let .author(id):
+            if let tab = workspace.author(id: id) {
+                AuthorView(
+                    tab: tab,
+                    now: now,
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
+                    onOpenConversation: { workspace.openConversation($0) },
+                    onOpenAuthor: { openAuthor(for: $0) },
+                    onReply: { openReplyComposer($0, refreshing: tab.model) },
+                    onQuote: { openQuoteComposer($0, refreshing: tab.model) }
                 )
                 .id(id)
             } else {
                 Color.clear.background(theme.canvas)
             }
         }
+    }
+
+    /// Open the author tab for `post`, deriving the author DID from the post URI.
+    /// No-op when the URI is not a well-formed AT-URI.
+    private func openAuthor(for post: PostDisplay) {
+        guard let did = ATURI.repo(post.id), !did.isEmpty else { return }
+        workspace.openAuthor(did: did, handle: post.authorHandle, displayName: post.authorDisplayName, avatarURL: post.avatarURL)
     }
 
     /// Open the composer for a new post; on success dismiss it and refresh the
@@ -188,6 +219,15 @@ struct MainWindowView: View {
         notifications.setActive(workspace.selection == .notifications)
         for tab in workspace.filters {
             tab.model.setActive(workspace.selection == .filter(tab.id))
+        }
+        for tab in workspace.authors {
+            let isActive = workspace.selection == .author(tab.id)
+            tab.model.setActive(isActive)
+            if isActive {
+                tab.model.startPolling(every: pollInterval)
+            } else {
+                tab.model.stopPolling()
+            }
         }
     }
 
