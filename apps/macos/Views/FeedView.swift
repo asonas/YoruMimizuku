@@ -214,6 +214,12 @@ struct FeedView: View {
                 if let post = focusedPost { Task { await model.toggleLike(post) } }
             }
             .keyboardShortcut("f", modifiers: [])
+            Button("") {
+                if let post = focusedPost, let url = PostPermalink.url(for: post) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .keyboardShortcut("o", modifiers: [])
             if let onCompose {
                 Button("") { onCompose() }
                     .keyboardShortcut("n", modifiers: [])
