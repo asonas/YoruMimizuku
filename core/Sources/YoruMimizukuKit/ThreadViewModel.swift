@@ -72,8 +72,8 @@ public final class ThreadViewModel: ObservableObject {
         )
     }
 
-    /// Only the focused post is interactive in the conversation view; reply nodes
-    /// are re-anchor targets, so a non-matching id resolves to nil.
+    /// Only the focused post is interactive in the conversation view; ancestor and
+    /// reply nodes are re-anchor targets, so a non-matching id resolves to nil.
     private func post(id: String) -> PostDisplay? {
         guard case let .loaded(thread) = state, thread.focus.id == id else { return nil }
         return thread.focus
