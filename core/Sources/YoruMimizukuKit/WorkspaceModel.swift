@@ -8,6 +8,7 @@ public enum WorkspaceTab: Hashable, Sendable {
     case notifications
     case filter(UUID)
     case conversation(UUID)
+    case author(UUID)
 }
 
 /// One conversation tab: anchored on a post URI, it owns the `ThreadViewModel`
@@ -47,6 +48,45 @@ public final class ConversationTab: Identifiable {
     /// The snapshot persisted for this tab.
     var saved: SavedConversation {
         SavedConversation(anchorID: anchorID, title: title, handle: handle, subtitle: subtitle)
+    }
+}
+
+/// One author tab: a view-only window onto a single user. Anchored on the user's
+/// DID (the dedupe key), it owns a `TimelineViewModel` backed by the author feed and
+/// a `ProfileHeaderViewModel` for the header. The tab captures the tapped avatar's
+/// basics so its header and sidebar row render instantly; the feed and full profile
+/// load lazily. Author tabs are ephemeral (never persisted).
+@MainActor
+public final class AuthorTab: Identifiable {
+    public let id = UUID()
+    /// The user's DID; used to de-duplicate tabs for the same user.
+    public let did: String
+    public let handle: String
+    public let displayName: String
+    public let avatarURL: URL?
+    public let model: TimelineViewModel
+    public let header: ProfileHeaderViewModel
+
+    public init(
+        did: String,
+        handle: String,
+        displayName: String,
+        avatarURL: URL?,
+        model: TimelineViewModel,
+        header: ProfileHeaderViewModel
+    ) {
+        self.did = did
+        self.handle = handle
+        self.displayName = displayName
+        self.avatarURL = avatarURL
+        self.model = model
+        self.header = header
+    }
+
+    /// Sidebar title: the display name, falling back to the handle when blank.
+    public var title: String {
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "@\(handle)" : trimmed
     }
 }
 
@@ -103,6 +143,7 @@ public final class WorkspaceModel: ObservableObject {
     @Published public private(set) var conversations: [ConversationTab] = [] {
         didSet { if !isRestoring { persist() } }
     }
+    @Published public private(set) var authors: [AuthorTab] = []
     @Published public var selection: WorkspaceTab = .home {
         didSet { if !isRestoring { persist() } }
     }
@@ -110,6 +151,8 @@ public final class WorkspaceModel: ObservableObject {
     public let filterStore: SavedFilterStore
     private let makeThreadModel: @MainActor (String) -> ThreadViewModel
     private let makeFilterModel: @MainActor (SavedFilter) -> TimelineViewModel
+    private let makeAuthorModel: @MainActor (String) -> TimelineViewModel
+    private let makeAuthorHeader: @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel
     private let persistence: ConversationPersisting
     /// Set while `restore()` repopulates state from disk so the property observers
     /// do not write the just-loaded state straight back out.
@@ -119,12 +162,16 @@ public final class WorkspaceModel: ObservableObject {
         filterStore: SavedFilterStore,
         persistence: ConversationPersisting = EphemeralConversationStore(),
         makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel,
-        makeFilterModel: @escaping @MainActor (SavedFilter) -> TimelineViewModel
+        makeFilterModel: @escaping @MainActor (SavedFilter) -> TimelineViewModel,
+        makeAuthorModel: @escaping @MainActor (String) -> TimelineViewModel,
+        makeAuthorHeader: @escaping @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel
     ) {
         self.filterStore = filterStore
         self.persistence = persistence
         self.makeThreadModel = makeThreadModel
         self.makeFilterModel = makeFilterModel
+        self.makeAuthorModel = makeAuthorModel
+        self.makeAuthorHeader = makeAuthorHeader
         self.filters = filterStore.filters.map { FilterTab(filter: $0, makeModel: makeFilterModel) }
         restore()
     }
@@ -252,6 +299,50 @@ public final class WorkspaceModel: ObservableObject {
         conversations.first { $0.id == id }
     }
 
+    // MARK: - Authors
+
+    /// Open `did` in a view-only author tab. If a tab for the same user already
+    /// exists it is re-selected rather than duplicated. The tapped avatar's basics
+    /// seed an instant header while the full profile loads.
+    public func openAuthor(did: String, handle: String, displayName: String, avatarURL: URL?) {
+        if let existing = authors.first(where: { $0.did == did }) {
+            selection = .author(existing.id)
+            return
+        }
+        let initial = AuthorProfile(
+            did: did, handle: handle,
+            displayName: displayName.isEmpty ? nil : displayName,
+            avatarURL: avatarURL, bio: nil
+        )
+        let tab = AuthorTab(
+            did: did, handle: handle, displayName: displayName, avatarURL: avatarURL,
+            model: makeAuthorModel(did),
+            header: makeAuthorHeader(did, initial)
+        )
+        authors.append(tab)
+        selection = .author(tab.id)
+    }
+
+    /// Close an author tab. When the closed tab was selected, select the adjacent
+    /// author if any, otherwise fall back to home.
+    public func closeAuthor(_ id: UUID) {
+        let wasSelected = selection == .author(id)
+        let index = authors.firstIndex { $0.id == id }
+        authors.first { $0.id == id }?.model.stopPolling()
+        authors.removeAll { $0.id == id }
+
+        guard wasSelected else { return }
+        if let index, !authors.isEmpty {
+            selection = .author(authors[min(index, authors.count - 1)].id)
+        } else {
+            selection = .home
+        }
+    }
+
+    public func author(id: UUID) -> AuthorTab? {
+        authors.first { $0.id == id }
+    }
+
     // MARK: - Cycling
 
     /// All tabs in display order: the two pinned tabs, the filters, then the open
@@ -260,6 +351,7 @@ public final class WorkspaceModel: ObservableObject {
         [.home, .notifications]
             + filters.map { .filter($0.id) }
             + conversations.map { .conversation($0.id) }
+            + authors.map { .author($0.id) }
     }
 
     /// Select the next tab in display order, wrapping past the last back to home.
