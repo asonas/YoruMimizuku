@@ -28,18 +28,23 @@ final class FontSettingsStore: ObservableObject {
     private static let familyKey = "display.fontFamily"
     private static let baseSizeKey = "display.fontBaseSize"
 
-    /// All font families installed on the system, sorted for the picker.
-    let availableFamilies: [String]
+    /// All font families installed on the system, sorted for the picker. Computed
+    /// lazily: enumerating and sorting every installed family is expensive (it was
+    /// a top main-thread allocation in Time Profiler), and only the settings picker
+    /// ever needs it — `init` must stay cheap because the app root reconstructs
+    /// this store's `@StateObject` initializer on every re-render.
+    lazy var availableFamilies: [String] = NSFontManager.shared.availableFontFamilies.sorted()
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let families = NSFontManager.shared.availableFontFamilies.sorted()
-        self.availableFamilies = families
 
         // Fall back to the default if nothing is stored or the stored font is no
-        // longer installed, so a missing font never leaves the UI unrendered.
+        // longer installed, so a missing font never leaves the UI unrendered. The
+        // common case (nothing stored) short-circuits before any font lookup; a
+        // stored family is validated with a single-family query, never the full
+        // enumeration that `availableFamilies` performs.
         let stored = defaults.string(forKey: Self.familyKey)
-        let resolved = stored.flatMap { families.contains($0) ? $0 : nil }
+        let resolved = stored.flatMap { Self.isInstalled($0) ? $0 : nil }
             ?? AppTypography.systemDefaultFamily
         self.family = resolved
         AppTypography.family = resolved
@@ -50,6 +55,13 @@ final class FontSettingsStore: ObservableObject {
         } ?? Double(AppTypography.defaultBaseSize)
         self.baseSize = resolvedSize
         AppTypography.baseSize = CGFloat(resolvedSize)
+    }
+
+    /// Whether `family` is installed, via a single-family query rather than
+    /// enumerating every installed family (the enumeration is deferred to
+    /// `availableFamilies`).
+    private static func isInstalled(_ family: String) -> Bool {
+        NSFontManager.shared.availableMembers(ofFontFamily: family) != nil
     }
 
     /// Restore the built-in default family and size.
