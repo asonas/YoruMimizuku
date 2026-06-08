@@ -138,6 +138,19 @@ private struct AuthenticatedRootView: View {
                 },
                 makeFilterModel: { filter in
                     TimelineViewModel(loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries))
+                },
+                makeAuthorModel: { authorDID in
+                    TimelineViewModel(
+                        loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID),
+                        interactor: LivePostInteractor(accountManager: accountManager)
+                    )
+                },
+                makeAuthorHeader: { authorDID, initial in
+                    ProfileHeaderViewModel(
+                        loader: LiveAuthorProfileLoader(accountManager: accountManager),
+                        actor: authorDID,
+                        initial: initial
+                    )
                 }
             )
         )
