@@ -19,6 +19,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-08 ingest
 
 - updated: [[macos]]
+- note: Added a "Scroll performance" subsection to the timeline rendering page. Time Profiler of scrolling showed most main-thread time in framework layout / AttributeGraph (inherent to hosting SwiftUI rows in List), with `s_strFromUTF8WithSub` (ICU UTF-8) as the top self-weight leaf we own. Two fixes recorded: the body `AttributedString` is now precomputed once on `PostDisplay.bodyAttributedString` (links carry only `.link`; color via the view's `.tint`) instead of rebuilt per render, and the `now` refresh tick was coarsened 1s -> 15s.
+
+## 2026-06-08 ingest
+
+- updated: [[macos]]
 - note: Documented the timeline rendering decision — the feed uses SwiftUI `List` rather than `ScrollView { LazyVStack }`. A blank gap appeared below rows because LazyVStack keeps a stale estimated slot height that normal body re-renders (the per-second `now` tick) never revisit; it only collapses on a forced re-layout (scroll / scene-phase change). The gap was independent of text length, width, AttributedString vs plain text, `.fixedSize`, and `.textSelection`. A plain VStack was rejected (~98% CPU, ~1 GB memory); `List` measures variable heights correctly and recycles rows. Recorded the neutralizing modifiers and the j/k scroll path. Implementation in `apps/macos/Views/FeedView.swift`.
 
 ## 2026-06-08 ingest

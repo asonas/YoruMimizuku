@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import YoruMimizukuKit
 
 /// A scrollable post feed backed by a `TimelineViewModel`. Reused by the home tab
@@ -91,7 +92,8 @@ struct FeedView: View {
                         onLike: { Task { await model.toggleLike(post) } },
                         onRepost: { Task { await model.toggleRepost(post) } },
                         onQuote: { onQuote(post) },
-                        onAvatarTap: { onOpenAuthor(post) }
+                        onAvatarTap: { onOpenAuthor(post) },
+                        onCopyLink: { copyPermalink(post) }
                     )
                     // Clicking the row's open area moves j/k focus here, so navigation
                     // resumes from the post the user just clicked.
@@ -193,12 +195,34 @@ struct FeedView: View {
         }
     }
 
+    private func copyPermalink(_ post: PostDisplay) {
+        guard let url = PostPermalink.url(for: post) else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
+    }
+
+    /// The post j/k focus currently sits on, if any.
+    private var focusedPost: PostDisplay? {
+        model.posts.first { $0.id == focusedPostID }
+    }
+
     private var postNavShortcuts: some View {
         ZStack {
             Button("") { focusAdjacentPost(1) }
                 .keyboardShortcut("j", modifiers: [])
             Button("") { focusAdjacentPost(-1) }
                 .keyboardShortcut("k", modifiers: [])
+            Button("") {
+                if let post = focusedPost { Task { await model.toggleLike(post) } }
+            }
+            .keyboardShortcut("f", modifiers: [])
+            Button("") {
+                if let post = focusedPost, let url = PostPermalink.url(for: post) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .keyboardShortcut("o", modifiers: [])
             if let onCompose {
                 Button("") { onCompose() }
                     .keyboardShortcut("n", modifiers: [])

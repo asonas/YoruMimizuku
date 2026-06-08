@@ -15,11 +15,16 @@ final class ATURITests: XCTestCase {
         XCTAssertNil(ATURI.rkey(""))
     }
 
-    func testRepoReturnsAuthority() {
-        XCTAssertEqual(ATURI.repo("at://did:plc:alice/app.bsky.feed.post/aaa"), "did:plc:alice")
+    func testRepoExtractsAuthority() {
+        XCTAssertEqual(
+            ATURI.repo("at://did:plc:me/app.bsky.feed.post/3kabc123"),
+            "did:plc:me"
+        )
     }
 
-    func testRepoReturnsNilForNonATURI() {
-        XCTAssertNil(ATURI.repo("https://example.com"))
+    func testRepoReturnsNilWhenMalformed() {
+        XCTAssertNil(ATURI.repo("not-an-at-uri"))
+        XCTAssertNil(ATURI.repo("at://did:plc:me/app.bsky.feed.post"))
+        XCTAssertNil(ATURI.repo(""))
     }
 }

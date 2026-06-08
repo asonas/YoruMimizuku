@@ -49,6 +49,15 @@ The feed (`apps/macos/Views/FeedView.swift`) renders its rows with a SwiftUI `Li
 
 A plain `VStack` measures every row eagerly and sidesteps the estimation, but realizing the whole feed at once is not viable (~98% CPU and ~1 GB memory on a long timeline). `List` is the middle ground: it measures variable row heights correctly (no phantom gap) and recycles rows (bounded memory). The cost is that `List` brings its own chrome, which is neutralized per-row with `.listRowInsets(EdgeInsets())`, `.listRowSeparator(.hidden)` (each row draws its own `Divider` so the separator color follows the theme), `.listRowBackground(Color.clear)`, plus `.scrollContentBackground(.hidden)` and `.environment(\.defaultMinListRowHeight, 0)` on the list. j/k focus still scrolls via `ScrollViewReader.scrollTo`, and the loading / failed / empty states render outside the `List` in a plain `ScrollView`. The same row view ([[timeline-streaming]]) is reused unchanged.
 
+### Scroll performance
+
+Because `List` hosts each row in an `NSHostingView` and re-lays it out on scroll, per-row body work shows up directly as scroll cost. A Time Profiler capture of vigorous scrolling put most main-thread time in the framework layout / AttributeGraph machinery (inherent to hosting SwiftUI rows in `List`), but the top *self-weight* leaf we own was `s_strFromUTF8WithSub` (ICU UTF-8 conversion) followed by `NSAttributedString` metrics — both from building the body text. Two changes target that:
+
+- **Precompute the body `AttributedString`.** `PostRowView` used to rebuild `Text`'s `AttributedString` from the post's rich-text segments on every render. It is now built once in `PostDisplay.bodyAttributedString` (at mapping time) and the row just references it. Link spans carry only the `.link` attribute; the color is left to the view's `.tint(theme.accent)` so the precomputed value stays theme-independent (`PostDisplay.swift`, `apps/macos/Views/PostRowView.swift`).
+- **Coarsen the `now` tick.** The window refreshes `now` to advance relative timestamps; the timer was 1s but the displayed string is minutes/hours for all but the newest posts, so it re-rendered every visible row ~15x more often than needed. It is now 15s; only sub-minute ages ("30s") update in coarser steps (`apps/macos/Views/MainWindowView.swift`, see also [[app-shell]]).
+
+The remaining cost (NSTableView row layout, `AG::Graph` updates) is structural to `List` + SwiftUI hosting and is not separately optimized.
+
 ## App icon
 
 The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`2026-06-04-yorumimizuku-app-icon-design.md`, `2026-06-04-yorumimizuku-app-icon.md`). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).

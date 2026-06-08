@@ -34,6 +34,8 @@ struct PostRowView: View {
     var onQuote: () -> Void = {}
     /// Called when the author avatar is tapped, so the host can open the author tab.
     var onAvatarTap: () -> Void = {}
+    /// Called when the copy-link icon is tapped (copies the post permalink).
+    var onCopyLink: () -> Void = {}
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
@@ -112,7 +114,10 @@ struct PostRowView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
-            Text(bodyAttributed)
+            // Body is precomputed on `PostDisplay` (links carry `.link`); the row
+            // no longer rebuilds the AttributedString per render. Link color comes
+            // from `.tint(theme.accent)` below rather than a baked foreground color.
+            Text(post.bodyAttributedString)
                 .font(.app(density == .compact ? .callout : .body))
                 .foregroundStyle(theme.primaryText)
                 .tint(theme.accent)
@@ -132,19 +137,6 @@ struct PostRowView: View {
         }
     }
 
-    /// Build the post body as an `AttributedString` so links, hashtags, and
-    /// mentions render inline and stay tappable (SwiftUI opens `.link` runs via
-    /// the environment's `openURL`). Plain spans keep the body text color.
-    private var bodyAttributed: AttributedString {
-        post.bodySegments.reduce(into: AttributedString()) { result, segment in
-            var run = AttributedString(segment.text)
-            if let url = segment.url {
-                run.link = url
-                run.foregroundColor = theme.accent
-            }
-            result += run
-        }
-    }
 
     @ViewBuilder
     private var imageGrid: some View {
@@ -242,6 +234,15 @@ struct PostRowView: View {
                             active: post.isLiked, activeColor: theme.star)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
+
+            Button {
+                onSelect()
+                onCopyLink()
+            } label: {
+                Image(systemName: "link")
+                    .foregroundStyle(theme.tertiaryText)
+            }
+            .help("リンクをコピー")
         }
         .font(.app(.caption))
         .labelStyle(.titleAndIcon)

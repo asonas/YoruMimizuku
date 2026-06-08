@@ -12,8 +12,10 @@ public enum ATURI {
         return String(parts[2])
     }
 
-    /// The authority (repo DID/handle) of an AT-URI, or nil when the string is not a
-    /// `at://authority/collection/rkey` triple. Used to address the author of a post.
+    /// The repository authority (first path segment, normally the author DID) of
+    /// an AT-URI, or nil when the string is not a `at://authority/collection/rkey`
+    /// triple. Used to address the author of a post and as the permalink profile
+    /// segment when a handle is unusable.
     public static func repo(_ uri: String) -> String? {
         guard uri.hasPrefix("at://") else { return nil }
         let parts = uri.dropFirst("at://".count).split(separator: "/", omittingEmptySubsequences: false)
