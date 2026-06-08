@@ -61,12 +61,26 @@ extension PostDisplay {
     }
 
     /// Parse an atproto timestamp, tolerating both fractional and whole-second forms.
+    ///
+    /// The two formatters are created once and reused. `ISO8601DateFormatter` is
+    /// expensive to construct — building a pair per call was a top app-code hot
+    /// spot in Time Profiler, since the feed maps every post through here. A shared
+    /// instance is safe to read concurrently: `ISO8601DateFormatter.date(from:)` is
+    /// thread-safe, and the feed mapping that calls this runs off the main actor.
     static func parseISO8601(_ string: String) -> Date? {
-        let fractional = ISO8601DateFormatter()
-        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractional.date(from: string) { return date }
-        let plain = ISO8601DateFormatter()
-        plain.formatOptions = [.withInternetDateTime]
-        return plain.date(from: string)
+        fractionalISO8601Formatter.date(from: string)
+            ?? plainISO8601Formatter.date(from: string)
     }
+
+    private nonisolated(unsafe) static let fractionalISO8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private nonisolated(unsafe) static let plainISO8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }
