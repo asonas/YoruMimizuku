@@ -25,8 +25,6 @@ struct FeedView: View {
 
     @State private var focusedPostID: String?
 
-    private let refreshInterval: Duration = .seconds(30)
-
     var body: some View {
         VStack(spacing: 0) {
             DetailHeader(title) { EmptyView() }
@@ -35,7 +33,9 @@ struct FeedView: View {
         .background(theme.canvas)
         .ignoresSafeArea(.container, edges: .top)
         .background { postNavShortcuts }
-        .task { await runFeed() }
+        .onChange(of: model.state) { _, _ in
+            if focusedPostID == nil { focusedPostID = model.posts.first?.id }
+        }
     }
 
     private var timeline: some View {
@@ -156,18 +156,6 @@ struct FeedView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
-    }
-
-    /// Load once, then refresh on an interval while on screen. SwiftUI cancels this
-    /// on disappear; returning re-runs it (the initial load is skipped once loaded).
-    private func runFeed() async {
-        if case .idle = model.state { await model.load() }
-        if focusedPostID == nil { focusedPostID = model.posts.first?.id }
-        while !Task.isCancelled {
-            try? await Task.sleep(for: refreshInterval)
-            if Task.isCancelled { break }
-            await model.refresh()
-        }
     }
 
     private func focusAdjacentPost(_ offset: Int) {

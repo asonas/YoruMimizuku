@@ -31,6 +31,8 @@ struct MainWindowView: View {
     @State private var now = Date()
     /// Ticks once a second on the main run loop to refresh `now`.
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// How often every badge-bearing tab polls for new content.
+    private let pollInterval: Duration = .seconds(30)
 
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
@@ -43,6 +45,16 @@ struct MainWindowView: View {
         // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
         .background { tabShortcuts }
         .onReceive(clock) { now = $0 }
+        .task {
+            model.startPolling(every: pollInterval)
+            notifications.startPolling(every: pollInterval)
+            for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
+            syncActiveTab()
+        }
+        .onChange(of: workspace.filters.map(\.id)) { _, _ in
+            for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
+        }
+        .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
         .overlay {
             if let lightbox {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
@@ -157,6 +169,16 @@ struct MainWindowView: View {
         let vm = makeQuoteComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
+    }
+
+    /// Mark the selected badge-bearing tab active (badge stays 0 while viewed) and
+    /// the others inactive. Conversation/author tabs carry no badge and are ignored.
+    private func syncActiveTab() {
+        model.setActive(workspace.selection == .home)
+        notifications.setActive(workspace.selection == .notifications)
+        for tab in workspace.filters {
+            tab.model.setActive(workspace.selection == .filter(tab.id))
+        }
     }
 
     // MARK: - Keyboard shortcuts

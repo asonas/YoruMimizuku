@@ -182,6 +182,7 @@ public final class WorkspaceModel: ObservableObject {
         let wasSelected = selection == .filter(id)
         let index = filters.firstIndex { $0.id == id }
         filterStore.remove(id: id)
+        filters.first { $0.id == id }?.model.stopPolling()
         filters.removeAll { $0.id == id }
 
         guard wasSelected else { return }
