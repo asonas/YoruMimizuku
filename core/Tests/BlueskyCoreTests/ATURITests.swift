@@ -14,4 +14,12 @@ final class ATURITests: XCTestCase {
         XCTAssertNil(ATURI.rkey("at://did:plc:me/app.bsky.feed.like"))
         XCTAssertNil(ATURI.rkey(""))
     }
+
+    func testRepoReturnsAuthority() {
+        XCTAssertEqual(ATURI.repo("at://did:plc:alice/app.bsky.feed.post/aaa"), "did:plc:alice")
+    }
+
+    func testRepoReturnsNilForNonATURI() {
+        XCTAssertNil(ATURI.repo("https://example.com"))
+    }
 }
