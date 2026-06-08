@@ -4,10 +4,10 @@ import XCTest
 @MainActor
 final class ThreadViewModelTests: XCTestCase {
     private final class StubLoader: ThreadLoading, @unchecked Sendable {
-        var result: Result<PostDisplay, Error>
+        var result: Result<ConversationThread, Error>
         private(set) var requestedURIs: [String] = []
-        init(result: Result<PostDisplay, Error>) { self.result = result }
-        func loadThread(uri: String) async throws -> PostDisplay {
+        init(result: Result<ConversationThread, Error>) { self.result = result }
+        func loadThread(uri: String) async throws -> ConversationThread {
             requestedURIs.append(uri)
             return try result.get()
         }
@@ -24,14 +24,15 @@ final class ThreadViewModelTests: XCTestCase {
 
     func testToggleLikeUpdatesFocusedPost() async {
         let focus = sample(id: "reply")
-        let vm = ThreadViewModel(loader: StubLoader(result: .success(focus)), uri: "reply", interactor: FakeInteractor())
+        let thread = ConversationThread(focus: focus, replies: [])
+        let vm = ThreadViewModel(loader: StubLoader(result: .success(thread)), uri: "reply", interactor: FakeInteractor())
         await vm.load()
 
         await vm.toggleLike(focus)
 
         guard case let .loaded(updated) = vm.state else { return XCTFail("expected loaded") }
-        XCTAssertTrue(updated.isLiked)
-        XCTAssertEqual(updated.viewerLikeURI, "at://me/app.bsky.feed.like/new")
+        XCTAssertTrue(updated.focus.isLiked)
+        XCTAssertEqual(updated.focus.viewerLikeURI, "at://me/app.bsky.feed.like/new")
     }
 
     private func sample(id: String, parent: PostDisplay? = nil) -> PostDisplay {
@@ -43,19 +44,21 @@ final class ThreadViewModelTests: XCTestCase {
     }
 
     func testInitialStateIsIdle() {
-        let vm = ThreadViewModel(loader: StubLoader(result: .success(sample(id: "x"))), uri: "x")
+        let thread = ConversationThread(focus: sample(id: "x"), replies: [])
+        let vm = ThreadViewModel(loader: StubLoader(result: .success(thread)), uri: "x")
         XCTAssertEqual(vm.state, .idle)
     }
 
     func testSuccessfulLoadReachesLoadedAndRequestsURI() async {
         let parent = sample(id: "root")
         let focus = sample(id: "reply", parent: parent)
-        let loader = StubLoader(result: .success(focus))
+        let thread = ConversationThread(focus: focus, replies: [])
+        let loader = StubLoader(result: .success(thread))
         let vm = ThreadViewModel(loader: loader, uri: "reply")
 
         await vm.load()
 
-        XCTAssertEqual(vm.state, .loaded(focus))
+        XCTAssertEqual(vm.state, .loaded(thread))
         XCTAssertEqual(loader.requestedURIs, ["reply"])
     }
 

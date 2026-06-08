@@ -1,11 +1,25 @@
 import Foundation
 import BlueskyCore
 
-/// Loads a single post's thread as a UI-ready `PostDisplay` whose `replyParent`
-/// is the immediate ancestor (when present). The app provides the live
-/// implementation (authenticated XRPC + mapping); tests inject a stub.
+/// The data a conversation tab renders: the focused post (carrying its ancestor
+/// chain via `replyParent`, unchanged from before) plus the child reply tree
+/// below it. The app provides the live loader (authenticated XRPC + mapping);
+/// tests inject a stub.
+public struct ConversationThread: Equatable, Sendable {
+    public let focus: PostDisplay
+    public let replies: [ThreadNode]
+
+    public init(focus: PostDisplay, replies: [ThreadNode]) {
+        self.focus = focus
+        self.replies = replies
+    }
+}
+
+/// Loads a single post's thread as a `ConversationThread`: the focus's
+/// `replyParent` is its immediate ancestor (recursively, when present), and
+/// `replies` is the descendant tree below the focus.
 public protocol ThreadLoading: Sendable {
-    func loadThread(uri: String) async throws -> PostDisplay
+    func loadThread(uri: String) async throws -> ConversationThread
 }
 
 /// Drives one conversation tab: fetches the focused post and its immediate parent
@@ -17,7 +31,7 @@ public final class ThreadViewModel: ObservableObject {
     public enum State: Equatable {
         case idle
         case loading
-        case loaded(PostDisplay)
+        case loaded(ConversationThread)
         case failed(String)
 
         public var isLoading: Bool {
@@ -58,24 +72,24 @@ public final class ThreadViewModel: ObservableObject {
         )
     }
 
-    /// Only the focused post is interactive in the conversation view; ancestors are
-    /// re-anchor targets, so a non-matching id resolves to nil.
+    /// Only the focused post is interactive in the conversation view; reply nodes
+    /// are re-anchor targets, so a non-matching id resolves to nil.
     private func post(id: String) -> PostDisplay? {
-        guard case let .loaded(focus) = state, focus.id == id else { return nil }
-        return focus
+        guard case let .loaded(thread) = state, thread.focus.id == id else { return nil }
+        return thread.focus
     }
 
     private func write(_ post: PostDisplay) {
-        guard case let .loaded(focus) = state, focus.id == post.id else { return }
-        state = .loaded(post)
+        guard case let .loaded(thread) = state, thread.focus.id == post.id else { return }
+        state = .loaded(ConversationThread(focus: post, replies: thread.replies))
     }
 
     /// Load the thread for `uri`, moving through loading -> loaded/failed.
     public func load() async {
         state = .loading
         do {
-            let post = try await loader.loadThread(uri: uri)
-            state = .loaded(post)
+            let thread = try await loader.loadThread(uri: uri)
+            state = .loaded(thread)
         } catch {
             SessionExpiry.reportIfExpired(error)
             state = .failed(String(describing: error))

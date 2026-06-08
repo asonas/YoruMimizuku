@@ -10,8 +10,9 @@ import XCTest
 @MainActor
 final class WorkspaceModelTests: XCTestCase {
     private final class StubThreadLoader: ThreadLoading, @unchecked Sendable {
-        func loadThread(uri: String) async throws -> PostDisplay {
-            PostDisplay(id: uri, authorDisplayName: "x", authorHandle: "x", body: "x", createdAt: Date())
+        func loadThread(uri: String) async throws -> ConversationThread {
+            let post = PostDisplay(id: uri, authorDisplayName: "x", authorHandle: "x", body: "x", createdAt: Date())
+            return ConversationThread(focus: post, replies: [])
         }
     }
 
