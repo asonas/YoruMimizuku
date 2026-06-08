@@ -1,14 +1,22 @@
 <#
 .SYNOPSIS
-    Produce a distributable Windows build (self-contained ZIP).
+    Produce a distributable Windows build (framework-dependent ZIP).
 
 .DESCRIPTION
-    Publishes the WinUI app self-contained for win-x64 (bundling the .NET and
-    Windows App SDK runtimes, the YoruMimizukuBridge DLL, and the Swift runtime),
-    places that payload under app/, builds a small top-level launcher exe, and
-    zips the layout into build/. The result is "download, extract, run" — no
-    installer and no runtime prerequisites beyond the Edge WebView2 runtime
-    (preinstalled on Windows 11 and most Windows 10).
+    Publishes the WinUI app framework-dependent for win-x64 -- the .NET 8 Desktop
+    runtime and the Windows App SDK runtime are NOT bundled -- then lays out a
+    small top-level YoruMimizuku.exe launcher plus an app/ payload directory
+    (holding the app, the YoruMimizukuBridge DLL, and the Swift runtime) and zips
+    it into build/. Dropping the two bundled runtimes keeps the ZIP near ~40 MB
+    (versus ~90 MB self-contained), small enough to upload as a Tangled tag
+    artifact (which is stored as an atproto blob, ~50 MB limit on a default PDS).
+
+    The user installs the runtimes once. The app prompts and links to the download
+    on first run if a runtime is missing: the .NET apphost shows a dialog for the
+    .NET 8 Desktop Runtime, and the Windows App SDK bootstrapper prompts for the
+    Windows App Runtime (enabled via WindowsAppSDKBootstrapAutoInitializeOptions_OnNoMatch_ShowUI
+    in the csproj). The Edge WebView2 runtime (preinstalled on Windows 11 and most
+    Windows 10) is still needed for OAuth sign-in.
 
     Code signing is OPTIONAL and can be added later without changing the pipeline:
     pass -Thumbprint (a cert already in the cert store) or -CertPath/-CertPassword
@@ -200,15 +208,25 @@ if ($StageBridge) {
     if ($LASTEXITCODE -ne 0) { throw "stage-bridge failed" }
 }
 
-Write-Host "Publishing self-contained $rid (Release)..."
+Write-Host "Publishing framework-dependent $rid (Release)..."
 # -p:Platform=x64 is required: invoking the project directly otherwise defaults to
-# AnyCPU, which the Windows App SDK self-contained build rejects.
-dotnet publish $proj -c Release -r $rid -p:Platform=x64
+# AnyCPU, which the Windows App SDK build rejects. --self-contained false makes the
+# .NET runtime framework-dependent; WindowsAppSDKSelfContained=false (in the csproj)
+# does the same for the Windows App SDK runtime, so neither runtime is bundled.
+dotnet publish $proj -c Release -r $rid -p:Platform=x64 --self-contained false
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
 
-$publishDir = Join-Path $repoRoot "apps\windows\App\bin\x64\Release\net8.0-windows10.0.19041.0\$rid\publish"
+# Resolve the publish dir without hardcoding the target framework (so a TFM bump
+# like net8.0 -> net10.0 doesn't silently zip a stale build): pick the most
+# recently written bin\x64\Release\net*-windows*\<rid>\publish that has the exe.
+$releaseRoot = Join-Path $repoRoot "apps\windows\App\bin\x64\Release"
+$publishDir = Get-ChildItem $releaseRoot -Directory -Filter "net*-windows*" -ErrorAction SilentlyContinue |
+    Sort-Object LastWriteTime -Descending |
+    ForEach-Object { Join-Path $_.FullName "$rid\publish" } |
+    Where-Object { Test-Path (Join-Path $_ "YoruMimizuku.App.exe") } |
+    Select-Object -First 1
+if (-not $publishDir) { throw "no publish output found under $releaseRoot\net*-windows*\$rid\publish" }
 $exe = Join-Path $publishDir "YoruMimizuku.App.exe"
-if (-not (Test-Path $exe)) { throw "published exe not found at $exe" }
 
 $buildDir = Join-Path $repoRoot "build"
 New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
@@ -217,6 +235,17 @@ $appDir = Join-Path $layoutDir "app"
 if (Test-Path $layoutDir) { Remove-Item $layoutDir -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $appDir | Out-Null
 Copy-Item -Path (Join-Path $publishDir "*") -Destination $appDir -Recurse -Force
+
+# Windows App SDK 2.x bundles the Windows ML / AI stack (onnxruntime.dll ~21 MB,
+# DirectML.dll ~18 MB, the AI.MachineLearning projection) by default, and there is
+# no supported project-level opt-out (microsoft/WindowsAppSDK#5969). This app uses
+# no ML APIs, so those binaries are dead weight (~16 MB zipped) and would push the
+# ZIP over the Tangled artifact limit. Drop them; they are only loaded on demand
+# when Windows ML APIs are called, which never happens here.
+$mlDrop = @("onnxruntime*.dll", "Microsoft.ML.OnnxRuntime*.dll", "DirectML.dll", "Microsoft.Windows.AI.MachineLearning*.dll", "Microsoft.WindowsAppSDK.ML*.dll")
+Get-ChildItem -LiteralPath $appDir -File |
+    Where-Object { $name = $_.Name; $mlDrop | Where-Object { $name -like $_ } } |
+    ForEach-Object { Remove-Item $_.FullName -Force }
 
 $launcherSource = Join-Path $buildDir "YoruMimizukuLauncher.cpp"
 $launcherExe = Join-Path $layoutDir "YoruMimizuku.exe"
@@ -242,5 +271,6 @@ $zip = Join-Path $buildDir "YoruMimizuku-$rid-$Version.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Directory -SourcePath $layoutDir -DestinationPath $zip
 
+$sizeMB = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 Write-Host ""
-Write-Host "Release ZIP: $zip" -ForegroundColor Green
+Write-Host "Release ZIP: $zip ($sizeMB MB)" -ForegroundColor Green

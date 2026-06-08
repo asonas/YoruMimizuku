@@ -37,7 +37,7 @@ dotnet build $solution -c Debug
 if ($LASTEXITCODE -ne 0) { throw "dotnet build failed (exit $LASTEXITCODE)" }
 
 # 4. Report the exe to launch.
-$exe = Join-Path $repoRoot "apps\windows\App\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe"
+$exe = Join-Path $repoRoot "apps\windows\App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe"
 Write-Host ""
 Write-Host "Build complete. Launch:" -ForegroundColor Green
 Write-Host "  $exe"

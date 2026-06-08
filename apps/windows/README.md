@@ -25,7 +25,7 @@ storage, `BCryptGenRandom`). The bridge entry points are in
 ## Prerequisites
 
 - Swift toolchain for Windows: `winget install --id Swift.Toolchain`
-- .NET 8 SDK: `winget install --id Microsoft.DotNet.SDK.8`
+- .NET 10 SDK: `winget install --id Microsoft.DotNet.SDK.10`
 - Visual Studio 2022 (or Build Tools) with the C++ workload and the
   Windows App SDK / WinUI 3 component (`dotnet workload install` is handled by VS).
 - Microsoft Edge WebView2 Runtime (preinstalled on current Windows 11).
@@ -38,41 +38,58 @@ scripts\windows\stage-bridge.ps1
 
 # 2. Build and run the WinUI app
 dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
-# Self-contained output lands under a win-x64 subfolder:
-.\App\bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
+# Framework-dependent output lands under a win-x64 subfolder:
+.\App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
 ```
 
 `scripts\windows\ci.ps1` runs the full chain (core build/test + stage + dotnet build).
 
-The project is configured **self-contained** (`SelfContained` +
-`WindowsAppSDKSelfContained`): the .NET runtime and the Windows App SDK 1.5
-runtime are bundled in the output, so the app runs without separately installing
-the Windows App Runtime. Startup/runtime errors are written to
-`%LOCALAPPDATA%\YoruMimizuku\app.log`.
+The project targets **.NET 10** + **Windows App SDK 2.1.3** and is configured
+**framework-dependent** (`SelfContained=false` + `WindowsAppSDKSelfContained=false`):
+the .NET 10 Desktop runtime and the Windows App SDK runtime are **not** bundled,
+so both must be installed on the machine.
+On a developer machine they already are. If a runtime is missing at launch the
+app prompts: the .NET apphost shows a download dialog, and the Windows App SDK
+bootstrapper prompts for the Windows App Runtime
+(`WindowsAppSDKBootstrapAutoInitializeOptions_OnNoMatch_ShowUI`).
+Startup/runtime errors are written to `%LOCALAPPDATA%\YoruMimizuku\app.log`.
 
 ## Distribution
 
-`scripts\windows\release.ps1` produces a distributable, self-contained ZIP under
-`build/`. The ZIP root contains only a small `YoruMimizuku.exe` launcher plus an
-`app/` directory; the actual WinUI app, .NET and Windows App SDK runtimes, the
-bridge DLL, Swift runtime DLLs, and satellite resource folders all live under
-`app/`:
+`scripts\windows\release.ps1` produces a distributable **ZIP** under `build/`.
+It publishes the app framework-dependent (neither the .NET nor the Windows App
+SDK runtime is bundled), lays out a small top-level `YoruMimizuku.exe` launcher
+plus an `app/` payload directory (the app, the bridge DLL, the Swift runtime,
+and the remaining dependency DLLs), and zips it:
 
 ```powershell
-scripts\windows\release.ps1 -Version 0.4.0
+scripts\windows\release.ps1 -Version 0.5.0
 # add -StageBridge to rebuild the Swift bridge (release) first, after core/ changes
-# -> build\YoruMimizuku-win-x64-0.4.0.zip   ("download, extract, run")
+# -> build\YoruMimizuku-win-x64-0.5.0.zip   (~40 MB)
 ```
 
-The only runtime prerequisite is the Edge **WebView2 runtime** (preinstalled on
-Windows 11 and most Windows 10), needed for OAuth sign-in.
+Dropping the two bundled runtimes shrinks the ZIP from ~90 MB (self-contained) to
+**~40 MB** — small enough to upload as a Tangled tag artifact, which is stored as
+an atproto blob (~50 MB limit on a default PDS). The release script also strips the
+Windows ML / AI stack that Windows App SDK 2.x bundles by default (`onnxruntime.dll`,
+`DirectML.dll`, the `AI.MachineLearning` projection — ~16 MB zipped) since this app
+uses no ML APIs and there is no supported project-level opt-out
+([microsoft/WindowsAppSDK#5969](https://github.com/microsoft/WindowsAppSDK/issues/5969)).
+
+Runtime prerequisites the user installs once (the app prompts and links to the
+download on first run if missing):
+
+- **.NET 10 Desktop Runtime** (x64)
+- **Windows App Runtime 2.1** (the channel the app is built against)
+- **Edge WebView2 runtime** (preinstalled on Windows 11 and most Windows 10), for OAuth sign-in
 
 Code signing is **optional and decoupled** so it can be added later without
 changing anything else: pass `-Thumbprint <sha1>` (a cert in the store) or
-`-CertPath <pfx> -CertPassword <pw>` and the app binaries are Authenticode-signed
-before zipping. With no cert the ZIP is unsigned and Windows shows a one-time
-SmartScreen "more info -> run". (Windows has no free notarization equivalent to
-macOS; a publicly trusted signature needs a paid/again-free-for-OSS cert.)
+`-CertPath <pfx> -CertPassword <pw>` and the launcher + app binaries are
+Authenticode-signed before zipping. With no cert the ZIP is unsigned and Windows
+shows a one-time SmartScreen "more info -> run". (Windows has no free notarization
+equivalent to macOS; a publicly trusted signature needs a paid/again-free-for-OSS
+cert.)
 
 ## OAuth
 
