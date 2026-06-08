@@ -11,6 +11,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[macos]]
+- note: Fixed post-body links vanishing on focus. Root cause: `.textSelection(.enabled)` and tappable `.link` runs are mutually incompatible on macOS SwiftUI — the link spans render blank when the row re-lays-out (focus toggling its background), so URLs disappeared and could not be clicked. Removed `.textSelection(.enabled)` from the body `Text` (links win; copy-link covers sharing). Also corrected the precompute note: link color is re-applied per render on the row's `bodyAttributed` (run-attribute mutation only, no UTF-8 re-conversion), not left to `.tint`. Added a "Body links are not selectable text" subsection.
+
+## 2026-06-08 ingest
+
 - sources: [[2026-06-08-phase-c-author-tab]] (plan)
 - created: [[author-tab]]
 - updated: [[app-shell]]

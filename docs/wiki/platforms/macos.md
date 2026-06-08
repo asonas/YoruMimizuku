@@ -53,10 +53,14 @@ A plain `VStack` measures every row eagerly and sidesteps the estimation, but re
 
 Because `List` hosts each row in an `NSHostingView` and re-lays it out on scroll, per-row body work shows up directly as scroll cost. A Time Profiler capture of vigorous scrolling put most main-thread time in the framework layout / AttributeGraph machinery (inherent to hosting SwiftUI rows in `List`), but the top *self-weight* leaf we own was `s_strFromUTF8WithSub` (ICU UTF-8 conversion) followed by `NSAttributedString` metrics — both from building the body text. Two changes target that:
 
-- **Precompute the body `AttributedString`.** `PostRowView` used to rebuild `Text`'s `AttributedString` from the post's rich-text segments on every render. It is now built once in `PostDisplay.bodyAttributedString` (at mapping time) and the row just references it. Link spans carry only the `.link` attribute; the color is left to the view's `.tint(theme.accent)` so the precomputed value stays theme-independent (`PostDisplay.swift`, `apps/macos/Views/PostRowView.swift`).
+- **Precompute the body `AttributedString`.** `PostRowView` used to rebuild `Text`'s `AttributedString` from the post's rich-text segments on every render. The expensive part — the character build (`s_strFromUTF8WithSub`) — is now done once in `PostDisplay.bodyAttributedString` (at mapping time, theme-independent: link spans carry only the `.link` attribute). The row's `bodyAttributed` then re-applies the accent color to link runs per render, which only mutates run attributes (no re-conversion), so the hot leaf stays eliminated while link color stays theme-derived (`PostDisplay.swift`, `apps/macos/Views/PostRowView.swift`).
 - **Coarsen the `now` tick.** The window refreshes `now` to advance relative timestamps; the timer was 1s but the displayed string is minutes/hours for all but the newest posts, so it re-rendered every visible row ~15x more often than needed. It is now 15s; only sub-minute ages ("30s") update in coarser steps (`apps/macos/Views/MainWindowView.swift`, see also [[app-shell]]).
 
 The remaining cost (NSTableView row layout, `AG::Graph` updates) is structural to `List` + SwiftUI hosting and is not separately optimized.
+
+### Body links are not selectable text
+
+The post body `Text` does **not** use `.textSelection(.enabled)`. On macOS, a selectable `Text` and tappable `.link` runs are mutually incompatible: with both, the link spans render blank the moment the row re-lays-out (e.g. when j/k focus toggles the row background), so URLs vanish on focus and become unclickable. Tappable links win over body selection — sharing a post is covered by the copy-link action ([[timeline-streaming]]) (`apps/macos/Views/PostRowView.swift`).
 
 ## App icon
 
