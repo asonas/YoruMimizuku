@@ -13,6 +13,7 @@ struct ConversationView: View {
     let now: Date
     var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
+    var onOpenAuthor: (PostDisplay) -> Void = { _ in }
 
     var body: some View {
         content
@@ -84,7 +85,8 @@ struct ConversationView: View {
         } label: {
             PostRowView(
                 post: parent, density: displaySettings.density, now: now,
-                showReplyMarker: false, interactiveActions: false
+                showReplyMarker: false, interactiveActions: false,
+                onAvatarTap: { onOpenAuthor(parent) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -100,7 +102,8 @@ struct ConversationView: View {
                 post: focus, density: displaySettings.density, now: now,
                 showReplyMarker: false, onImageTap: onImageTap,
                 onLike: { Task { await model.toggleLike(focus) } },
-                onRepost: { Task { await model.toggleRepost(focus) } }
+                onRepost: { Task { await model.toggleRepost(focus) } },
+                onAvatarTap: { onOpenAuthor(focus) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
         }

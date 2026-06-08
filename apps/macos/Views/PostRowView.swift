@@ -32,6 +32,8 @@ struct PostRowView: View {
     var onRepost: () -> Void = {}
     /// Called when "引用" is chosen from the repost menu (opens the quote composer).
     var onQuote: () -> Void = {}
+    /// Called when the author avatar is tapped, so the host can open the author tab.
+    var onAvatarTap: () -> Void = {}
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
@@ -101,6 +103,9 @@ struct PostRowView: View {
         .frame(width: avatarSize, height: avatarSize)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+        .contentShape(Circle())
+        .onTapGesture { onAvatarTap() }
+        .help("@\(post.authorHandle) のページを開く")
     }
 
     @ViewBuilder

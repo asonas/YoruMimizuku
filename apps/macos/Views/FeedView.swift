@@ -22,6 +22,8 @@ struct FeedView: View {
     var onReply: (PostDisplay) -> Void = { _ in }
     /// Opens the quote composer for a post (from the repost menu).
     var onQuote: (PostDisplay) -> Void = { _ in }
+    /// Opens the author tab for a tapped avatar.
+    var onOpenAuthor: (PostDisplay) -> Void = { _ in }
 
     @State private var focusedPostID: String?
 
@@ -88,7 +90,8 @@ struct FeedView: View {
                         onSelect: { focusedPostID = post.id },
                         onLike: { Task { await model.toggleLike(post) } },
                         onRepost: { Task { await model.toggleRepost(post) } },
-                        onQuote: { onQuote(post) }
+                        onQuote: { onQuote(post) },
+                        onAvatarTap: { onOpenAuthor(post) }
                     )
                     // Clicking the row's open area moves j/k focus here, so navigation
                     // resumes from the post the user just clicked.

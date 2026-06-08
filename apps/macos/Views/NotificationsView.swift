@@ -10,6 +10,7 @@ struct NotificationsView: View {
     @ObservedObject var model: NotificationsViewModel
     @EnvironmentObject private var theme: ThemeStore
     let now: Date
+    var onOpenAuthor: (NotificationGroup.Actor) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -37,7 +38,7 @@ struct NotificationsView: View {
     private func list(_ items: [NotificationGroup]) -> some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(items) { item in
-                NotificationRowView(item: item, now: now)
+                NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor)
                 Divider().overlay(theme.divider)
             }
         }
@@ -87,6 +88,7 @@ struct NotificationsView: View {
 private struct NotificationRowView: View {
     let item: NotificationGroup
     let now: Date
+    var onOpenAuthor: (NotificationGroup.Actor) -> Void = { _ in }
     @EnvironmentObject private var theme: ThemeStore
     @State private var isExpanded = false
 
@@ -146,7 +148,7 @@ private struct NotificationRowView: View {
     private var avatarRow: some View {
         HStack(spacing: 3) {
             ForEach(Array(displayedActors.enumerated()), id: \.offset) { _, actor in
-                avatarCircle(actor.avatarURL, size: 26)
+                avatarCircle(actor, size: 26)
             }
         }
     }
@@ -156,7 +158,7 @@ private struct NotificationRowView: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(item.actors.enumerated()), id: \.offset) { _, actor in
                 HStack(spacing: 8) {
-                    avatarCircle(actor.avatarURL, size: 24)
+                    avatarCircle(actor, size: 24)
                     Text(actor.displayName.isEmpty ? actor.handle : actor.displayName)
                         .font(.app(.caption, weight: .semibold))
                         .foregroundStyle(theme.primaryText).lineLimit(1)
@@ -228,8 +230,8 @@ private struct NotificationRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func avatarCircle(_ url: URL?, size: CGFloat) -> some View {
-        RemoteImage(url: url, maxPointSize: size) { phase in
+    private func avatarCircle(_ actor: NotificationGroup.Actor, size: CGFloat) -> some View {
+        RemoteImage(url: actor.avatarURL, maxPointSize: size) { phase in
             if case let .success(image) = phase {
                 image.resizable().scaledToFill()
             } else {
@@ -239,6 +241,9 @@ private struct NotificationRowView: View {
         .frame(width: size, height: size)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+        .contentShape(Circle())
+        .onTapGesture { onOpenAuthor(actor) }
+        .help("@\(actor.handle) のページを開く")
     }
 
     private var icon: String {
