@@ -95,6 +95,7 @@ struct ConversationView: View {
                 onAvatarTap: { onOpenAuthor(parent) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            .rowHoverHighlight()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -113,6 +114,7 @@ struct ConversationView: View {
                 onCopyLink: { copyPermalink(focus) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            .rowHoverHighlight()
         }
     }
 
@@ -161,6 +163,7 @@ struct ConversationView: View {
                 onCopyLink: { copyPermalink(node.post) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
+            .rowHoverHighlight()
         }
         .padding(.leading, CGFloat(node.depth + 1) * indentStep)
     }

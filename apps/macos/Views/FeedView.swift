@@ -95,16 +95,18 @@ struct FeedView: View {
                         onAvatarTap: { onOpenAuthor(post) },
                         onCopyLink: { copyPermalink(post) }
                     )
+                    // Skip re-rendering rows whose data is unchanged: PostRowView is
+                    // Equatable on its value inputs, so a parent re-render that only
+                    // recreates the closures no longer re-typesets every visible row.
+                    .equatable()
                     // Clicking the row's open area moves j/k focus here, so navigation
                     // resumes from the post the user just clicked.
                     .contentShape(Rectangle())
                     .onTapGesture { focusedPostID = post.id }
-                    .background(post.id == focusedPostID ? theme.rowHover : .clear)
-                    .overlay(alignment: .leading) {
-                        if post.id == focusedPostID {
-                            Rectangle().fill(theme.accent).frame(width: 3)
-                        }
-                    }
+                    // Focus + hover highlight in an isolated layer: hovering rows
+                    // during a scroll re-renders only this background, not the row
+                    // body (which stays cached via `.equatable()`).
+                    .rowHoverHighlight(isFocused: post.id == focusedPostID)
                     Divider().overlay(theme.divider)
                 }
                 .listRowInsets(EdgeInsets())

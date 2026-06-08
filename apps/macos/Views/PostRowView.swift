@@ -5,7 +5,7 @@ import YoruMimizukuKit
 /// (avatars + action counts) per `DisplayDensity`. Avatars sit in a fixed-width
 /// leading column so every row's text aligns; the repost/reply context is a
 /// header indented to that same text column. The whole row lifts gently on hover.
-struct PostRowView: View {
+struct PostRowView: View, @MainActor Equatable {
     let post: PostDisplay
     let density: DisplayDensity
     let now: Date
@@ -38,7 +38,6 @@ struct PostRowView: View {
     var onCopyLink: () -> Void = {}
 
     @EnvironmentObject private var theme: ThemeStore
-    @State private var isHovered = false
     @State private var showRepostOptions = false
 
     private let timeFormatter = RelativeTimeFormatter()
@@ -50,6 +49,31 @@ struct PostRowView: View {
     private var avatarSize: CGFloat { density == .compact ? 24 : 42 }
     private var columnSpacing: CGFloat { density == .compact ? 8 : 11 }
     private var leadingInset: CGFloat { avatarSize + columnSpacing }
+
+    /// The row's rendered output depends only on these value inputs (plus the
+    /// theme environment and local @State, which SwiftUI tracks separately). The
+    /// closures are deliberately excluded: `FeedView` recreates them on every
+    /// parent update, and comparing them would defeat the whole point — without
+    /// this, an unchanged row re-runs a full text re-typeset on every tick.
+    ///
+    /// We compare `post` by `id` plus only its mutable, display-affecting fields
+    /// rather than with `PostDisplay`'s synthesized `==`. A post's URI (`id`) keys
+    /// immutable content (text, author, images, createdAt), so the full deep
+    /// compare — which walks the whole `bodyAttributedString` every call — is pure
+    /// overhead on a hot path; only counts and the viewer's like/repost state ever
+    /// change in place (optimistic updates).
+    static func == (lhs: PostRowView, rhs: PostRowView) -> Bool {
+        lhs.post.id == rhs.post.id
+            && lhs.post.replyCount == rhs.post.replyCount
+            && lhs.post.repostCount == rhs.post.repostCount
+            && lhs.post.likeCount == rhs.post.likeCount
+            && lhs.post.viewerLikeURI == rhs.post.viewerLikeURI
+            && lhs.post.viewerRepostURI == rhs.post.viewerRepostURI
+            && lhs.density == rhs.density
+            && lhs.now == rhs.now
+            && lhs.showReplyMarker == rhs.showReplyMarker
+            && lhs.interactiveActions == rhs.interactiveActions
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 1 : 3) {
@@ -68,9 +92,6 @@ struct PostRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, density == .compact ? 6 : 11)
         .padding(.horizontal, density == .compact ? 12 : 16)
-        .background(isHovered ? theme.rowHover : .clear)
-        .animation(.easeOut(duration: 0.12), value: isHovered)
-        .onHover { isHovered = $0 }
     }
 
     private func contextHeader(_ text: String) -> some View {
@@ -348,6 +369,39 @@ struct PostRowView: View {
     ) -> some View {
         Label(text, systemImage: systemImage)
             .foregroundStyle(active ? (activeColor ?? theme.accent) : theme.tertiaryText)
+    }
+}
+
+/// Draws a row's focus + hover highlight in a layer whose hover state is isolated
+/// here. The pointer sliding across rows during a scroll then re-renders only this
+/// thin background — not the wrapped `PostRowView`, whose `.equatable()` inputs are
+/// unchanged, so its body is skipped. Hover previously lived as `@State` inside
+/// `PostRowView`, which forced a full text re-typeset every time a row passed under
+/// the cursor mid-scroll; that was a dominant scroll-time cost in Time Profiler.
+struct RowHoverHighlight: ViewModifier {
+    /// Whether this row is the j/k focus target (draws the leading accent bar).
+    var isFocused: Bool = false
+    @EnvironmentObject private var theme: ThemeStore
+    @State private var isHovered = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(isFocused || isHovered ? theme.rowHover : Color.clear)
+            .animation(.easeOut(duration: 0.12), value: isHovered)
+            .overlay(alignment: .leading) {
+                if isFocused {
+                    Rectangle().fill(theme.accent).frame(width: 3)
+                }
+            }
+            .onHover { isHovered = $0 }
+    }
+}
+
+extension View {
+    /// Apply the row hover (and optional focus) highlight without letting hover
+    /// changes re-render the wrapped content. See `RowHoverHighlight`.
+    func rowHoverHighlight(isFocused: Bool = false) -> some View {
+        modifier(RowHoverHighlight(isFocused: isFocused))
     }
 }
 
