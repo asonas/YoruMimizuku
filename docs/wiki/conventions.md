@@ -25,14 +25,14 @@ Every page (except `index.md` / `log.md`) starts with frontmatter:
 ```yaml
 ---
 title: Human-readable title
-type: overview | behavior | platform | meta
+type: overview | concept | behavior | platform | reference | meta
 updated: YYYY-MM-DD
 sources:
   - docs/superpowers/specs/....md   # repo-relative path, or a URL
 ---
 ```
 
-- `sources` is mandatory for `overview` / `behavior` / `platform` pages and must point at the raw sources the page is derived from. Cite sources inline in the prose too (e.g. "(`...design.md` §5)").
+- `sources` is mandatory for `overview` / `concept` / `behavior` / `platform` pages and must point at the raw sources the page is derived from. Cite sources inline in the prose too (e.g. "(`...design.md` §5)"). `reference` and `meta` pages may omit `sources`.
 - Links between pages use **basename wikilinks**: `[[oauth-flow]]`, `[[macos]]` — never a path. Each basename must resolve to exactly one file under `docs/wiki/`. Keep basenames unique.
 - Write in **English** (the repo is published publicly; AGENTS.md and the wiki are the agent-facing English layer, even though the specs are Japanese).
 
@@ -44,7 +44,7 @@ When a raw source is added or changed, or behavior changes land:
 1. Read the changed source(s) in `docs/superpowers/`.
 2. Update or create the affected wiki page(s): summarize, keep prose accurate, add inline citations, set `sources` and `updated`.
 3. Update cross-references (`[[links]]`) on related pages.
-4. Append a one-line entry to `log.md`.
+4. Add an entry to the **top** of `log.md`: a `## YYYY-MM-DD <op>` heading followed by a short bullet body (`sources` / `updated` / `created` / `note`).
 5. Run lint + rebuild-index (below) and fix anything it reports.
 
 A single source change typically touches 1–3 wiki pages plus `index.md` and `log.md`.

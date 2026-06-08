@@ -4,6 +4,7 @@ type: behavior
 updated: 2026-06-07
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
+  - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
 ---
 
 # Composing Posts

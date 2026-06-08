@@ -4,6 +4,13 @@ type: behavior
 updated: 2026-06-06
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-discovery.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-par-authz-url.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-pkce-dpop-sender.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-token-exchange.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-client-orchestrator.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-dpop.md
+  - docs/superpowers/plans/2026-06-04-yorumimizuku-login-integration.md
   - core/Sources/BlueskyCore/OAuth/RefreshGate.swift
   - core/Sources/BlueskyCore/OAuth/SessionExpiry.swift
 ---
@@ -25,7 +32,7 @@ A native OAuth client must publish a single static JSON at an HTTPS `client_id`.
 5. Token exchange: exchange the authorization code with DPoP binding (including nonce retry). Obtain access / refresh tokens and a DPoP nonce.
 6. Storage: store tokens and the DPoP private key per-DID in the Keychain.
 
-(`2026-06-04-yorumimizuku-design.md` §5.2)
+(`2026-06-04-yorumimizuku-design.md` §5.2). Each step was built as its own plan: discovery (`oauth-discovery`), PAR + authorize URL (`oauth-par-authz-url`), the PKCE/DPoP sender (`oauth-pkce-dpop-sender`), token exchange (`oauth-token-exchange`), the orchestrator that wires them together (`oauth-client-orchestrator`), the DPoP module (`dpop`), and the app-side login wiring (`login-integration`).
 
 ## DPoP essentials
 
@@ -44,7 +51,7 @@ Two pieces address this:
 
 ## Multi-account
 
-Each window holds its own active account. All account sessions are cached in the Keychain, so switching is instant. `AccountManager` manages the current account and token refresh (modeled after tempest's per-DID / accounts index; §8).
+A successful login is persisted per-DID and managed by `AccountManager`; each window holds its own active account and switching is instant. How accounts are stored, indexed, and switched is covered in [[accounts]] (§8).
 
 ## Where it lives in the core
 

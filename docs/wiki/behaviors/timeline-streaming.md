@@ -4,7 +4,6 @@ type: behavior
 updated: 2026-06-06
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
-  - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
 ---
 
 # Timeline Fetching and Streaming
@@ -25,8 +24,6 @@ Jetstream's `wantedDids` filter has an upper bound. For users whose follow count
 
 ## Other sources (polling)
 
-Custom feed / search / author / notifications are server-computed or target non-follows, so they use interval polling + backoff + pull-to-refresh. Notifications additionally use `getUnreadCount` for the badge (§6.3; the OS banner / Dock badge details are in [[macos]]).
+Custom feed / search / author / notifications are server-computed or target non-follows, so they use interval polling + backoff + pull-to-refresh. Notifications additionally use `getUnreadCount` for the badge (§6.3); the in-app tab, OS banner, and Dock badge are described in [[notifications]].
 
-## Sidebar / tab UI
-
-The vertical-tab sidebar (home / notifications / conversations / filters) keeps its tab state in `WorkspaceModel` (`@MainActor ObservableObject`), rendered by the `NavigationSplitView` in `MainWindowView`. The `SidebarRow` component is display-only and receives theme colors from `ThemeStore`. Its look and density follow the reference app cmux (`2026-06-05-yorumimizuku-cmux-sidebar.md`).
+The window, tabs, and the vertical-tab sidebar that host these sources are described in [[app-shell]].

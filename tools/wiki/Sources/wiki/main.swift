@@ -7,8 +7,8 @@ import Foundation
 //
 // Run from the repo root. Foundation only, so it behaves the same on macOS and Windows.
 
-let typeOrder = ["overview", "behavior", "platform", "meta"]
-let sourcedTypes: Set<String> = ["overview", "behavior", "platform"]
+let typeOrder = ["overview", "concept", "behavior", "platform", "reference", "meta"]
+let sourcedTypes: Set<String> = ["overview", "concept", "behavior", "platform"]
 
 struct Page {
     let relPath: String
