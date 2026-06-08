@@ -130,7 +130,8 @@ struct ConversationView: View {
                 Divider().overlay(theme.divider)
                 if node.replies.isEmpty {
                     if node.post.replyCount > 0 {
-                        showMoreButton(node.post)
+                        showMoreButton(node)
+                        Divider().overlay(theme.divider)
                     }
                 } else {
                     replyTree(node.replies)
@@ -146,6 +147,10 @@ struct ConversationView: View {
             Rectangle()
                 .fill(theme.divider)
                 .frame(width: 2)
+            // Phase D: like/repost on reply nodes are intentionally inert — the view model
+            // only mutates the focused post. Tapping a reply row re-anchors the tab (which
+            // reloads it as a focus). Unlike parentBlock (interactiveActions: false), the
+            // action bar stays visible so users can still see counts.
             PostRowView(
                 post: node.post, density: displaySettings.density, now: now,
                 showReplyMarker: false, onImageTap: onImageTap,
@@ -162,16 +167,16 @@ struct ConversationView: View {
     /// Re-anchor cue for a subtree that was cut at the depth cap. Tapping opens the
     /// node as a fresh conversation anchor (reusing the existing re-anchor path),
     /// which reloads it with its own descendants.
-    private func showMoreButton(_ post: PostDisplay) -> some View {
+    private func showMoreButton(_ node: ThreadNode) -> some View {
         Button {
-            onOpenConversation(post)
+            onOpenConversation(node.post)
         } label: {
             Label("さらに表示", systemImage: "ellipsis.bubble")
                 .font(.app(.caption))
                 .foregroundStyle(theme.accent)
         }
         .buttonStyle(.plain)
-        .padding(.leading, 16 + indentStep)
+        .padding(.leading, CGFloat(node.depth + 2) * indentStep)
         .padding(.vertical, 8)
     }
 
