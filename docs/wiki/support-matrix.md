@@ -70,6 +70,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Rich text + image grid / lightbox rendering | ○ | ○ | − | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | △ | − | − |
 | Copy post permalink | ○ | × | − | − |
+| Conversation child reply tree | ○ | × | − | − |
 
 ## Notes
 
@@ -84,3 +85,4 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): The Windows feed updates by 30s polling only; the bridge exposes no Jetstream subscription, so live top-merge is macOS-only ([[windows]]).
 - **Keyboard navigation & post actions (j/k, n, f, o)** ([[timeline-streaming]]): Windows supports j/k navigation and n-to-compose; the f (like) and o (open-in-browser) shortcuts are macOS-only so far ([[windows]]).
 - **Copy post permalink** ([[timeline-streaming]]): The copy-permalink action-bar icon is macOS-only; the Windows feed shows like/repost/reply but no copy-link action yet ([[windows]]).
+- **Conversation child reply tree** ([[timeline-streaming]]): The macOS conversation view renders the descendant reply tree below the anchor; the Windows conversation view shows the ancestor chain + re-anchor only, not the child tree yet ([[windows]]).

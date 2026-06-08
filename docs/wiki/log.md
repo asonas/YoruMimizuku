@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[timeline-streaming]]
+- sources: `2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.6, `2026-06-08-phase-d-conversation-child-tree.md`
+- note: Phase D landed — the macOS conversation view now renders the descendant reply tree below the anchor. Added a "Conversation view (ancestors + reply tree)" section (tolerant `replies` decode skipping notFound/blocked, `depth=6` fetch, `ThreadNode.childTree(maxDepth:3)`, `ConversationThread`, indented render + 「さらに表示」 re-anchor) and a "Conversation child reply tree" feature row (macos full / windows none — Windows shows ancestors + re-anchor only). Documented that reply-node like/repost stay inert until re-anchored.
+
+## 2026-06-08 ingest
+
 - updated: [[macos]]
 - note: Fixed post-body links vanishing on focus. Root cause: `.textSelection(.enabled)` and tappable `.link` runs are mutually incompatible on macOS SwiftUI — the link spans render blank when the row re-lays-out (focus toggling its background), so URLs disappeared and could not be clicked. Removed `.textSelection(.enabled)` from the body `Text` (links win; copy-link covers sharing). Also corrected the precompute note: link color is re-applied per render on the row's `bodyAttributed` (run-attribute mutation only, no UTF-8 re-conversion), not left to `.tint`. Added a "Body links are not selectable text" subsection.
 
