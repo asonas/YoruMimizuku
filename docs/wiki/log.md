@@ -11,6 +11,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[architecture]]
+- note: Documented the macOS image loading & caching pipeline (code-derived, no spec) — `RemoteImage` over the `ImageDownsampler` actor: thumbnail downsample sized to the view, in-memory decoded `NSCache`, request coalescing, and an on-disk `URLCache`. Prompted by a scroll-performance pass that fixed the disk cache (the legacy `URLCache(diskPath:)` resolved to the filesystem root, failed to open, and disabled disk caching while spamming SQLite errors); now created with the `directory:` initializer. The other changes in that pass (cached ISO8601 formatters, lazy font-family enumeration, hover-highlight extracted into an isolated layer so scrolling skips row re-typeset, `PostRowView: Equatable`) are internal performance work with no user-facing behavior change and are not separately ingested.
+
+## 2026-06-08 ingest
+
 - updated: [[timeline-streaming]]
 - sources: `2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.6, `2026-06-08-phase-d-conversation-child-tree.md`
 - note: Phase D landed — the macOS conversation view now renders the descendant reply tree below the anchor. Added a "Conversation view (ancestors + reply tree)" section (tolerant `replies` decode skipping notFound/blocked, `depth=6` fetch, `ThreadNode.childTree(maxDepth:3)`, `ConversationThread`, indented render + 「さらに表示」 re-anchor) and a "Conversation child reply tree" feature row (macos full / windows none — Windows shows ancestors + re-anchor only). Documented that reply-node like/repost stay inert until re-anchored.

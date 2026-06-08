@@ -40,3 +40,13 @@ Networking, streams, and stores are `actor`-based for thread safety. Each tab's 
 ## How the platforms attach
 
 The ports are realized per platform: `PlatformApple` provides the Apple adapters (`#if os(macOS)`), and on Windows `PlatformWindows` provides DPAPI / `BCryptGenRandom` adapters, reached from a C# WinUI app through a C ABI bridge DLL. Those platform specifics are in [[macos]] and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in the Keychain (`2026-06-04-yorumimizuku-design.md` §10).
+
+## Image loading & caching (macOS app layer)
+
+> Derived from code (`apps/macos/Media/RemoteImage.swift`, `apps/macos/Media/ImageDownsampler.swift`), not from a spec. This pipeline lives in the macOS app layer, not in the cross-platform core.
+
+Avatars and post images do not use SwiftUI's `AsyncImage`, which keeps no decoded cache and decodes at full resolution. The app loads them through `RemoteImage`, an `AsyncImage`-shaped view backed by the `ImageDownsampler` actor. `RemoteImage` asks for a thumbnail sized to the view's longest edge in points times the display scale, so an image decodes no larger than it is shown and reloads only when its URL or the display scale changes.
+
+`ImageDownsampler` serves each request through three layers. An in-memory `NSCache` of already-decoded bitmaps (cost-limited to roughly 64 MB, keyed by URL plus target pixel size) answers repeat requests immediately; concurrent requests for the same key are coalesced onto a single in-flight task; and the raw network bytes go through a `URLSession` whose `URLCache` persists to disk (16 MB in memory, 256 MB on disk) under the user's Caches directory. Decoding itself uses ImageIO's `CGImageSourceCreateThumbnailAtIndex` bounded by the target pixel size, so the full-resolution bitmap is never materialized.
+
+The on-disk cache must be created with `URLCache`'s `directory:` initializer: the legacy `diskPath:` form resolved its bare name against the filesystem root on modern macOS, failed to open, and silently fell back to memory-only caching while logging a stream of SQLite errors on every request.
