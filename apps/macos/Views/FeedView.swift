@@ -40,15 +40,15 @@ struct FeedView: View {
 
     private var timeline: some View {
         ScrollViewReader { proxy in
-            ScrollView {
+            Group {
                 switch model.state {
                 case .idle, .loading:
-                    loadingState
+                    ScrollView { loadingState }
                 case let .failed(message):
-                    failedState(message)
+                    ScrollView { failedState(message) }
                 case let .loaded(posts):
                     if posts.isEmpty {
-                        emptyState
+                        ScrollView { emptyState }
                     } else {
                         postList(posts)
                     }
@@ -61,49 +61,67 @@ struct FeedView: View {
         }
     }
 
+    /// The loaded feed. Uses `List` rather than `ScrollView { LazyVStack }`: with a
+    /// LazyVStack, rows whose height was first estimated (before the row was actually
+    /// measured) keep that stale slot height until a full re-layout — a normal body
+    /// re-render (e.g. the per-second `now` tick) does not revisit it — leaving a
+    /// blank gap below the row that only collapses on scroll or scene-phase change.
+    /// `List` measures variable row heights correctly and recycles rows, so the gap
+    /// never appears and memory stays bounded.
     private func postList(_ posts: [PostDisplay]) -> some View {
-        LazyVStack(alignment: .leading, spacing: 0) {
+        List {
             ForEach(posts) { post in
-                PostRowView(
-                    post: post, density: displaySettings.density, now: now,
-                    onImageTap: { urls, index in
-                        focusedPostID = post.id
-                        onImageTap(urls, index)
-                    },
-                    onReplyTap: { target in
-                        if target.id == post.id {
-                            onReply(post)
-                        } else {
-                            onOpenConversation(target)
+                VStack(alignment: .leading, spacing: 0) {
+                    PostRowView(
+                        post: post, density: displaySettings.density, now: now,
+                        onImageTap: { urls, index in
+                            focusedPostID = post.id
+                            onImageTap(urls, index)
+                        },
+                        onReplyTap: { target in
+                            if target.id == post.id {
+                                onReply(post)
+                            } else {
+                                onOpenConversation(target)
+                            }
+                        },
+                        onSelect: { focusedPostID = post.id },
+                        onLike: { Task { await model.toggleLike(post) } },
+                        onRepost: { Task { await model.toggleRepost(post) } },
+                        onQuote: { onQuote(post) }
+                    )
+                    // Clicking the row's open area moves j/k focus here, so navigation
+                    // resumes from the post the user just clicked.
+                    .contentShape(Rectangle())
+                    .onTapGesture { focusedPostID = post.id }
+                    .background(post.id == focusedPostID ? theme.rowHover : .clear)
+                    .overlay(alignment: .leading) {
+                        if post.id == focusedPostID {
+                            Rectangle().fill(theme.accent).frame(width: 3)
                         }
-                    },
-                    onSelect: { focusedPostID = post.id },
-                    onLike: { Task { await model.toggleLike(post) } },
-                    onRepost: { Task { await model.toggleRepost(post) } },
-                    onQuote: { onQuote(post) }
-                )
-                // Clicking the row's open area moves j/k focus here, so navigation
-                // resumes from the post the user just clicked.
-                .contentShape(Rectangle())
-                .onTapGesture { focusedPostID = post.id }
-                .background(post.id == focusedPostID ? theme.rowHover : .clear)
-                .overlay(alignment: .leading) {
-                    if post.id == focusedPostID {
-                        Rectangle().fill(theme.accent).frame(width: 3)
                     }
+                    Divider().overlay(theme.divider)
                 }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
                 .id(post.id)
                 .onAppear {
                     if post.id == posts.last?.id {
                         Task { await model.loadMore() }
                     }
                 }
-                Divider().overlay(theme.divider)
             }
             if model.isLoadingMore {
                 loadMoreFooter
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 0)
     }
 
     private var loadMoreFooter: some View {

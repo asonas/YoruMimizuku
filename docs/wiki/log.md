@@ -11,6 +11,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[macos]]
+- note: Documented the timeline rendering decision — the feed uses SwiftUI `List` rather than `ScrollView { LazyVStack }`. A blank gap appeared below rows because LazyVStack keeps a stale estimated slot height that normal body re-renders (the per-second `now` tick) never revisit; it only collapses on a forced re-layout (scroll / scene-phase change). The gap was independent of text length, width, AttributedString vs plain text, `.fixedSize`, and `.textSelection`. A plain VStack was rejected (~98% CPU, ~1 GB memory); `List` measures variable heights correctly and recycles rows. Recorded the neutralizing modifiers and the j/k scroll path. Implementation in `apps/macos/Views/FeedView.swift`.
+
+## 2026-06-08 ingest
+
 - created: [[app-shell]], [[accounts]], [[architecture]], [[notifications]], [[glossary]]
 - updated: [[overview]], [[timeline-streaming]], [[oauth-flow]], [[filters]], [[macos]], [[conventions]]
 - note: Structural pass to fill wiki gaps. Added behavior pages for the app shell (window/tabs/sidebar/density — the cmux-sidebar content moved here out of timeline-streaming), multi-account persistence, and notifications; a `concept` page for the ports-and-adapters architecture (was only a paragraph in overview); and a `reference` glossary of AT Protocol/OAuth terms. Tightened citations: oauth-flow now cites the granular oauth/dpop/login plans, filters cites the filter-tabs/structured-filters plans, and macos cites the app-icon design+plan. Extended the wiki tool's `typeOrder`/`sourcedTypes` with `concept` and `reference` so the new page types order and validate correctly; updated conventions accordingly.

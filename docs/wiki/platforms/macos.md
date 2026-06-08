@@ -1,7 +1,7 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-06-06
+updated: 2026-06-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -40,6 +40,14 @@ OS touchpoints from the core's ports are implemented in `core/Sources/PlatformAp
 ## Persistence
 
 Secrets go to the Keychain; settings/state are Codable files under Application Support (account index, window/tab layout, display settings, Jetstream cursor, optional timeline snapshots). SwiftData is not used, to keep persistence reusable across all Swift platforms (`2026-06-04-yorumimizuku-design.md` §10).
+
+## Timeline rendering: `List`, not `LazyVStack`
+
+The feed (`apps/macos/Views/FeedView.swift`) renders its rows with a SwiftUI `List` (`.listStyle(.plain)`), not the more obvious `ScrollView { LazyVStack }`. This is deliberate, and the reasoning matters because the obvious choice has a real bug.
+
+`LazyVStack` lays rows out from an *estimated* height before each row is actually measured. On the first layout pass a row can be assigned a slot taller than its content, and a normal body re-render — including the per-second relative-time (`now`) tick that the window already drives ([[app-shell]]) — does **not** revisit that estimate. The result is a blank gap below the row that only collapses when a full re-layout is forced (scrolling the row off and back, or a scene-phase change such as backgrounding the app). The gap was reproducible at launch, independent of the row's text length, width, `AttributedString` rich-text vs plain text, `.fixedSize`, and `.textSelection` — i.e. it is a `LazyVStack` slot-estimation artifact, not a content-measurement one.
+
+A plain `VStack` measures every row eagerly and sidesteps the estimation, but realizing the whole feed at once is not viable (~98% CPU and ~1 GB memory on a long timeline). `List` is the middle ground: it measures variable row heights correctly (no phantom gap) and recycles rows (bounded memory). The cost is that `List` brings its own chrome, which is neutralized per-row with `.listRowInsets(EdgeInsets())`, `.listRowSeparator(.hidden)` (each row draws its own `Divider` so the separator color follows the theme), `.listRowBackground(Color.clear)`, plus `.scrollContentBackground(.hidden)` and `.environment(\.defaultMinListRowHeight, 0)` on the list. j/k focus still scrolls via `ScrollViewReader.scrollTo`, and the loading / failed / empty states render outside the `List` in a plain `ScrollView`. The same row view ([[timeline-streaming]]) is reused unchanged.
 
 ## App icon
 
