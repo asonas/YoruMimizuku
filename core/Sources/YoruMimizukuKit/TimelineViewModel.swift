@@ -142,6 +142,8 @@ public final class TimelineViewModel: ObservableObject {
         do {
             let page = try await loader.loadPage(cursor: cursor)
             self.cursor = page.cursor
+            // Appending older posts to the tail never moves the head, so the unread
+            // boundary is unaffected; no onItemsChanged() needed here.
             state = .loaded(Self.merging(current, appending: page.posts))
         } catch {
             SessionExpiry.reportIfExpired(error)

@@ -271,4 +271,17 @@ final class TimelineViewModelTests: XCTestCase {
         await vm.refresh()
         XCTAssertEqual(vm.unreadCount, 0)
     }
+
+    func testDeactivatedTabAccumulatesUnread() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p2")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1"), sample(id: "p2")], cursor: "c0"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+        vm.setActive(true)    // marks seen at p2
+        vm.setActive(false)   // now inactive; fresh posts should accumulate
+        await vm.refresh()    // p0, p1 land above the seen head p2
+        XCTAssertEqual(vm.unreadCount, 2)
+    }
 }
