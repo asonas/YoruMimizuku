@@ -4,7 +4,8 @@ import YoruMimizukuKit
 
 /// Live `ThreadLoading`: wires the real `ThreadService` through a
 /// `LiveServiceContext`, fetches a post's thread, persists any refreshed tokens,
-/// and maps the focused post (with its immediate parent) into a `PostDisplay`.
+/// and maps the focused post (with its ancestor chain) plus the descendant reply
+/// tree into a `ConversationThread`.
 struct LiveThreadLoader: ThreadLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
@@ -14,7 +15,7 @@ struct LiveThreadLoader: ThreadLoading {
         self.config = config
     }
 
-    func loadThread(uri: String) async throws -> PostDisplay {
+    func loadThread(uri: String) async throws -> ConversationThread {
         let context = try LiveServiceContext(accountManager: accountManager, config: config)
         let service = ThreadService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
@@ -30,6 +31,10 @@ struct LiveThreadLoader: ThreadLoading {
 
         try context.persist(result.refreshed)
 
-        return PostDisplay(result.response.thread)
+        let thread = result.response.thread
+        return ConversationThread(
+            focus: PostDisplay(thread),
+            replies: ThreadNode.childTree(of: thread, maxDepth: 3)
+        )
     }
 }
