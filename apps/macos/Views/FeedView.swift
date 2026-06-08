@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import YoruMimizukuKit
 
 /// A scrollable post feed backed by a `TimelineViewModel`. Reused by the home tab
@@ -88,7 +89,8 @@ struct FeedView: View {
                         onSelect: { focusedPostID = post.id },
                         onLike: { Task { await model.toggleLike(post) } },
                         onRepost: { Task { await model.toggleRepost(post) } },
-                        onQuote: { onQuote(post) }
+                        onQuote: { onQuote(post) },
+                        onCopyLink: { copyPermalink(post) }
                     )
                     // Clicking the row's open area moves j/k focus here, so navigation
                     // resumes from the post the user just clicked.
@@ -188,6 +190,13 @@ struct FeedView: View {
         if focusedPostID == posts.last?.id {
             Task { await model.loadMore() }
         }
+    }
+
+    private func copyPermalink(_ post: PostDisplay) {
+        guard let url = PostPermalink.url(for: post) else { return }
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(url.absoluteString, forType: .string)
     }
 
     /// The post j/k focus currently sits on, if any.

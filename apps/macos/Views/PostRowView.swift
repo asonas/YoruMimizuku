@@ -32,6 +32,8 @@ struct PostRowView: View {
     var onRepost: () -> Void = {}
     /// Called when "引用" is chosen from the repost menu (opens the quote composer).
     var onQuote: () -> Void = {}
+    /// Called when the copy-link icon is tapped (copies the post permalink).
+    var onCopyLink: () -> Void = {}
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
@@ -237,6 +239,15 @@ struct PostRowView: View {
                             active: post.isLiked, activeColor: theme.star)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
+
+            Button {
+                onSelect()
+                onCopyLink()
+            } label: {
+                Image(systemName: "link")
+                    .foregroundStyle(theme.tertiaryText)
+            }
+            .help("リンクをコピー")
         }
         .font(.app(.caption))
         .labelStyle(.titleAndIcon)
