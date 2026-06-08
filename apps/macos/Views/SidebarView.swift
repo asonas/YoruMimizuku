@@ -10,6 +10,9 @@ struct SidebarView: View {
     var accountHandle: String
     var accountAvatarURL: URL?
     var onOpenSettings: () -> Void
+    /// Unread counts for the pinned tabs, supplied by the owner.
+    var homeUnread: Int = 0
+    var notificationsUnread: Int = 0
 
     /// Drives the create/edit sheet. `.new` opens a blank editor; `.edit` prefills
     /// from an existing filter and preserves its id/createdAt on save.
@@ -68,13 +71,15 @@ struct SidebarView: View {
                 SidebarRow(
                     icon: "house",
                     title: "ホーム",
-                    isSelected: workspace.selection == .home
+                    isSelected: workspace.selection == .home,
+                    badge: homeUnread
                 ) { workspace.selection = .home }
 
                 SidebarRow(
                     icon: "bell",
                     title: "通知",
-                    isSelected: workspace.selection == .notifications
+                    isSelected: workspace.selection == .notifications,
+                    badge: notificationsUnread
                 ) { workspace.selection = .notifications }
 
                 filterSection
@@ -116,8 +121,8 @@ struct SidebarView: View {
             }
 
             ForEach(workspace.filters) { tab in
-                SidebarRow(
-                    icon: "line.3.horizontal.decrease",
+                FilterSidebarRow(
+                    model: tab.model,
                     title: tab.title,
                     meta: tab.summary,
                     isSelected: workspace.selection == .filter(tab.id),
@@ -126,8 +131,9 @@ struct SidebarView: View {
                         if let saved = workspace.savedFilter(id: tab.id) {
                             editorRequest = .edit(saved)
                         }
-                    }
-                ) { workspace.selection = .filter(tab.id) }
+                    },
+                    onSelect: { workspace.selection = .filter(tab.id) }
+                )
             }
         }
     }
@@ -189,6 +195,8 @@ private struct SidebarRow: View {
     let isSelected: Bool
     var onClose: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    /// Unread/new count shown as a pill. Hidden when 0 or when the row is selected.
+    var badge: Int = 0
     let action: () -> Void
 
     private static let cornerRadius: CGFloat = 6
@@ -230,6 +238,15 @@ private struct SidebarRow: View {
                 }
 
                 Spacer(minLength: 0)
+
+                if badge > 0, !isSelected {
+                    Text(badge > 99 ? "99+" : "\(badge)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(theme.accent))
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -280,4 +297,29 @@ private struct SidebarRow: View {
     private var subtitleColor: Color { isSelected ? Color.white.opacity(0.82) : theme.secondaryText }
     private var metaColor: Color { isSelected ? Color.white.opacity(0.7) : theme.tertiaryText }
     private var iconColor: Color { isSelected ? .white : theme.tertiaryText }
+}
+
+/// One filter row that observes its own `TimelineViewModel` so the unread badge
+/// updates as the backing feed polls in the background.
+private struct FilterSidebarRow: View {
+    @ObservedObject var model: TimelineViewModel
+    let title: String
+    let meta: String
+    let isSelected: Bool
+    let onClose: () -> Void
+    let onEdit: () -> Void
+    let onSelect: () -> Void
+
+    var body: some View {
+        SidebarRow(
+            icon: "line.3.horizontal.decrease",
+            title: title,
+            meta: meta,
+            isSelected: isSelected,
+            onClose: onClose,
+            onEdit: onEdit,
+            badge: model.unreadCount,
+            action: onSelect
+        )
+    }
 }

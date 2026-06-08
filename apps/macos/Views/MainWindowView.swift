@@ -79,7 +79,9 @@ struct MainWindowView: View {
                 workspace: workspace,
                 accountHandle: accountHandle,
                 accountAvatarURL: accountAvatarURL,
-                onOpenSettings: { showSettings = true }
+                onOpenSettings: { showSettings = true },
+                homeUnread: model.unreadCount,
+                notificationsUnread: notifications.unreadCount
             )
             .overlay(alignment: .trailing) {
                 Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
