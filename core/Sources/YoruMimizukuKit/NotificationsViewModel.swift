@@ -32,6 +32,7 @@ public final class NotificationsViewModel: ObservableObject {
 
     private var lastSeenTopID: String?
     private var isActive = false
+    private var pollingTask: Task<Void, Never>?
     private let loader: NotificationsLoading
 
     public init(loader: NotificationsLoading) {
@@ -72,6 +73,26 @@ public final class NotificationsViewModel: ObservableObject {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current notifications.
         }
+    }
+
+    /// Start the periodic refresh loop if not already running (idempotent). Owned by
+    /// the view model so it survives the view and keeps the badge fresh in the
+    /// background.
+    public func startPolling(every interval: Duration) {
+        guard pollingTask == nil else { return }
+        pollingTask = Task { [weak self] in
+            await self?.load()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                if Task.isCancelled { break }
+                await self?.refresh()
+            }
+        }
+    }
+
+    public func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     /// Mark every loaded notification as seen and reset the badge to zero.

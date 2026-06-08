@@ -56,6 +56,8 @@ public final class TimelineViewModel: ObservableObject {
     private var lastSeenTopID: String?
     /// True while this tab is the selected one. Active tabs keep their unread at 0.
     private var isActive = false
+    /// The running refresh loop, or nil when not polling.
+    private var pollingTask: Task<Void, Never>?
     private let loader: TimelineLoading
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
@@ -168,6 +170,27 @@ public final class TimelineViewModel: ObservableObject {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current feed.
         }
+    }
+
+    /// Start the periodic refresh loop if it is not already running (idempotent).
+    /// The loop is owned by the view model, so it keeps running—and keeps
+    /// accumulating the unread count—after the view that started it disappears.
+    public func startPolling(every interval: Duration) {
+        guard pollingTask == nil else { return }
+        pollingTask = Task { [weak self] in
+            await self?.load()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                if Task.isCancelled { break }
+                await self?.refresh()
+            }
+        }
+    }
+
+    /// Stop the refresh loop. Called when a filter tab is closed.
+    public func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     /// Mark every loaded post as seen: the head becomes the unread boundary and the
