@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: `2026-06-08-macos-compose-notification-followups.md`
+- updated: [[compose-post]], [[notifications]]
+- note: Added planned macOS follow-ups requested from the product backlog: reply composers should preview the replied-to post (avatar, user name, body start), submit loading should replace the Post button instead of resizing the sheet, `Command-Return` / `Control-Return` should submit, and target-post snippets in notifications (notably likes) should open the post's conversation tab.
+
+## 2026-06-08 ingest
+
 - sources: `2026-06-08-yorumimizuku-ipados-design.md`
 - created: [[ipados]]
 - updated: [[overview]], [[architecture]], [[macos]], [[accounts]], [[app-shell]], [[author-tab]], [[compose-post]], [[filters]], [[notifications]], [[oauth-flow]], [[timeline-streaming]]

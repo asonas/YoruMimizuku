@@ -6,6 +6,7 @@ sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
+  - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
@@ -71,3 +72,12 @@ compresses them to JPEG before upload, and each attachment has an alt-text field
 ## UI entry points
 
 The composer is shown as a sheet. On the home view, `n` (no modifier) opens a new post and a post row's reply button opens a reply. A post row's repost button does not toggle directly: it opens a small menu offering **リポスト** (toggle the repost; "リポストを取り消す" when already reposted) and **引用** (open the composer as a quote of that post). The quote composer shows a read-only preview of the post being quoted. This repost/quote menu is present on both [[macos]] (a popover) and [[windows]] (a `MenuFlyout`). On `uploadBlob` failure the whole post is aborted (no partial send); a mention DID-resolution failure is non-fatal and the post continues with plain text.
+
+## Planned macOS follow-ups
+
+The macOS follow-up plan records three composer UX improvements that are not yet
+documented as shipped behavior: a reply composer should show a compact preview of
+the post being replied to (avatar, user name, and the start of the body), submit
+loading should replace the Post button instead of adding a new row at the bottom
+of the sheet, and `Command-Return` / `Control-Return` should submit the draft
+(`2026-06-08-macos-compose-notification-followups.md`).

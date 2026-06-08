@@ -6,6 +6,7 @@ sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
+  - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
@@ -42,3 +43,11 @@ On [[ipados]], `NotificationsViewModel` drives the in-app tab and sidebar badge
 through foreground polling. The MVP intentionally does not promise background
 polling-based banners; push notifications would need a separate design
 (`2026-06-08-yorumimizuku-ipados-design.md` §9).
+
+## Planned macOS follow-up
+
+The macOS follow-up plan records a missing notification navigation affordance:
+when a notification has a target post (especially a like notification), the
+target-post snippet should open that post in a conversation tab instead of being
+plain context text. Notifications without a `subjectURI`, such as follows, remain
+non-opening (`2026-06-08-macos-compose-notification-followups.md`).
