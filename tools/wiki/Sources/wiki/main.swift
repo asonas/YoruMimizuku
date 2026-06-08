@@ -241,8 +241,40 @@ func generateMatrix() -> String {
     return out
 }
 
+// All spec/plan ground-truth files that wiki pages are expected to derive from.
+func groundTruthSources() -> [String] {
+    ["docs/superpowers/specs", "docs/superpowers/plans"]
+        .flatMap { markdownFiles(in: root + "/" + $0).map(relativize) }
+        .sorted()
+}
+
+// Ground-truth specs/plans that no page lists in its `sources`. These are
+// un-ingested: real, but not yet reflected in the wiki.
+func uncitedSources() -> [String] {
+    let cited = Set(pages.flatMap { $0.sources })
+    return groundTruthSources().filter { !cited.contains($0) }
+}
+
+// Listed pages that no *other* page links to. The generated index links
+// everything, so it is excluded as a link source; `overview` is the entry
+// point and is exempt from being a link target.
+func orphanPages() -> [String] {
+    var inbound: Set<String> = []
+    for page in listed {
+        for link in page.links where link != page.basename {
+            inbound.insert(link)
+        }
+    }
+    let entryPoints: Set<String> = ["overview"]
+    return listed
+        .map { $0.basename }
+        .filter { !entryPoints.contains($0) && !inbound.contains($0) }
+        .sorted()
+}
+
 func runLint() {
     var errors: [String] = []
+    var warnings: [String] = []
 
     let duplicates = Dictionary(grouping: pages, by: { $0.basename }).filter { $0.value.count > 1 }
     for (name, dupes) in duplicates {
@@ -295,6 +327,18 @@ func runLint() {
         }
     }
 
+    // Coverage and reachability are advisory: they surface gaps without blocking a
+    // commit, so a freshly-added spec (not yet ingested) does not fail the build.
+    for src in uncitedSources() {
+        warnings.append("uncited source (no page derives from it): \(src)")
+    }
+    for orphan in orphanPages() {
+        warnings.append("orphan page (no inbound [[link]]): \(orphan)")
+    }
+
+    if !warnings.isEmpty {
+        print("wiki: \(warnings.count) warning(s):\n" + warnings.sorted().map { "  - " + $0 }.joined(separator: "\n"))
+    }
     if errors.isEmpty {
         print("wiki: lint passed (\(listed.count) pages)")
     } else {

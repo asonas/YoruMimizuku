@@ -91,6 +91,8 @@ mise run wiki:index    # regenerate index.md from page frontmatter
 mise run wiki:check    # lint + verify support-matrix.md and index.md are up to date (CI / pre-commit)
 ```
 
+`wiki:lint` hard-fails on structural errors (duplicate basenames, missing frontmatter fields, a sourced type with no `sources`, a missing source path, an unresolved `[[link]]`). It additionally prints **non-fatal warnings** for two coverage gaps: a spec/plan under `docs/superpowers/` that no page cites (un-ingested), and a page with no inbound `[[link]]` (an orphan; `overview` is exempt as the entry point). Warnings do not fail the build — they flag work to do, so adding a spec in one commit and ingesting it in the next is allowed.
+
 The pre-commit hook runs lint and regenerates `support-matrix.md` and `index.md` automatically when any `docs/wiki/**` file is staged (see `scripts/hooks/pre-commit`; install with `mise run wiki:install-hooks`). Ingest (writing prose, choosing platform status) is never done by the hook — only an agent does that.
 
 ## Division of labor

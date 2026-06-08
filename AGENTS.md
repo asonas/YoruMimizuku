@@ -13,10 +13,10 @@ For the full design, read `docs/superpowers/specs/2026-06-04-yorumimizuku-design
 This repository keeps a git-versioned LLM-wiki at `docs/wiki/` that describes how the app behaves and is built. It is the **cross-machine source of context**: because it lives in git, every agent (Claude / Cursor on macOS, the build agent on Windows) reconstructs the same picture by pulling the repo.
 
 - Start at `docs/wiki/index.md`, then open only the pages you need. Do not assume the whole wiki is in context.
-- `docs/wiki/overview.md` is the high-level map; behaviors are under `docs/wiki/behaviors/`, platform differences under `docs/wiki/platforms/`.
+- `docs/wiki/overview.md` is the high-level map; behaviors are under `docs/wiki/behaviors/`, platform differences under `docs/wiki/platforms/`. Cross-cutting `concept` and `reference` pages (e.g. `architecture.md`, `glossary.md`) live at the top level of `docs/wiki/`. Pages are classified by frontmatter `type` (`overview` / `concept` / `behavior` / `platform` / `reference` / `meta`), defined in `docs/wiki/conventions.md`.
 - The ground truth is `docs/superpowers/specs/` and `plans/`; the wiki is a derived layer that cites them.
 - When specs/plans change, or app behavior changes, **update the wiki**: run the `wiki-update` skill (Claude) or `/wiki-update` command (Cursor) — both follow `docs/wiki/conventions.md`.
-- Bookkeeping is deterministic and tooled: `mise run wiki:lint` validates, `mise run wiki:index` regenerates `docs/wiki/index.md` (never hand-edit it). Install the pre-commit hook once with `mise run wiki:install-hooks`.
+- Bookkeeping is deterministic and tooled: `mise run wiki:lint` validates, `mise run wiki:index` regenerates `docs/wiki/index.md` (never hand-edit it). Install the pre-commit hook once with `mise run wiki:install-hooks`. Lint also warns (non-fatally) about specs/plans no page cites and about pages with no inbound `[[link]]` — treat those as a prompt to ingest or cross-link.
 
 ## Publishing Policy (Important)
 

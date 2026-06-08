@@ -24,7 +24,7 @@ cd core && swift test          # fast core tests — run most of the time
 xcodebuild build -scheme YoruMimizuku -project YoruMimizuku.xcodeproj
 ```
 
-> Note: AGENTS.md still shows the old `cd BlueskyCore && swift test` path. The package now lives at `core/`, so use `cd core && swift test` ([[overview]]).
+The package lives at `core/` (an earlier note about an `BlueskyCore/` path in AGENTS.md is obsolete; AGENTS.md now uses `core/`) ([[overview]]).
 
 ## Apple-only implementations
 
