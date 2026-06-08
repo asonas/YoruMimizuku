@@ -29,8 +29,12 @@ struct MainWindowView: View {
     /// Driven by `clock` below so the displayed ages advance; a captured constant
     /// would freeze and the times would never update.
     @State private var now = Date()
-    /// Ticks once a second on the main run loop to refresh `now`.
-    private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// Ticks on the main run loop to refresh `now`. 15s rather than 1s: relative
+    /// timestamps are minutes/hours for all but the newest posts, so a per-second
+    /// tick re-rendered every visible row 15x more often than the displayed string
+    /// could change. Only sub-minute ages ("30s") update in coarser steps now,
+    /// which is an acceptable trade for far less render churn while scrolling.
+    private let clock = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
 
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
