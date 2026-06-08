@@ -56,6 +56,7 @@ final class ThreadServiceTests: XCTestCase {
         )
         XCTAssertTrue(sent.url.query?.contains("uri=") == true)
         XCTAssertTrue(sent.url.query?.contains("parentHeight=80") == true)
+        XCTAssertTrue(sent.url.query?.contains("depth=6") == true, "expected descendants requested: \(sent.url.query ?? "")")
         XCTAssertEqual(sent.headers["Authorization"], "DPoP atk")
         XCTAssertNotNil(sent.headers["DPoP"])
     }
