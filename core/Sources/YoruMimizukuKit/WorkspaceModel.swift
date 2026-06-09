@@ -35,6 +35,16 @@ public final class ConversationTab: Identifiable {
         self.model = model
     }
 
+    /// Build a tab when only the target post URI and display snippet are known
+    /// (for example, a notification subject).
+    public init(anchorID: String, title: String, handle: String, subtitle: String, model: ThreadViewModel) {
+        self.anchorID = anchorID
+        self.title = title
+        self.handle = handle
+        self.subtitle = subtitle
+        self.model = model
+    }
+
     /// Rebuild a tab from a persisted snapshot, restoring its sidebar fields so it
     /// renders before its thread loads.
     public init(saved: SavedConversation, model: ThreadViewModel) {
@@ -276,6 +286,24 @@ public final class WorkspaceModel: ObservableObject {
             return
         }
         let tab = ConversationTab(anchor: post, model: makeThreadModel(post.id))
+        conversations.append(tab)
+        selection = .conversation(tab.id)
+    }
+
+    /// Open a conversation when only the post URI and a sidebar snippet are known.
+    /// Used by notification subject snippets, which do not carry a full PostDisplay.
+    public func openConversation(anchorID: String, title: String, handle: String, subtitle: String) {
+        if let existing = conversations.first(where: { $0.anchorID == anchorID }) {
+            selection = .conversation(existing.id)
+            return
+        }
+        let tab = ConversationTab(
+            anchorID: anchorID,
+            title: title,
+            handle: handle,
+            subtitle: subtitle,
+            model: makeThreadModel(anchorID)
+        )
         conversations.append(tab)
         selection = .conversation(tab.id)
     }

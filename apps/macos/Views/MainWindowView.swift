@@ -16,8 +16,8 @@ struct MainWindowView: View {
     @EnvironmentObject private var fontSettings: FontSettingsStore
     var accountHandle: String
     var accountAvatarURL: URL?
-    /// Builds a composer VM for a new post (nil parent) or a reply (parent URI).
-    var makeComposer: @MainActor (String?) -> ComposerViewModel
+    /// Builds a composer VM for a new post (nil parent) or a reply (parent post).
+    var makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     /// Builds a composer VM that quotes `post`.
     var makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
 
@@ -131,6 +131,9 @@ struct MainWindowView: View {
                 model: notifications, now: now,
                 onOpenAuthor: { actor in
                     workspace.openAuthor(did: actor.handle, handle: actor.handle, displayName: actor.displayName, avatarURL: actor.avatarURL)
+                },
+                onOpenSubject: { group in
+                    openNotificationSubject(group)
                 }
             )
         case let .filter(id):
@@ -199,7 +202,7 @@ struct MainWindowView: View {
     /// Open the composer replying to `post`; on success dismiss it and refresh the
     /// feed that was visible so the reply count and any surfaced reply update.
     private func openReplyComposer(_ post: PostDisplay, refreshing model: TimelineViewModel) {
-        let vm = makeComposer(post.id)
+        let vm = makeComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
     }
@@ -210,6 +213,15 @@ struct MainWindowView: View {
         let vm = makeQuoteComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
+    }
+
+    private func openNotificationSubject(_ group: NotificationGroup) {
+        guard let uri = group.subjectURI else { return }
+        let actor = group.actors.first
+        let displayName = actor.map { $0.displayName.isEmpty ? $0.handle : $0.displayName } ?? "通知"
+        let handle = actor.map { "@\($0.handle)" } ?? ""
+        let subtitle = group.subjectText ?? group.text ?? (group.subjectImageURL == nil ? "" : "画像")
+        workspace.openConversation(anchorID: uri, title: displayName, handle: handle, subtitle: subtitle)
     }
 
     /// Mark the selected badge-bearing tab active (badge stays 0 while viewed) and

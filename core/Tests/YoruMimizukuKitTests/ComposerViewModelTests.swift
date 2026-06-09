@@ -45,6 +45,25 @@ final class ComposerViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isSubmitting)
     }
 
+    func testReplyParentPostIsStoredAndDraftUsesItsURI() async {
+        let submitter = FakeSubmitter()
+        let parent = PostDisplay(
+            id: "at://did:plc:parent/app.bsky.feed.post/abc",
+            authorDisplayName: "Alice",
+            authorHandle: "alice.bsky.social",
+            body: "This is the post being replied to",
+            createdAt: Date(timeIntervalSince1970: 0)
+        )
+        let vm = ComposerViewModel(submitter: submitter, replyParent: parent)
+        vm.text = "reply"
+
+        XCTAssertEqual(vm.replyParent?.id, parent.id)
+
+        await vm.submit()
+
+        XCTAssertEqual(submitter.received?.replyParentURI, parent.id)
+    }
+
     func testQuotePostIsSubmittableWithEmptyTextAndForwardsQuote() async {
         let submitter = FakeSubmitter()
         let quoted = PostDisplay(

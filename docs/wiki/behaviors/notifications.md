@@ -44,10 +44,13 @@ through foreground polling. The MVP intentionally does not promise background
 polling-based banners; push notifications would need a separate design
 (`2026-06-08-yorumimizuku-ipados-design.md` §9).
 
-## Planned macOS follow-up
+## Opening notification subjects
 
-The macOS follow-up plan records a missing notification navigation affordance:
-when a notification has a target post (especially a like notification), the
-target-post snippet should open that post in a conversation tab instead of being
-plain context text. Notifications without a `subjectURI`, such as follows, remain
-non-opening (`2026-06-08-macos-compose-notification-followups.md`).
+On macOS, a notification with a target post (`subjectURI`) opens that post in a
+conversation tab when the target-post snippet is clicked. This covers likes and
+reposts and any other subject-backed notification group. `WorkspaceModel` has a
+URI-based `openConversation(anchorID:title:handle:subtitle:)` entry point for this
+case because notification groups carry a subject URI and snippet, not a full
+`PostDisplay`. Notifications without a `subjectURI`, such as follows, remain
+non-opening (`2026-06-08-macos-compose-notification-followups.md`,
+`WorkspaceModel.swift`, `apps/macos/Views/NotificationsView.swift`).

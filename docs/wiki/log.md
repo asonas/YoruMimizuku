@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: `2026-06-08-macos-compose-notification-followups.md`
+- updated: [[compose-post]], [[notifications]]
+- note: Implemented the macOS compose/notification follow-ups. Reply composers now carry the parent `PostDisplay` for a compact reply preview while still submitting only the parent URI; the Post button shows its own progress indicator; `Command-Return` / `Control-Return` submit drafts; notification subject snippets with `subjectURI` open or re-select a conversation tab through a URI-based `WorkspaceModel.openConversation(...)` path.
+
+## 2026-06-08 ingest
+
 - updated: [[auto-updates]], [[macos]]
 - note: Marked macOS Sparkle auto-update as fully shipped after publishing the stable `v0.7.0` GitHub Release with DMG/ZIP artifacts and updating `appcast.xml` on `gh-pages`. The support matrix now marks Sparkle auto-update full on macOS; other platforms remain unsupported because they need separate updater mechanisms.
 

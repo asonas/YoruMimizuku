@@ -94,6 +94,21 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(persistence.state.selectedAnchorID, "at://a")
     }
 
+    func testOpenConversationByURIReusesExistingTab() async {
+        let persistence = FakePersistence()
+        let model = makeModel(persistence: persistence)
+
+        model.openConversation(anchorID: "at://a", title: "Alice", handle: "@alice", subtitle: "liked post")
+        let firstID = model.conversations[0].id
+        model.selection = .home
+        model.openConversation(anchorID: "at://a", title: "Alice changed", handle: "@alice", subtitle: "changed")
+
+        XCTAssertEqual(model.conversations.count, 1)
+        XCTAssertEqual(model.conversations[0].title, "Alice")
+        XCTAssertEqual(model.selection, .conversation(firstID))
+        XCTAssertEqual(persistence.state.conversations.map(\.anchorID), ["at://a"])
+    }
+
     func testCloseConversationPersistsRemoval() async {
         let persistence = FakePersistence()
         let model = makeModel(persistence: persistence)

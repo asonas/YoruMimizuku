@@ -41,8 +41,8 @@ struct RootView: View {
                     did: did,
                     accountHandle: currentHandle,
                     accountAvatarURL: accountAvatarURL,
-                    makeComposer: { parentURI in
-                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParentURI: parentURI)
+                    makeComposer: { parent in
+                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParent: parent)
                     },
                     makeQuoteComposer: { post in
                         ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), quotedPost: post)
@@ -104,7 +104,7 @@ private struct AuthenticatedRootView: View {
 
     private let accountHandle: String
     private let accountAvatarURL: URL?
-    private let makeComposer: @MainActor (String?) -> ComposerViewModel
+    private let makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     private let makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
 
     init(
@@ -112,7 +112,7 @@ private struct AuthenticatedRootView: View {
         did: String,
         accountHandle: String,
         accountAvatarURL: URL?,
-        makeComposer: @escaping @MainActor (String?) -> ComposerViewModel,
+        makeComposer: @escaping @MainActor (PostDisplay?) -> ComposerViewModel,
         makeQuoteComposer: @escaping @MainActor (PostDisplay) -> ComposerViewModel
     ) {
         _timelineModel = StateObject(

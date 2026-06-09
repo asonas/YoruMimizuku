@@ -19,7 +19,12 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
     @Published public private(set) var isSubmitting = false
     @Published public private(set) var errorMessage: String?
 
-    public let replyParentURI: String?
+    /// The post being replied to, when the composer was opened from a post row.
+    /// The full display model is kept for preview UI; submission still forwards
+    /// only the post URI through `PostDraft`.
+    public let replyParent: PostDisplay?
+    private let explicitReplyParentURI: String?
+    public var replyParentURI: String? { replyParent?.id ?? explicitReplyParentURI }
     /// The post being quoted, when this composer is a quote post. Shown as a
     /// preview and embedded as a record reference on submit.
     public let quotedPost: PostDisplay?
@@ -28,9 +33,15 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
 
     private let submitter: PostSubmitting
 
-    public init(submitter: PostSubmitting, replyParentURI: String? = nil, quotedPost: PostDisplay? = nil) {
+    public init(
+        submitter: PostSubmitting,
+        replyParentURI: String? = nil,
+        replyParent: PostDisplay? = nil,
+        quotedPost: PostDisplay? = nil
+    ) {
         self.submitter = submitter
-        self.replyParentURI = replyParentURI
+        self.explicitReplyParentURI = replyParentURI
+        self.replyParent = replyParent
         self.quotedPost = quotedPost
     }
 

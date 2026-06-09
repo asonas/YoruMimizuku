@@ -28,25 +28,16 @@ struct ComposerView: View {
             TextEditor(text: $model.text)
                 .frame(minHeight: 120)
                 .font(.body)
+            if let parent = model.replyParent {
+                replyPreview(parent)
+            }
             if let quoted = model.quotedPost {
                 quotePreview(quoted)
             }
             if !model.images.isEmpty {
                 imageStrip
             }
-            HStack {
-                Button { importing = true } label: { Image(systemName: "photo.badge.plus") }
-                    .disabled(!model.canAddImage)
-                    .help("クリック、または画像をドラッグ&ドロップで添付")
-                Spacer()
-                Text("\(model.remaining)")
-                    .font(.callout).monospacedDigit()
-                    .foregroundStyle(model.remaining < 0 ? Color.red : theme.tertiaryText)
-                Button("Post") { Task { await model.submit() } }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.canSubmit)
-            }
-            if model.isSubmitting { ProgressView().controlSize(.small) }
+            composerFooter
             if let error = model.errorMessage {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
@@ -67,6 +58,65 @@ struct ComposerView: View {
         .onDrop(of: [.image, .fileURL], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }
+        .background { submitShortcuts }
+    }
+
+    private var composerFooter: some View {
+        HStack {
+            Button { importing = true } label: { Image(systemName: "photo.badge.plus") }
+                .disabled(!model.canAddImage)
+                .help("クリック、または画像をドラッグ&ドロップで添付")
+            Spacer()
+            Text("\(model.remaining)")
+                .font(.callout).monospacedDigit()
+                .foregroundStyle(model.remaining < 0 ? Color.red : theme.tertiaryText)
+            Button { submitIfPossible() } label: {
+                if model.isSubmitting {
+                    ProgressView().controlSize(.small)
+                        .frame(minWidth: 44)
+                } else {
+                    Text("Post")
+                        .frame(minWidth: 44)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!model.canSubmit)
+        }
+    }
+
+    private func replyPreview(_ post: PostDisplay) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            RemoteImage(url: post.avatarURL, maxPointSize: 28) { phase in
+                if case let .success(image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    theme.avatarPlaceholder
+                }
+            }
+            .frame(width: 28, height: 28)
+            .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(post.authorDisplayName.isEmpty ? post.authorHandle : post.authorDisplayName)
+                        .font(.app(.caption, weight: .semibold))
+                        .foregroundStyle(theme.primaryText)
+                        .lineLimit(1)
+                    Text("@\(post.authorHandle)")
+                        .font(.app(.caption2))
+                        .foregroundStyle(theme.tertiaryText)
+                        .lineLimit(1)
+                }
+                Text(post.body)
+                    .font(.app(.caption))
+                    .foregroundStyle(theme.secondaryText)
+                    .lineLimit(2)
+            }
+        }
+        .allowsHitTesting(false)
+        .padding(8)
+        .background(theme.surface.opacity(0.7))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
     }
 
     /// Read-only preview of the post being quoted, shown inside the composer so the
@@ -79,6 +129,23 @@ struct ComposerView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1)
             )
+    }
+
+    private var submitShortcuts: some View {
+        ZStack {
+            Button("") { submitIfPossible() }
+                .keyboardShortcut(.return, modifiers: [.command])
+            Button("") { submitIfPossible() }
+                .keyboardShortcut(.return, modifiers: [.control])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .accessibilityHidden(true)
+    }
+
+    private func submitIfPossible() {
+        guard model.canSubmit else { return }
+        Task { await model.submit() }
     }
 
     private var imageStrip: some View {

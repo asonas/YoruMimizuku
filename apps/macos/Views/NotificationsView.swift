@@ -11,6 +11,7 @@ struct NotificationsView: View {
     @EnvironmentObject private var theme: ThemeStore
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void = { _ in }
+    var onOpenSubject: (NotificationGroup) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,7 +39,7 @@ struct NotificationsView: View {
     private func list(_ items: [NotificationGroup]) -> some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(items) { item in
-                NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor)
+                NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor, onOpenSubject: onOpenSubject)
                 Divider().overlay(theme.divider)
             }
         }
@@ -89,6 +90,7 @@ private struct NotificationRowView: View {
     let item: NotificationGroup
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void = { _ in }
+    var onOpenSubject: (NotificationGroup) -> Void = { _ in }
     @EnvironmentObject private var theme: ThemeStore
     @State private var isExpanded = false
 
@@ -205,29 +207,36 @@ private struct NotificationRowView: View {
     /// The liked/reposted post, rendered as plain grey text (no bordered box) to mirror
     /// the Bluesky app. An image-only post falls back to a small thumbnail.
     private func subjectSnippet(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            if let imageURL = item.subjectImageURL {
-                RemoteImage(url: imageURL, maxPointSize: 32) { phase in
-                    if case let .success(image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        theme.avatarPlaceholder
+        Button {
+            onOpenSubject(item)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                if let imageURL = item.subjectImageURL {
+                    RemoteImage(url: imageURL, maxPointSize: 32) { phase in
+                        if case let .success(image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            theme.avatarPlaceholder
+                        }
                     }
+                    .frame(width: 32, height: 32)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
-                .frame(width: 32, height: 32)
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                if !text.isEmpty {
+                    Text(text)
+                        .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
+                        .lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("画像")
+                        .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
+                }
+                Spacer(minLength: 0)
             }
-            if !text.isEmpty {
-                Text(text)
-                    .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
-                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("画像")
-                    .font(.app(.subheadline)).foregroundStyle(theme.tertiaryText)
-            }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .buttonStyle(.plain)
+        .disabled(item.subjectURI == nil)
     }
 
     private func avatarCircle(_ actor: NotificationGroup.Actor, size: CGFloat) -> some View {

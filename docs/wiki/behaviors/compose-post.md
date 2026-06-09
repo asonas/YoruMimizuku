@@ -73,11 +73,13 @@ compresses them to JPEG before upload, and each attachment has an alt-text field
 
 The composer is shown as a sheet. On the home view, `n` (no modifier) opens a new post and a post row's reply button opens a reply. A post row's repost button does not toggle directly: it opens a small menu offering **リポスト** (toggle the repost; "リポストを取り消す" when already reposted) and **引用** (open the composer as a quote of that post). The quote composer shows a read-only preview of the post being quoted. This repost/quote menu is present on both [[macos]] (a popover) and [[windows]] (a `MenuFlyout`). On `uploadBlob` failure the whole post is aborted (no partial send); a mention DID-resolution failure is non-fatal and the post continues with plain text.
 
-## Planned macOS follow-ups
+## macOS composer follow-ups
 
-The macOS follow-up plan records three composer UX improvements that are not yet
-documented as shipped behavior: a reply composer should show a compact preview of
-the post being replied to (avatar, user name, and the start of the body), submit
-loading should replace the Post button instead of adding a new row at the bottom
-of the sheet, and `Command-Return` / `Control-Return` should submit the draft
-(`2026-06-08-macos-compose-notification-followups.md`).
+The macOS composer shows a compact preview when opened as a reply: avatar, display
+name / handle, and the first two lines of the replied-to post. The full parent
+`PostDisplay` is held on `ComposerViewModel` for display, while submission still
+passes only the parent URI through `PostDraft`. While submitting, the Post button
+itself is replaced by a small progress indicator so the sheet does not resize.
+`Command-Return` and `Control-Return` submit the draft when `canSubmit` is true
+(`2026-06-08-macos-compose-notification-followups.md`, `ComposerViewModel.swift`,
+`apps/macos/Views/ComposerView.swift`).
