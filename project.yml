@@ -30,8 +30,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: as.ason.YoruMimizuku
         PRODUCT_NAME: YoruMimizuku
-        MARKETING_VERSION: "0.7.0"
-        CURRENT_PROJECT_VERSION: "6"
+        MARKETING_VERSION: "0.8.0-dev.1"
+        CURRENT_PROJECT_VERSION: "7"
         SWIFT_VERSION: "6.0"
         ENABLE_HARDENED_RUNTIME: YES
         DEVELOPMENT_TEAM: QYP65434UW
