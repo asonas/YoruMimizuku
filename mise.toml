@@ -12,6 +12,11 @@ TEAM_ID = "QYP65434UW"
 SIGN_IDENTITY = "Developer ID Application: Yuya Fujiwara (QYP65434UW)"
 # Keychain profile name used by notarytool. Create it once with `mise run setup-notary`.
 NOTARY_PROFILE = "YoruMimizukuNotary"
+GITHUB_REPO = "asonas/YoruMimizuku"
+GITHUB_REMOTE = "github"
+SPARKLE_BIN = "/Applications/Sparkle.app/Contents/SharedSupport"
+APPCAST_STABLE = "build/appcast.xml"
+APPCAST_DEV = "build/appcast-dev.xml"
 
 [tasks.generate]
 description = "Generate the Xcode project from project.yml"
@@ -40,9 +45,26 @@ xcodebuild -exportArchive \
   -exportPath "$BUILD_DIR/export"
 """
 
-[tasks.dmg]
-description = "Package the exported .app into a signed DMG with an /Applications drop link"
+[tasks."notarize-app"]
+description = "Notarize and staple the exported .app for Sparkle and DMG packaging"
 depends = ["export"]
+run = """
+set -euo pipefail
+app="$BUILD_DIR/export/$APP_NAME.app"
+zip="$BUILD_DIR/$APP_NAME-notary.zip"
+rm -f "$zip"
+ditto -c -k --keepParent "$app" "$zip"
+xcrun notarytool submit "$zip" \
+  --keychain-profile "$NOTARY_PROFILE" \
+  --wait
+xcrun stapler staple "$app"
+spctl -a -vvv -t exec "$app"
+rm -f "$zip"
+"""
+
+[tasks.dmg]
+description = "Package the stapled .app into a signed DMG with an /Applications drop link"
+depends = ["notarize-app"]
 run = """
 set -euo pipefail
 app="$BUILD_DIR/export/$APP_NAME.app"
@@ -86,9 +108,118 @@ spctl -a -vvv -t open --context context:primary-signature "$BUILD_DIR/$APP_NAME.
 """
 
 [tasks.release]
-description = "Build, sign, notarize and package a distributable DMG"
-depends = ["notarize"]
-run = 'echo "Release DMG ready: $BUILD_DIR/$APP_NAME.dmg"'
+description = "Build stable release artifacts (DMG + Sparkle appcast)"
+depends = ["release:stable"]
+run = 'echo "Release artifacts ready under $BUILD_DIR"'
+
+[tasks."sparkle-zip"]
+description = "Create the Sparkle update ZIP from the notarized/stapled app"
+depends = ["notarize-app"]
+run = """
+set -euo pipefail
+version="$(python3 - <<'PY'
+import re
+text = open('project.yml').read()
+print(re.search(r'MARKETING_VERSION: "([^"]+)"', text).group(1))
+PY
+)"
+zip="$BUILD_DIR/$APP_NAME-$version.zip"
+rm -f "$zip"
+ditto -c -k --keepParent "$BUILD_DIR/export/$APP_NAME.app" "$zip"
+echo "Sparkle ZIP ready: $zip"
+"""
+
+[tasks."appcast:stable"]
+description = "Generate stable appcast.xml for GitHub Pages"
+depends = ["sparkle-zip"]
+run = """
+set -euo pipefail
+version="$(python3 - <<'PY'
+import re
+text = open('project.yml').read()
+print(re.search(r'MARKETING_VERSION: "([^"]+)"', text).group(1))
+PY
+)"
+archives="$BUILD_DIR/appcast-stable"
+rm -rf "$archives"
+mkdir -p "$archives"
+cp "$BUILD_DIR/$APP_NAME-$version.zip" "$archives/"
+"$SPARKLE_BIN/generate_appcast" \
+  --download-url-prefix "https://github.com/$GITHUB_REPO/releases/download/v$version/" \
+  "$archives"
+cp "$archives/appcast.xml" "$APPCAST_STABLE"
+echo "Stable appcast ready: $APPCAST_STABLE"
+"""
+
+[tasks."appcast:dev"]
+description = "Generate development appcast-dev.xml for GitHub Pages"
+depends = ["sparkle-zip"]
+run = """
+set -euo pipefail
+version="$(python3 - <<'PY'
+import re
+text = open('project.yml').read()
+print(re.search(r'MARKETING_VERSION: "([^"]+)"', text).group(1))
+PY
+)"
+archives="$BUILD_DIR/appcast-dev"
+rm -rf "$archives"
+mkdir -p "$archives"
+cp "$BUILD_DIR/$APP_NAME-$version.zip" "$archives/"
+"$SPARKLE_BIN/generate_appcast" \
+  --download-url-prefix "https://github.com/$GITHUB_REPO/releases/download/v$version/" \
+  "$archives"
+cp "$archives/appcast.xml" "$APPCAST_DEV"
+echo "Development appcast ready: $APPCAST_DEV"
+"""
+
+[tasks."release:stable"]
+description = "Build stable release artifacts for vX.Y.Z"
+depends = ["notarize", "appcast:stable"]
+run = 'echo "Stable release ready: $BUILD_DIR/$APP_NAME.dmg, $BUILD_DIR/$APP_NAME-<version>.zip, $APPCAST_STABLE"'
+
+[tasks."release:dev"]
+description = "Build development prerelease artifacts for vX.Y.Z-dev.N"
+depends = ["notarize-app", "appcast:dev"]
+run = 'echo "Development release ready: $BUILD_DIR/$APP_NAME-<version>.zip, $APPCAST_DEV"'
+
+[tasks."publish:stable"]
+description = "Manually publish stable artifacts to GitHub Releases and gh-pages"
+run = """
+set -euo pipefail
+version="$(python3 - <<'PY'
+import re
+text = open('project.yml').read()
+print(re.search(r'MARKETING_VERSION: "([^"]+)"', text).group(1))
+PY
+)"
+gh release create "v$version" \
+  "$BUILD_DIR/$APP_NAME-$version.zip" \
+  "$BUILD_DIR/$APP_NAME.dmg" \
+  --repo "$GITHUB_REPO" \
+  --title "YoruMimizuku $version" \
+  --notes-file "build/release-notes-$version.md"
+echo "Push $APPCAST_STABLE to gh-pages root as appcast.xml using remote $GITHUB_REMOTE."
+"""
+
+[tasks."publish:dev"]
+description = "Manually publish development ZIP to a GitHub prerelease and gh-pages"
+run = """
+set -euo pipefail
+version="$(python3 - <<'PY'
+import re
+text = open('project.yml').read()
+print(re.search(r'MARKETING_VERSION: "([^"]+)"', text).group(1))
+PY
+)"
+gh release create "v$version" \
+  "$BUILD_DIR/$APP_NAME-$version.zip" \
+  --repo "$GITHUB_REPO" \
+  --title "YoruMimizuku $version" \
+  --notes-file "build/release-notes-$version.md" \
+  --prerelease
+echo "Push $APPCAST_DEV to gh-pages root as appcast-dev.xml using remote $GITHUB_REMOTE."
+"""
 
 [tasks.setup-notary]
 description = "Store notarytool credentials in the keychain (run once, interactive)"

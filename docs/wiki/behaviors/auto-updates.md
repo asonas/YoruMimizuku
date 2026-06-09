@@ -35,24 +35,37 @@ there (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Goal,
 
 Manual installation remains the only install mode. `SUAutomaticallyUpdate` is not
 enabled, so the app does not silently download or install updates. The settings
-tab exposes "今すぐ確認" and a toggle for Sparkle's
-`automaticallyChecksForUpdates` preference (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
-§Architecture, §Sparkle configuration).
+tab exposes "今すぐ確認", a toggle for Sparkle's `automaticallyChecksForUpdates`
+preference, and a channel picker for **リリース** versus **開発版**
+(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Architecture,
+§Sparkle configuration).
 
 ## App-side architecture
 
 The implementation plan centers on a macOS-only `UpdateController` that owns
 `SPUStandardUpdaterController` and is injected into the SwiftUI environment from
 `YoruMimizukuApp`. `UpdateController` publishes `updateAvailable`,
-`canCheckForUpdates`, and `automaticallyChecksForUpdates`; the sidebar gear reads
-`updateAvailable`, while the update settings tab drives manual checks and the
-automatic-check toggle (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
+`canCheckForUpdates`, `automaticallyChecksForUpdates`, and the selected
+`UpdateChannel`; the sidebar gear reads `updateAvailable`, while the update
+settings tab drives manual checks, the automatic-check toggle, and
+stable/development channel selection (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
 §Architecture, `2026-06-09-yorumimizuku-sparkle-auto-update.md` Task 3).
 
-The Sparkle-free state machine and version formatting live in a separate
-`UpdateBadgeState` value type so they can be unit-tested without loading Sparkle.
-Sparkle delegate glue stays thin and remains in the macOS app layer
+The Sparkle-free state machine, version formatting, and channel persistence live
+in small value/store types (`UpdateBadgeState`, `UpdateChannel`,
+`UpdateChannelStore`) so they can be unit-tested without loading Sparkle. Sparkle
+delegate glue stays thin and remains in the macOS app layer
 (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Testing strategy).
+
+Channel switching uses two appcast URLs rather than Sparkle's single-feed channel
+tags. `SUFeedURL` remains the stable default, and `SPUUpdaterDelegate` supplies
+the selected feed URL at runtime. The stable feed is
+`https://asonas.github.io/YoruMimizuku/appcast.xml`; the development feed is
+`https://asonas.github.io/YoruMimizuku/appcast-dev.xml`. Development releases use
+tags like `v0.7.0-dev.1` and GitHub prereleases. Sparkle does not downgrade, so a
+user who installs a development build and switches back to the stable channel
+will not receive a stable update until the stable build number is greater than
+the installed development build; immediate rollback is a manual reinstall.
 
 For gentle reminders, the standard user driver delegate declares support for
 gentle scheduled update reminders and returns `false` from
@@ -64,11 +77,13 @@ update session (Sparkle gentle reminders documentation).
 
 ## Release and appcast
 
-The appcast is hosted on GitHub Pages from the `gh-pages` branch at
-`https://asonas.github.io/YoruMimizuku/appcast.xml`. Each release tag uploads two
-artifacts to GitHub Releases: a notarized/stapled `.app` ZIP for Sparkle and a
-signed/notarized/stapled DMG for first-time manual downloads
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Hosting & appcast).
+The appcasts are hosted on GitHub Pages from the `gh-pages` branch. Stable uses
+`appcast.xml`; development uses `appcast-dev.xml`. Stable release tags
+(`v0.6.0`, `v0.7.0`) upload a notarized/stapled `.app` ZIP for Sparkle and a
+signed/notarized/stapled DMG for first-time manual downloads. Development tags
+(`v0.7.0-dev.1`, `v0.7.0-dev.2`) upload the Sparkle ZIP to GitHub prereleases and
+update `appcast-dev.xml` (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
+§Hosting & appcast).
 
 The EdDSA public key is committed in the macOS app's generated Info.plist via
 `SUPublicEDKey`; the private key stays in the macOS Keychain and is never

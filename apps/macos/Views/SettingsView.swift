@@ -77,6 +77,8 @@ struct SettingsView: View {
             FontSettingsContentView()
         case .display:
             DisplaySettingsContentView()
+        case .update:
+            UpdateSettingsView()
         }
     }
 }
@@ -86,6 +88,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case appearance
     case font
     case display
+    case update
 
     var id: String { rawValue }
 
@@ -94,6 +97,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "配色"
         case .font: return "フォント"
         case .display: return "表示"
+        case .update: return "アップデート"
         }
     }
 
@@ -102,6 +106,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "paintpalette"
         case .font: return "textformat"
         case .display: return "rectangle.grid.1x2"
+        case .update: return "arrow.down.circle"
         }
     }
 }

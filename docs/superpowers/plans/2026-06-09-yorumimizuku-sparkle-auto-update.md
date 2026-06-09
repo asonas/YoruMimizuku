@@ -13,6 +13,8 @@
 ## File Structure
 
 - Create `apps/macos/Update/UpdateBadgeState.swift`: pure badge state and version display formatter.
+- Create `apps/macos/Update/UpdateChannel.swift`: stable/development channel enum and feed URLs.
+- Create `apps/macos/Update/UpdateChannelStore.swift`: UserDefaults-backed channel persistence.
 - Create `apps/macos/Update/UpdateController.swift`: `@MainActor ObservableObject` Sparkle wrapper and delegate glue.
 - Create `apps/macos/Views/UpdateSettingsView.swift`: settings pane for current version, manual check, automatic-check toggle, and update availability.
 - Create `apps/macosTests/UpdateBadgeStateTests.swift`: XCTest coverage for the pure state.
@@ -218,6 +220,66 @@ xcodebuild build -scheme YoruMimizuku -project YoruMimizuku.xcodeproj
 ```
 
 Expected: If `SUPublicEDKey` is still a placeholder, compile should still succeed. Runtime update checks will not verify real updates until the key is replaced.
+
+## Task 2A: GitHub Stable / Development Channels
+
+**Files:**
+- Create: `apps/macos/Update/UpdateChannel.swift`
+- Create: `apps/macos/Update/UpdateChannelStore.swift`
+- Create: `apps/macosTests/UpdateChannelStoreTests.swift`
+- Modify: `apps/macos/Update/UpdateController.swift`
+- Modify: `apps/macos/Views/UpdateSettingsView.swift`
+- Modify: `mise.toml`
+
+- [x] **Step 1: Add channel model tests**
+
+The tests assert that stable uses `https://asonas.github.io/YoruMimizuku/appcast.xml`,
+development uses `https://asonas.github.io/YoruMimizuku/appcast-dev.xml`, and the
+selected channel persists through an injected `UserDefaults` instance.
+
+- [x] **Step 2: Add channel model and store**
+
+`UpdateChannel` defines `.stable` and `.development` with title, explanation, and
+feed URL. `UpdateChannelStore` stores the raw channel value under
+`updates.channel` and defaults to `.stable`.
+
+- [x] **Step 3: Select feed URL through Sparkle delegate**
+
+`UpdateController` publishes `channel` and persists it through
+`UpdateChannelStore`. It implements `SPUUpdaterDelegate.feedURLString(for:)` to
+return the selected channel's appcast URL. `SUFeedURL` remains the stable default
+in `Info.plist`.
+
+The controller calls `clearFeedURLFromUserDefaults()` on startup when Sparkle is
+configured so deprecated `setFeedURL` persistence cannot override the channel
+picker. While `SUPublicEDKey` still contains the placeholder, the controller does
+not instantiate the Sparkle updater; this keeps local app-hosted tests from
+failing before the real public key is generated.
+
+- [x] **Step 4: Add channel picker to settings**
+
+`UpdateSettingsView` shows a segmented picker for **リリース** and **開発版**.
+The development channel explanation states that Sparkle does not downgrade:
+after installing a development build, switching back to stable does not install a
+lower stable build; the next stable build must have a greater build number, or
+the user must reinstall manually.
+
+- [x] **Step 5: Split release tasks for GitHub**
+
+`mise.toml` has separate tasks:
+
+```bash
+mise run release:stable
+mise run release:dev
+mise run publish:stable
+mise run publish:dev
+```
+
+Stable releases use tags like `v0.6.0` and generate `appcast.xml`.
+Development releases use tags like `v0.7.0-dev.1`, are published as GitHub
+prereleases, and generate `appcast-dev.xml`. GitHub publication uses the
+`github` remote/repository (`asonas/YoruMimizuku`) rather than the Tangled
+`origin`.
 
 ## Task 3: Update Controller
 

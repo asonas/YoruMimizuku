@@ -7,6 +7,7 @@ import YoruMimizukuKit
 struct SidebarView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
+    @EnvironmentObject private var updateController: UpdateController
     var accountHandle: String
     var accountAvatarURL: URL?
     var onOpenSettings: () -> Void
@@ -170,6 +171,14 @@ struct SidebarView: View {
                 .truncationMode(.tail)
             Spacer(minLength: 4)
             ChromeIconButton(systemImage: "gearshape", help: "設定", action: onOpenSettings)
+                .overlay(alignment: .topTrailing) {
+                    if updateController.updateAvailable {
+                        Circle()
+                            .fill(theme.accent)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 2, y: -2)
+                    }
+                }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

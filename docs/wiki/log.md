@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: `2026-06-09-yorumimizuku-sparkle-auto-update.md`
+- updated: [[auto-updates]]
+- note: Added the GitHub-backed stable/development channel design to Sparkle auto-updates. The macOS updater now treats `appcast.xml` as the stable feed and `appcast-dev.xml` as the development feed, selected from the update settings tab and persisted in UserDefaults. Development builds use prerelease tags such as `v0.7.0-dev.1`; Sparkle does not downgrade when switching back to stable, so a later stable build must have a greater build number or the user reinstalls manually.
+
+## 2026-06-08 ingest
+
 - sources: `2026-06-08-yorumimizuku-sparkle-auto-update-design.md`, `2026-06-09-yorumimizuku-sparkle-auto-update.md`
 - created: [[auto-updates]]
 - updated: [[overview]], [[macos]]
