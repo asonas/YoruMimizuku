@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0"
-     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
-     xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>YoruMimizuku Stable Updates</title>
-    <link>https://github.com/asonas/YoruMimizuku</link>
-    <description>Stable Sparkle appcast for YoruMimizuku.</description>
-    <language>en</language>
-  </channel>
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>YoruMimizuku</title>
+        <item>
+            <title>0.7.0</title>
+            <pubDate>Tue, 09 Jun 2026 18:00:19 +0900</pubDate>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>0.7.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/asonas/YoruMimizuku/releases/download/v0.7.0/YoruMimizuku-0.7.0.zip" length="2889177" type="application/octet-stream" sparkle:edSignature="5gVxuGm2m99/gJXxT6E9lNK9e31TPG31puPjOc4GAqkKXVmaiw8A3DiRV5hXZU/Wc7/iB5tOat+h4e1H2iaJAg=="/>
+        </item>
+    </channel>
 </rss>
