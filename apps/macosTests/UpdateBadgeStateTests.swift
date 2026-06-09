@@ -20,14 +20,21 @@ final class UpdateBadgeStateTests: XCTestCase {
     func testVersionDisplayIncludesBuildNumber() {
         XCTAssertEqual(
             UpdateBadgeState.versionDisplay(shortVersion: "0.6.0", build: "4"),
-            "0.6.0 (4)"
+            "v0.6.0 (4)"
         )
     }
 
     func testVersionDisplayOmitsEmptyBuildNumber() {
         XCTAssertEqual(
             UpdateBadgeState.versionDisplay(shortVersion: "0.6.0", build: ""),
-            "0.6.0"
+            "v0.6.0"
+        )
+    }
+
+    func testVersionDisplayDoesNotDuplicateVPrefix() {
+        XCTAssertEqual(
+            UpdateBadgeState.versionDisplay(shortVersion: "v0.7.0-dev.1", build: "5"),
+            "v0.7.0-dev.1 (5)"
         )
     }
 }

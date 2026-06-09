@@ -18,7 +18,8 @@ struct UpdateBadgeState: Equatable {
     static func versionDisplay(shortVersion: String?, build: String?) -> String {
         let version = shortVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
         let build = build?.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch (version?.isEmpty == false ? version : nil, build?.isEmpty == false ? build : nil) {
+        let displayedVersion = version.map { $0.hasPrefix("v") ? $0 : "v" + $0 }
+        switch (displayedVersion?.isEmpty == false ? displayedVersion : nil, build?.isEmpty == false ? build : nil) {
         case let (.some(version), .some(build)):
             return "\(version) (\(build))"
         case let (.some(version), .none):
