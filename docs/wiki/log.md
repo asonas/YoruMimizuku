@@ -11,6 +11,13 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- sources: `2026-06-08-yorumimizuku-sparkle-auto-update-design.md`, `2026-06-09-yorumimizuku-sparkle-auto-update.md`
+- created: [[auto-updates]]
+- updated: [[overview]], [[macos]]
+- note: Ingested the approved Sparkle auto-update design and added an implementation plan. The wiki now records the macOS-only Sparkle 2 scope, gentle settings-gear reminder, update settings tab, GitHub Pages appcast, GitHub Release ZIP/DMG split, app-first notarization, EdDSA key handling, and release task changes. The support matrix marks Sparkle auto-update as planned for macOS and unsupported on Windows/iPadOS/Android.
+
+## 2026-06-08 ingest
+
 - updated: [[ipados]], [[timeline-streaming]]
 - note: iPadOS closed several macOS parity gaps. Timeline rows now show relative timestamps, support hidden j/k/f/o keyboard actions, open a full-screen image lightbox, and intercept hashtag links into saved-search tabs. Conversation tabs now include ancestors and a 「さらに表示」 re-anchor cue for capped reply branches. Notifications gained reason icons, relative timestamps, actor taps, and unread tint. Remaining iPadOS gaps are settings/theme/font/density UI, Jetstream live updates, OS-level notifications, full structured-filter editing, and some composer affordances.
 

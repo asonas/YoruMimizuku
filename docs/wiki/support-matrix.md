@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-08
+updated: 2026-06-09
 sources: []
 ---
 
@@ -32,6 +32,12 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | Author (user) tab | ○ | ○ | ○ | − |
+
+## [[auto-updates]] — Auto Updates (Sparkle)
+
+| Feature | macOS | Windows | iOS | Android |
+|---|:--:|:--:|:--:|:--:|
+| Sparkle auto-update checks and install | − | × | × | × |
 
 ## [[compose-post]] — Composing Posts
 
@@ -79,6 +85,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]]).
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
+- **Sparkle auto-update checks and install** ([[auto-updates]]): The approved Sparkle design is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
 - **OS banner + unread badge** ([[notifications]]): Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]]).

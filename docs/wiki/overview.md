@@ -6,6 +6,7 @@ sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - AGENTS.md
 ---
 
@@ -70,6 +71,7 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 - [[compose-post]] — posting (facet detection, images, replies)
 - [[filters]] — saved-search filters (structured terms and AND/OR)
 - [[notifications]] — in-app tab, OS banner, and Dock badge
+- [[auto-updates]] — planned macOS Sparkle update checks, settings-tab install flow, and release appcast
 
 ## Platforms
 

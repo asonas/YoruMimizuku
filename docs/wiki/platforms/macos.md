@@ -6,6 +6,7 @@ sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-app-icon-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-icon.md
 ---
@@ -70,6 +71,16 @@ A lone attached image is laid out at its true aspect ratio rather than a fixed-h
 ## App icon
 
 The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`2026-06-04-yorumimizuku-app-icon-design.md`, `2026-06-04-yorumimizuku-app-icon.md`). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).
+
+## Auto updates
+
+macOS is the only platform covered by the approved Sparkle auto-update design.
+The planned implementation adds Sparkle 2 to `apps/macos`, shows a non-modal dot
+on the settings gear when a scheduled check finds an update, and installs from a
+new **アップデート** tab in the existing settings sheet. Release artifacts split
+into a Sparkle `.app` ZIP and a manual DMG, with the appcast hosted from the
+repository's `gh-pages` branch. Details live in [[auto-updates]]
+(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`).
 
 ## Windows / iPadOS / Android
 
