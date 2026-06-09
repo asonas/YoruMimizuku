@@ -32,7 +32,7 @@
 - Create: `apps/macosTests/UpdateBadgeStateTests.swift`
 - Modify: `project.yml`
 
-- [ ] **Step 1: Add a macOS app test target**
+- [x] **Step 1: Add a macOS app test target**
 
 Add this target to `project.yml` so app-layer pure logic can be tested without moving it into the core package:
 
@@ -66,7 +66,7 @@ xcodebuild test -scheme YoruMimizuku -project YoruMimizuku.xcodeproj -destinatio
 
 Expected: FAIL because `apps/macosTests` does not exist yet or contains no tests after the target is added. Continue by adding the test file.
 
-- [ ] **Step 2: Write failing tests for `UpdateBadgeState`**
+- [x] **Step 2: Write failing tests for `UpdateBadgeState`**
 
 Create `apps/macosTests/UpdateBadgeStateTests.swift`:
 
@@ -115,7 +115,7 @@ xcodebuild test -scheme YoruMimizuku -project YoruMimizuku.xcodeproj -destinatio
 
 Expected: FAIL with `cannot find 'UpdateBadgeState' in scope`.
 
-- [ ] **Step 3: Implement `UpdateBadgeState` minimally**
+- [x] **Step 3: Implement `UpdateBadgeState` minimally**
 
 Create `apps/macos/Update/UpdateBadgeState.swift`:
 
@@ -162,7 +162,7 @@ xcodebuild test -scheme YoruMimizuku -project YoruMimizuku.xcodeproj -destinatio
 
 Expected: PASS.
 
-- [ ] **Step 4: Run the app test target**
+- [x] **Step 4: Run the app test target**
 
 Run:
 
@@ -177,7 +177,7 @@ Expected: PASS for `YoruMimizukuTests`; app launches in test host without Sparkl
 **Files:**
 - Modify: `project.yml`
 
-- [ ] **Step 1: Add Sparkle package and dependency**
+- [x] **Step 1: Add Sparkle package and dependency**
 
 Modify `project.yml`:
 
@@ -197,7 +197,7 @@ Add the package product to the macOS target dependencies:
         product: Sparkle
 ```
 
-- [ ] **Step 2: Add Sparkle Info.plist keys**
+- [x] **Step 2: Add Sparkle Info.plist keys**
 
 Add these under `targets.YoruMimizuku.info.properties`:
 
@@ -210,7 +210,7 @@ Add these under `targets.YoruMimizuku.info.properties`:
 
 Keep the placeholder public key until `generate_keys` has been run once. Do not invent a key and do not commit a private key.
 
-- [ ] **Step 3: Verify project generation**
+- [x] **Step 3: Verify project generation**
 
 Run:
 
@@ -287,7 +287,7 @@ prereleases, and generate `appcast-dev.xml`. GitHub publication uses the
 - Create: `apps/macos/Update/UpdateController.swift`
 - Modify: `apps/macos/YoruMimizukuApp.swift`
 
-- [ ] **Step 1: Implement Sparkle wrapper**
+- [x] **Step 1: Implement Sparkle wrapper**
 
 Create `apps/macos/Update/UpdateController.swift`:
 
@@ -364,7 +364,7 @@ extension UpdateController: SPUStandardUserDriverDelegate {
 
 If Sparkle's Swift signatures differ in the installed package version, adjust only the delegate method signatures to match Sparkle's generated interface; keep the behavior unchanged.
 
-- [ ] **Step 2: Inject controller from the app entry point**
+- [x] **Step 2: Inject controller from the app entry point**
 
 Modify `apps/macos/YoruMimizukuApp.swift`:
 
@@ -391,7 +391,7 @@ struct YoruMimizukuApp: App {
 }
 ```
 
-- [ ] **Step 3: Verify build**
+- [x] **Step 3: Verify build**
 
 Run:
 
@@ -408,7 +408,7 @@ Expected: PASS. If delegate method signatures fail, fix signatures and rerun.
 - Modify: `apps/macos/Views/SettingsView.swift`
 - Modify: `apps/macos/Views/SidebarView.swift`
 
-- [ ] **Step 1: Create update settings view**
+- [x] **Step 1: Create update settings view**
 
 Create `apps/macos/Views/UpdateSettingsView.swift`:
 
@@ -468,7 +468,7 @@ struct UpdateSettingsView: View {
 }
 ```
 
-- [ ] **Step 2: Add settings tab**
+- [x] **Step 2: Add settings tab**
 
 Modify `apps/macos/Views/SettingsView.swift`:
 
@@ -499,7 +499,7 @@ Add title/icon:
         case .update: return "arrow.down.circle"
 ```
 
-- [ ] **Step 3: Draw gear dot**
+- [x] **Step 3: Draw gear dot**
 
 Modify `apps/macos/Views/SidebarView.swift`:
 
@@ -521,7 +521,7 @@ Replace the gear button in `accountFooter`:
                 }
 ```
 
-- [ ] **Step 4: Verify build**
+- [x] **Step 4: Verify build**
 
 Run:
 
@@ -537,7 +537,7 @@ Expected: PASS and settings sheet has an update tab.
 - Modify: `mise.toml`
 - Optional create: `scripts/release/appcast-notes-template.md`
 
-- [ ] **Step 1: Add Sparkle env variables**
+- [x] **Step 1: Add Sparkle env variables**
 
 Add to `[env]`:
 
@@ -547,7 +547,7 @@ APPCAST_URL_PREFIX = "https://github.com/asonas/YoruMimizuku/releases/download"
 APPCAST_PATH = "build/appcast.xml"
 ```
 
-- [ ] **Step 2: Split app notarization**
+- [x] **Step 2: Split app notarization**
 
 Replace the current `notarize` dependency chain with:
 
@@ -569,7 +569,7 @@ rm -f "$zip"
 
 Change `[tasks.dmg]` to depend on `notarize-app` instead of `export`, and keep the existing DMG signing/notarization steps.
 
-- [ ] **Step 3: Add Sparkle ZIP and appcast tasks**
+- [x] **Step 3: Add Sparkle ZIP and appcast tasks**
 
 Add:
 
@@ -603,7 +603,7 @@ echo "Appcast ready: $APPCAST_PATH"
 
 If `generate_appcast` is not at `$SPARKLE_BIN/generate_appcast` for the local Sparkle installation, adjust `SPARKLE_BIN` only.
 
-- [ ] **Step 4: Adjust release task**
+- [x] **Step 4: Adjust release task**
 
 Change:
 
@@ -616,7 +616,7 @@ run = 'echo "Release artifacts ready under $BUILD_DIR"'
 
 Keep publishing to GitHub Releases and pushing `appcast.xml` to `gh-pages` manual; do not automate outward-facing pushes in this task.
 
-- [ ] **Step 5: Verify release task graph syntax**
+- [x] **Step 5: Verify release task graph syntax**
 
 Run:
 
@@ -633,7 +633,7 @@ Expected: PASS and shows `notarize-app`, `sparkle-zip`, `appcast`, and `release`
 - Modify: `docs/wiki/platforms/macos.md` if implementation differs.
 - Modify: `README.md` only if release-key setup docs do not already exist.
 
-- [ ] **Step 1: Update docs for actual key setup**
+- [x] **Step 1: Update docs for actual key setup**
 
 If `SUPublicEDKey` has been replaced with a real public key, add a short README section:
 
@@ -646,7 +646,7 @@ The private key is stored in the macOS Keychain and must never be committed or
 logged. Forks must generate their own key pair and replace `SUPublicEDKey`.
 ```
 
-- [ ] **Step 2: Run core and app tests**
+- [x] **Step 2: Run core and app tests**
 
 Run:
 
@@ -657,7 +657,7 @@ xcodebuild test -scheme YoruMimizuku -project YoruMimizuku.xcodeproj -destinatio
 
 Expected: PASS.
 
-- [ ] **Step 3: Run app builds**
+- [x] **Step 3: Run app builds**
 
 Run:
 
@@ -668,7 +668,7 @@ xcodebuild build -scheme YoruMimizukuPad -project YoruMimizuku.xcodeproj -destin
 
 Expected: PASS.
 
-- [ ] **Step 4: Run wiki checks**
+- [x] **Step 4: Run wiki checks**
 
 Run:
 

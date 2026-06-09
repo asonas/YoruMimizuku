@@ -74,12 +74,13 @@ The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月
 
 ## Auto updates
 
-macOS is the only platform covered by the approved Sparkle auto-update design.
-The planned implementation adds Sparkle 2 to `apps/macos`, shows a non-modal dot
-on the settings gear when a scheduled check finds an update, and installs from a
-new **アップデート** tab in the existing settings sheet. Release artifacts split
-into a Sparkle `.app` ZIP and a manual DMG, with the appcast hosted from the
-repository's `gh-pages` branch. Details live in [[auto-updates]]
+macOS is the only platform covered by the Sparkle auto-update design. Sparkle 2
+is wired into `apps/macos`, the settings gear can show a non-modal update dot, and
+the existing settings sheet has an **アップデート** tab with release/development
+channel selection. Development updates are served from `appcast-dev.xml` on the
+repository's `gh-pages` branch, and a development-channel update test has passed.
+The stable `v0.7.0` production release flow is still the remaining step before
+this is marked fully shipped. Details live in [[auto-updates]]
 (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`).
 
 ## Windows / iPadOS / Android

@@ -11,6 +11,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
+- updated: [[auto-updates]], [[macos]]
+- note: Reconciled Sparkle auto-update docs and plans with implementation status. The Sparkle app wiring, update settings tab, stable/development channel picker, EdDSA public key, GitHub Pages appcasts, development prerelease ZIP, and development-channel update test are complete. The support matrix now marks macOS auto-update as limited rather than planned because the stable production release path remains to be exercised.
+
+## 2026-06-08 ingest
+
 - sources: `2026-06-09-yorumimizuku-sparkle-auto-update.md`
 - updated: [[auto-updates]]
 - note: Added the GitHub-backed stable/development channel design to Sparkle auto-updates. The macOS updater now treats `appcast.xml` as the stable feed and `appcast-dev.xml` as the development feed, selected from the update settings tab and persisted in UserDefaults. Development builds use prerelease tags such as `v0.7.0-dev.1`; Sparkle does not downgrade when switching back to stable, so a later stable build must have a greater build number or the user reinstalls manually.
