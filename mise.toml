@@ -14,7 +14,7 @@ SIGN_IDENTITY = "Developer ID Application: Yuya Fujiwara (QYP65434UW)"
 NOTARY_PROFILE = "YoruMimizukuNotary"
 GITHUB_REPO = "asonas/YoruMimizuku"
 GITHUB_REMOTE = "github"
-SPARKLE_BIN = "/Applications/Sparkle.app/Contents/SharedSupport"
+SPARKLE_BIN = "/opt/homebrew/Caskroom/sparkle/2.9.3/bin"
 APPCAST_STABLE = "build/appcast.xml"
 APPCAST_DEV = "build/appcast-dev.xml"
 

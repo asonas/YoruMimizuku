@@ -1,5 +1,4 @@
 import XCTest
-@testable import YoruMimizuku
 
 final class UpdateBadgeStateTests: XCTestCase {
     func testBackgroundFoundUpdateShowsBadge() {

@@ -43,7 +43,7 @@ targets:
         CFBundleDisplayName: YoruMimizuku
         LSMinimumSystemVersion: "15.0"
         SUFeedURL: https://asonas.github.io/YoruMimizuku/appcast.xml
-        SUPublicEDKey: "__REPLACE_WITH_SPARKLE_PUBLIC_ED25519_KEY__"
+        SUPublicEDKey: "8c0cuIKl7mQR1iOxRVu3/a4d8ySnE4NlyzXol8oFhDM="
         SUEnableAutomaticChecks: true
         SUScheduledCheckInterval: 86400
         CFBundleURLTypes:
@@ -93,8 +93,9 @@ targets:
     platform: macOS
     sources:
       - apps/macosTests
-    dependencies:
-      - target: YoruMimizuku
+      - apps/macos/Update/UpdateBadgeState.swift
+      - apps/macos/Update/UpdateChannel.swift
+      - apps/macos/Update/UpdateChannelStore.swift
     settings:
       base:
         SWIFT_VERSION: "6.0"
