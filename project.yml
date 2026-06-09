@@ -41,6 +41,8 @@ targets:
       path: apps/macos/Info.plist
       properties:
         CFBundleDisplayName: YoruMimizuku
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSMinimumSystemVersion: "15.0"
         SUFeedURL: https://asonas.github.io/YoruMimizuku/appcast.xml
         SUPublicEDKey: "8c0cuIKl7mQR1iOxRVu3/a4d8ySnE4NlyzXol8oFhDM="
@@ -78,6 +80,8 @@ targets:
       path: apps/ipados/Info.plist
       properties:
         CFBundleDisplayName: YoruMimizuku
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UIRequiresFullScreen: true
         UILaunchScreen: {}
         CFBundleURLTypes:
