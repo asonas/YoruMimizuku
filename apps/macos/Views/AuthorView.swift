@@ -41,7 +41,7 @@ struct AuthorView: View {
         VStack(spacing: 0) {
             profileHeader
             FeedView(
-                model: tab.model, title: nil, now: now,
+                model: tab.model, title: nil, showsHeader: false, now: now,
                 onImageTap: onImageTap,
                 onOpenConversation: onOpenConversation,
                 onReply: onReply,
@@ -90,8 +90,8 @@ struct AuthorView: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 36)
-        .padding(.bottom, 12)
+        .padding(.top, 18)
+        .padding(.bottom, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme.divider).frame(height: 1)

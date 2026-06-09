@@ -14,6 +14,7 @@ struct FeedView: View {
     /// Shown in the header. Home passes nil (the sidebar already names the pane);
     /// filter tabs pass the filter name.
     var title: String?
+    var showsHeader: Bool = true
     let now: Date
     var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
@@ -30,7 +31,9 @@ struct FeedView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DetailHeader(title) { EmptyView() }
+            if showsHeader {
+                DetailHeader(title) { EmptyView() }
+            }
             timeline
         }
         .background(theme.canvas)
