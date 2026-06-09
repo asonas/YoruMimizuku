@@ -9,11 +9,11 @@ sources:
   - https://sparkle-project.github.io/documentation/gentle-reminders
 features:
   - name: Sparkle auto-update checks and install
-    macos: limited
+    macos: full
     windows: none
     ios: none
     android: none
-    note: "macOS has Sparkle wiring, stable/dev channel selection, signed dev appcast, and a successful development-channel update test; stable production release is still pending ([[macos]]). Windows/iPadOS/Android need separate updater mechanisms."
+    note: "Sparkle auto-update is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]])."
 ---
 
 # Auto Updates (Sparkle)
@@ -42,9 +42,8 @@ preference, and a channel picker for **リリース** versus **開発版**
 
 Status as of 2026-06-09: the app-side Sparkle wiring, settings UI, stable/dev
 channel selection, EdDSA key setup, GitHub Pages appcasts, GitHub prerelease ZIP,
-and a development-channel update test (`v0.7.0-dev.1` → `v0.7.0-dev.2`) have
-landed. The remaining milestone before marking this fully shipped is the stable
-production release flow (`v0.7.0`) and its `appcast.xml`/DMG/ZIP publication.
+a development-channel update test (`v0.7.0-dev.1` → `v0.7.0-dev.2`), and the
+stable production release flow (`v0.7.0` ZIP/DMG plus `appcast.xml`) have landed.
 
 ## App-side architecture
 

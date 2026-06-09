@@ -79,8 +79,8 @@ is wired into `apps/macos`, the settings gear can show a non-modal update dot, a
 the existing settings sheet has an **アップデート** tab with release/development
 channel selection. Development updates are served from `appcast-dev.xml` on the
 repository's `gh-pages` branch, and a development-channel update test has passed.
-The stable `v0.7.0` production release flow is still the remaining step before
-this is marked fully shipped. Details live in [[auto-updates]]
+The stable `v0.7.0` production release has also shipped with a GitHub Release,
+DMG/ZIP artifacts, and `appcast.xml`. Details live in [[auto-updates]]
 (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`).
 
 ## Windows / iPadOS / Android

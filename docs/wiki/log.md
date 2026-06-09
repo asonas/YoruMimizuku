@@ -12,6 +12,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-08 ingest
 
 - updated: [[auto-updates]], [[macos]]
+- note: Marked macOS Sparkle auto-update as fully shipped after publishing the stable `v0.7.0` GitHub Release with DMG/ZIP artifacts and updating `appcast.xml` on `gh-pages`. The support matrix now marks Sparkle auto-update full on macOS; other platforms remain unsupported because they need separate updater mechanisms.
+
+## 2026-06-08 ingest
+
+- updated: [[auto-updates]], [[macos]]
 - note: Reconciled Sparkle auto-update docs and plans with implementation status. The Sparkle app wiring, update settings tab, stable/development channel picker, EdDSA public key, GitHub Pages appcasts, development prerelease ZIP, and development-channel update test are complete. The support matrix now marks macOS auto-update as limited rather than planned because the stable production release path remains to be exercised.
 
 ## 2026-06-08 ingest
