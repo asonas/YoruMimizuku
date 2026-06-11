@@ -40,7 +40,7 @@ struct FeedView: View {
         .ignoresSafeArea(.container, edges: .top)
         .background { postNavShortcuts }
         .onChange(of: model.state) { _, _ in
-            if focusedPostID == nil { focusedPostID = model.posts.first?.id }
+            if focusedPostID == nil { focusedPostID = FeedThreading.arrange(model.posts).first?.id }
         }
     }
 
@@ -75,8 +75,12 @@ struct FeedView: View {
     /// `List` measures variable row heights correctly and recycles rows, so the gap
     /// never appears and memory stays bounded.
     private func postList(_ posts: [PostDisplay]) -> some View {
-        List {
-            ForEach(posts) { post in
+        // Same-thread posts are regrouped the way Bluesky's web feed shows them
+        // (oldest first within the block, connector line, no divider inside).
+        let items = FeedThreading.arrange(posts)
+        return List {
+            ForEach(items) { item in
+                let post = item.post
                 VStack(alignment: .leading, spacing: 0) {
                     PostRowView(
                         post: post, density: displaySettings.density, now: now,
@@ -96,7 +100,9 @@ struct FeedView: View {
                         onRepost: { Task { await model.toggleRepost(post) } },
                         onQuote: { onQuote(post) },
                         onAvatarTap: { onOpenAuthor(post) },
-                        onCopyLink: { copyPermalink(post) }
+                        onCopyLink: { copyPermalink(post) },
+                        connectsToPrevious: item.connectsToPrevious,
+                        connectsToNext: item.connectsToNext
                     )
                     // Skip re-rendering rows whose data is unchanged: PostRowView is
                     // Equatable on its value inputs, so a parent re-render that only
@@ -110,14 +116,18 @@ struct FeedView: View {
                     // during a scroll re-renders only this background, not the row
                     // body (which stays cached via `.equatable()`).
                     .rowHoverHighlight(isFocused: post.id == focusedPostID)
-                    Divider().overlay(theme.divider)
+                    // Rows joined by the thread line read as one block; the divider
+                    // only closes the block (or separates standalone rows).
+                    if !item.connectsToNext {
+                        Divider().overlay(theme.divider)
+                    }
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
                 .id(post.id)
                 .onAppear {
-                    if post.id == posts.last?.id {
+                    if post.id == items.last?.id {
                         Task { await model.loadMore() }
                     }
                 }
@@ -187,15 +197,16 @@ struct FeedView: View {
     }
 
     private func focusAdjacentPost(_ offset: Int) {
-        let posts = model.posts
-        guard !posts.isEmpty else { return }
-        if let id = focusedPostID, let index = posts.firstIndex(where: { $0.id == id }) {
-            let target = max(0, min(posts.count - 1, index + offset))
-            focusedPostID = posts[target].id
+        // Navigate the displayed (thread-grouped) order, not the raw page order.
+        let ids = FeedThreading.arrange(model.posts).map(\.id)
+        guard !ids.isEmpty else { return }
+        if let id = focusedPostID, let index = ids.firstIndex(of: id) {
+            let target = max(0, min(ids.count - 1, index + offset))
+            focusedPostID = ids[target]
         } else {
-            focusedPostID = posts.first?.id
+            focusedPostID = ids.first
         }
-        if focusedPostID == posts.last?.id {
+        if focusedPostID == ids.last {
             Task { await model.loadMore() }
         }
     }

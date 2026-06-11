@@ -36,6 +36,12 @@ struct PostRowView: View, @MainActor Equatable {
     var onAvatarTap: () -> Void = {}
     /// Called when the copy-link icon is tapped (copies the post permalink).
     var onCopyLink: () -> Void = {}
+    /// Thread-grouping flags (see `FeedThreading`): when set, a member of the
+    /// same reply chain sits directly above / below, and the avatar column draws
+    /// the Bluesky-web-style connector line toward it. The reply marker is
+    /// redundant when the parent is the row right above, so it is hidden.
+    var connectsToPrevious: Bool = false
+    var connectsToNext: Bool = false
 
     @EnvironmentObject private var theme: ThemeStore
     @State private var showRepostOptions = false
@@ -73,6 +79,8 @@ struct PostRowView: View, @MainActor Equatable {
             && lhs.now == rhs.now
             && lhs.showReplyMarker == rhs.showReplyMarker
             && lhs.interactiveActions == rhs.interactiveActions
+            && lhs.connectsToPrevious == rhs.connectsToPrevious
+            && lhs.connectsToNext == rhs.connectsToNext
     }
 
     var body: some View {
@@ -80,18 +88,49 @@ struct PostRowView: View, @MainActor Equatable {
             if let context = post.contextLabel {
                 contextHeader(context).padding(.leading, leadingInset)
             }
-            if showReplyMarker, let parent = post.replyParent?.post {
+            if showReplyMarker, !connectsToPrevious, let parent = post.replyParent?.post {
                 replyMarker(parent: parent).padding(.leading, leadingInset)
             }
             HStack(alignment: .top, spacing: columnSpacing) {
-                avatar
+                avatarColumn
                 content
                 Spacer(minLength: 0)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, density == .compact ? 6 : 11)
+        .padding(.vertical, verticalPadding)
         .padding(.horizontal, density == .compact ? 12 : 16)
+    }
+
+    private var verticalPadding: CGFloat { density == .compact ? 6 : 11 }
+
+    /// The avatar plus the thread connector segments. The top segment reaches
+    /// back through the row's own top padding to meet the previous row's line;
+    /// the bottom segment stretches to the row's bottom edge and through the
+    /// bottom padding so the line is continuous across grouped rows (the feed
+    /// also drops the divider between them).
+    private var avatarColumn: some View {
+        VStack(spacing: 0) {
+            if connectsToPrevious {
+                threadLine
+                    .frame(height: verticalPadding)
+                    .padding(.top, -verticalPadding)
+            }
+            avatar
+            if connectsToNext {
+                threadLine
+                    .frame(maxHeight: .infinity)
+                    .padding(.bottom, -verticalPadding)
+            }
+        }
+        .frame(width: avatarSize)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private var threadLine: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(theme.hairline)
+            .frame(width: 2)
     }
 
     private func contextHeader(_ text: String) -> some View {
