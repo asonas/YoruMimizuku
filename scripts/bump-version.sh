@@ -5,24 +5,29 @@
 set -euo pipefail
 
 version="${1:-}"
-if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Usage: mise run bump <x.y.z>  (got: '${version}')" >&2
+if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+  echo "Usage: mise run bump <x.y.z[-pre.N]>  (got: '${version}')" >&2
   exit 1
 fi
 
 cd "$(dirname "$0")/.."
 
-current_build="$(sed -n 's/.*CURRENT_PROJECT_VERSION: "\([0-9]*\)".*/\1/p' project.yml)"
+# Only the first MARKETING_VERSION / CURRENT_PROJECT_VERSION pair in project.yml
+# belongs to the macOS release target; the iPadOS target below it is versioned
+# independently and must not be touched.
+current_build="$(sed -n 's/.*CURRENT_PROJECT_VERSION: "\([0-9]*\)".*/\1/p' project.yml | head -1)"
 if [[ -z "$current_build" ]]; then
   echo "Could not find CURRENT_PROJECT_VERSION in project.yml" >&2
   exit 1
 fi
 next_build="$((current_build + 1))"
 
-sed -i '' \
-  -e "s/\(MARKETING_VERSION: \)\"[^\"]*\"/\1\"${version}\"/" \
-  -e "s/\(CURRENT_PROJECT_VERSION: \)\"[0-9]*\"/\1\"${next_build}\"/" \
-  project.yml
+awk -v ver="$version" -v build="$next_build" '
+  !mv && /MARKETING_VERSION: "/ { sub(/MARKETING_VERSION: "[^"]*"/, "MARKETING_VERSION: \"" ver "\""); mv = 1 }
+  !bv && /CURRENT_PROJECT_VERSION: "/ { sub(/CURRENT_PROJECT_VERSION: "[0-9]*"/, "CURRENT_PROJECT_VERSION: \"" build "\""); bv = 1 }
+  { print }
+' project.yml > project.yml.bump.tmp
+mv project.yml.bump.tmp project.yml
 
 xcodegen generate >/dev/null
 
