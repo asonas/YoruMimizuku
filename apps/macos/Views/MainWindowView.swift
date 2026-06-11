@@ -49,6 +49,8 @@ struct MainWindowView: View {
         }
         // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
         .background { tabShortcuts }
+        // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
+        .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
         .onReceive(clock) { now = $0 }
         .task {
             model.startPolling(every: pollInterval)
@@ -189,6 +191,26 @@ struct MainWindowView: View {
     private func openAuthor(for post: PostDisplay) {
         guard let did = ATURI.repo(post.id), !did.isEmpty else { return }
         workspace.openAuthor(did: did, handle: post.authorHandle, displayName: post.authorDisplayName, avatarURL: post.avatarURL)
+    }
+
+    /// The timeline backing the currently selected tab, so a post composed from
+    /// the menu refreshes the feed the user is looking at. Tabs without their
+    /// own timeline (notifications / conversation / author) fall back to home.
+    private var activeTimelineModel: TimelineViewModel {
+        switch workspace.selection {
+        case let .filter(id):
+            return workspace.filter(id: id)?.model ?? model
+        default:
+            return model
+        }
+    }
+
+    /// ⌘N from the File menu: open a new-post composer over the current tab.
+    /// No-op while another sheet is already up so the command cannot stack or
+    /// replace an in-progress draft.
+    private func composeFromMenu() {
+        guard composer == nil, !showSettings else { return }
+        compose(refreshing: activeTimelineModel)
     }
 
     /// Open the composer for a new post; on success dismiss it and refresh the
