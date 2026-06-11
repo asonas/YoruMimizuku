@@ -66,7 +66,7 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
         let quote = quotedPost.map { StrongRef(uri: $0.id, cid: $0.cid) }
         // Trailing blank lines would be published verbatim, so drop them at the
         // submission boundary while leaving interior line breaks untouched.
-        let trimmedText = Self.trimmingTrailingWhitespace(of: text)
+        let trimmedText = PostText.trimmingTrailingWhitespace(of: text)
         let draft = PostDraft(text: trimmedText, images: images, replyParentURI: replyParentURI, quote: quote)
         do {
             _ = try await submitter.submit(draft)
@@ -77,13 +77,5 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
             isSubmitting = false
             errorMessage = String(describing: error)
         }
-    }
-
-    /// Remove whitespace and newlines only from the end of the text.
-    static func trimmingTrailingWhitespace(of text: String) -> String {
-        guard let lastNonWhitespace = text.rangeOfCharacter(
-            from: CharacterSet.whitespacesAndNewlines.inverted, options: .backwards
-        ) else { return "" }
-        return String(text[..<lastNonWhitespace.upperBound])
     }
 }
