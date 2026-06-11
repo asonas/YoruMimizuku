@@ -45,8 +45,43 @@ public sealed class PostItem : ObservableObject
         ? new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new System.Uri(u)) : null;
 
     public Visibility ContextVisibility => HasContext ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility ReplyVisibility => IsReply ? Visibility.Visible : Visibility.Collapsed;
+    // The reply marker is hidden for a grouped member (its parent is shown
+    // directly above), mirroring the macOS web-style thread block.
+    public Visibility ReplyVisibility => IsReply && !ConnectsToPrevious ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ImagesVisibility => HasImages ? Visibility.Visible : Visibility.Collapsed;
+
+    // -- Web-style thread grouping (see FeedThreading via yoru_feed_arrange) --
+    private bool _connectsToPrevious;
+    public bool ConnectsToPrevious
+    {
+        get => _connectsToPrevious;
+        private set { if (SetProperty(ref _connectsToPrevious, value)) OnPropertyChanged(nameof(ReplyVisibility)); }
+    }
+
+    private bool _connectsToNext;
+    public bool ConnectsToNext
+    {
+        get => _connectsToNext;
+        private set
+        {
+            if (SetProperty(ref _connectsToNext, value))
+            {
+                OnPropertyChanged(nameof(ConnectorBottomVisibility));
+                OnPropertyChanged(nameof(RowBorderThickness));
+            }
+        }
+    }
+
+    /// Connector line dropping from this avatar to the grouped reply below it.
+    public Visibility ConnectorBottomVisibility => ConnectsToNext ? Visibility.Visible : Visibility.Collapsed;
+    /// Drop the row's bottom divider inside a thread block so grouped posts read as one unit.
+    public Thickness RowBorderThickness => new(0, 0, 0, ConnectsToNext ? 0 : 1);
+
+    public void SetThreadConnectors(bool connectsToPrevious, bool connectsToNext)
+    {
+        ConnectsToPrevious = connectsToPrevious;
+        ConnectsToNext = connectsToNext;
+    }
 
     // Action-bar glyphs/brushes (Segoe MDL2): like heart, repost two-arrows.
     public string LikeGlyph => IsLiked ? "\uEB52" : "\uEB51";
