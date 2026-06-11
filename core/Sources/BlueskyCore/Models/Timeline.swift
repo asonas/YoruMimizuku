@@ -99,25 +99,106 @@ public struct PostViewerState: Decodable, Equatable, Sendable {
     }
 }
 
-/// The post's view embed. `app.bsky.embed.images#view` fills `images` and
-/// `app.bsky.embed.external#view` fills `external`; any other embed kind
-/// (record, video, recordWithMedia) decodes to an empty value so decoding never
-/// fails on shapes we do not render yet.
+/// The post's view embed, decoded by key shape rather than `$type` so one
+/// struct covers every kind we render: `app.bsky.embed.images#view` fills
+/// `images`, `app.bsky.embed.external#view` fills `external`, and
+/// `app.bsky.embed.video#view` (recognized by its `playlist` key) fills
+/// `video`. Any embed kind we do not render decodes to an empty value so
+/// decoding never fails on unknown shapes.
 public struct PostEmbed: Decodable, Equatable, Sendable {
     public let images: [EmbedImage]
     public let external: EmbedExternal?
+    public let video: EmbedVideo?
+    public let record: EmbedRecord?
 
-    public init(images: [EmbedImage], external: EmbedExternal? = nil) {
+    public init(images: [EmbedImage], external: EmbedExternal? = nil, video: EmbedVideo? = nil, record: EmbedRecord? = nil) {
         self.images = images
         self.external = external
+        self.video = video
+        self.record = record
     }
 
-    enum CodingKeys: String, CodingKey { case images, external }
+    enum CodingKeys: String, CodingKey { case images, external, playlist, record, media }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.images = (try? container.decode([EmbedImage].self, forKey: .images)) ?? []
-        self.external = try? container.decodeIfPresent(EmbedExternal.self, forKey: .external)
+        // `app.bsky.embed.recordWithMedia#view` nests its media embed (images /
+        // external / video view) under `media`; decoding it as a `PostEmbed` of
+        // its own lets the merge below reuse every shape this struct handles.
+        let media = try? container.decodeIfPresent(PostEmbed.self, forKey: .media)
+        self.images = (try? container.decode([EmbedImage].self, forKey: .images)) ?? media?.images ?? []
+        self.external = (try? container.decodeIfPresent(EmbedExternal.self, forKey: .external)) ?? media?.external
+        self.video = container.contains(.playlist) ? (try? EmbedVideo(from: decoder)) : media?.video
+        // `record` is the quoted `viewRecord` directly in `record#view`, but in
+        // `recordWithMedia#view` it is the whole `record#view` object — one more
+        // `record` level down. Probe both shapes.
+        self.record = (try? container.decodeIfPresent(EmbedRecord.self, forKey: .record))
+            ?? (try? container.decodeIfPresent(RecordViewWrapper.self, forKey: .record))?.record
+    }
+}
+
+/// The `app.bsky.embed.record#view` object as nested inside
+/// `recordWithMedia#view`: one extra `record` level around the `viewRecord`.
+private struct RecordViewWrapper: Decodable {
+    let record: EmbedRecord?
+
+    enum CodingKeys: String, CodingKey { case record }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.record = try? container.decodeIfPresent(EmbedRecord.self, forKey: .record)
+    }
+}
+
+/// A quoted post (`app.bsky.embed.record#view`'s `viewRecord`) hydrated enough
+/// to render a quote card: the quoted post's identity, author, record value,
+/// and its own media embeds. Non-post records and the viewNotFound /
+/// viewBlocked / viewDetached variants fail this decode, which the tolerant
+/// parent (`PostEmbed`) turns into a nil `record` — the quote card is simply
+/// not rendered.
+public struct EmbedRecord: Decodable, Equatable, Sendable {
+    public let uri: String
+    public let cid: String
+    public let author: ProfileViewBasic
+    public let value: PostRecord
+    /// The quoted post's own embeds (images / external / video), used for the
+    /// quote card's thumbnails. A quote nested inside a quote is not rendered.
+    public let embeds: [PostEmbed]
+
+    public init(uri: String, cid: String, author: ProfileViewBasic, value: PostRecord, embeds: [PostEmbed] = []) {
+        self.uri = uri
+        self.cid = cid
+        self.author = author
+        self.value = value
+        self.embeds = embeds
+    }
+
+    enum CodingKeys: String, CodingKey { case uri, cid, author, value, embeds }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uri = try container.decode(String.self, forKey: .uri)
+        self.cid = try container.decode(String.self, forKey: .cid)
+        self.author = try container.decode(ProfileViewBasic.self, forKey: .author)
+        self.value = try container.decode(PostRecord.self, forKey: .value)
+        self.embeds = (try? container.decode([PostEmbed].self, forKey: .embeds)) ?? []
+    }
+}
+
+/// The hydrated video embed (`app.bsky.embed.video#view`): the HLS playlist URL
+/// plus the optional poster thumbnail, alt text, and source aspect ratio. The
+/// app renders the poster only; playback opens the post externally.
+public struct EmbedVideo: Decodable, Equatable, Sendable {
+    public let playlist: String
+    public let thumbnail: String?
+    public let alt: String?
+    public let aspectRatio: ImageAspectRatio?
+
+    public init(playlist: String, thumbnail: String? = nil, alt: String? = nil, aspectRatio: ImageAspectRatio? = nil) {
+        self.playlist = playlist
+        self.thumbnail = thumbnail
+        self.alt = alt
+        self.aspectRatio = aspectRatio
     }
 }
 

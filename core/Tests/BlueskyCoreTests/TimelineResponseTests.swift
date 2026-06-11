@@ -357,6 +357,196 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertEqual(record.facets, [])
     }
 
+    func testDecodesVideoEmbed() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.video#view",
+          "cid": "bafyvideo",
+          "playlist": "https://video.example/watch/playlist.m3u8",
+          "thumbnail": "https://video.example/watch/thumbnail.jpg",
+          "alt": "a dog running",
+          "aspectRatio": { "width": 1280, "height": 720 }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+
+        XCTAssertEqual(embed.video?.playlist, "https://video.example/watch/playlist.m3u8")
+        XCTAssertEqual(embed.video?.thumbnail, "https://video.example/watch/thumbnail.jpg")
+        XCTAssertEqual(embed.video?.alt, "a dog running")
+        XCTAssertEqual(embed.video?.aspectRatio, ImageAspectRatio(width: 1280, height: 720))
+        XCTAssertEqual(embed.images, [])
+        XCTAssertNil(embed.external)
+    }
+
+    func testDecodesRecordEmbedAsQuotedPost() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.record#view",
+          "record": {
+            "$type": "app.bsky.embed.record#viewRecord",
+            "uri": "at://did:plc:quoted/app.bsky.feed.post/qqq",
+            "cid": "bafyquoted",
+            "author": {
+              "did": "did:plc:quoted",
+              "handle": "quoted.bsky.social",
+              "displayName": "Quoted Author",
+              "avatar": "https://cdn.example/quoted.jpg"
+            },
+            "value": {
+              "$type": "app.bsky.feed.post",
+              "text": "the quoted text",
+              "createdAt": "2026-06-10T08:00:00.000Z"
+            },
+            "indexedAt": "2026-06-10T08:00:01.000Z"
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+        let record = try XCTUnwrap(embed.record)
+
+        XCTAssertEqual(record.uri, "at://did:plc:quoted/app.bsky.feed.post/qqq")
+        XCTAssertEqual(record.cid, "bafyquoted")
+        XCTAssertEqual(record.author.handle, "quoted.bsky.social")
+        XCTAssertEqual(record.value.text, "the quoted text")
+        XCTAssertEqual(record.value.createdAt, "2026-06-10T08:00:00.000Z")
+        XCTAssertEqual(record.embeds, [])
+    }
+
+    func testNotFoundQuotedRecordDecodesToNilRecord() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.record#view",
+          "record": {
+            "$type": "app.bsky.embed.record#viewNotFound",
+            "uri": "at://did:plc:gone/app.bsky.feed.post/zzz",
+            "notFound": true
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+        XCTAssertNil(embed.record)
+    }
+
+    func testNonPostQuotedRecordDecodesToNilRecord() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.record#view",
+          "record": {
+            "$type": "app.bsky.graph.defs#listView",
+            "uri": "at://did:plc:alice/app.bsky.graph.list/lll",
+            "cid": "bafylist",
+            "name": "my list",
+            "purpose": "app.bsky.graph.defs#curatelist",
+            "indexedAt": "2026-06-10T08:00:00.000Z"
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+        XCTAssertNil(embed.record)
+    }
+
+    func testDecodesRecordWithMediaImages() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.recordWithMedia#view",
+          "record": {
+            "$type": "app.bsky.embed.record#view",
+            "record": {
+              "$type": "app.bsky.embed.record#viewRecord",
+              "uri": "at://did:plc:quoted/app.bsky.feed.post/qqq",
+              "cid": "bafyquoted",
+              "author": { "did": "did:plc:quoted", "handle": "quoted.bsky.social" },
+              "value": {
+                "$type": "app.bsky.feed.post",
+                "text": "the quoted text",
+                "createdAt": "2026-06-10T08:00:00.000Z"
+              },
+              "indexedAt": "2026-06-10T08:00:01.000Z"
+            }
+          },
+          "media": {
+            "$type": "app.bsky.embed.images#view",
+            "images": [
+              { "thumb": "https://cdn.example/m-thumb.jpg", "fullsize": "https://cdn.example/m-full.jpg", "alt": "media" }
+            ]
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+
+        XCTAssertEqual(embed.images.count, 1)
+        XCTAssertEqual(embed.images[0].thumb, "https://cdn.example/m-thumb.jpg")
+        XCTAssertEqual(embed.record?.uri, "at://did:plc:quoted/app.bsky.feed.post/qqq")
+        XCTAssertEqual(embed.record?.value.text, "the quoted text")
+    }
+
+    func testDecodesRecordWithMediaVideo() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.recordWithMedia#view",
+          "record": {
+            "$type": "app.bsky.embed.record#view",
+            "record": {
+              "$type": "app.bsky.embed.record#viewRecord",
+              "uri": "at://did:plc:quoted/app.bsky.feed.post/qqq",
+              "cid": "bafyquoted",
+              "author": { "did": "did:plc:quoted", "handle": "quoted.bsky.social" },
+              "value": {
+                "$type": "app.bsky.feed.post",
+                "text": "the quoted text",
+                "createdAt": "2026-06-10T08:00:00.000Z"
+              },
+              "indexedAt": "2026-06-10T08:00:01.000Z"
+            }
+          },
+          "media": {
+            "$type": "app.bsky.embed.video#view",
+            "cid": "bafyvideo",
+            "playlist": "https://video.example/watch/playlist.m3u8",
+            "thumbnail": "https://video.example/watch/thumbnail.jpg"
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+
+        XCTAssertEqual(embed.video?.playlist, "https://video.example/watch/playlist.m3u8")
+        XCTAssertEqual(embed.record?.value.text, "the quoted text")
+        XCTAssertEqual(embed.images, [])
+    }
+
+    func testQuotedRecordCarriesItsOwnImageEmbeds() throws {
+        let json = Data(##"""
+        {
+          "$type": "app.bsky.embed.record#view",
+          "record": {
+            "$type": "app.bsky.embed.record#viewRecord",
+            "uri": "at://did:plc:quoted/app.bsky.feed.post/qqq",
+            "cid": "bafyquoted",
+            "author": { "did": "did:plc:quoted", "handle": "quoted.bsky.social" },
+            "value": {
+              "$type": "app.bsky.feed.post",
+              "text": "quoted with pics",
+              "createdAt": "2026-06-10T08:00:00.000Z"
+            },
+            "embeds": [
+              {
+                "$type": "app.bsky.embed.images#view",
+                "images": [
+                  { "thumb": "https://cdn.example/q-thumb.jpg", "fullsize": "https://cdn.example/q-full.jpg", "alt": "" }
+                ]
+              }
+            ],
+            "indexedAt": "2026-06-10T08:00:01.000Z"
+          }
+        }
+        """##.utf8)
+        let embed = try JSONDecoder().decode(PostEmbed.self, from: json)
+        let record = try XCTUnwrap(embed.record)
+
+        XCTAssertEqual(record.embeds.count, 1)
+        XCTAssertEqual(record.embeds[0].images.first?.thumb, "https://cdn.example/q-thumb.jpg")
+    }
+
     func testUnknownFacetFeatureIsDropped() throws {
         let json = Data(##"""
         {
