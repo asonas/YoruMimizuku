@@ -22,17 +22,17 @@
 
 ## Test List
 
-- [ ] 1. video#view を持つ embed が `EmbedVideo`（playlist / thumbnail / aspectRatio / alt）にデコードされる
-- [ ] 2. record#view（viewRecord、value がポスト）が `EmbedRecord`（uri / author / value.text / value.createdAt）にデコードされる
-- [ ] 3. record#view の viewNotFound / viewBlocked は `record == nil` でデコード成功する
-- [ ] 4. record の `value` がポストでない（text 欠落）場合も `record == nil` で成功する
-- [ ] 5. recordWithMedia#view（media = images）で images と record の両方が取れる
-- [ ] 6. recordWithMedia#view（media = external / video）で external / video と record が取れる
-- [ ] 7. viewRecord の `embeds`（images#view）が `EmbedRecord.embeds` に入る
-- [ ] 8. 既存: images#view / external#view のデコードが回 regress しない（既存テスト green 維持）
-- [ ] 9. mapping: video embed → `PostDisplay.video`（thumbURL / aspectRatio）
-- [ ] 10. mapping: record embed → `PostDisplay.quote`（作者 / 本文 / createdAt / 画像サムネ）
-- [ ] 11. mapping: embed なし・record なしでは quote / video が nil
+- [x] 1. video#view を持つ embed が `EmbedVideo`（playlist / thumbnail / aspectRatio / alt）にデコードされる
+- [x] 2. record#view（viewRecord、value がポスト）が `EmbedRecord`（uri / author / value.text / value.createdAt）にデコードされる
+- [x] 3. record#view の viewNotFound / viewBlocked は `record == nil` でデコード成功する
+- [x] 4. record の `value` がポストでない（text 欠落）場合も `record == nil` で成功する
+- [x] 5. recordWithMedia#view（media = images）で images と record の両方が取れる
+- [x] 6. recordWithMedia#view（media = external / video）で external / video と record が取れる
+- [x] 7. viewRecord の `embeds`（images#view）が `EmbedRecord.embeds` に入る
+- [x] 8. 既存: images#view / external#view のデコードが回 regress しない（既存テスト green 維持）
+- [x] 9. mapping: video embed → `PostDisplay.video`（thumbURL / aspectRatio）
+- [x] 10. mapping: record embed → `PostDisplay.quote`（作者 / 本文 / createdAt / 画像サムネ）
+- [x] 11. mapping: embed なし・record なしでは quote / video が nil
 
 ## Task 1: BlueskyCore — EmbedVideo と EmbedRecord のデコード（テスト 1〜8）
 
@@ -55,5 +55,5 @@
 
 ## Task 4: wiki 更新とリリース
 
-- [ ] wiki: `timeline-streaming.md` に引用カード・動画ポスターの behavior 追記、features 行追加、`mise run wiki:matrix` / `lint` / `index`
+- [x] wiki: `timeline-streaming.md` に引用カード・動画ポスターの behavior 追記、features 行追加、`mise run wiki:matrix` / `lint` / `index`
 - [ ] `mise run bump 1.0.0-dev.1` → commit → tag → 両リモート push → `release:dev` → `publish:dev` → gh-pages `appcast-dev.xml` 更新 → Pages 反映確認

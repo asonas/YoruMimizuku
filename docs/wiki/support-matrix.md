@@ -77,6 +77,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
 | External link preview cards (OGP) | ○ | × | × | − |
+| Quote post (record embed) cards | ○ | × | × | − |
+| Video embed poster (no inline playback) | ○ | × | × | − |
 | Conversation child reply tree | ○ | × | ○ | − |
 | Thread grouping in the feed (web-style) | ○ | × | × | − |
 
@@ -94,5 +96,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0. No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
+- **Quote post (record embed) cards** ([[timeline-streaming]]): macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]]).
+- **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).
 - **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).

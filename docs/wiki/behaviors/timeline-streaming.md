@@ -12,6 +12,10 @@ sources:
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
   - docs/superpowers/plans/2026-06-08-phase-d-conversation-child-tree.md
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
+  - docs/superpowers/plans/2026-06-11-quote-and-video-embeds.md
+  - core/Sources/BlueskyCore/Models/Timeline.swift
+  - apps/macos/Views/QuoteCardView.swift
+  - apps/macos/Views/VideoPosterView.swift
   - apps/windows/App/Views/FeedView.xaml
   - apps/windows/App/Views/FeedView.xaml.cs
   - apps/windows/App/Views/ConversationView.xaml
@@ -49,6 +53,18 @@ features:
     ios: none
     android: planned
     note: "macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
+  - name: Quote post (record embed) cards
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]])."
+  - name: Video embed poster (no inline playback)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]])."
   - name: Conversation child reply tree
     macos: full
     windows: none
@@ -104,6 +120,12 @@ uses SwiftUI `openURL`, and hashtag links are intercepted into saved-search tabs
 A post row can carry a link card styled after X's full large summary card: one bordered, rounded container stacking a wide 1.91:1 hero image, the page title in bold (2 lines), the description in grey (2 lines, comfortable density only), and a link-icon host line; links without a thumbnail render the same text section alone. The card sits between the body / image grid and the action bar; clicking it opens the URL in the default browser. Two sources feed the card. When the post's embed is `app.bsky.embed.external#view`, the card renders directly from the hydrated data the posting client captured (`PostEmbed.external` → `PostDisplay.linkCard`, `Timeline.swift`, `PostDisplay+Mapping.swift`). When a text-only post has no embed but its body contains a link facet, the first link's OGP metadata is fetched on demand and the same card is built client-side: `LinkPreviewLoader` (an actor) caches one result per URL — including misses — and deduplicates concurrent fetches, and the pure `OGP` parser extracts `og:title` / `og:description` / `og:image` with `<title>` / `meta description` fallbacks (`LinkPreviewLoader.swift`, `OGP.swift`, `apps/macos/Views/LinkCardView.swift`).
 
 The fallback is intentionally skipped for posts that already attach images, keeping rows tight, and a page that yields no usable title renders nothing rather than an empty card. Note the privacy trade-off of the fallback path: resolving a bare link's preview fetches that page from the viewer's machine, so linked sites can observe the viewer's IP (the embed-provided path has no such fetch — its thumbnail comes from the Bluesky CDN). The card UI exists on [[macos]] only today; Windows and iPadOS rows render body text and images without link cards.
+
+## Quote post cards and video posters
+
+A post whose embed is `app.bsky.embed.record#view` (or `recordWithMedia#view`) renders the quoted post inside the row as a bordered, rounded card: a compact author line (small avatar, display name, handle, relative time), the quoted body capped at six lines, and the quoted post's own media — up to two small image thumbnails, or a video poster. Clicking the card opens the quoted post's conversation tab through the same URI-based `WorkspaceModel.openConversation(anchorID:)` entry point notifications use. Decoding is tolerant by shape, not `$type`: `PostEmbed` probes the `record` key both as the bare `viewRecord` (record#view) and as the one-level-deeper wrapper (recordWithMedia#view), and a `viewNotFound` / `viewBlocked` / `viewDetached` variant or a non-post record (a quoted list or feed generator) simply yields no card. A recordWithMedia post's `media` is decoded as a nested `PostEmbed` and merged, so its images / external / video render through the existing paths alongside the quote card (`Timeline.swift`, `PostDisplay+Mapping.swift`, `apps/macos/Views/QuoteCardView.swift`).
+
+A post with `app.bsky.embed.video#view` renders the video's poster frame at its reported aspect ratio (16:9 when omitted) with a centered play badge. Playback is not inline in v1 — clicking the poster opens the post's public permalink in the default browser. The quote card reuses the same poster for a quoted post that carries video (`apps/macos/Views/VideoPosterView.swift`, `2026-06-11-quote-and-video-embeds.md`). The OGP fallback card for bare links is skipped for posts that already carry images, video, or a quote, keeping rows tight. Both renderings are macOS-only today; Windows and iPadOS rows still drop record and video embeds.
 
 ## Conversation view (ancestors + reply tree)
 
