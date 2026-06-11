@@ -39,7 +39,7 @@ The `listNotifications` request always carries an explicit `priority=false`. Whe
 
 The v1 design (§9.2) calls for a background polling actor that periodically calls `getUnreadCount` / `listNotifications`, surfaces anything new since the last seen marker as an `UNUserNotificationCenter` banner, and sets the Dock badge to the unread count, with first-use permission request and a configurable interval (default 30–60s) with backoff. `UNUserNotificationCenter` is one of the six OS-touchpoint ports (see [[architecture]]).
 
-**None of this exists on macOS yet**: the app contains no `UNUserNotificationCenter` or Dock-badge code, and the OS-notification port itself is undefined in core. Today the only unread surfacing on every platform is the in-app sidebar badge described below. Implementing the OS path is tracked as milestone M3 of the v1.0.0 roadmap (`docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`).
+**None of this exists on macOS yet**: the app contains no `UNUserNotificationCenter` or Dock-badge code, and the OS-notification port itself is undefined in core. Today the only unread surfacing on every platform is the in-app sidebar badge described below. By the 2026-06-11 scope decision the OS path is deferred past v1.0.0 into a 1.x release; v1.0.0 ships in-app notification settings (polling interval, badges) only (design spec §14 addendum, `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`).
 
 ## Sidebar / navigation unread badge
 
