@@ -31,6 +31,10 @@ public sealed partial class MainWindow : Window
     private bool _restoringWindowWidth;
     private AppWindow? _appWindow;
     private SavedFilterStore? _filterStore;
+    // Last unread count we already alerted on, so a steady or falling count does
+    // not re-toast. Starts at 0; the first load anchors unread to 0 (see
+    // NotificationsViewModel), so only genuinely new activity raises it.
+    private int _lastNotifiedUnread;
 
     public MainWindow()
     {
@@ -38,6 +42,7 @@ public sealed partial class MainWindow : Window
         Title = "YoruMimizuku";
         Views.MainWindowAccessor.Current = this;
         AppIcon.TrySetWindowIcon(this);
+        NotificationAlerts.Shared.Register();
         if (CurrentAppWindow() is not null)
         {
             _appWindow!.Changed += OnAppWindowChanged;
@@ -47,12 +52,20 @@ public sealed partial class MainWindow : Window
         {
             SaveWindowWidth();
             UpdateService.Shared.Shutdown();
+            NotificationAlerts.Shared.Unregister();
         };
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
         _notifications.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(NotificationsViewModel.UnreadCount)) BuildTabs();
+            if (e.PropertyName != nameof(NotificationsViewModel.UnreadCount)) return;
+            BuildTabs();
+            var unread = _notifications.UnreadCount;
+            if (unread > _lastNotifiedUnread && unread > 0)
+            {
+                NotificationAlerts.Shared.NotifyNewActivity(unread, this);
+            }
+            _lastNotifiedUnread = unread;
         };
         _notificationsTimer.Tick += async (_, _) => await _notifications.RefreshAsync();
         RootGrid.KeyDown += OnRootKeyDown;
