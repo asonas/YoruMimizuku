@@ -21,6 +21,59 @@ public struct PostImage: Identifiable, Equatable, Sendable {
     }
 }
 
+/// A video attached to a post, reduced to what the row renders: the poster
+/// thumbnail with its aspect ratio and alt text. Playback is not inline —
+/// activating the poster opens the post externally.
+public struct PostVideo: Equatable, Sendable {
+    public let thumbURL: URL?
+    public let alt: String?
+    public let aspectRatio: Double?
+
+    public init(thumbURL: URL?, alt: String? = nil, aspectRatio: Double? = nil) {
+        self.thumbURL = thumbURL
+        self.alt = alt
+        self.aspectRatio = aspectRatio
+    }
+}
+
+/// The quoted post inside a quote card, reduced to what the card renders: the
+/// quoted author, body, timestamp, and its own media (image thumbnails and a
+/// video poster). `id` is the quoted post's AT-URI, so activating the card can
+/// open its conversation. A quote nested inside the quoted post is dropped.
+public struct QuotedPost: Identifiable, Equatable, Sendable {
+    public let id: String
+    public let cid: String
+    public let authorDisplayName: String
+    public let authorHandle: String
+    public let avatarURL: URL?
+    public let body: String
+    public let createdAt: Date
+    public let images: [PostImage]
+    public let video: PostVideo?
+
+    public init(
+        id: String,
+        cid: String,
+        authorDisplayName: String,
+        authorHandle: String,
+        avatarURL: URL? = nil,
+        body: String,
+        createdAt: Date,
+        images: [PostImage] = [],
+        video: PostVideo? = nil
+    ) {
+        self.id = id
+        self.cid = cid
+        self.authorDisplayName = authorDisplayName
+        self.authorHandle = authorHandle
+        self.avatarURL = avatarURL
+        self.body = body
+        self.createdAt = createdAt
+        self.images = images
+        self.video = video
+    }
+}
+
 /// Reference box for a post's reply parent. A class breaks the otherwise
 /// recursive value type (`PostDisplay` containing a `PostDisplay`); it is
 /// immutable so it stays `Sendable`.
@@ -64,6 +117,12 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     /// `app.bsky.embed.external#view`. Rendered between the body/images and the
     /// action bar.
     public let linkCard: LinkCard?
+    /// The video attached to this post (`app.bsky.embed.video#view`), rendered
+    /// as a poster image with a play badge.
+    public let video: PostVideo?
+    /// The post this one quotes (`app.bsky.embed.record#view` /
+    /// `recordWithMedia#view`), rendered as a bordered quote card.
+    public let quote: QuotedPost?
     /// The post this one replies to, when its parent is available in the feed.
     public let replyParent: ReplyParent?
     public let replyCount: Int
@@ -100,6 +159,8 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         contextLabel: String? = nil,
         images: [PostImage] = [],
         linkCard: LinkCard? = nil,
+        video: PostVideo? = nil,
+        quote: QuotedPost? = nil,
         replyParent: ReplyParent? = nil,
         replyCount: Int = 0,
         repostCount: Int = 0,
@@ -120,6 +181,8 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.contextLabel = contextLabel
         self.images = images
         self.linkCard = linkCard
+        self.video = video
+        self.quote = quote
         self.replyParent = replyParent
         self.replyCount = replyCount
         self.repostCount = repostCount
