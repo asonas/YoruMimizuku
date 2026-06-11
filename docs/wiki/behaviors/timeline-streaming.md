@@ -11,6 +11,7 @@ sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
   - docs/superpowers/plans/2026-06-08-phase-d-conversation-child-tree.md
+  - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
   - apps/windows/App/Views/FeedView.xaml
   - apps/windows/App/Views/FeedView.xaml.cs
   - apps/windows/App/Views/ConversationView.xaml
@@ -22,11 +23,11 @@ features:
     ios: full
     android: planned
   - name: Jetstream live updates (home / list)
-    macos: full
+    macos: none
     windows: none
     ios: none
     android: planned
-    note: "Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]])."
+    note: "Designed in the v1 spec but not implemented on any platform yet: every source updates by interval polling today. No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]])."
   - name: Rich text + image grid / lightbox rendering
     macos: full
     windows: full
@@ -72,15 +73,15 @@ On the display side, the state machine (idle / loading / loaded / failed), polli
 
 A feed page that contains several posts of the same reply chain — typically an author's self-thread ("1/3 … 3/3") — no longer lists them as independent newest-first rows. Mirroring Bluesky's web client, the pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) resolves each post to its topmost ancestor present on the page and emits the whole chain as one block, oldest first, at the feed position of the block's newest member; posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders the block with a thread connector line between the grouped rows' avatars, hides the now-redundant "@x への返信" marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`).
 
-## Home / List (Jetstream live)
+## Home / List (Jetstream live) — designed, not yet implemented
 
-The first page is fetched over XRPC (`getTimeline` / `getListFeed`). After that, Jetstream is subscribed with a filter on the target DIDs (home = follows, list = members) plus `app.bsky.feed.post`, and new items are merged at the top. Because Jetstream streams raw records only, new posts are batch-hydrated via `getPosts` (filling in author profiles and counts) before insertion. Counts lag slightly but that is acceptable (§6.1).
+The v1 design (§6.1) calls for Jetstream live updates on home and list tabs: after the first XRPC page, subscribe Jetstream filtered on the target DIDs (home = follows, list = members) plus `app.bsky.feed.post`, batch-hydrate new posts via `getPosts`, and merge them at the top — with cursor persistence, backfill on resume, and a **watchdog that detects a stall and forces reconnection** (the typical failure after macOS sleep/wake), all carried over from tempest.
 
-Knowledge carried over from tempest: cursor persistence, backfill on resume, suppression of like/repost replays from the cursor, and a **watchdog that detects a stall and forces reconnection** (the typical failure after macOS sleep/wake).
+**None of this exists in the codebase yet.** There is no WebSocket port, no Jetstream decoder, and no watchdog in `BlueskyCore`; every source — including home — updates by the interval polling described below. Implementing Jetstream is tracked as milestone M4 of the v1.0.0 roadmap (`docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`).
 
-## Fallback (known limitation)
+## Fallback (design note)
 
-Jetstream's `wantedDids` filter has an upper bound. For users whose follow count exceeds it, subscribing to all DIDs + client-side filtering is too heavy, so **when the limit is exceeded, home falls back to short-interval polling** (a v1 compromise; the threshold is set at implementation time after confirming Jetstream's limit, §6.2). Jetstream live updates apply only to home / lists; filters and the rest poll.
+Jetstream's `wantedDids` filter has an upper bound. For users whose follow count exceeds it, subscribing to all DIDs + client-side filtering is too heavy, so the design says **home falls back to short-interval polling when the limit is exceeded** (a v1 compromise; the threshold is set at implementation time after confirming Jetstream's limit, §6.2). Today that "fallback" is effectively the only mode: everything polls.
 
 ## Other sources (polling)
 

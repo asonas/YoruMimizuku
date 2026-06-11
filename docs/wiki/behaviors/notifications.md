@@ -8,6 +8,7 @@ sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
+  - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
@@ -17,11 +18,11 @@ features:
     ios: full
     android: planned
   - name: OS banner + unread badge
-    macos: full
+    macos: limited
     windows: limited
     ios: limited
     android: planned
-    note: "Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]])."
+    note: "Every platform has in-app unread badges only today. The designed UNUserNotificationCenter banner + Dock badge path is not implemented on macOS either ([[macos]], [[windows]], [[ipados]])."
 ---
 
 # Notifications
@@ -34,9 +35,11 @@ The Notifications tab fetches `listNotifications` and groups items by kind (like
 
 The `listNotifications` request always carries an explicit `priority=false`. When the parameter is omitted, the AppView falls back to the account-level "priority notifications" preference, which silently drops notifications (such as replies) from accounts the viewer does not follow. The app has no priority-only mode of its own, so it always requests the full stream (`NotificationsService.swift` `notificationsURL`).
 
-## OS banner + Dock badge
+## OS banner + Dock badge — designed, not yet implemented
 
-A background polling actor periodically calls `getUnreadCount` / `listNotifications`, surfaces anything new since the last seen marker as an `UNUserNotificationCenter` banner, and sets the Dock badge to the unread count. Notification permission is requested on first use. The polling interval is configurable (default 30–60s) with backoff to avoid over-polling (`2026-06-04-yorumimizuku-design.md` §9). `UNUserNotificationCenter` is one of the six OS-touchpoint ports (see [[architecture]]); the Apple specifics are on the [[macos]] page.
+The v1 design (§9.2) calls for a background polling actor that periodically calls `getUnreadCount` / `listNotifications`, surfaces anything new since the last seen marker as an `UNUserNotificationCenter` banner, and sets the Dock badge to the unread count, with first-use permission request and a configurable interval (default 30–60s) with backoff. `UNUserNotificationCenter` is one of the six OS-touchpoint ports (see [[architecture]]).
+
+**None of this exists on macOS yet**: the app contains no `UNUserNotificationCenter` or Dock-badge code, and the OS-notification port itself is undefined in core. Today the only unread surfacing on every platform is the in-app sidebar badge described below. Implementing the OS path is tracked as milestone M3 of the v1.0.0 roadmap (`docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`).
 
 ## Sidebar / navigation unread badge
 

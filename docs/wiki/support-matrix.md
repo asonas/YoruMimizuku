@@ -57,7 +57,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | In-app notifications tab | ○ | ○ | ○ | − |
-| OS banner + unread badge | ○ | △ | △ | − |
+| OS banner + unread badge | △ | △ | △ | − |
 
 ## [[oauth-flow]] — Authentication (OAuth + DPoP)
 
@@ -72,7 +72,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | Timeline load / refresh / infinite scroll | ○ | ○ | ○ | − |
-| Jetstream live updates (home / list) | ○ | × | × | − |
+| Jetstream live updates (home / list) | × | × | × | − |
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
@@ -90,9 +90,9 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Sparkle auto-update checks and install** ([[auto-updates]]): Sparkle auto-update is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
-- **OS banner + unread badge** ([[notifications]]): Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]]).
+- **OS banner + unread badge** ([[notifications]]): Every platform has in-app unread badges only today. The designed UNUserNotificationCenter banner + Dock badge path is not implemented on macOS either ([[macos]], [[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
-- **Jetstream live updates (home / list)** ([[timeline-streaming]]): Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]]).
+- **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but not implemented on any platform yet: every source updates by interval polling today. No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).
 - **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).
