@@ -78,6 +78,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Copy post permalink | ○ | ○ | ○ | − |
 | External link preview cards (OGP) | ○ | × | × | − |
 | Conversation child reply tree | ○ | × | ○ | − |
+| Thread grouping in the feed (web-style) | ○ | × | × | − |
 
 ## Notes
 
@@ -94,3 +95,4 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).
+- **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).

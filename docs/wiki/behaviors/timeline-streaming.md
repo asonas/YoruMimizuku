@@ -5,6 +5,7 @@ updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - core/Sources/YoruMimizukuKit/LinkPreviewLoader.swift
+  - core/Sources/YoruMimizukuKit/FeedThreading.swift
   - apps/macos/Views/LinkCardView.swift
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -53,6 +54,12 @@ features:
     ios: full
     android: planned
     note: "macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]])."
+  - name: Thread grouping in the feed (web-style)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]])."
 ---
 
 # Timeline Fetching and Streaming
@@ -60,6 +67,10 @@ features:
 Each tab's data source is abstracted behind the `TimelineSource` protocol (`loadLatest()` / `loadOlder(cursor:)`, with an optional `liveUpdates`). Implementations are the Home / Feed / List / Author / Search / Notification / Thread sources. Networking, streams, and stores are kept thread-safe with an `actor`-based design (`2026-06-04-yorumimizuku-design.md` §4.4).
 
 On the display side, the state machine (idle / loading / loaded / failed), polling, top-merge, and infinite scroll are centralized in `TimelineViewModel` (`YoruMimizukuKit`). Different sources are reused by swapping in a loader that satisfies the thin boundary `TimelineLoading.loadPage(cursor:) async throws -> TimelinePage`. Filter search rides on the same mechanism ([[filters]]).
+
+## Thread grouping in the feed
+
+A feed page that contains several posts of the same reply chain — typically an author's self-thread ("1/3 … 3/3") — no longer lists them as independent newest-first rows. Mirroring Bluesky's web client, the pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) resolves each post to its topmost ancestor present on the page and emits the whole chain as one block, oldest first, at the feed position of the block's newest member; posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders the block with a thread connector line between the grouped rows' avatars, hides the now-redundant "@x への返信" marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`).
 
 ## Home / List (Jetstream live)
 

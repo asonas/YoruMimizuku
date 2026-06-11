@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-11 ingest
 
+- sources: `FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift` (feed thread grouping; no new spec)
+- updated: [[timeline-streaming]]
+- note: The macOS feed now groups same-thread posts the way Bluesky web does: `FeedThreading.arrange` resolves each post to its topmost on-page ancestor and emits the chain oldest-first at the newest member's position, with a connector line between avatars, the in-block reply marker hidden, and the in-block divider dropped. New "Thread grouping in the feed (web-style)" matrix row (macOS full, Windows/iPadOS none).
+
+## 2026-06-11 ingest
+
 - sources: `NewPostCommand.swift`, `AppDelegate.swift`, `LinkCardView.swift` (macOS UX fixes; no new spec)
 - updated: [[app-shell]], [[auto-updates]], [[timeline-streaming]]
 - note: Three macOS changes. (1) ⌘N now opens the new-post composer instead of the WindowGroup default New Window, via a FocusedValues-published action. (2) Sparkle "Install and Restart" works again: a custom quit-Apple-event handler ends presented sheets and re-enters terminate, because AppKit cancels the quit event with userCanceledErr while any sheet is up (the update UI lives in the settings sheet). (3) The external link card is restyled after X's large summary card: 1.91:1 hero image, title chip overlay, "hostから" line; thumbnail-less links use a bordered text card.
