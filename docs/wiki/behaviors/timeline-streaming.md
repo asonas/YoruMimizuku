@@ -31,7 +31,7 @@ features:
     windows: none
     ios: none
     android: planned
-    note: "Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0. No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]])."
+    note: "Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]])."
   - name: Rich text + image grid / lightbox rendering
     macos: full
     windows: full
@@ -49,10 +49,10 @@ features:
     android: planned
   - name: External link preview cards (OGP)
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
+    note: "macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
   - name: Quote post (record embed) cards
     macos: full
     windows: none
@@ -67,16 +67,16 @@ features:
     note: "macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]])."
   - name: Conversation child reply tree
     macos: full
-    windows: none
+    windows: full
     ios: full
     android: planned
-    note: "macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]])."
+    note: "macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it from the tested ThreadNode.childTree via the extended yoru_thread_load and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]])."
   - name: Thread grouping in the feed (web-style)
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]])."
+    note: "macOS and Windows regroup same-thread posts into one oldest-first block (Windows via the yoru_feed_arrange bridge wrapper over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; iPadOS still lists reply-chain posts as independent newest-first rows ([[windows]], [[ipados]])."
 ---
 
 # Timeline Fetching and Streaming

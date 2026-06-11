@@ -40,6 +40,21 @@ struct PostImageDTO: Encodable {
     }
 }
 
+struct LinkCardDTO: Encodable {
+    let url: String
+    let title: String
+    let description: String
+    let thumbUrl: String?
+    let host: String?
+    init(_ c: LinkCard) {
+        url = c.url.absoluteString
+        title = c.title
+        description = c.description
+        thumbUrl = c.thumbURL?.absoluteString
+        host = c.host
+    }
+}
+
 struct PostDisplayDTO: Encodable {
     let id: String
     let cid: String
@@ -51,6 +66,7 @@ struct PostDisplayDTO: Encodable {
     let createdAt: String
     let contextLabel: String?
     let images: [PostImageDTO]
+    let linkCard: LinkCardDTO?
     let replyParent: ReplyParentDTO?
     let replyCount: Int
     let repostCount: Int
@@ -71,6 +87,7 @@ struct PostDisplayDTO: Encodable {
         createdAt = ISO8601.string(p.createdAt)
         contextLabel = p.contextLabel
         images = p.images.map(PostImageDTO.init)
+        linkCard = p.linkCard.map(LinkCardDTO.init)
         replyParent = p.replyParent.map { ReplyParentDTO($0.post) }
         replyCount = p.replyCount
         repostCount = p.repostCount
@@ -103,6 +120,25 @@ struct ReplyParentDTO: Encodable {
 struct TimelinePageDTO: Encodable {
     let posts: [PostDisplayDTO]
     let cursor: String?
+}
+
+/// One node in the conversation's descendant reply tree (mirrors `ThreadNode`).
+struct ThreadNodeDTO: Encodable, Sendable {
+    let post: PostDisplayDTO
+    let replies: [ThreadNodeDTO]
+    let depth: Int
+    init(_ n: ThreadNode) {
+        post = PostDisplayDTO(n.post)
+        replies = n.replies.map(ThreadNodeDTO.init)
+        depth = n.depth
+    }
+}
+
+/// What a conversation tab renders: the focused post (carrying its ancestor
+/// chain via `replyParent`) plus the descendant reply tree below it.
+struct ConversationThreadDTO: Encodable, Sendable {
+    let focus: PostDisplayDTO
+    let replies: [ThreadNodeDTO]
 }
 
 struct NotificationActorDTO: Encodable {
@@ -176,6 +212,17 @@ enum ISO8601 {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f.string(from: date)
+    }
+
+    /// Parse an ISO8601 timestamp produced by `string(_:)`, tolerating the
+    /// fractional-seconds-less form too. Returns nil when neither matches.
+    static func date(_ value: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = withFraction.date(from: value) { return d }
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        return plain.date(from: value)
     }
 }
 
@@ -288,7 +335,7 @@ enum BridgeOps {
         )
     }
 
-    static func threadLoad(uri: String) async throws -> PostDisplayDTO {
+    static func threadLoad(uri: String) async throws -> ConversationThreadDTO {
         let rt = try BridgeRuntime.require()
         let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
         let service = ThreadService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config)
@@ -297,7 +344,11 @@ enum BridgeOps {
             accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken, uri: uri
         )
         try ctx.persist(result.refreshed)
-        return PostDisplayDTO(PostDisplay(result.response.thread))
+        let thread = result.response.thread
+        return ConversationThreadDTO(
+            focus: PostDisplayDTO(PostDisplay(thread)),
+            replies: ThreadNode.childTree(of: thread, maxDepth: 3).map(ThreadNodeDTO.init)
+        )
     }
 
     static func notificationsLoad() async throws -> [NotificationGroupDTO] {
@@ -489,6 +540,56 @@ enum BridgeOps {
         )
         try ctx.persist(result.refreshed)
         return ProfileDTO(result.response)
+    }
+
+    // -- Link previews (OGP) --
+
+    /// Fetch an OGP preview card for a bare URL, mirroring the macOS client-side
+    /// fallback. Returns nil when the URL is unparseable or yields no usable
+    /// metadata; results (and misses) are cached process-wide per URL.
+    static func ogpLoad(url: String) async -> LinkCardDTO? {
+        guard let parsed = URL(string: url) else { return nil }
+        return await BridgeLinkPreviews.shared.preview(for: parsed).map(LinkCardDTO.init)
+    }
+
+    // -- Feed thread grouping (web-style) --
+
+    /// One post reduced to just what `FeedThreading.arrange` needs: its id, its
+    /// creation time, and the id of its reply parent when that parent is also on
+    /// the page. The C# feed sends this for the loaded page and reorders its rows
+    /// from the result, keeping the grouping logic in the tested core.
+    struct ArrangeItem: Decodable, Sendable {
+        let id: String
+        let createdAt: String
+        let replyParentId: String?
+    }
+
+    struct ArrangeResultDTO: Encodable {
+        let id: String
+        let connectsToPrevious: Bool
+        let connectsToNext: Bool
+    }
+
+    static func feedArrange(items: [ArrangeItem]) -> [ArrangeResultDTO] {
+        let posts: [PostDisplay] = items.map { item in
+            let created = ISO8601.date(item.createdAt) ?? Date(timeIntervalSince1970: 0)
+            let parent = item.replyParentId.map { parentID in
+                ReplyParent(PostDisplay(
+                    id: parentID, authorDisplayName: "", authorHandle: "", body: "", createdAt: created
+                ))
+            }
+            return PostDisplay(
+                id: item.id, authorDisplayName: "", authorHandle: "", body: "",
+                createdAt: created, replyParent: parent
+            )
+        }
+        return FeedThreading.arrange(posts).map {
+            ArrangeResultDTO(
+                id: $0.post.id,
+                connectsToPrevious: $0.connectsToPrevious,
+                connectsToNext: $0.connectsToNext
+            )
+        }
     }
 }
 

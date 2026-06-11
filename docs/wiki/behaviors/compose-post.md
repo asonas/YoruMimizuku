@@ -19,10 +19,10 @@ features:
     android: planned
   - name: Image attachment (up to 4, alt text)
     macos: full
-    windows: limited
+    windows: full
     ios: full
     android: planned
-    note: "Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]])."
+    note: "Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]])."
 ---
 
 # Composing Posts

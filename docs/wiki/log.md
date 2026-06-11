@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-11 ingest
 
+- sources: `apps/windows/App/**`, `core/Sources/YoruMimizukuBridge/**`, `core/Sources/YoruMimizukuKit/PostText.swift` (Windows 0.8.0 parity; no new spec)
+- updated: [[windows]], [[timeline-streaming]], [[compose-post]], [[notifications]], [[app-shell]]
+- note: Brought the Windows app to macOS 0.8.0 parity (bumped to 0.8.0). New: external link preview cards (embed card + lazy OGP via `yoru_ogp_load`), web-style feed thread grouping (`yoru_feed_arrange` over the tested `FeedThreading`), the conversation descendant reply tree (`yoru_thread_load` now returns a `ConversationThread` from `ThreadNode.childTree`), a composer alt-text editor + WIC downsampling, OS toast + taskbar flash for new notifications, and multiple windows (`Ctrl+Shift+N`). Post submission now trims trailing blank lines via the shared `PostText`. Rebased onto the v1.0.0-roadmap merge, which independently reached the same Jetstream finding and deferred it past v1.0.0; this branch keeps that framing (Jetstream row stays none everywhere) and notes Windows interval polling is at parity. Windows is now the one platform with OS-level notification surfacing (toast + taskbar flash), ahead of the roadmap's deferred macOS OS-banner path; the numeric taskbar badge still awaits MSIX.
+
+## 2026-06-11 ingest
+
 - sources: `apps/macos/Views/LinkCardView.swift` (link card restyle; no new spec)
 - updated: [[timeline-streaming]]
 - note: The link card moved from the title-chip-overlay style to X's full large card: hero image, bold title, grey description, and a link-icon host line stacked in one bordered container; thumbnail-less links render the text section alone.
@@ -32,6 +38,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 - sources: `ComposerViewModel.swift`, `NotificationsService.swift`, `LinkPreviewLoader.swift`, `LinkCardView.swift` (v0.8.0-dev.2 behavior changes; no new spec)
 - updated: [[compose-post]], [[notifications]], [[timeline-streaming]]
 - note: Three shipped changes. (1) Submission now trims trailing whitespace/blank lines from the post body, preserving interior line breaks. (2) `listNotifications` always sends `priority=false` so an account-level priority setting can no longer silently drop reply notifications from non-followed accounts. (3) macOS post rows render external link preview cards: directly from `app.bsky.embed.external#view`, or via a cached client-side OGP fetch for a bare link facet in text-only posts; the card sits between body/images and the action bar. New "External link preview cards (OGP)" matrix row (macOS full, Windows/iPadOS none).
+
+## 2026-06-09 ingest
+
+- updated: [[auto-updates]], [[windows]]
+- note: Added the Windows auto-update path. The WinUI app now has WinSparkle wiring and an Update settings section, guarded behind a placeholder Windows EdDSA public key. `release.ps1 -Installer` can build an Inno Setup installer EXE while preserving the ZIP artifact, and `-WinSparklePrivateKey` can sign that installer and generate `appcast-windows.xml` / `appcast-windows-dev.xml` for GitHub Pages and GitHub Releases hosting. The support matrix marks Windows updates limited until a real key and appcast are published.
 
 ## 2026-06-08 ingest
 

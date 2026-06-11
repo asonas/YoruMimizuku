@@ -17,10 +17,10 @@ features:
     note: "iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]])."
   - name: Multiple windows
     macos: full
-    windows: none
+    windows: full
     ios: differs
     android: planned
-    note: "macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]])."
+    note: "macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS maps the per-window model to per-scene `WorkspaceModel` ([[ipados]], [[windows]])."
   - name: Display density A / B
     macos: full
     windows: full

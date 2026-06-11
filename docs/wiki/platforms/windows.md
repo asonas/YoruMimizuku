@@ -1,7 +1,7 @@
 ---
 title: Platform — Windows
 type: platform
-updated: 2026-06-08
+updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
@@ -21,6 +21,11 @@ sources:
   - apps/windows/App/MainWindow.xaml.cs
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
+  - apps/windows/App/Services/ImageProcessing.cs
+  - apps/windows/App/Services/NotificationAlerts.cs
+  - core/Sources/YoruMimizukuBridge/BridgeOperations.swift
+  - core/Sources/YoruMimizukuBridge/BridgeLinkPreview.swift
+  - core/Sources/YoruMimizukuKit/PostText.swift
   - README.md
 ---
 
@@ -107,15 +112,19 @@ lifetime handling is confined here.
 - C# MVVM view models mirror `YoruMimizukuKit`: Timeline / Thread / Notifications /
   Login / Composer / Workspace / SavedFilter (+ `PostItem` with optimistic like/repost).
 - Views: WebView2 OAuth login, a feed (facet-aware rich text, image grid + lightbox,
-  relative timestamps, like/repost/reply icons, infinite scroll, 30s refresh, j/k,
-  n-to-compose, per-post separators), conversation (ancestor + re-anchor),
+  external link preview cards, web-style thread grouping, relative timestamps,
+  like/repost/reply icons, infinite scroll, 30s refresh, j/k, n-to-compose,
+  per-post separators), conversation (ancestor + descendant reply tree + re-anchor),
   notifications, composer, settings; a cmux-style `NavigationView` vertical-tab
-  shell with `Ctrl+Shift+J/K` cycling, closable tabs, and an account footer.
+  shell with `Ctrl+Shift+J/K` cycling, `Ctrl+Shift+N` for a new window, closable
+  tabs, and an account footer.
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
-  attachments through `yoru_post_create`. It serializes `dataBase64`, `mimeType`,
-  and `alt`, but the visible dialog currently exposes only file picking and
-  thumbnails; no alt-text editor, drag/drop attach, WIC downsampling, or upload
-  re-encode UI is present yet ([[compose-post]]).
+  attachments through `yoru_post_create`. Each attachment now shows a thumbnail
+  with a per-image alt-text editor and a remove button, and oversized images are
+  scaled to a 2000px longest edge and re-encoded as JPEG via WIC before upload
+  (`Services/ImageProcessing.cs`). `yoru_post_create` also trims trailing blank
+  lines via the shared `PostText` helper, matching the macOS submission boundary
+  ([[compose-post]]).
 - Saved-filter tabs call `yoru_search_load` with the structured
   `terms` + `combinator` JSON shape used by the Swift core. The WinUI shell has
   a multi-row AND/OR editor, edit/remove affordances, hashtag-link creation, and
@@ -130,9 +139,40 @@ lifetime handling is confined here.
   f toggles like, o opens the focused post's bsky.app permalink, and the link
   action copies that permalink to the clipboard. Conversation focus rows support
   f/o/copy too ([[timeline-streaming]]).
+- Feed rows render external link preview cards in the X-style large layout (hero
+  image, bold title, grey description, host line). A post's own
+  `app.bsky.embed.external` card comes through `PostDisplayDTO.linkCard`; a bare
+  link in a text-only post resolves its OGP preview lazily via the `yoru_ogp_load`
+  bridge endpoint (a Windows `HTMLFetching` over the shared `LinkPreviewLoader` /
+  `OGP` core), cached per URL ([[timeline-streaming]]).
+- The feed groups same-thread posts web-style: after each load the timeline sends
+  every post's id / createdAt / reply-parent id to `yoru_feed_arrange` (a thin
+  wrapper over the tested `FeedThreading.arrange`) and reorders the rows in place
+  with `Move`, drawing a connector under the avatar, hiding the in-block reply
+  marker, and dropping the in-block divider ([[timeline-streaming]]).
+- The conversation view renders the focused post's descendant reply tree:
+  `yoru_thread_load` now returns a `ConversationThread` (focus + tree from the
+  tested `ThreadNode.childTree(maxDepth: 3)`), and each reply is indented by depth
+  with a left connector and is tappable to re-anchor ([[timeline-streaming]]).
+- The shell is multi-window: `Ctrl+Shift+N` opens another independent workspace
+  window over the same session, the analogue of a macOS `WindowGroup` window. Only
+  the primary window owns the process-wide singletons (bridge init, updater,
+  notification polling, OS toasts); secondary windows reuse the live session and
+  keep their own tabs ([[app-shell]]).
 - The notifications navigation row has a local unread badge driven by 30-second
-  polling and cleared when the tab becomes active. OS toast notifications and a
-  taskbar badge are still not implemented ([[notifications]]).
+  polling and cleared when the tab becomes active. When that poll raises the
+  unread count, the app now also shows an OS toast via the Windows App SDK
+  `AppNotificationManager` and flashes the taskbar with `FlashWindowEx`
+  (`Services/NotificationAlerts.cs`). A persistent numeric taskbar badge still
+  needs packaged (MSIX) identity, so the in-app tab badge carries the count
+  meanwhile ([[notifications]]).
+- Windows update checks use WinSparkle in the WinUI app layer, not the macOS
+  Sparkle framework. The settings view exposes version/channel/automatic-check
+  controls and a manual check button; the service stays disabled while the
+  Windows EdDSA public key placeholder is present. `release.ps1 -Installer` can
+  build an Inno Setup installer EXE and, when given the WinSparkle private key,
+  generate `appcast-windows*.xml` for GitHub Pages / GitHub Releases hosting
+  ([[auto-updates]]).
 - The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
   **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS
@@ -198,7 +238,10 @@ eventual installable form. Code signing is decoupled (optional `-Thumbprint` /
 `-CertPath` on `release.ps1`): the launcher + app binaries are signed before
 zipping; unsigned builds get a one-time SmartScreen prompt, and Windows has no
 free notarization equivalent to macOS — a trusted signature needs a paid (or
-free-for-OSS) Authenticode cert, deferred for now.
+free-for-OSS) Authenticode cert, deferred for now. For auto-updates, the same
+script can additionally build and sign an installer EXE (`-Installer`) and emit a
+WinSparkle appcast (`-WinSparklePrivateKey`, `-Channel stable|development`) whose
+enclosure URL targets GitHub Releases.
 
 ## Resolved / open questions
 

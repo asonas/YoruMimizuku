@@ -77,6 +77,12 @@ internal static class NativeMethods
     [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_profile_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
+    [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_ogp_load([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
+    [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_feed_arrange([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
     /// <summary>Marshal the returned UTF-8 pointer to a managed string and free it.</summary>
     internal static string Consume(IntPtr ptr)
     {

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -25,8 +26,14 @@ public sealed class PostItem : ObservableObject
     public string CreatedAt { get; }
     public string? ContextLabel { get; }
     public IReadOnlyList<PostImageDto> Images { get; }
+    public LinkCardDto? LinkCard { get; }
     public ReplyParentDto? ReplyParent { get; }
     public int ReplyCount { get; }
+
+    /// <summary>First web link in the body (link facets only), used to fetch an OGP
+    /// preview card when the post carries no external embed of its own.</summary>
+    public string? FirstLinkUrl =>
+        Segments.FirstOrDefault(s => s.Kind == "link" && !string.IsNullOrEmpty(s.Url))?.Url;
     public bool HasImages => Images.Count > 0;
     public bool HasContext => !string.IsNullOrEmpty(ContextLabel);
     public bool IsReply => ReplyParent is not null;
@@ -38,8 +45,43 @@ public sealed class PostItem : ObservableObject
         ? new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new System.Uri(u)) : null;
 
     public Visibility ContextVisibility => HasContext ? Visibility.Visible : Visibility.Collapsed;
-    public Visibility ReplyVisibility => IsReply ? Visibility.Visible : Visibility.Collapsed;
+    // The reply marker is hidden for a grouped member (its parent is shown
+    // directly above), mirroring the macOS web-style thread block.
+    public Visibility ReplyVisibility => IsReply && !ConnectsToPrevious ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ImagesVisibility => HasImages ? Visibility.Visible : Visibility.Collapsed;
+
+    // -- Web-style thread grouping (see FeedThreading via yoru_feed_arrange) --
+    private bool _connectsToPrevious;
+    public bool ConnectsToPrevious
+    {
+        get => _connectsToPrevious;
+        private set { if (SetProperty(ref _connectsToPrevious, value)) OnPropertyChanged(nameof(ReplyVisibility)); }
+    }
+
+    private bool _connectsToNext;
+    public bool ConnectsToNext
+    {
+        get => _connectsToNext;
+        private set
+        {
+            if (SetProperty(ref _connectsToNext, value))
+            {
+                OnPropertyChanged(nameof(ConnectorBottomVisibility));
+                OnPropertyChanged(nameof(RowBorderThickness));
+            }
+        }
+    }
+
+    /// Connector line dropping from this avatar to the grouped reply below it.
+    public Visibility ConnectorBottomVisibility => ConnectsToNext ? Visibility.Visible : Visibility.Collapsed;
+    /// Drop the row's bottom divider inside a thread block so grouped posts read as one unit.
+    public Thickness RowBorderThickness => new(0, 0, 0, ConnectsToNext ? 0 : 1);
+
+    public void SetThreadConnectors(bool connectsToPrevious, bool connectsToNext)
+    {
+        ConnectsToPrevious = connectsToPrevious;
+        ConnectsToNext = connectsToNext;
+    }
 
     // Action-bar glyphs/brushes (Segoe MDL2): like heart, repost two-arrows.
     public string LikeGlyph => IsLiked ? "\uEB52" : "\uEB51";
@@ -79,6 +121,7 @@ public sealed class PostItem : ObservableObject
         CreatedAt = dto.CreatedAt;
         ContextLabel = dto.ContextLabel;
         Images = dto.Images;
+        LinkCard = dto.LinkCard;
         ReplyParent = dto.ReplyParent;
         ReplyCount = dto.ReplyCount;
         _repostCount = dto.RepostCount;

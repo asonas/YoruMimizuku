@@ -58,10 +58,19 @@ public sealed class ComposerViewModel : ObservableObject
         _quote = quote;
     }
 
-    public void AddImage(byte[] data, string mimeType)
+    public ComposeImageItem? AddImage(byte[] data, string mimeType)
     {
-        if (!CanAddImage) return;
-        Images.Add(new ComposeImageItem { Data = data, MimeType = mimeType });
+        if (!CanAddImage) return null;
+        var item = new ComposeImageItem { Data = data, MimeType = mimeType };
+        Images.Add(item);
+        OnPropertyChanged(nameof(CanAddImage));
+        OnPropertyChanged(nameof(CanSubmit));
+        return item;
+    }
+
+    public void RemoveImage(ComposeImageItem item)
+    {
+        if (!Images.Remove(item)) return;
         OnPropertyChanged(nameof(CanAddImage));
         OnPropertyChanged(nameof(CanSubmit));
     }

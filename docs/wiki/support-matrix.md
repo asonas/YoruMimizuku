@@ -24,7 +24,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
-| Multiple windows | ○ | × | △ | − |
+| Multiple windows | ○ | ○ | △ | − |
 | Display density A / B | ○ | ○ | × | − |
 
 ## [[author-tab]] — Author (User) Tab
@@ -33,18 +33,18 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Author (user) tab | ○ | ○ | ○ | − |
 
-## [[auto-updates]] — Auto Updates (Sparkle)
+## [[auto-updates]] — Auto Updates (Sparkle / WinSparkle)
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Sparkle auto-update checks and install | ○ | × | × | × |
+| Sparkle / WinSparkle update checks and install | ○ | △ | × | × |
 
 ## [[compose-post]] — Composing Posts
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
 | Post / reply / quote (facets, mention resolution) | ○ | ○ | ○ | − |
-| Image attachment (up to 4, alt text) | ○ | △ | ○ | − |
+| Image attachment (up to 4, alt text) | ○ | ○ | ○ | − |
 
 ## [[filters]] — Saved-Search Filters
 
@@ -76,27 +76,27 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
-| External link preview cards (OGP) | ○ | × | × | − |
+| External link preview cards (OGP) | ○ | ○ | × | − |
 | Quote post (record embed) cards | ○ | × | × | − |
 | Video embed poster (no inline playback) | ○ | × | × | − |
-| Conversation child reply tree | ○ | × | ○ | − |
-| Thread grouping in the feed (web-style) | ○ | × | × | − |
+| Conversation child reply tree | ○ | ○ | ○ | − |
+| Thread grouping in the feed (web-style) | ○ | ○ | × | − |
 
 ## Notes
 
 Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
-- **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]]).
+- **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS maps the per-window model to per-scene `WorkspaceModel` ([[ipados]], [[windows]]).
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
-- **Sparkle auto-update checks and install** ([[auto-updates]]): Sparkle auto-update is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]]).
-- **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
+- **Sparkle / WinSparkle update checks and install** ([[auto-updates]]): Windows has WinSparkle wiring, update settings, and installer/appcast generation hooks, but it stays disabled until a Windows EdDSA public key and installer appcast are published ([[windows]]).
+- **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
-- **OS banner + unread badge** ([[notifications]]): Every platform has in-app unread badges only today. The designed UNUserNotificationCenter banner + Dock badge path is not implemented on macOS either ([[macos]], [[windows]], [[ipados]]).
+- **OS banner + unread badge** ([[notifications]]): macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
-- **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0. No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
-- **External link preview cards (OGP)** ([[timeline-streaming]]): macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
+- **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
+- **External link preview cards (OGP)** ([[timeline-streaming]]): macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Quote post (record embed) cards** ([[timeline-streaming]]): macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]]).
 - **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]]).
-- **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).
-- **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS regroups same-thread posts into one oldest-first block with a connector line; Windows and iPadOS feeds still list reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).
+- **Conversation child reply tree** ([[timeline-streaming]]): macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it from the tested ThreadNode.childTree via the extended yoru_thread_load and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]]).
+- **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS and Windows regroup same-thread posts into one oldest-first block (Windows via the yoru_feed_arrange bridge wrapper over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; iPadOS still lists reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).

@@ -46,6 +46,9 @@
                 </StackPanel>
             </Border>
 
+            <!-- Descendant reply tree, populated imperatively in RenderReplies(). -->
+            <StackPanel x:Name="RepliesHost" Spacing="6" />
+
             <ProgressRing x:Name="Spinner" IsActive="False" HorizontalAlignment="Center" />
         </StackPanel>
     </ScrollViewer>

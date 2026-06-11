@@ -56,6 +56,7 @@ public sealed partial class FeedView : UserControl
         if (args.ItemContainer?.ContentTemplateRoot is not FrameworkElement root) return;
         if (root.FindName("BodyRich") is RichTextBlock rich) PopulateRich(rich, post);
         if (root.FindName("ImagesHost") is Grid host) PopulateImages(host, post);
+        if (root.FindName("LinkCardHost") is Border cardHost) PopulateLinkCard(cardHost, post);
     }
 
     private void PopulateRich(RichTextBlock rich, PostItem post)
@@ -130,6 +131,119 @@ public sealed partial class FeedView : UserControl
             Grid.SetRow(border, i / columns);
             host.Children.Add(border);
         }
+    }
+
+    // -- External link preview card --
+
+    /// Mirrors macOS PostRowView: a post with its own external embed renders the
+    /// card directly; otherwise a bare link in a text-only post resolves its OGP
+    /// preview lazily (image posts skip the fallback to keep rows tight). The host
+    /// is tagged with the post id so a recycled container drops a stale fetch.
+    private void PopulateLinkCard(Border host, PostItem post)
+    {
+        host.Child = null;
+        host.Visibility = Visibility.Collapsed;
+        host.Tag = post.Id;
+        if (post.LinkCard is { } card)
+        {
+            host.Child = BuildLinkCard(card);
+            host.Visibility = Visibility.Visible;
+        }
+        else if (post.Images.Count == 0 && post.FirstLinkUrl is { Length: > 0 } link)
+        {
+            _ = LoadOgpAsync(host, post.Id, link);
+        }
+    }
+
+    private async Task LoadOgpAsync(Border host, string postId, string url)
+    {
+        LinkCardDto? card = null;
+        try { card = await BridgeClient.Shared.OgpLoadAsync(url); } catch { /* no card */ }
+        if (card is null) return;
+        if (host.Tag as string != postId) return; // container recycled to another post
+        host.Child = BuildLinkCard(card);
+        host.Visibility = Visibility.Visible;
+    }
+
+    /// Builds the X-style large link card: a 1.91:1 hero image (when present) over
+    /// a bordered text block with bold title, grey description, and a host line.
+    private FrameworkElement BuildLinkCard(LinkCardDto card)
+    {
+        var stack = new StackPanel();
+
+        if (TryUri(card.ThumbUrl, out var thumbUri))
+        {
+            stack.Children.Add(new Image
+            {
+                Source = new BitmapImage(thumbUri),
+                Stretch = Stretch.UniformToFill,
+                Height = 230,
+                MaxWidth = 440
+            });
+            stack.Children.Add(new Border
+            {
+                Height = 1,
+                Background = (Brush)Application.Current.Resources["AppHairlineBrush"]
+            });
+        }
+
+        var text = new StackPanel { Spacing = 3, Padding = new Thickness(10, 8, 10, 8) };
+        text.Children.Add(new TextBlock
+        {
+            Text = card.Title,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
+            TextWrapping = TextWrapping.Wrap,
+            MaxLines = 2,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        if (!string.IsNullOrEmpty(card.Description))
+        {
+            text.Children.Add(new TextBlock
+            {
+                Text = card.Description,
+                FontSize = 12,
+                Foreground = (Brush)Application.Current.Resources["AppTertiaryTextBrush"],
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 2,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+        }
+        if (!string.IsNullOrEmpty(card.Host))
+        {
+            var hostLine = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            hostLine.Children.Add(new FontIcon
+            {
+                Glyph = "",
+                FontSize = 11,
+                Foreground = (Brush)Application.Current.Resources["AppTertiaryTextBrush"]
+            });
+            hostLine.Children.Add(new TextBlock
+            {
+                Text = card.Host,
+                FontSize = 11,
+                Foreground = (Brush)Application.Current.Resources["AppTertiaryTextBrush"],
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            text.Children.Add(hostLine);
+        }
+        stack.Children.Add(text);
+
+        var border = new Border
+        {
+            CornerRadius = new CornerRadius(12),
+            BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+            BorderThickness = new Thickness(1),
+            Background = (Brush)Application.Current.Resources["AppRowHoverBrush"],
+            MaxWidth = 440,
+            Child = stack
+        };
+        if (TryUri(card.Url, out var cardUri))
+        {
+            border.Tapped += async (_, e) => { e.Handled = true; await Launcher.LaunchUriAsync(cardUri); };
+            ToolTipService.SetToolTip(border, card.Url);
+        }
+        return border;
     }
 
     // -- Lightbox --

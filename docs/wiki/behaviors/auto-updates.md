@@ -1,5 +1,5 @@
 ---
-title: Auto Updates (Sparkle)
+title: Auto Updates (Sparkle / WinSparkle)
 type: behavior
 updated: 2026-06-11
 sources:
@@ -8,21 +8,28 @@ sources:
   - apps/macos/AppDelegate.swift
   - https://sparkle-project.org/documentation/customization/
   - https://sparkle-project.github.io/documentation/gentle-reminders
+  - https://github.com/vslavik/winsparkle
+  - apps/windows/App/Services/UpdateService.cs
+  - apps/windows/App/Views/SettingsView.xaml.cs
+  - scripts/windows/release.ps1
 features:
-  - name: Sparkle auto-update checks and install
+  - name: Sparkle / WinSparkle update checks and install
     macos: full
-    windows: none
+    windows: limited
     ios: none
     android: none
-    note: "Sparkle auto-update is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]])."
+    note: "Windows has WinSparkle wiring, update settings, and installer/appcast generation hooks, but it stays disabled until a Windows EdDSA public key and installer appcast are published ([[windows]])."
 ---
 
-# Auto Updates (Sparkle)
+# Auto Updates (Sparkle / WinSparkle)
 
 YoruMimizuku's macOS auto-update path uses Sparkle 2. Sparkle is
 macOS/AppKit-specific, so the updater belongs in `apps/macos` and must not enter
 `BlueskyCore`, `YoruMimizukuKit`, or the Windows/iPadOS front ends
 (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Why this placement).
+Windows uses a separate WinSparkle integration in the WinUI app layer; it shares
+the appcast/signature model, but it is not Sparkle.framework and it distributes a
+Windows installer EXE rather than the macOS `.app` ZIP.
 
 ## User experience
 
@@ -120,3 +127,25 @@ the DMG from that stapled app, create the Sparkle ZIP from that stapled app, sig
 the ZIP with Sparkle's EdDSA key, then generate and publish `appcast.xml`
 (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Release pipeline
 changes).
+
+## Windows path (WinSparkle)
+
+Windows uses WinSparkle through a small P/Invoke wrapper around `WinSparkle.dll`.
+`UpdateService` configures the Windows appcast URL, app details, the WinSparkle
+registry path, the automatic-check preference, and the EdDSA public key before
+calling `win_sparkle_init`. The settings view exposes the current version,
+stable/development channel selection, an automatic-check toggle, and a manual
+"check now" button. Until the placeholder Windows EdDSA public key is replaced,
+`UpdateService` deliberately does not initialize WinSparkle, so local builds and
+forks do not make unsigned update checks (`apps/windows/App/Services/UpdateService.cs`,
+`apps/windows/App/Views/SettingsView.xaml.cs`).
+
+The Windows appcast is separate from the macOS feeds: stable is planned as
+`https://asonas.github.io/YoruMimizuku/appcast-windows.xml`, and development as
+`https://asonas.github.io/YoruMimizuku/appcast-windows-dev.xml`. WinSparkle can
+download and run installers, but it does not replace the app from the existing
+ZIP layout by itself. Therefore `scripts/windows/release.ps1 -Installer` keeps
+the current ZIP artifact and can also build an Inno Setup installer EXE. With
+`-WinSparklePrivateKey`, it signs that installer using `winsparkle-tool` and
+writes an appcast whose enclosure points at the GitHub Releases installer URL
+(`scripts/windows/release.ps1`, `scripts/windows/installer.iss`).

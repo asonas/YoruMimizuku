@@ -38,6 +38,16 @@
 .PARAMETER CertPassword
     Password for the PFX given by -CertPath.
 
+.PARAMETER Installer
+    Also build an Inno Setup installer EXE for WinSparkle / GitHub Releases.
+
+.PARAMETER WinSparklePrivateKey
+    Path to the WinSparkle EdDSA private key. When supplied with -Installer,
+    release.ps1 signs the installer and writes appcast-windows*.xml under build/.
+
+.PARAMETER Channel
+    Appcast channel to write when -WinSparklePrivateKey is supplied.
+
 .EXAMPLE
     scripts\windows\release.ps1
     scripts\windows\release.ps1 -StageBridge -Version 0.4.0
@@ -49,7 +59,13 @@ param(
     [switch]$StageBridge,
     [string]$Thumbprint = "",
     [string]$CertPath = "",
-    [string]$CertPassword = ""
+    [string]$CertPassword = "",
+    [switch]$Installer,
+    [ValidateSet("stable", "development")]
+    [string]$Channel = "stable",
+    [string]$WinSparklePrivateKey = "",
+    [string]$WinSparkleTool = "",
+    [string]$GitHubRepo = "asonas/YoruMimizuku"
 )
 
 $ErrorActionPreference = "Stop"
@@ -63,6 +79,80 @@ function Find-SignTool {
         if ($found.Count -gt 0) { return $found[-1] }
     }
     throw "signtool.exe not found (install the Windows SDK)."
+}
+
+function Find-InnoSetup {
+    $candidates = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) { return $candidate }
+    }
+    $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    throw "ISCC.exe not found. Install Inno Setup 6 or add ISCC.exe to PATH."
+}
+
+function Find-WinSparkleTool {
+    param([string]$Explicit)
+    if ($Explicit) {
+        if (Test-Path $Explicit) { return $Explicit }
+        throw "winsparkle-tool not found at $Explicit"
+    }
+    $packages = Join-Path $env:USERPROFILE ".nuget\packages\winsparkle"
+    if (Test-Path $packages) {
+        $found = Get-ChildItem $packages -Recurse -Filter winsparkle-tool.exe -ErrorAction SilentlyContinue |
+            Sort-Object FullName | Select-Object -ExpandProperty FullName
+        if ($found.Count -gt 0) { return $found[-1] }
+    }
+    $cmd = Get-Command winsparkle-tool.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    throw "winsparkle-tool.exe not found. Restore the WinSparkle NuGet package or pass -WinSparkleTool."
+}
+
+function Escape-Xml {
+    param([string]$Value)
+    return [System.Security.SecurityElement]::Escape($Value)
+}
+
+function Write-WinSparkleAppcast {
+    param(
+        [string]$InstallerPath,
+        [string]$Version,
+        [string]$Channel,
+        [string]$PrivateKey,
+        [string]$ToolPath,
+        [string]$Repo,
+        [string]$OutputPath
+    )
+    $tool = Find-WinSparkleTool $ToolPath
+    if (-not (Test-Path $PrivateKey)) { throw "WinSparkle private key not found at $PrivateKey" }
+    $signatureOutput = & $tool sign --verbose --private-key-file $PrivateKey $InstallerPath
+    if ($LASTEXITCODE -ne 0) { throw "winsparkle-tool sign failed" }
+    $signatureAttrs = ($signatureOutput | Where-Object { $_ -match 'sparkle:edSignature=' } | Select-Object -Last 1)
+    if (-not $signatureAttrs) { throw "winsparkle-tool did not print sparkle:edSignature" }
+    $fileName = Split-Path -Leaf $InstallerPath
+    $url = "https://github.com/$Repo/releases/download/v$Version/$fileName"
+    $title = if ($Channel -eq "development") { "YoruMimizuku $Version (development)" } else { "YoruMimizuku $Version" }
+    $pubDate = [DateTimeOffset]::UtcNow.ToString("R", [Globalization.CultureInfo]::InvariantCulture)
+    $xml = @"
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>YoruMimizuku Windows Updates</title>
+    <item>
+      <title>$(Escape-Xml $title)</title>
+      <pubDate>$pubDate</pubDate>
+      <sparkle:version>$(Escape-Xml $Version)</sparkle:version>
+      <sparkle:shortVersionString>$(Escape-Xml $Version)</sparkle:shortVersionString>
+      <enclosure url="$(Escape-Xml $url)" type="application/octet-stream" $signatureAttrs />
+    </item>
+  </channel>
+</rss>
+"@
+    Set-Content -Path $OutputPath -Value $xml -Encoding UTF8
+    Write-Host "Windows appcast ready: $OutputPath"
 }
 
 function Enter-MSVC {
@@ -213,7 +303,7 @@ Write-Host "Publishing framework-dependent $rid (Release)..."
 # AnyCPU, which the Windows App SDK build rejects. --self-contained false makes the
 # .NET runtime framework-dependent; WindowsAppSDKSelfContained=false (in the csproj)
 # does the same for the Windows App SDK runtime, so neither runtime is bundled.
-dotnet publish $proj -c Release -r $rid -p:Platform=x64 --self-contained false
+dotnet publish $proj -c Release -r $rid -p:Platform=x64 -p:Version=$Version -p:InformationalVersion=$Version --self-contained false
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
 
 # Resolve the publish dir without hardcoding the target framework (so a TFM bump
@@ -274,3 +364,31 @@ Compress-Directory -SourcePath $layoutDir -DestinationPath $zip
 $sizeMB = [math]::Round((Get-Item $zip).Length / 1MB, 1)
 Write-Host ""
 Write-Host "Release ZIP: $zip ($sizeMB MB)" -ForegroundColor Green
+
+if ($Installer) {
+    $iscc = Find-InnoSetup
+    $iss = Join-Path $PSScriptRoot "installer.iss"
+    & $iscc "/DAppVersion=$Version" "/DSourceDir=$layoutDir" "/DOutputDir=$buildDir" $iss
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+    $installerExe = Join-Path $buildDir "YoruMimizuku-win-x64-$Version-Setup.exe"
+    if (-not (Test-Path $installerExe)) { throw "installer not found at $installerExe" }
+    if ($Thumbprint -or $CertPath) {
+        $signtool = Find-SignTool
+        & $signtool @signArgs $installerExe
+        if ($LASTEXITCODE -ne 0) { throw "signtool failed for installer" }
+    }
+    Write-Host "Installer EXE: $installerExe" -ForegroundColor Green
+
+    if ($WinSparklePrivateKey) {
+        $appcastName = if ($Channel -eq "development") { "appcast-windows-dev.xml" } else { "appcast-windows.xml" }
+        $appcastPath = Join-Path $buildDir $appcastName
+        Write-WinSparkleAppcast `
+            -InstallerPath $installerExe `
+            -Version $Version `
+            -Channel $Channel `
+            -PrivateKey $WinSparklePrivateKey `
+            -ToolPath $WinSparkleTool `
+            -Repo $GitHubRepo `
+            -OutputPath $appcastPath
+    }
+}
