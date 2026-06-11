@@ -240,6 +240,65 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertEqual(post.embed?.images, [])
     }
 
+    func testDecodesExternalEmbed() throws {
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:x/app.bsky.feed.post/x",
+          "cid": "cid",
+          "author": { "did": "did:plc:x", "handle": "x.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "link", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "embed": {
+            "$type": "app.bsky.embed.external#view",
+            "external": {
+              "uri": "https://www.ableton.com/ja/blog/satsuki/",
+              "title": "Satsuki on her new EP",
+              "description": "An interview with the artist.",
+              "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:x/bafkthumb@jpeg"
+            }
+          }
+        }
+        """##.utf8)
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+        let external = try XCTUnwrap(post.embed?.external)
+
+        XCTAssertEqual(external.uri, "https://www.ableton.com/ja/blog/satsuki/")
+        XCTAssertEqual(external.title, "Satsuki on her new EP")
+        XCTAssertEqual(external.description, "An interview with the artist.")
+        XCTAssertEqual(external.thumb, "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:x/bafkthumb@jpeg")
+        XCTAssertEqual(post.embed?.images, [])
+    }
+
+    func testExternalEmbedWithoutThumbDecodes() throws {
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:x/app.bsky.feed.post/x",
+          "cid": "cid",
+          "author": { "did": "did:plc:x", "handle": "x.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "link", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "embed": {
+            "$type": "app.bsky.embed.external#view",
+            "external": {
+              "uri": "https://example.com/article",
+              "title": "Article",
+              "description": ""
+            }
+          }
+        }
+        """##.utf8)
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+        let external = try XCTUnwrap(post.embed?.external)
+
+        XCTAssertEqual(external.uri, "https://example.com/article")
+        XCTAssertNil(external.thumb)
+    }
+
+    func testImageEmbedHasNilExternal() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        XCTAssertNil(response.feed[0].post.embed?.external)
+    }
+
     func testDecodesRepostReasonAndOptionalAuthorFields() throws {
         let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
         let item = response.feed[1]

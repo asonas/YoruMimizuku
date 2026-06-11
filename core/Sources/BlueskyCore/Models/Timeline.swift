@@ -99,21 +99,42 @@ public struct PostViewerState: Decodable, Equatable, Sendable {
     }
 }
 
-/// The post's view embed. Only `app.bsky.embed.images#view` is modeled; for any
-/// other embed kind (external, record, video, recordWithMedia) `images` is empty
-/// so decoding never fails on shapes we do not render yet.
+/// The post's view embed. `app.bsky.embed.images#view` fills `images` and
+/// `app.bsky.embed.external#view` fills `external`; any other embed kind
+/// (record, video, recordWithMedia) decodes to an empty value so decoding never
+/// fails on shapes we do not render yet.
 public struct PostEmbed: Decodable, Equatable, Sendable {
     public let images: [EmbedImage]
+    public let external: EmbedExternal?
 
-    public init(images: [EmbedImage]) {
+    public init(images: [EmbedImage], external: EmbedExternal? = nil) {
         self.images = images
+        self.external = external
     }
 
-    enum CodingKeys: String, CodingKey { case images }
+    enum CodingKeys: String, CodingKey { case images, external }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.images = (try? container.decode([EmbedImage].self, forKey: .images)) ?? []
+        self.external = try? container.decodeIfPresent(EmbedExternal.self, forKey: .external)
+    }
+}
+
+/// The hydrated external-link card (`app.bsky.embed.external#view`'s
+/// `viewExternal`): the link target plus the OGP-derived title, description, and
+/// optional CDN thumbnail URL captured by the posting client.
+public struct EmbedExternal: Decodable, Equatable, Sendable {
+    public let uri: String
+    public let title: String
+    public let description: String
+    public let thumb: String?
+
+    public init(uri: String, title: String, description: String, thumb: String? = nil) {
+        self.uri = uri
+        self.title = title
+        self.description = description
+        self.thumb = thumb
     }
 }
 
