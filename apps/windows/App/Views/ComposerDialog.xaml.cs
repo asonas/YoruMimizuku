@@ -65,18 +65,50 @@ public sealed partial class ComposerDialog : ContentDialog
 
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
-        var bytes = await File.ReadAllBytesAsync(file.Path);
-        var mime = file.FileType.Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
-        _vm.AddImage(bytes, mime);
-        AddThumbnail(file);
+        var rawBytes = await File.ReadAllBytesAsync(file.Path);
+        var rawMime = file.FileType.Equals(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+        var (bytes, mime) = await Services.ImageProcessing.PrepareAsync(rawBytes, rawMime);
+        var item = _vm.AddImage(bytes, mime);
+        if (item is null) return;
+        AddImageEntry(file, item);
         UpdateCounter();
     }
 
-    private void AddThumbnail(StorageFile file)
+    /// One attachment entry: a thumbnail, an alt-text editor bound to the item's
+    /// Alt, and a remove button — the Windows analogue of the macOS/iPadOS
+    /// per-image alt fields.
+    private void AddImageEntry(StorageFile file, ComposeImageItem item)
     {
-        var image = new Image { Width = 64, Height = 64, Stretch = Microsoft.UI.Xaml.Media.Stretch.UniformToFill };
-        image.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(file.Path));
-        ImagesList.Items.Add(image);
+        var panel = new StackPanel { Width = 132, Spacing = 4 };
+
+        panel.Children.Add(new Image
+        {
+            Width = 132,
+            Height = 90,
+            Stretch = Microsoft.UI.Xaml.Media.Stretch.UniformToFill,
+            Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(file.Path))
+        });
+
+        var alt = new TextBox
+        {
+            PlaceholderText = "代替テキスト",
+            TextWrapping = TextWrapping.Wrap,
+            AcceptsReturn = false,
+            FontSize = 12
+        };
+        alt.TextChanged += (_, _) => item.Alt = alt.Text;
+        panel.Children.Add(alt);
+
+        var remove = new Button { Content = "削除", HorizontalAlignment = HorizontalAlignment.Right };
+        remove.Click += (_, _) =>
+        {
+            _vm.RemoveImage(item);
+            ImagesList.Items.Remove(panel);
+            UpdateCounter();
+        };
+        panel.Children.Add(remove);
+
+        ImagesList.Items.Add(panel);
     }
 
     private async void OnPrimaryClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
