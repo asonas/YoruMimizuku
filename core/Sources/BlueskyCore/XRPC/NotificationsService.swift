@@ -73,6 +73,12 @@ public struct NotificationsService: Sendable {
             throw XRPCError.invalidURL("app.bsky.notification.listNotifications")
         }
         var items = [URLQueryItem(name: "limit", value: String(limit))]
+        // Explicitly opt out of priority-only filtering: when the parameter is
+        // omitted the AppView falls back to the account-level priority setting,
+        // which silently drops notifications (such as replies) from accounts the
+        // viewer does not follow. YoruMimizuku has no priority mode, so it always
+        // asks for the full stream.
+        items.append(URLQueryItem(name: "priority", value: "false"))
         if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
         components.queryItems = items
         guard let url = components.url else {

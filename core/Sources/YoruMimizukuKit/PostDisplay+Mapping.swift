@@ -28,6 +28,7 @@ extension PostDisplay {
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),
             contextLabel: contextLabel,
             images: images,
+            linkCard: post.embed?.external.flatMap(LinkCard.init),
             replyParent: replyParent,
             replyCount: post.replyCount ?? 0,
             repostCount: post.repostCount ?? 0,

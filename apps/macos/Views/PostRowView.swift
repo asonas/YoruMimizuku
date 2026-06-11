@@ -153,6 +153,15 @@ struct PostRowView: View, @MainActor Equatable {
             if !post.images.isEmpty {
                 imageGrid.padding(.top, 3)
             }
+            // The external-link card sits below the body and images and above the
+            // action bar. A post with its own external embed renders it directly;
+            // otherwise a bare link in a text-only post resolves its OGP preview
+            // lazily (image posts skip the fallback to keep rows tight).
+            if let card = post.linkCard {
+                LinkCardView(card: card, density: density).padding(.top, 3)
+            } else if post.images.isEmpty, let url = post.firstLinkURL {
+                LazyLinkCardView(url: url, density: density).padding(.top, 3)
+            }
             if density == .comfortable {
                 if interactiveActions {
                     actionBar

@@ -98,6 +98,31 @@ final class PostDisplayTests: XCTestCase {
         XCTAssertEqual(linkRuns.first?.link, url)
     }
 
+    func test_firstLinkURL_returnsFirstLinkSegmentURL() {
+        let segments = [
+            RichTextSegment(id: 0, kind: .text, text: "see ", url: nil),
+            RichTextSegment(id: 1, kind: .tag, text: "#swift", url: URL(string: "https://bsky.app/hashtag/swift")),
+            RichTextSegment(id: 2, kind: .mention, text: "@bob", url: URL(string: "https://bsky.app/profile/did:plc:bob")),
+            RichTextSegment(id: 3, kind: .link, text: "example.com", url: URL(string: "https://example.com/a")),
+            RichTextSegment(id: 4, kind: .link, text: "second.com", url: URL(string: "https://second.com")),
+        ]
+        let post = PostDisplay(
+            id: "p", authorDisplayName: "a", authorHandle: "a",
+            body: "see #swift @bob example.com second.com", bodySegments: segments, createdAt: Date()
+        )
+
+        XCTAssertEqual(post.firstLinkURL, URL(string: "https://example.com/a"))
+    }
+
+    func test_firstLinkURL_isNilWithoutLinkSegments() {
+        let post = PostDisplay(
+            id: "p", authorDisplayName: "a", authorHandle: "a",
+            body: "plain text only", createdAt: Date()
+        )
+
+        XCTAssertNil(post.firstLinkURL)
+    }
+
     func test_samples_returnNonEmptyDeterministicData() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let samples = PostDisplay.samples(now: now)

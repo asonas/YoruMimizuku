@@ -1,9 +1,11 @@
 ---
 title: Timeline Fetching and Streaming
 type: behavior
-updated: 2026-06-08
+updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - core/Sources/YoruMimizukuKit/LinkPreviewLoader.swift
+  - apps/macos/Views/LinkCardView.swift
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-b-like-permalink-browser.md
@@ -39,6 +41,12 @@ features:
     windows: full
     ios: full
     android: planned
+  - name: External link preview cards (OGP)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
   - name: Conversation child reply tree
     macos: full
     windows: none
@@ -82,6 +90,12 @@ its permalink, and `n` opens compose. Copy uses `UIPasteboard`, browser opening
 uses SwiftUI `openURL`, and hashtag links are intercepted into saved-search tabs
 (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/TimelineListView.swift`,
 `apps/ipados/Views/RootView.swift`).
+
+## External link preview cards
+
+A post row can carry a web-embed-style link card — thumbnail, title, description, and host — between the body / image grid and the action bar; clicking it opens the URL in the default browser. Two sources feed the card. When the post's embed is `app.bsky.embed.external#view`, the card renders directly from the hydrated data the posting client captured (`PostEmbed.external` → `PostDisplay.linkCard`, `Timeline.swift`, `PostDisplay+Mapping.swift`). When a text-only post has no embed but its body contains a link facet, the first link's OGP metadata is fetched on demand and the same card is built client-side: `LinkPreviewLoader` (an actor) caches one result per URL — including misses — and deduplicates concurrent fetches, and the pure `OGP` parser extracts `og:title` / `og:description` / `og:image` with `<title>` / `meta description` fallbacks (`LinkPreviewLoader.swift`, `OGP.swift`, `apps/macos/Views/LinkCardView.swift`).
+
+The fallback is intentionally skipped for posts that already attach images, keeping rows tight, and a page that yields no usable title renders nothing rather than an empty card. Note the privacy trade-off of the fallback path: resolving a bare link's preview fetches that page from the viewer's machine, so linked sites can observe the viewer's IP (the embed-provided path has no such fetch — its thumbnail comes from the Bluesky CDN). The card UI exists on [[macos]] only today; Windows and iPadOS rows render body text and images without link cards.
 
 ## Conversation view (ancestors + reply tree)
 

@@ -60,6 +60,10 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let createdAt: Date
     public let contextLabel: String?
     public let images: [PostImage]
+    /// The external-link preview card attached to this post, when its embed is
+    /// `app.bsky.embed.external#view`. Rendered between the body/images and the
+    /// action bar.
+    public let linkCard: LinkCard?
     /// The post this one replies to, when its parent is available in the feed.
     public let replyParent: ReplyParent?
     public let replyCount: Int
@@ -71,6 +75,13 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public var viewerLikeURI: String?
     /// AT-URI of the viewer's own repost record when they have reposted it.
     public var viewerRepostURI: String?
+
+    /// The first web link in the body (link facets only — hashtags and mentions
+    /// also carry URLs but are in-app destinations). Used to build an OGP preview
+    /// card when the post carries no external embed of its own.
+    public var firstLinkURL: URL? {
+        bodySegments.first { $0.kind == .link }?.url
+    }
 
     /// Whether the viewer has liked this post.
     public var isLiked: Bool { viewerLikeURI != nil }
@@ -88,6 +99,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         createdAt: Date,
         contextLabel: String? = nil,
         images: [PostImage] = [],
+        linkCard: LinkCard? = nil,
         replyParent: ReplyParent? = nil,
         replyCount: Int = 0,
         repostCount: Int = 0,
@@ -107,6 +119,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.createdAt = createdAt
         self.contextLabel = contextLabel
         self.images = images
+        self.linkCard = linkCard
         self.replyParent = replyParent
         self.replyCount = replyCount
         self.repostCount = repostCount

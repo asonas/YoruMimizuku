@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-09
+updated: 2026-06-11
 sources: []
 ---
 
@@ -76,6 +76,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
+| External link preview cards (OGP) | ○ | × | × | − |
 | Conversation child reply tree | ○ | × | ○ | − |
 
 ## Notes
@@ -91,4 +92,5 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **OS banner + unread badge** ([[notifications]]): Windows and iPadOS keep in-app unread badges while active, but neither has a complete OS toast/banner + badge path yet ([[windows]], [[ipados]], [[macos]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Windows and iPadOS feeds update by polling only today; neither front end wires Jetstream live top-merge yet ([[windows]], [[ipados]]).
+- **External link preview cards (OGP)** ([[timeline-streaming]]): macOS renders app.bsky.embed.external cards and falls back to a client-side OGP fetch for bare links; Windows and iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS and iPadOS render the descendant reply tree below the anchor; Windows shows the ancestor chain + re-anchor only ([[ipados]], [[windows]]).
