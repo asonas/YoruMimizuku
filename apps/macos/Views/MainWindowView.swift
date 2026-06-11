@@ -126,7 +126,8 @@ struct MainWindowView: View {
                 onCompose: { compose(refreshing: model) },
                 onReply: { openReplyComposer($0, refreshing: model) },
                 onQuote: { openQuoteComposer($0, refreshing: model) },
-                onOpenAuthor: { openAuthor(for: $0) }
+                onOpenAuthor: { openAuthor(for: $0) },
+                onOpenQuote: { openQuotedPost($0) }
             )
         case .notifications:
             NotificationsView(
@@ -147,7 +148,8 @@ struct MainWindowView: View {
                     onCompose: { compose(refreshing: tab.model) },
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) },
-                    onOpenAuthor: { openAuthor(for: $0) }
+                    onOpenAuthor: { openAuthor(for: $0) },
+                    onOpenQuote: { openQuotedPost($0) }
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -162,7 +164,8 @@ struct MainWindowView: View {
                     now: now,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenConversation: { workspace.openConversation($0) },
-                    onOpenAuthor: { openAuthor(for: $0) }
+                    onOpenAuthor: { openAuthor(for: $0) },
+                    onOpenQuote: { openQuotedPost($0) }
                 )
                 .id(id)
             } else {
@@ -177,7 +180,8 @@ struct MainWindowView: View {
                     onOpenConversation: { workspace.openConversation($0) },
                     onOpenAuthor: { openAuthor(for: $0) },
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
-                    onQuote: { openQuoteComposer($0, refreshing: tab.model) }
+                    onQuote: { openQuoteComposer($0, refreshing: tab.model) },
+                    onOpenQuote: { openQuotedPost($0) }
                 )
                 .id(id)
             } else {
@@ -235,6 +239,18 @@ struct MainWindowView: View {
         let vm = makeQuoteComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
+    }
+
+    /// Open the conversation for a tapped quote card. The quoted post arrives as
+    /// a `QuotedPost` (not a full `PostDisplay`), so this uses the URI-based
+    /// conversation entry point with the card's snippet as the tab label.
+    private func openQuotedPost(_ quote: QuotedPost) {
+        workspace.openConversation(
+            anchorID: quote.id,
+            title: quote.authorDisplayName,
+            handle: "@\(quote.authorHandle)",
+            subtitle: quote.body
+        )
     }
 
     private func openNotificationSubject(_ group: NotificationGroup) {

@@ -26,6 +26,8 @@ struct FeedView: View {
     var onQuote: (PostDisplay) -> Void = { _ in }
     /// Opens the author tab for a tapped avatar.
     var onOpenAuthor: (PostDisplay) -> Void = { _ in }
+    /// Opens the conversation of a tapped quote card's quoted post.
+    var onOpenQuote: (QuotedPost) -> Void = { _ in }
 
     @State private var focusedPostID: String?
 
@@ -101,6 +103,7 @@ struct FeedView: View {
                         onQuote: { onQuote(post) },
                         onAvatarTap: { onOpenAuthor(post) },
                         onCopyLink: { copyPermalink(post) },
+                        onQuoteTap: { onOpenQuote($0) },
                         connectsToPrevious: item.connectsToPrevious,
                         connectsToNext: item.connectsToNext
                     )
