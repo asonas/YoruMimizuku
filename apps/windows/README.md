@@ -68,6 +68,24 @@ scripts\windows\release.ps1 -Version 0.5.0
 # -> build\YoruMimizuku-win-x64-0.5.0.zip   (~40 MB)
 ```
 
+For WinSparkle auto-updates, build an installer EXE in addition to the ZIP:
+
+```powershell
+scripts\windows\release.ps1 -Version 0.7.1 -Installer
+# -> build\YoruMimizuku-win-x64-0.7.1-Setup.exe
+
+# When the Windows WinSparkle EdDSA private key is available, also generate the
+# GitHub Pages appcast for the installer enclosure.
+scripts\windows\release.ps1 -Version 0.7.1 -Installer `
+  -WinSparklePrivateKey C:\path\to\winsparkle-private.key `
+  -Channel stable
+# -> build\appcast-windows.xml
+```
+
+The app contains WinSparkle wiring and an Update section in Settings. It remains
+disabled until the Windows EdDSA public key placeholder in `UpdateService` is
+replaced and a signed installer appcast is published.
+
 Dropping the two bundled runtimes shrinks the ZIP from ~90 MB (self-contained) to
 **~40 MB** — small enough to upload as a Tangled tag artifact, which is stored as
 an atproto blob (~50 MB limit on a default PDS). The release script also strips the

@@ -43,7 +43,11 @@ public sealed partial class MainWindow : Window
             _appWindow!.Changed += OnAppWindowChanged;
         }
         SizeChanged += OnWindowSizeChanged;
-        Closed += (_, _) => SaveWindowWidth();
+        Closed += (_, _) =>
+        {
+            SaveWindowWidth();
+            UpdateService.Shared.Shutdown();
+        };
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
         _notifications.PropertyChanged += (_, e) =>

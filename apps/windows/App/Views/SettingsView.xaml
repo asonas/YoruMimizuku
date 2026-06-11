@@ -30,6 +30,20 @@
                 <Slider x:Name="FontSlider" Minimum="11" Maximum="24" Value="14"
                         ValueChanged="OnFontSizeChanged" />
             </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="アップデート" FontWeight="SemiBold" />
+                <TextBlock x:Name="VersionText" Opacity="0.7" />
+                <CheckBox x:Name="AutoUpdateCheck" Content="起動時に自動で確認"
+                          Checked="OnAutoUpdateChanged" Unchecked="OnAutoUpdateChanged" />
+                <ComboBox x:Name="UpdateChannelBox" SelectionChanged="OnUpdateChannelChanged"
+                          HorizontalAlignment="Left">
+                    <ComboBoxItem Content="リリース" />
+                    <ComboBoxItem Content="開発版" />
+                </ComboBox>
+                <Button Content="今すぐ確認" Click="OnCheckUpdatesClick" HorizontalAlignment="Left" />
+                <TextBlock x:Name="UpdateStatusText" Opacity="0.7" TextWrapping="Wrap" />
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

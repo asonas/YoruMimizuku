@@ -133,6 +133,13 @@ lifetime handling is confined here.
 - The notifications navigation row has a local unread badge driven by 30-second
   polling and cleared when the tab becomes active. OS toast notifications and a
   taskbar badge are still not implemented ([[notifications]]).
+- Windows update checks use WinSparkle in the WinUI app layer, not the macOS
+  Sparkle framework. The settings view exposes version/channel/automatic-check
+  controls and a manual check button; the service stays disabled while the
+  Windows EdDSA public key placeholder is present. `release.ps1 -Installer` can
+  build an Inno Setup installer EXE and, when given the WinSparkle private key,
+  generate `appcast-windows*.xml` for GitHub Pages / GitHub Releases hosting
+  ([[auto-updates]]).
 - The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
   **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS
@@ -198,7 +205,10 @@ eventual installable form. Code signing is decoupled (optional `-Thumbprint` /
 `-CertPath` on `release.ps1`): the launcher + app binaries are signed before
 zipping; unsigned builds get a one-time SmartScreen prompt, and Windows has no
 free notarization equivalent to macOS — a trusted signature needs a paid (or
-free-for-OSS) Authenticode cert, deferred for now.
+free-for-OSS) Authenticode cert, deferred for now. For auto-updates, the same
+script can additionally build and sign an installer EXE (`-Installer`) and emit a
+WinSparkle appcast (`-WinSparklePrivateKey`, `-Channel stable|development`) whose
+enclosure URL targets GitHub Releases.
 
 ## Resolved / open questions
 

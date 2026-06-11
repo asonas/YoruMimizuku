@@ -36,5 +36,6 @@ public partial class App : Application
         mainWindow.RestoreSavedWindowWidth();
         _window = mainWindow;
         _window.Activate();
+        UpdateService.Shared.Initialize();
     }
 }

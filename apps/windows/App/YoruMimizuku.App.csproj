@@ -13,6 +13,7 @@
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <Version>0.7.0</Version>
     <!-- Unpackaged run during development; switch to MSIX for distribution. -->
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
@@ -30,6 +31,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4654" />
+    <PackageReference Include="WinSparkle" Version="0.9.3" />
     <!-- WebView2 (CoreWebView2 etc.) ships inside Microsoft.WindowsAppSDK, so no
          separate Microsoft.Web.WebView2 package (it would clash as CS0433). -->
   </ItemGroup>

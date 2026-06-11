@@ -7,6 +7,7 @@ using System.Globalization;
 namespace YoruMimizuku.App.Services;
 
 public enum DisplayDensity { Compact, Comfortable }
+public enum WindowsUpdateChannel { Stable, Development }
 
 /// <summary>
 /// App-local preferences (density, font size, theme) persisted as JSON under
@@ -47,6 +48,18 @@ public sealed class AppSettings
     {
         get => double.TryParse(Get("windowWidth"), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
         set => Set("windowWidth", value?.ToString(CultureInfo.InvariantCulture));
+    }
+
+    public WindowsUpdateChannel UpdateChannel
+    {
+        get => Get("updates.channel") == "development" ? WindowsUpdateChannel.Development : WindowsUpdateChannel.Stable;
+        set => Set("updates.channel", value == WindowsUpdateChannel.Development ? "development" : "stable");
+    }
+
+    public bool AutomaticallyChecksForUpdates
+    {
+        get => Get("updates.automaticChecks") != "false";
+        set => Set("updates.automaticChecks", value ? "true" : "false");
     }
 
     /// Persisted theme as "RRGGBB|RRGGBB" (background|text); null = default palette.

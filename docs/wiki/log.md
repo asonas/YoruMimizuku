@@ -33,6 +33,11 @@ Recent activity: `grep "^## " log.md | head -5`.
 - updated: [[compose-post]], [[notifications]], [[timeline-streaming]]
 - note: Three shipped changes. (1) Submission now trims trailing whitespace/blank lines from the post body, preserving interior line breaks. (2) `listNotifications` always sends `priority=false` so an account-level priority setting can no longer silently drop reply notifications from non-followed accounts. (3) macOS post rows render external link preview cards: directly from `app.bsky.embed.external#view`, or via a cached client-side OGP fetch for a bare link facet in text-only posts; the card sits between body/images and the action bar. New "External link preview cards (OGP)" matrix row (macOS full, Windows/iPadOS none).
 
+## 2026-06-09 ingest
+
+- updated: [[auto-updates]], [[windows]]
+- note: Added the Windows auto-update path. The WinUI app now has WinSparkle wiring and an Update settings section, guarded behind a placeholder Windows EdDSA public key. `release.ps1 -Installer` can build an Inno Setup installer EXE while preserving the ZIP artifact, and `-WinSparklePrivateKey` can sign that installer and generate `appcast-windows.xml` / `appcast-windows-dev.xml` for GitHub Pages and GitHub Releases hosting. The support matrix marks Windows updates limited until a real key and appcast are published.
+
 ## 2026-06-08 ingest
 
 - sources: `2026-06-08-macos-compose-notification-followups.md`

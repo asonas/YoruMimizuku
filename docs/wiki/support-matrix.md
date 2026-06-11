@@ -33,11 +33,11 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Author (user) tab | ○ | ○ | ○ | − |
 
-## [[auto-updates]] — Auto Updates (Sparkle)
+## [[auto-updates]] — Auto Updates (Sparkle / WinSparkle)
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Sparkle auto-update checks and install | ○ | × | × | × |
+| Sparkle / WinSparkle update checks and install | ○ | △ | × | × |
 
 ## [[compose-post]] — Composing Posts
 
@@ -87,7 +87,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; iPadOS maps the same per-window model to per-scene `WorkspaceModel`, while WinUI is single-window today ([[ipados]], [[windows]]).
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
-- **Sparkle auto-update checks and install** ([[auto-updates]]): Sparkle auto-update is macOS-only; Windows/iPadOS/Android need separate updater mechanisms if they ever gain auto-update support ([[macos]], [[windows]], [[ipados]]).
+- **Sparkle / WinSparkle update checks and install** ([[auto-updates]]): Windows has WinSparkle wiring, update settings, and installer/appcast generation hooks, but it stays disabled until a Windows EdDSA public key and installer appcast are published ([[windows]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows can attach PNG/JPEG files but still lacks alt-text editing/downsampling UI; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
 - **OS banner + unread badge** ([[notifications]]): Every platform has in-app unread badges only today. The designed UNUserNotificationCenter banner + Dock badge path is not implemented on macOS either ([[macos]], [[windows]], [[ipados]]).
