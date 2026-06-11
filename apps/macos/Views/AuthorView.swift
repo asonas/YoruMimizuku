@@ -17,6 +17,7 @@ struct AuthorView: View {
     var onOpenAuthor: (PostDisplay) -> Void
     var onReply: (PostDisplay) -> Void = { _ in }
     var onQuote: (PostDisplay) -> Void = { _ in }
+    var onOpenQuote: (QuotedPost) -> Void = { _ in }
 
     init(
         tab: AuthorTab,
@@ -25,7 +26,8 @@ struct AuthorView: View {
         onOpenConversation: @escaping (PostDisplay) -> Void,
         onOpenAuthor: @escaping (PostDisplay) -> Void,
         onReply: @escaping (PostDisplay) -> Void = { _ in },
-        onQuote: @escaping (PostDisplay) -> Void = { _ in }
+        onQuote: @escaping (PostDisplay) -> Void = { _ in },
+        onOpenQuote: @escaping (QuotedPost) -> Void = { _ in }
     ) {
         self.tab = tab
         self.header = tab.header
@@ -35,6 +37,7 @@ struct AuthorView: View {
         self.onOpenAuthor = onOpenAuthor
         self.onReply = onReply
         self.onQuote = onQuote
+        self.onOpenQuote = onOpenQuote
     }
 
     var body: some View {
@@ -46,7 +49,8 @@ struct AuthorView: View {
                 onOpenConversation: onOpenConversation,
                 onReply: onReply,
                 onQuote: onQuote,
-                onOpenAuthor: onOpenAuthor
+                onOpenAuthor: onOpenAuthor,
+                onOpenQuote: onOpenQuote
             )
         }
         .background(theme.canvas)

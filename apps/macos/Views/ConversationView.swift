@@ -17,6 +17,8 @@ struct ConversationView: View {
     var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
     var onOpenAuthor: (PostDisplay) -> Void = { _ in }
+    /// Opens the conversation of a tapped quote card's quoted post.
+    var onOpenQuote: (QuotedPost) -> Void = { _ in }
 
     var body: some View {
         content
@@ -111,7 +113,8 @@ struct ConversationView: View {
                 onLike: { Task { await model.toggleLike(focus) } },
                 onRepost: { Task { await model.toggleRepost(focus) } },
                 onAvatarTap: { onOpenAuthor(focus) },
-                onCopyLink: { copyPermalink(focus) }
+                onCopyLink: { copyPermalink(focus) },
+                onQuoteTap: { onOpenQuote($0) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .rowHoverHighlight()
@@ -160,7 +163,8 @@ struct ConversationView: View {
                 onLike: { Task { await model.toggleLike(node.post) } },
                 onRepost: { Task { await model.toggleRepost(node.post) } },
                 onAvatarTap: { onOpenAuthor(node.post) },
-                onCopyLink: { copyPermalink(node.post) }
+                onCopyLink: { copyPermalink(node.post) },
+                onQuoteTap: { onOpenQuote($0) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .rowHoverHighlight()

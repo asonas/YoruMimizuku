@@ -36,6 +36,9 @@ struct PostRowView: View, @MainActor Equatable {
     var onAvatarTap: () -> Void = {}
     /// Called when the copy-link icon is tapped (copies the post permalink).
     var onCopyLink: () -> Void = {}
+    /// Called when the quote card is tapped, so the host can open the quoted
+    /// post's conversation.
+    var onQuoteTap: (QuotedPost) -> Void = { _ in }
     /// Thread-grouping flags (see `FeedThreading`): when set, a member of the
     /// same reply chain sits directly above / below, and the avatar column draws
     /// the Bluesky-web-style connector line toward it. The reply marker is
@@ -44,9 +47,17 @@ struct PostRowView: View, @MainActor Equatable {
     var connectsToNext: Bool = false
 
     @EnvironmentObject private var theme: ThemeStore
+    @Environment(\.openURL) private var openURL
     @State private var showRepostOptions = false
 
     private let timeFormatter = RelativeTimeFormatter()
+
+    /// Open this post's public permalink in the default browser. Used by the
+    /// video poster, whose playback is not inline in v1.
+    private func openInBrowser() {
+        guard let url = PostPermalink.url(for: post) else { return }
+        openURL(url)
+    }
 
     private var relativeTime: String {
         timeFormatter.string(for: post.createdAt, now: now)
@@ -192,14 +203,26 @@ struct PostRowView: View, @MainActor Equatable {
             if !post.images.isEmpty {
                 imageGrid.padding(.top, 3)
             }
+            if let video = post.video {
+                VideoPosterView(video: video, maxWidth: imageMaxWidth, onTap: openInBrowser)
+                    .padding(.top, 3)
+            }
             // The external-link card sits below the body and images and above the
             // action bar. A post with its own external embed renders it directly;
             // otherwise a bare link in a text-only post resolves its OGP preview
-            // lazily (image posts skip the fallback to keep rows tight).
+            // lazily (posts that already carry media or a quote skip the fallback
+            // to keep rows tight).
             if let card = post.linkCard {
                 LinkCardView(card: card, density: density).padding(.top, 3)
-            } else if post.images.isEmpty, let url = post.firstLinkURL {
+            } else if post.images.isEmpty, post.video == nil, post.quote == nil,
+                      let url = post.firstLinkURL {
                 LazyLinkCardView(url: url, density: density).padding(.top, 3)
+            }
+            if let quote = post.quote {
+                QuoteCardView(quote: quote, density: density, now: now) {
+                    onQuoteTap(quote)
+                }
+                .padding(.top, 3)
             }
             if density == .comfortable {
                 if interactiveActions {

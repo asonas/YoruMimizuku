@@ -283,6 +283,81 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.bodySegments.map(\.text), ["plain body"])
     }
 
+    func testMapsVideoEmbedToPostVideo() {
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(text: "watch this", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            embed: PostEmbed(
+                images: [],
+                video: EmbedVideo(
+                    playlist: "https://video.example/playlist.m3u8",
+                    thumbnail: "https://video.example/poster.jpg",
+                    alt: "a dog",
+                    aspectRatio: ImageAspectRatio(width: 1280, height: 720)
+                )
+            )
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+        let video = display.video
+
+        XCTAssertEqual(video?.thumbURL, URL(string: "https://video.example/poster.jpg"))
+        XCTAssertEqual(video?.alt, "a dog")
+        XCTAssertEqual(video?.aspectRatio, 1280.0 / 720.0)
+    }
+
+    func testMapsRecordEmbedToQuotedPost() {
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(text: "check this out", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            embed: PostEmbed(
+                images: [],
+                record: EmbedRecord(
+                    uri: "at://did:plc:quoted/app.bsky.feed.post/qqq",
+                    cid: "bafyquoted",
+                    author: ProfileViewBasic(
+                        did: "did:plc:quoted",
+                        handle: "quoted.bsky.social",
+                        displayName: "Quoted Author",
+                        avatar: "https://cdn.example/quoted.jpg"
+                    ),
+                    value: PostRecord(text: "the quoted text", createdAt: "2026-06-10T08:00:00.000Z"),
+                    embeds: [
+                        PostEmbed(images: [
+                            EmbedImage(thumb: "https://cdn.example/q-thumb.jpg", fullsize: "https://cdn.example/q-full.jpg", alt: "pic")
+                        ])
+                    ]
+                )
+            )
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+        let quote = display.quote
+
+        XCTAssertEqual(quote?.id, "at://did:plc:quoted/app.bsky.feed.post/qqq")
+        XCTAssertEqual(quote?.authorDisplayName, "Quoted Author")
+        XCTAssertEqual(quote?.authorHandle, "quoted.bsky.social")
+        XCTAssertEqual(quote?.avatarURL, URL(string: "https://cdn.example/quoted.jpg"))
+        XCTAssertEqual(quote?.body, "the quoted text")
+        // Parsed, not an epoch-0 fallback.
+        XCTAssertGreaterThan(quote?.createdAt.timeIntervalSince1970 ?? 0, 1_700_000_000)
+        XCTAssertEqual(quote?.images.first?.thumbURL, URL(string: "https://cdn.example/q-thumb.jpg"))
+    }
+
+    func testQuoteAndVideoAreNilWithoutMatchingEmbeds() {
+        let display = PostDisplay(FeedViewPost(post: post()))
+        XCTAssertNil(display.quote)
+        XCTAssertNil(display.video)
+    }
+
     func testParsesFractionalAndWholeSecondTimestamps() {
         let fractional = PostDisplay(FeedViewPost(post: post(createdAt: "2026-06-04T12:00:00.000Z")))
         let whole = PostDisplay(FeedViewPost(post: post(createdAt: "2026-06-04T12:00:00Z")))
