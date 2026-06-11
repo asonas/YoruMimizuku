@@ -41,6 +41,39 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.likeCount, 3)
     }
 
+    func testMapsExternalEmbedToLinkCard() {
+        let postView = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
+            cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatar: nil),
+            record: PostRecord(text: "see https://example.com/article", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            embed: PostEmbed(
+                images: [],
+                external: EmbedExternal(
+                    uri: "https://example.com/article",
+                    title: "An Article",
+                    description: "Worth reading.",
+                    thumb: "https://cdn.example/thumb.jpg"
+                )
+            )
+        )
+
+        let display = PostDisplay(FeedViewPost(post: postView))
+
+        XCTAssertEqual(display.linkCard?.url, URL(string: "https://example.com/article"))
+        XCTAssertEqual(display.linkCard?.title, "An Article")
+        XCTAssertEqual(display.linkCard?.description, "Worth reading.")
+        XCTAssertEqual(display.linkCard?.thumbURL, URL(string: "https://cdn.example/thumb.jpg"))
+        XCTAssertEqual(display.linkCard?.host, "example.com")
+    }
+
+    func testPostWithoutExternalEmbedHasNilLinkCard() {
+        let display = PostDisplay(FeedViewPost(post: post()))
+        XCTAssertNil(display.linkCard)
+    }
+
     func testMapsCidAndViewerState() {
         let postView = PostView(
             uri: "at://did:plc:alice/app.bsky.feed.post/aaa",
