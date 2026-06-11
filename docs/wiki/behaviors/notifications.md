@@ -1,9 +1,10 @@
 ---
 title: Notifications
 type: behavior
-updated: 2026-06-08
+updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - core/Sources/BlueskyCore/XRPC/NotificationsService.swift
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
@@ -30,6 +31,8 @@ Notifications reach the user through two channels: an in-app "Notifications" tab
 ## In-app tab
 
 The Notifications tab fetches `listNotifications` and groups items by kind (like / repost / follow / reply / mention / quote). Read state is advanced with `updateSeen`. As a polled, server-computed source it shares the timeline machinery — interval polling + backoff + pull-to-refresh — described in [[timeline-streaming]] (§6.3), and it additionally calls `getUnreadCount` to drive the badge.
+
+The `listNotifications` request always carries an explicit `priority=false`. When the parameter is omitted, the AppView falls back to the account-level "priority notifications" preference, which silently drops notifications (such as replies) from accounts the viewer does not follow. The app has no priority-only mode of its own, so it always requests the full stream (`NotificationsService.swift` `notificationsURL`).
 
 ## OS banner + Dock badge
 

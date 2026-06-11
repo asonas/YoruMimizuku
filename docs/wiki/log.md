@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-11 ingest
+
+- sources: `ComposerViewModel.swift`, `NotificationsService.swift`, `LinkPreviewLoader.swift`, `LinkCardView.swift` (v0.8.0-dev.2 behavior changes; no new spec)
+- updated: [[compose-post]], [[notifications]], [[timeline-streaming]]
+- note: Three shipped changes. (1) Submission now trims trailing whitespace/blank lines from the post body, preserving interior line breaks. (2) `listNotifications` always sends `priority=false` so an account-level priority setting can no longer silently drop reply notifications from non-followed accounts. (3) macOS post rows render external link preview cards: directly from `app.bsky.embed.external#view`, or via a cached client-side OGP fetch for a bare link facet in text-only posts; the card sits between body/images and the action bar. New "External link preview cards (OGP)" matrix row (macOS full, Windows/iPadOS none).
+
 ## 2026-06-08 ingest
 
 - sources: `2026-06-08-macos-compose-notification-followups.md`
