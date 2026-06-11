@@ -19,10 +19,10 @@ features:
     android: planned
   - name: OS banner + unread badge
     macos: limited
-    windows: limited
+    windows: differs
     ios: limited
     android: planned
-    note: "Every platform has in-app unread badges only today. The designed UNUserNotificationCenter banner + Dock badge path is not implemented on macOS either ([[macos]], [[windows]], [[ipados]])."
+    note: "macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]])."
 ---
 
 # Notifications
@@ -43,7 +43,7 @@ The v1 design (§9.2) calls for a background polling actor that periodically cal
 
 ## Sidebar / navigation unread badge
 
-The app also has an in-app unread badge path. On Windows, `NotificationsViewModel` keeps a local `UnreadCount` using the same "items above the last seen top item" rule as `UnreadCounter`, and `MainWindow` refreshes notifications every 30 seconds while the shell is open. Selecting the Notifications tab calls `SetActive(true)` / `MarkSeen()` and clears the badge; leaving the tab lets the next poll accumulate a count on the NavigationView row. This is not an OS toast or taskbar badge, so the support matrix marks Windows limited until those OS surfaces exist (`apps/windows/App/ViewModels/NotificationsViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
+The app also has an in-app unread badge path. On Windows, `NotificationsViewModel` keeps a local `UnreadCount` using the same "items above the last seen top item" rule as `UnreadCounter`, and `MainWindow` refreshes notifications every 30 seconds while the shell is open. Selecting the Notifications tab calls `SetActive(true)` / `MarkSeen()` and clears the badge; leaving the tab lets the next poll accumulate a count on the NavigationView row. When that poll raises the unread count, `MainWindow` also fires an OS toast through the Windows App SDK `AppNotificationManager` and flashes the taskbar with `FlashWindowEx` (`Services/NotificationAlerts.cs`), so Windows — unlike macOS — does surface notifications at the OS level; only a persistent numeric taskbar badge is still missing, pending packaged (MSIX) identity (`apps/windows/App/ViewModels/NotificationsViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
 
 On [[ipados]], `NotificationsViewModel` drives the in-app tab and sidebar badge
 through foreground polling. The MVP intentionally does not promise background

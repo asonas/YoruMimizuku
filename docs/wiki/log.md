@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-11 ingest
 
+- sources: `apps/windows/App/**`, `core/Sources/YoruMimizukuBridge/**`, `core/Sources/YoruMimizukuKit/PostText.swift` (Windows 0.8.0 parity; no new spec)
+- updated: [[windows]], [[timeline-streaming]], [[compose-post]], [[notifications]], [[app-shell]]
+- note: Brought the Windows app to macOS 0.8.0 parity (bumped to 0.8.0). New: external link preview cards (embed card + lazy OGP via `yoru_ogp_load`), web-style feed thread grouping (`yoru_feed_arrange` over the tested `FeedThreading`), the conversation descendant reply tree (`yoru_thread_load` now returns a `ConversationThread` from `ThreadNode.childTree`), a composer alt-text editor + WIC downsampling, OS toast + taskbar flash for new notifications, and multiple windows (`Ctrl+Shift+N`). Post submission now trims trailing blank lines via the shared `PostText`. Rebased onto the v1.0.0-roadmap merge, which independently reached the same Jetstream finding and deferred it past v1.0.0; this branch keeps that framing (Jetstream row stays none everywhere) and notes Windows interval polling is at parity. Windows is now the one platform with OS-level notification surfacing (toast + taskbar flash), ahead of the roadmap's deferred macOS OS-banner path; the numeric taskbar badge still awaits MSIX.
+
+## 2026-06-11 ingest
+
 - sources: `apps/macos/Views/LinkCardView.swift` (link card restyle; no new spec)
 - updated: [[timeline-streaming]]
 - note: The link card moved from the title-chip-overlay style to X's full large card: hero image, bold title, grey description, and a link-icon host line stacked in one bordered container; thumbnail-less links render the text section alone.
