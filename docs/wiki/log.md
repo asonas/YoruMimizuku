@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-11 ingest
 
+- sources: `apps/macos/Views/LinkCardView.swift` (link card restyle; no new spec)
+- updated: [[timeline-streaming]]
+- note: The link card moved from the title-chip-overlay style to X's full large card: hero image, bold title, grey description, and a link-icon host line stacked in one bordered container; thumbnail-less links render the text section alone.
+
+## 2026-06-11 ingest
+
 - sources: `FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift` (feed thread grouping; no new spec)
 - updated: [[timeline-streaming]]
 - note: The macOS feed now groups same-thread posts the way Bluesky web does: `FeedThreading.arrange` resolves each post to its topmost on-page ancestor and emits the chain oldest-first at the newest member's position, with a connector line between avatars, the in-block reply marker hidden, and the in-block divider dropped. New "Thread grouping in the feed (web-style)" matrix row (macOS full, Windows/iPadOS none).
