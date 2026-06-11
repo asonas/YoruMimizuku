@@ -81,6 +81,26 @@ final class ComposerViewModelTests: XCTestCase {
         XCTAssertEqual(submitter.received?.quote?.cid, "bafyquote")
     }
 
+    func testSubmitTrimsTrailingBlankLines() async {
+        let submitter = FakeSubmitter()
+        let vm = ComposerViewModel(submitter: submitter)
+        vm.text = "hello\n\n"
+
+        await vm.submit()
+
+        XCTAssertEqual(submitter.received?.text, "hello")
+    }
+
+    func testSubmitPreservesInteriorBlankLines() async {
+        let submitter = FakeSubmitter()
+        let vm = ComposerViewModel(submitter: submitter)
+        vm.text = "line1\n\nline2\n \n"
+
+        await vm.submit()
+
+        XCTAssertEqual(submitter.received?.text, "line1\n\nline2")
+    }
+
     func testSubmitSetsErrorMessageOnFailure() async {
         let submitter = FakeSubmitter()
         submitter.result = .failure(NSError(domain: "x", code: 1))
