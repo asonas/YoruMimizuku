@@ -1,11 +1,11 @@
 import SwiftUI
 import YoruMimizukuKit
 
-/// An external-link preview rendered inside a post row, styled after X's large
-/// link card: a wide 1.91:1 hero image with the page title overlaid as a dark
-/// chip in the bottom-left corner and a grey "hostから" line underneath. Links
-/// without a thumbnail fall back to a compact bordered text card (host, title,
-/// description). Sits between the post body / images and the action bar.
+/// An external-link preview rendered inside a post row, styled after X's full
+/// large link card: a wide 1.91:1 hero image on top and, inside the same
+/// bordered container, the page title in bold, the description in grey, and a
+/// small host line. Links without a thumbnail render the same text section
+/// alone. Sits between the post body / images and the action bar.
 struct LinkCardView: View {
     let card: LinkCard
     let density: DisplayDensity
@@ -20,27 +20,26 @@ struct LinkCardView: View {
         Button {
             openURL(card.url)
         } label: {
-            if let thumbURL = card.thumbURL {
-                VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 0) {
+                if let thumbURL = card.thumbURL {
                     heroImage(thumbURL)
-                    if let host = card.host {
-                        Text("\(host)から")
-                            .font(.app(.caption2))
-                            .foregroundStyle(theme.tertiaryText)
-                            .lineLimit(1)
-                    }
+                    Divider().overlay(theme.hairline)
                 }
-            } else {
-                textCard
+                textSection
             }
+            .frame(maxWidth: maxWidth, alignment: .leading)
+            .background(theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
         .help(card.url.absoluteString)
         .accessibilityLabel("リンク: \(card.title)")
     }
 
-    /// The cover-cropped hero image with rounded corners, a hairline border, and
-    /// the title chip pinned to the bottom-leading corner.
+    /// The cover-cropped hero image filling the card's top; the container clips
+    /// it to the card's rounded corners.
     private func heroImage(_ url: URL) -> some View {
         RemoteImage(url: url, maxPointSize: maxWidth) { phase in
             if case let .success(image) = phase {
@@ -54,40 +53,12 @@ struct LinkCardView: View {
         .aspectRatio(Self.heroAspectRatio, contentMode: .fit)
         .frame(maxWidth: maxWidth, alignment: .leading)
         .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
-        .overlay(alignment: .bottomLeading) {
-            if !card.title.isEmpty {
-                titleChip
-            }
-        }
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    /// The page title as X renders it: small white text in a translucent black
-    /// capsule, inset from the image's bottom-left corner.
-    private var titleChip: some View {
-        Text(card.title)
-            .font(.app(.caption))
-            .foregroundStyle(.white)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(Color.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-            .padding(9)
-    }
-
-    /// Thumbnail-less fallback: a bordered text card with the host above the
-    /// title, mirroring X's text-only summary card.
-    private var textCard: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let host = card.host {
-                Text(host)
-                    .font(.app(.caption2))
-                    .foregroundStyle(theme.tertiaryText)
-                    .lineLimit(1)
-            }
+    /// Title, description, and host under the image (or alone for links without
+    /// a thumbnail), mirroring X's card text block.
+    private var textSection: some View {
+        VStack(alignment: .leading, spacing: 3) {
             Text(card.title)
                 .font(.app(density == .compact ? .caption : .subheadline, weight: .semibold))
                 .foregroundStyle(theme.primaryText)
@@ -100,12 +71,17 @@ struct LinkCardView: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
+            if let host = card.host {
+                Label(host, systemImage: "link")
+                    .font(.app(.caption2))
+                    .foregroundStyle(theme.tertiaryText)
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+            }
         }
-        .padding(density == .compact ? 7 : 9)
-        .frame(maxWidth: maxWidth, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.surface))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
-        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, density == .compact ? 8 : 10)
+        .padding(.vertical, density == .compact ? 6 : 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
