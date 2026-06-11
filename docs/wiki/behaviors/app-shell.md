@@ -1,12 +1,13 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-06-08
+updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-shell.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
+  - apps/macos/Views/NewPostCommand.swift
 features:
   - name: Tabbed single-column shell (sidebar / tabs)
     macos: full
@@ -37,6 +38,8 @@ The app shell is the Yorufukurou-style frame that hosts every timeline: one wind
 A window carries an account switcher (top-right of the title bar), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
 
 The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720; the brand area is padded to clear the traffic-light buttons (`2026-06-05-yorumimizuku-cmux-sidebar.md`). Apple-specific window wiring lives on the [[macos]] page.
+
+On macOS the File menu's default New Window (⌘N) is replaced with **新規投稿**: ⌘N opens the composer sheet over the focused window's current tab instead of spawning another timeline window, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]).
 
 ## Display density (A / B)
 

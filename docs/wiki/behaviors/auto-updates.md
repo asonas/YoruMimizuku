@@ -1,10 +1,11 @@
 ---
 title: Auto Updates (Sparkle)
 type: behavior
-updated: 2026-06-09
+updated: 2026-06-11
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/plans/2026-06-09-yorumimizuku-sparkle-auto-update.md
+  - apps/macos/AppDelegate.swift
   - https://sparkle-project.org/documentation/customization/
   - https://sparkle-project.github.io/documentation/gentle-reminders
 features:
@@ -79,6 +80,22 @@ when the app wants to handle a scheduled update non-modally. Sparkle documents
 that returning `false` makes the delegate responsible for showing the reminder,
 which in this app means setting the gear dot until the user interacts with the
 update session (Sparkle gentle reminders documentation).
+
+## Quit handling for "Install and Restart"
+
+Sparkle terminates the app by sending a quit Apple event — never a force kill —
+and waits for the process to exit before swapping the bundle and relaunching.
+With the SwiftUI life cycle, AppKit cancels that event with `userCanceledErr`
+whenever any window has a presented sheet, and the update UI lives inside the
+settings sheet, so "Install and Restart" always arrived in exactly that state:
+the app never quit, Sparkle silently waited, and the update only installed on
+the next manual quit. The app therefore installs its own `kAEQuitApplication`
+handler (`AppDelegate`, wired via `@NSApplicationDelegateAdaptor`): it ends every
+attached sheet and re-enters `NSApp.terminate` on the next run-loop turn. The
+behavior was verified with a minimal WindowGroup reproduction — the default
+handler cancels while a sheet is up, `applicationShouldTerminate` is never
+reached, and a synchronous terminate is still swallowed until the sheet has been
+ended (`apps/macos/AppDelegate.swift`).
 
 ## Release and appcast
 

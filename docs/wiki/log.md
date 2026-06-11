@@ -11,6 +11,12 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-11 ingest
 
+- sources: `NewPostCommand.swift`, `AppDelegate.swift`, `LinkCardView.swift` (macOS UX fixes; no new spec)
+- updated: [[app-shell]], [[auto-updates]], [[timeline-streaming]]
+- note: Three macOS changes. (1) ⌘N now opens the new-post composer instead of the WindowGroup default New Window, via a FocusedValues-published action. (2) Sparkle "Install and Restart" works again: a custom quit-Apple-event handler ends presented sheets and re-enters terminate, because AppKit cancels the quit event with userCanceledErr while any sheet is up (the update UI lives in the settings sheet). (3) The external link card is restyled after X's large summary card: 1.91:1 hero image, title chip overlay, "hostから" line; thumbnail-less links use a bordered text card.
+
+## 2026-06-11 ingest
+
 - sources: `ComposerViewModel.swift`, `NotificationsService.swift`, `LinkPreviewLoader.swift`, `LinkCardView.swift` (v0.8.0-dev.2 behavior changes; no new spec)
 - updated: [[compose-post]], [[notifications]], [[timeline-streaming]]
 - note: Three shipped changes. (1) Submission now trims trailing whitespace/blank lines from the post body, preserving interior line breaks. (2) `listNotifications` always sends `priority=false` so an account-level priority setting can no longer silently drop reply notifications from non-followed accounts. (3) macOS post rows render external link preview cards: directly from `app.bsky.embed.external#view`, or via a cached client-side OGP fetch for a bare link facet in text-only posts; the card sits between body/images and the action bar. New "External link preview cards (OGP)" matrix row (macOS full, Windows/iPadOS none).

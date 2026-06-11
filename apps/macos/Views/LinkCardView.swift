@@ -1,68 +1,111 @@
 import SwiftUI
 import YoruMimizukuKit
 
-/// An external-link preview rendered inside a post row, web-embed style: a
-/// square thumbnail on the leading edge with the page title, description, and
-/// host beside it, the whole card bordered and clickable. Sits between the post
-/// body / images and the action bar.
+/// An external-link preview rendered inside a post row, styled after X's large
+/// link card: a wide 1.91:1 hero image with the page title overlaid as a dark
+/// chip in the bottom-left corner and a grey "hostから" line underneath. Links
+/// without a thumbnail fall back to a compact bordered text card (host, title,
+/// description). Sits between the post body / images and the action bar.
 struct LinkCardView: View {
     let card: LinkCard
     let density: DisplayDensity
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
 
-    private var thumbSize: CGFloat { density == .compact ? 44 : 64 }
     private var maxWidth: CGFloat { density == .compact ? 320 : 440 }
+    /// X's summary_large_image proportion (1200x628).
+    private static let heroAspectRatio: CGFloat = 1.91
 
     var body: some View {
         Button {
             openURL(card.url)
         } label: {
-            HStack(alignment: .top, spacing: 9) {
-                if let thumbURL = card.thumbURL {
-                    RemoteImage(url: thumbURL, maxPointSize: thumbSize) { phase in
-                        if case let .success(image) = phase {
-                            image.resizable().scaledToFill()
-                        } else {
-                            theme.surface.overlay(
-                                Image(systemName: "globe").foregroundStyle(theme.tertiaryText)
-                            )
-                        }
-                    }
-                    .frame(width: thumbSize, height: thumbSize)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(card.title)
-                        .font(.app(density == .compact ? .caption : .subheadline, weight: .semibold))
-                        .foregroundStyle(theme.primaryText)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    if density == .comfortable, !card.description.isEmpty {
-                        Text(card.description)
-                            .font(.app(.caption))
-                            .foregroundStyle(theme.secondaryText)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
+            if let thumbURL = card.thumbURL {
+                VStack(alignment: .leading, spacing: 3) {
+                    heroImage(thumbURL)
                     if let host = card.host {
-                        Text(host)
+                        Text("\(host)から")
                             .font(.app(.caption2))
                             .foregroundStyle(theme.tertiaryText)
                             .lineLimit(1)
                     }
                 }
-                Spacer(minLength: 0)
+            } else {
+                textCard
             }
-            .padding(density == .compact ? 6 : 8)
-            .frame(maxWidth: maxWidth, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(theme.surface))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
         .help(card.url.absoluteString)
         .accessibilityLabel("リンク: \(card.title)")
+    }
+
+    /// The cover-cropped hero image with rounded corners, a hairline border, and
+    /// the title chip pinned to the bottom-leading corner.
+    private func heroImage(_ url: URL) -> some View {
+        RemoteImage(url: url, maxPointSize: maxWidth) { phase in
+            if case let .success(image) = phase {
+                image.resizable().scaledToFill()
+            } else {
+                theme.surface.overlay(
+                    Image(systemName: "globe").foregroundStyle(theme.tertiaryText)
+                )
+            }
+        }
+        .aspectRatio(Self.heroAspectRatio, contentMode: .fit)
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .clipped()
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
+        .overlay(alignment: .bottomLeading) {
+            if !card.title.isEmpty {
+                titleChip
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    /// The page title as X renders it: small white text in a translucent black
+    /// capsule, inset from the image's bottom-left corner.
+    private var titleChip: some View {
+        Text(card.title)
+            .font(.app(.caption))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Color.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .padding(9)
+    }
+
+    /// Thumbnail-less fallback: a bordered text card with the host above the
+    /// title, mirroring X's text-only summary card.
+    private var textCard: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let host = card.host {
+                Text(host)
+                    .font(.app(.caption2))
+                    .foregroundStyle(theme.tertiaryText)
+                    .lineLimit(1)
+            }
+            Text(card.title)
+                .font(.app(density == .compact ? .caption : .subheadline, weight: .semibold))
+                .foregroundStyle(theme.primaryText)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+            if density == .comfortable, !card.description.isEmpty {
+                Text(card.description)
+                    .font(.app(.caption))
+                    .foregroundStyle(theme.secondaryText)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .padding(density == .compact ? 7 : 9)
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(theme.surface))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(theme.hairline, lineWidth: 1))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
