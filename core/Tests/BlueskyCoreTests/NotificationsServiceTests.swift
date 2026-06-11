@@ -65,6 +65,22 @@ final class NotificationsServiceTests: XCTestCase {
         XCTAssertEqual(sent.url.query?.contains("limit=20"), true)
     }
 
+    /// The app has no priority-only mode, so it must explicitly request the full
+    /// notification stream. Without the parameter the AppView falls back to the
+    /// account-level priority setting, which silently drops notifications (e.g.
+    /// replies) from accounts the viewer does not follow.
+    func testListNotificationsExplicitlyDisablesPriorityFiltering() async throws {
+        let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, body: Self.body))
+        let service = makeService(http: http)
+
+        _ = try await service.listNotifications(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: nil
+        )
+
+        let sent = try XCTUnwrap(http.sentRequests.last)
+        XCTAssertEqual(sent.url.query?.contains("priority=false"), true)
+    }
+
     func testListNotificationsRefreshesOnUnauthorizedAndRetries() async throws {
         let unauthorized = HTTPResponse(statusCode: 401, body: Data(##"{"error":"invalid_token"}"##.utf8))
         let metadata = HTTPResponse(statusCode: 200, body: Data(##"""
