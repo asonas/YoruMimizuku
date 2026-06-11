@@ -45,9 +45,14 @@ private struct DraftReq: Decodable, Sendable {
             return ComposeImage(data: data, mimeType: image.mimeType, alt: image.alt)
         }
         let quoteRef = quote.map { StrongRef(uri: $0.uri, cid: $0.cid) }
-        return PostDraft(text: text, images: composeImages, replyParentURI: replyParentURI, quote: quoteRef)
+        // Drop trailing blank lines at the submission boundary (mirrors the
+        // macOS composer) while leaving interior line breaks intact.
+        let trimmed = PostText.trimmingTrailingWhitespace(of: text)
+        return PostDraft(text: trimmed, images: composeImages, replyParentURI: replyParentURI, quote: quoteRef)
     }
 }
+private struct OgpReq: Decodable, Sendable { let url: String }
+private struct FeedArrangeReq: Decodable, Sendable { let items: [BridgeOps.ArrangeItem] }
 
 // MARK: Envelope helpers
 
@@ -238,6 +243,16 @@ public func yoru_profile_avatar(_ input: UnsafePointer<CChar>?) -> UnsafeMutable
 @_cdecl("yoru_profile_load")
 public func yoru_profile_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, ActorReq.self) { try await BridgeOps.profile(actor: $0.actor) }
+}
+
+@_cdecl("yoru_ogp_load")
+public func yoru_ogp_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleAsync(input, OgpReq.self) { await BridgeOps.ogpLoad(url: $0.url) }
+}
+
+@_cdecl("yoru_feed_arrange")
+public func yoru_feed_arrange(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleSync(input, FeedArrangeReq.self) { BridgeOps.feedArrange(items: $0.items) }
 }
 
 /// Wrapper so `accountCurrent` (which is optional) encodes as `{ "account": ... }`.
