@@ -110,6 +110,16 @@ public sealed class BridgeClient
     public Task<ProfileDto> ProfileAsync(string actor) =>
         CallAsync<ProfileDto>(NativeMethods.yoru_profile_load, new { actor })!;
 
+    // -- Link previews / feed grouping --
+
+    /// <summary>Fetch an OGP preview card for a bare URL; null when the page yields no usable metadata.</summary>
+    public Task<LinkCardDto?> OgpLoadAsync(string url) =>
+        CallAsync<LinkCardDto>(NativeMethods.yoru_ogp_load, new { url });
+
+    /// <summary>Group a feed page web-style. <paramref name="items"/> carries each post's id, createdAt, and replyParentId.</summary>
+    public Task<List<ArrangeResultDto>> FeedArrangeAsync(object items) =>
+        CallAsync<List<ArrangeResultDto>>(NativeMethods.yoru_feed_arrange, new { items })!;
+
     // -- Plumbing --
 
     private static Task<T?> CallAsync<T>(Func<string, IntPtr> fn, object request) =>

@@ -15,6 +15,15 @@ public sealed record RichSegmentDto(string Kind, string Text, string? Url);
 
 public sealed record PostImageDto(string? ThumbUrl, string? FullsizeUrl, string Alt);
 
+public sealed record LinkCardDto(
+    string Url,
+    string Title,
+    string Description,
+    string? ThumbUrl,
+    string? Host);
+
+public sealed record ArrangeResultDto(string Id, bool ConnectsToPrevious, bool ConnectsToNext);
+
 public sealed record ReplyParentDto(
     string Id,
     string AuthorDisplayName,
@@ -34,6 +43,7 @@ public sealed record PostDisplayDto(
     string CreatedAt,
     string? ContextLabel,
     List<PostImageDto> Images,
+    LinkCardDto? LinkCard,
     ReplyParentDto? ReplyParent,
     int ReplyCount,
     int RepostCount,

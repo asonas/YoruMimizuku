@@ -85,6 +85,10 @@
                                     <Grid x:Name="ImagesHost" Visibility="{x:Bind ImagesVisibility}" Margin="0,3,0,0"
                                           ColumnSpacing="5" RowSpacing="5" HorizontalAlignment="Left" MaxWidth="440" />
 
+                                    <!-- External link preview card populated in OnContainerContentChanging -->
+                                    <Border x:Name="LinkCardHost" Margin="0,3,0,0" Visibility="Collapsed"
+                                            HorizontalAlignment="Left" />
+
                                     <!-- Action bar -->
                                     <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
                                         <Button Click="OnReplyClick" Tag="{x:Bind}" Background="Transparent"

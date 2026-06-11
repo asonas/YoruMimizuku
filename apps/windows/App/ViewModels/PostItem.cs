@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -25,8 +26,14 @@ public sealed class PostItem : ObservableObject
     public string CreatedAt { get; }
     public string? ContextLabel { get; }
     public IReadOnlyList<PostImageDto> Images { get; }
+    public LinkCardDto? LinkCard { get; }
     public ReplyParentDto? ReplyParent { get; }
     public int ReplyCount { get; }
+
+    /// <summary>First web link in the body (link facets only), used to fetch an OGP
+    /// preview card when the post carries no external embed of its own.</summary>
+    public string? FirstLinkUrl =>
+        Segments.FirstOrDefault(s => s.Kind == "link" && !string.IsNullOrEmpty(s.Url))?.Url;
     public bool HasImages => Images.Count > 0;
     public bool HasContext => !string.IsNullOrEmpty(ContextLabel);
     public bool IsReply => ReplyParent is not null;
@@ -79,6 +86,7 @@ public sealed class PostItem : ObservableObject
         CreatedAt = dto.CreatedAt;
         ContextLabel = dto.ContextLabel;
         Images = dto.Images;
+        LinkCard = dto.LinkCard;
         ReplyParent = dto.ReplyParent;
         ReplyCount = dto.ReplyCount;
         _repostCount = dto.RepostCount;
