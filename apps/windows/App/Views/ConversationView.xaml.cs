@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
@@ -30,6 +31,7 @@ public sealed partial class ConversationView : UserControl
         await _vm.LoadAsync();
         Spinner.IsActive = false;
         Render();
+        RenderReplies();
     }
 
     private void Render()
@@ -84,6 +86,78 @@ public sealed partial class ConversationView : UserControl
         {
             await _vm.ReanchorAsync(uri);
             Render();
+            RenderReplies();
+        }
+    }
+
+    // -- Descendant reply tree --
+
+    /// Render the conversation's child reply tree below the focused post,
+    /// mirroring the macOS ConversationView: each reply is indented by depth,
+    /// carries a left connector line, and re-anchors the conversation when tapped.
+    private void RenderReplies()
+    {
+        RepliesHost.Children.Clear();
+        foreach (var node in _vm.ReplyTree) AddReplyNode(node);
+    }
+
+    private void AddReplyNode(ThreadNodeDto node)
+    {
+        RepliesHost.Children.Add(BuildReplyRow(node));
+        foreach (var child in node.Replies) AddReplyNode(child);
+    }
+
+    private FrameworkElement BuildReplyRow(ThreadNodeDto node)
+    {
+        var content = new StackPanel { Spacing = 2 };
+
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        header.Children.Add(new PersonPicture
+        {
+            Width = 24,
+            Height = 24,
+            ProfilePicture = node.Post.AvatarUrl is { Length: > 0 } a ? new BitmapImage(new Uri(a)) : null
+        });
+        header.Children.Add(new TextBlock
+        {
+            Text = node.Post.AuthorDisplayName,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        header.Children.Add(new TextBlock
+        {
+            Text = "@" + node.Post.AuthorHandle,
+            FontSize = 12,
+            Opacity = 0.6,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(header);
+        content.Children.Add(new TextBlock { Text = node.Post.Body, TextWrapping = TextWrapping.Wrap });
+
+        var row = new Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+            BorderThickness = new Thickness(1, 0, 0, 0),
+            Margin = new Thickness(node.Depth * 16, 0, 0, 0),
+            Padding = new Thickness(10, 4, 4, 4),
+            Content = content,
+            Tag = node.Post.Id
+        };
+        row.Click += OnReplyRowClick;
+        return row;
+    }
+
+    private async void OnReplyRowClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string uri })
+        {
+            await _vm.ReanchorAsync(uri);
+            Render();
+            RenderReplies();
         }
     }
 

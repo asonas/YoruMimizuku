@@ -55,6 +55,10 @@ public sealed record PostDisplayDto(
 
 public sealed record TimelinePageDto(List<PostDisplayDto> Posts, string? Cursor);
 
+public sealed record ThreadNodeDto(PostDisplayDto Post, List<ThreadNodeDto> Replies, int Depth);
+
+public sealed record ConversationThreadDto(PostDisplayDto Focus, List<ThreadNodeDto> Replies);
+
 public sealed record ProfileDto(string Did, string Handle, string? DisplayName, string? AvatarUrl, string? Bio);
 
 public sealed record NotificationActorDto(string DisplayName, string Handle, string? AvatarUrl);

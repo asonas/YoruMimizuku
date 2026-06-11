@@ -70,8 +70,8 @@ public sealed class BridgeClient
     public Task<TimelinePageDto> AuthorFeedLoadAsync(string actor, string? cursor = null) =>
         CallAsync<TimelinePageDto>(NativeMethods.yoru_author_feed_load, new { actor, cursor })!;
 
-    public Task<PostDisplayDto> ThreadLoadAsync(string uri) =>
-        CallAsync<PostDisplayDto>(NativeMethods.yoru_thread_load, new { uri })!;
+    public Task<ConversationThreadDto> ThreadLoadAsync(string uri) =>
+        CallAsync<ConversationThreadDto>(NativeMethods.yoru_thread_load, new { uri })!;
 
     public Task<List<NotificationGroupDto>> NotificationsLoadAsync() =>
         CallAsync<List<NotificationGroupDto>>(NativeMethods.yoru_notifications_load, new { })!;

@@ -122,6 +122,25 @@ struct TimelinePageDTO: Encodable {
     let cursor: String?
 }
 
+/// One node in the conversation's descendant reply tree (mirrors `ThreadNode`).
+struct ThreadNodeDTO: Encodable, Sendable {
+    let post: PostDisplayDTO
+    let replies: [ThreadNodeDTO]
+    let depth: Int
+    init(_ n: ThreadNode) {
+        post = PostDisplayDTO(n.post)
+        replies = n.replies.map(ThreadNodeDTO.init)
+        depth = n.depth
+    }
+}
+
+/// What a conversation tab renders: the focused post (carrying its ancestor
+/// chain via `replyParent`) plus the descendant reply tree below it.
+struct ConversationThreadDTO: Encodable, Sendable {
+    let focus: PostDisplayDTO
+    let replies: [ThreadNodeDTO]
+}
+
 struct NotificationActorDTO: Encodable {
     let displayName: String
     let handle: String
@@ -316,7 +335,7 @@ enum BridgeOps {
         )
     }
 
-    static func threadLoad(uri: String) async throws -> PostDisplayDTO {
+    static func threadLoad(uri: String) async throws -> ConversationThreadDTO {
         let rt = try BridgeRuntime.require()
         let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
         let service = ThreadService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config)
@@ -325,7 +344,11 @@ enum BridgeOps {
             accessToken: ctx.account.accessToken, refreshToken: ctx.account.refreshToken, uri: uri
         )
         try ctx.persist(result.refreshed)
-        return PostDisplayDTO(PostDisplay(result.response.thread))
+        let thread = result.response.thread
+        return ConversationThreadDTO(
+            focus: PostDisplayDTO(PostDisplay(thread)),
+            replies: ThreadNode.childTree(of: thread, maxDepth: 3).map(ThreadNodeDTO.init)
+        )
     }
 
     static func notificationsLoad() async throws -> [NotificationGroupDTO] {

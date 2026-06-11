@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
@@ -16,6 +17,10 @@ public sealed class ThreadViewModel : ObservableObject
     private PostItem? _focused;
     public PostItem? Focused { get => _focused; private set => SetProperty(ref _focused, value); }
 
+    /// The descendant reply tree below the focused post (depth-tagged), mirroring
+    /// the macOS conversation view's child tree.
+    public IReadOnlyList<ThreadNodeDto> ReplyTree { get; private set; } = Array.Empty<ThreadNodeDto>();
+
     private bool _isLoading;
     public bool IsLoading { get => _isLoading; private set => SetProperty(ref _isLoading, value); }
 
@@ -30,8 +35,9 @@ public sealed class ThreadViewModel : ObservableObject
         ErrorMessage = null;
         try
         {
-            var dto = await BridgeClient.Shared.ThreadLoadAsync(Anchor);
-            Focused = new PostItem(dto);
+            var thread = await BridgeClient.Shared.ThreadLoadAsync(Anchor);
+            Focused = new PostItem(thread.Focus);
+            ReplyTree = thread.Replies;
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
         finally { IsLoading = false; }
