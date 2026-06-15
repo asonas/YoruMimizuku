@@ -9,6 +9,8 @@ sources:
   - apps/macos/YoruMimizukuApp.swift
   - apps/macos/Update/UpdateController.swift
   - apps/macos/Update/LaunchUpdatePrompt.swift
+  - apps/macos/Update/InstallerVolumeEjection.swift
+  - apps/macos/Update/InstallerDiskImageCleaner.swift
   - https://sparkle-project.org/documentation/customization/
   - https://sparkle-project.github.io/documentation/gentle-reminders
   - https://github.com/vslavik/winsparkle
@@ -125,6 +127,21 @@ behavior was verified with a minimal WindowGroup reproduction — the default
 handler cancels while a sheet is up, `applicationShouldTerminate` is never
 reached, and a synchronous terminate is still swallowed until the sheet has been
 ended (`apps/macos/AppDelegate.swift`).
+
+## Leftover install DMG cleanup
+
+The app is distributed as a DMG for first-time manual installs: the image carries
+`YoruMimizuku.app` next to an `/Applications` drop link. After the user drags the
+app across, macOS leaves the image mounted, so the `YoruMimizuku` volume keeps
+reappearing in Finder across launches and Sparkle updates (the updates themselves
+ship as a ZIP and mount nothing — the lingering image is the original install
+media). On launch, `AppDelegate` calls `InstallerDiskImageCleaner`, which scans the
+mounted volumes and ejects the leftover install image. The eject decision is a
+Sparkle-free, unit-tested value type (`InstallerVolumeEjection`): a volume is
+ejected only when it is ejectable, carries our app bundle at its root, and is not
+the volume the running app is launched from — so a copy running directly off the
+DMG is never pulled out from under itself (`apps/macos/Update/InstallerVolumeEjection.swift`,
+`apps/macos/Update/InstallerDiskImageCleaner.swift`, `apps/macos/AppDelegate.swift`).
 
 ## Release and appcast
 

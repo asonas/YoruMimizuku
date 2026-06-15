@@ -101,6 +101,7 @@ targets:
       - apps/macos/Update/UpdateChannel.swift
       - apps/macos/Update/UpdateChannelStore.swift
       - apps/macos/Update/LaunchUpdatePrompt.swift
+      - apps/macos/Update/InstallerVolumeEjection.swift
     settings:
       base:
         SWIFT_VERSION: "6.0"
