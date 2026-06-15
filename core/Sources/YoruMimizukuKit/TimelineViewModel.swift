@@ -84,6 +84,26 @@ public final class TimelineViewModel: ObservableObject {
         await controller?.toggleRepost(post.id)
     }
 
+    /// Delete the viewer's own `post`: remove its row immediately, then call the
+    /// network. If the delete fails the row is restored at its original position so
+    /// a transient error never silently drops a post the server still holds. No-op
+    /// without an injected interactor or when the post is not in the loaded list.
+    public func deletePost(_ post: PostDisplay) async {
+        guard let interactor else { return }
+        guard case let .loaded(current) = state,
+              let index = current.firstIndex(where: { $0.id == post.id }) else { return }
+        var pruned = current
+        let removed = pruned.remove(at: index)
+        state = .loaded(pruned)
+        do {
+            try await interactor.deletePost(uri: post.id)
+        } catch {
+            guard case var .loaded(latest) = state else { return }
+            latest.insert(removed, at: min(index, latest.count))
+            state = .loaded(latest)
+        }
+    }
+
     /// A controller bound to this view model's post storage, or nil without an
     /// injected interactor.
     private var controller: PostInteractionController? {

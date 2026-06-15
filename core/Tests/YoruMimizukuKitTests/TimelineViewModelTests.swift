@@ -27,12 +27,15 @@ final class TimelineViewModelTests: XCTestCase {
         var likeResult: Result<String, Error> = .success("at://me/app.bsky.feed.like/new")
         var repostResult: Result<String, Error> = .success("at://me/app.bsky.feed.repost/new")
         var removeShouldFail = false
+        var deleteShouldFail = false
         private(set) var likeCalls = 0
         private(set) var removeLikeCalls = 0
         private(set) var repostCalls = 0
+        private(set) var deletePostCalls = 0
         private(set) var lastLikeUri: String?
         private(set) var lastLikeCid: String?
         private(set) var lastRemovedLikeURI: String?
+        private(set) var lastDeletedPostURI: String?
 
         func like(uri: String, cid: String) async throws -> String {
             likeCalls += 1; lastLikeUri = uri; lastLikeCid = cid
@@ -48,6 +51,10 @@ final class TimelineViewModelTests: XCTestCase {
         }
         func removeRepost(recordURI: String) async throws {
             if removeShouldFail { throw StubError() }
+        }
+        func deletePost(uri: String) async throws {
+            deletePostCalls += 1; lastDeletedPostURI = uri
+            if deleteShouldFail { throw StubError() }
         }
     }
 
@@ -116,6 +123,41 @@ final class TimelineViewModelTests: XCTestCase {
         XCTAssertEqual(vm.posts[0].repostCount, 1)
         XCTAssertEqual(vm.posts[0].viewerRepostURI, "at://me/app.bsky.feed.repost/new")
         XCTAssertEqual(interactor.repostCalls, 1)
+    }
+
+    func testDeletePostRemovesRowAndCallsInteractor() async {
+        let interactor = FakeInteractor()
+        let posts = [sample(id: "at://me/app.bsky.feed.post/a"), sample(id: "at://me/app.bsky.feed.post/b")]
+        let vm = TimelineViewModel(loader: StubLoader(result: .success(posts)), interactor: interactor)
+        await vm.load()
+
+        await vm.deletePost(posts[0])
+
+        XCTAssertEqual(vm.posts.map(\.id), ["at://me/app.bsky.feed.post/b"])
+        XCTAssertEqual(interactor.deletePostCalls, 1)
+        XCTAssertEqual(interactor.lastDeletedPostURI, "at://me/app.bsky.feed.post/a")
+    }
+
+    func testDeletePostRestoresRowOnFailure() async {
+        let interactor = FakeInteractor()
+        interactor.deleteShouldFail = true
+        let posts = [sample(id: "p1"), sample(id: "p2")]
+        let vm = TimelineViewModel(loader: StubLoader(result: .success(posts)), interactor: interactor)
+        await vm.load()
+
+        await vm.deletePost(posts[0])
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p1", "p2"])
+    }
+
+    func testDeletePostIsNoOpWithoutInteractor() async {
+        let posts = [sample(id: "p1")]
+        let vm = TimelineViewModel(loader: StubLoader(result: .success(posts)))
+        await vm.load()
+
+        await vm.deletePost(posts[0])
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p1"])
     }
 
     func testToggleLikeIsNoOpWithoutInteractor() async {

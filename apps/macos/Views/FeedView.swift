@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import BlueskyCore
 import YoruMimizukuKit
 
 /// A scrollable post feed backed by a `TimelineViewModel`. Reused by the home tab
@@ -28,8 +29,14 @@ struct FeedView: View {
     var onOpenAuthor: (PostDisplay) -> Void = { _ in }
     /// Opens the conversation of a tapped quote card's quoted post.
     var onOpenQuote: (QuotedPost) -> Void = { _ in }
+    /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
+    /// context-menu action. Nil disables delete everywhere (e.g. previews).
+    var currentDID: String? = nil
 
     @State private var focusedPostID: String?
+    /// The own-post the viewer asked to delete, pending confirmation. Set by a
+    /// row's context menu; cleared when the dialog is dismissed or the delete runs.
+    @State private var pendingDelete: PostDisplay?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,6 +51,27 @@ struct FeedView: View {
         .onChange(of: model.state) { _, _ in
             if focusedPostID == nil { focusedPostID = FeedThreading.arrange(model.posts).first?.id }
         }
+        .confirmationDialog(
+            "この投稿を削除しますか？",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            presenting: pendingDelete
+        ) { post in
+            Button("削除", role: .destructive) {
+                pendingDelete = nil
+                Task { await model.deletePost(post) }
+            }
+            Button("キャンセル", role: .cancel) { pendingDelete = nil }
+        } message: { _ in
+            Text("削除した投稿は元に戻せません。")
+        }
+    }
+
+    /// Whether `post` is one of the signed-in account's own posts: its author DID
+    /// (the repo authority in the post URI) equals `currentDID`. Only own posts may
+    /// be deleted.
+    private func isOwnPost(_ post: PostDisplay) -> Bool {
+        guard let currentDID, let repo = ATURI.repo(post.id) else { return false }
+        return repo == currentDID
     }
 
     private var timeline: some View {
@@ -104,6 +132,8 @@ struct FeedView: View {
                         onAvatarTap: { onOpenAuthor(post) },
                         onCopyLink: { copyPermalink(post) },
                         onQuoteTap: { onOpenQuote($0) },
+                        canDelete: isOwnPost(post),
+                        onDelete: { pendingDelete = post },
                         connectsToPrevious: item.connectsToPrevious,
                         connectsToNext: item.connectsToNext
                     )

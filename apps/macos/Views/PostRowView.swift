@@ -39,6 +39,12 @@ struct PostRowView: View, @MainActor Equatable {
     /// Called when the quote card is tapped, so the host can open the quoted
     /// post's conversation.
     var onQuoteTap: (QuotedPost) -> Void = { _ in }
+    /// Whether this row is one of the viewer's own posts, so the context menu can
+    /// offer a delete action. The host decides ownership (post DID == account DID).
+    var canDelete: Bool = false
+    /// Called when "削除" is chosen from the row's context menu, so the host can
+    /// confirm and remove the post.
+    var onDelete: () -> Void = {}
     /// Thread-grouping flags (see `FeedThreading`): when set, a member of the
     /// same reply chain sits directly above / below, and the avatar column draws
     /// the Bluesky-web-style connector line toward it. The reply marker is
@@ -92,6 +98,7 @@ struct PostRowView: View, @MainActor Equatable {
             && lhs.interactiveActions == rhs.interactiveActions
             && lhs.connectsToPrevious == rhs.connectsToPrevious
             && lhs.connectsToNext == rhs.connectsToNext
+            && lhs.canDelete == rhs.canDelete
     }
 
     var body: some View {
@@ -111,6 +118,28 @@ struct PostRowView: View, @MainActor Equatable {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, density == .compact ? 12 : 16)
+        .contextMenu { rowContextMenu }
+    }
+
+    /// The row's right-click menu. Always offers "リンクをコピー"; own posts also
+    /// offer "削除" (destructive), which the host confirms before deleting.
+    @ViewBuilder
+    private var rowContextMenu: some View {
+        Button {
+            onSelect()
+            onCopyLink()
+        } label: {
+            Label("リンクをコピー", systemImage: "link")
+        }
+        if canDelete {
+            Divider()
+            Button(role: .destructive) {
+                onSelect()
+                onDelete()
+            } label: {
+                Label("削除", systemImage: "trash")
+            }
+        }
     }
 
     private var verticalPadding: CGFloat { density == .compact ? 6 : 11 }

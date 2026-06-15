@@ -102,6 +102,7 @@ private struct AuthenticatedRootView: View {
     @StateObject private var notificationsModel: NotificationsViewModel
     @StateObject private var workspace: WorkspaceModel
 
+    private let accountDID: String
     private let accountHandle: String
     private let accountAvatarURL: URL?
     private let makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
@@ -154,6 +155,7 @@ private struct AuthenticatedRootView: View {
                 }
             )
         )
+        self.accountDID = did
         self.accountHandle = accountHandle
         self.accountAvatarURL = accountAvatarURL
         self.makeComposer = makeComposer
@@ -167,6 +169,7 @@ private struct AuthenticatedRootView: View {
             workspace: workspace,
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
+            accountDID: accountDID,
             makeComposer: makeComposer,
             makeQuoteComposer: makeQuoteComposer
         )

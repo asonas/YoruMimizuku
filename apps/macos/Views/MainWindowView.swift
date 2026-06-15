@@ -16,6 +16,9 @@ struct MainWindowView: View {
     @EnvironmentObject private var fontSettings: FontSettingsStore
     var accountHandle: String
     var accountAvatarURL: URL?
+    /// The signed-in account's DID, threaded to each feed so the viewer's own posts
+    /// can offer a delete action.
+    var accountDID: String
     /// Builds a composer VM for a new post (nil parent) or a reply (parent post).
     var makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     /// Builds a composer VM that quotes `post`.
@@ -127,7 +130,8 @@ struct MainWindowView: View {
                 onReply: { openReplyComposer($0, refreshing: model) },
                 onQuote: { openQuoteComposer($0, refreshing: model) },
                 onOpenAuthor: { openAuthor(for: $0) },
-                onOpenQuote: { openQuotedPost($0) }
+                onOpenQuote: { openQuotedPost($0) },
+                currentDID: accountDID
             )
         case .notifications:
             NotificationsView(
@@ -149,7 +153,8 @@ struct MainWindowView: View {
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) },
                     onOpenAuthor: { openAuthor(for: $0) },
-                    onOpenQuote: { openQuotedPost($0) }
+                    onOpenQuote: { openQuotedPost($0) },
+                    currentDID: accountDID
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -181,7 +186,8 @@ struct MainWindowView: View {
                     onOpenAuthor: { openAuthor(for: $0) },
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) },
-                    onOpenQuote: { openQuotedPost($0) }
+                    onOpenQuote: { openQuotedPost($0) },
+                    currentDID: accountDID
                 )
                 .id(id)
             } else {
