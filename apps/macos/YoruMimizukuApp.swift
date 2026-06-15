@@ -15,6 +15,7 @@ struct YoruMimizukuApp: App {
             RootView()
                 .environmentObject(updateController)
                 .modifier(DebugPerfOverlay())
+                .task { updateController.checkForUpdatesOnLaunch() }
         }
         .defaultSize(width: 940, height: 720)
         .windowStyle(.hiddenTitleBar)

@@ -100,6 +100,7 @@ targets:
       - apps/macos/Update/UpdateBadgeState.swift
       - apps/macos/Update/UpdateChannel.swift
       - apps/macos/Update/UpdateChannelStore.swift
+      - apps/macos/Update/LaunchUpdatePrompt.swift
     settings:
       base:
         SWIFT_VERSION: "6.0"

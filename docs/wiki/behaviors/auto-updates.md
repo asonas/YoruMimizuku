@@ -1,11 +1,14 @@
 ---
 title: Auto Updates (Sparkle / WinSparkle)
 type: behavior
-updated: 2026-06-11
+updated: 2026-06-15
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/plans/2026-06-09-yorumimizuku-sparkle-auto-update.md
   - apps/macos/AppDelegate.swift
+  - apps/macos/YoruMimizukuApp.swift
+  - apps/macos/Update/UpdateController.swift
+  - apps/macos/Update/LaunchUpdatePrompt.swift
   - https://sparkle-project.org/documentation/customization/
   - https://sparkle-project.github.io/documentation/gentle-reminders
   - https://github.com/vslavik/winsparkle
@@ -33,12 +36,20 @@ Windows installer EXE rather than the macOS `.app` ZIP.
 
 ## User experience
 
-The app should check for updates in the background but should not interrupt the
-user with Sparkle's modal for scheduled checks. Instead, a small accent dot appears
-on the settings gear when an update is available. The user opens the settings
-sheet, switches to a new **アップデート** tab, and starts the normal Sparkle
-download, signature verification, in-place replacement, and relaunch flow from
-there (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Goal,
+At launch the app fetches the selected channel's appcast once and, when a newer
+build is published, greets the user with the standard Sparkle update dialog so a
+fresh version is offered the moment the app opens. The launch check is silent
+when the user is already up to date — there is no "you're up to date" dialog to
+nag on every open — and it honors the "起動時に自動で確認"
+(`automaticallyChecksForUpdates`) toggle, so opting out disables it
+(`apps/macos/UpdateController.swift`, `apps/macos/YoruMimizukuApp.swift`).
+
+Sparkle's *periodic background* checks, by contrast, must not interrupt the
+user with the modal. Instead, a small accent dot appears on the settings gear
+when such a scheduled check finds an update. The user opens the settings sheet,
+switches to a new **アップデート** tab, and starts the normal Sparkle download,
+signature verification, in-place replacement, and relaunch flow from there
+(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Goal,
 §Settings sheet & gear dot).
 
 Manual installation remains the only install mode. `SUAutomaticallyUpdate` is not
@@ -87,6 +98,17 @@ when the app wants to handle a scheduled update non-modally. Sparkle documents
 that returning `false` makes the delegate responsible for showing the reminder,
 which in this app means setting the gear dot until the user interacts with the
 update session (Sparkle gentle reminders documentation).
+
+The launch check reuses that same scheduled-update path but escapes the gentle
+fallback through a one-shot latch. `checkForUpdatesOnLaunch()` arms a
+`LaunchUpdatePrompt` and calls `checkForUpdatesInBackground()`; when Sparkle then
+asks whether to show the find, the delegate consumes the armed latch and returns
+`true`, producing the dialog instead of the dot. The latch is consumed exactly
+once, and `updater(_:didFinishUpdateCycleFor:error:)` clears it after the cycle
+so a later periodic check (which finds nothing new to re-arm it) still falls back
+to the gentle badge. The latch itself is a Sparkle-free value type and is
+unit-tested (`apps/macos/Update/LaunchUpdatePrompt.swift`,
+`apps/macos/Update/UpdateController.swift`).
 
 ## Quit handling for "Install and Restart"
 
