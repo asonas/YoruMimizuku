@@ -142,9 +142,20 @@ struct FeedView: View {
                     // recreates the closures no longer re-typesets every visible row.
                     .equatable()
                     // Clicking the row's open area moves j/k focus here, so navigation
-                    // resumes from the post the user just clicked.
-                    .contentShape(Rectangle())
-                    .onTapGesture { focusedPostID = post.id }
+                    // resumes from the post the user just clicked. The tap target lives
+                    // in a background layer *behind* the row content rather than as an
+                    // overlay in front of it: the action-bar buttons (like / repost /
+                    // reply / copy) and tappable embeds sit in the foreground and
+                    // consume their own clicks, while clicks on empty space and body
+                    // text — which carry no gesture — fall through to this background
+                    // and only move focus. An `.onTapGesture` placed in front would
+                    // share the buttons' pixels and steal the first click for focus,
+                    // making like / repost feel like they fire a beat late.
+                    .background {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .onTapGesture { focusedPostID = post.id }
+                    }
                     // Focus + hover highlight in an isolated layer: hovering rows
                     // during a scroll re-renders only this background, not the row
                     // body (which stays cached via `.equatable()`).

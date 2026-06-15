@@ -24,6 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forEventClass: AEEventClass(kCoreEventClass),
             andEventID: AEEventID(kAEQuitApplication)
         )
+
+        // The first-time install DMG often stays mounted in Finder; eject it.
+        InstallerDiskImageCleaner.ejectLeftoverInstallerVolumes()
     }
 
     @objc private func handleQuitEvent(
