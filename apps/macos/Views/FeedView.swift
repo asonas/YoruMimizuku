@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import BlueskyCore
 import YoruMimizukuKit
 
 /// A scrollable post feed backed by a `TimelineViewModel`. Reused by the home tab
@@ -28,8 +29,14 @@ struct FeedView: View {
     var onOpenAuthor: (PostDisplay) -> Void = { _ in }
     /// Opens the conversation of a tapped quote card's quoted post.
     var onOpenQuote: (QuotedPost) -> Void = { _ in }
+    /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
+    /// context-menu action. Nil disables delete everywhere (e.g. previews).
+    var currentDID: String? = nil
 
     @State private var focusedPostID: String?
+    /// The own-post the viewer asked to delete, pending confirmation. Set by a
+    /// row's context menu; cleared when the dialog is dismissed or the delete runs.
+    @State private var pendingDelete: PostDisplay?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,6 +51,27 @@ struct FeedView: View {
         .onChange(of: model.state) { _, _ in
             if focusedPostID == nil { focusedPostID = FeedThreading.arrange(model.posts).first?.id }
         }
+        .confirmationDialog(
+            "この投稿を削除しますか？",
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            presenting: pendingDelete
+        ) { post in
+            Button("削除", role: .destructive) {
+                pendingDelete = nil
+                Task { await model.deletePost(post) }
+            }
+            Button("キャンセル", role: .cancel) { pendingDelete = nil }
+        } message: { _ in
+            Text("削除した投稿は元に戻せません。")
+        }
+    }
+
+    /// Whether `post` is one of the signed-in account's own posts: its author DID
+    /// (the repo authority in the post URI) equals `currentDID`. Only own posts may
+    /// be deleted.
+    private func isOwnPost(_ post: PostDisplay) -> Bool {
+        guard let currentDID, let repo = ATURI.repo(post.id) else { return false }
+        return repo == currentDID
     }
 
     private var timeline: some View {
@@ -52,8 +80,8 @@ struct FeedView: View {
                 switch model.state {
                 case .idle, .loading:
                     ScrollView { loadingState }
-                case let .failed(message):
-                    ScrollView { failedState(message) }
+                case let .failed(failure):
+                    ScrollView { failedState(failure) }
                 case let .loaded(posts):
                     if posts.isEmpty {
                         ScrollView { emptyState }
@@ -104,6 +132,8 @@ struct FeedView: View {
                         onAvatarTap: { onOpenAuthor(post) },
                         onCopyLink: { copyPermalink(post) },
                         onQuoteTap: { onOpenQuote($0) },
+                        canDelete: isOwnPost(post),
+                        onDelete: { pendingDelete = post },
                         connectsToPrevious: item.connectsToPrevious,
                         connectsToNext: item.connectsToNext
                     )
@@ -178,14 +208,14 @@ struct FeedView: View {
         .padding(.top, 80)
     }
 
-    private func failedState(_ message: String) -> some View {
+    private func failedState(_ failure: LoadFailure) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: Self.icon(for: failure.kind))
                 .font(.system(size: 26))
                 .foregroundStyle(theme.star)
-            Text("読み込みに失敗しました")
+            Text(failure.title)
                 .font(.app(.callout)).foregroundStyle(theme.secondaryText)
-            Text(message)
+            Text(failure.message)
                 .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
@@ -196,6 +226,16 @@ struct FeedView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
+    }
+
+    /// The SF Symbol that best signals each failure kind.
+    private static func icon(for kind: LoadFailure.Kind) -> String {
+        switch kind {
+        case .offline: return "wifi.slash"
+        case .rateLimited: return "hourglass"
+        case .server: return "exclamationmark.icloud"
+        case .unknown: return "exclamationmark.triangle"
+        }
     }
 
     private var emptyState: some View {

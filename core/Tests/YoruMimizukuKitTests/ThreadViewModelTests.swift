@@ -20,6 +20,7 @@ final class ThreadViewModelTests: XCTestCase {
         func removeLike(recordURI: String) async throws {}
         func repost(uri: String, cid: String) async throws -> String { "at://me/app.bsky.feed.repost/new" }
         func removeRepost(recordURI: String) async throws {}
+        func deletePost(uri: String) async throws {}
     }
 
     func testToggleLikeUpdatesFocusedPost() async {

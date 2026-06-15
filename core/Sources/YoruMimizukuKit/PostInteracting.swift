@@ -12,4 +12,7 @@ public protocol PostInteracting: Sendable {
     func removeLike(recordURI: String) async throws
     func repost(uri: String, cid: String) async throws -> String
     func removeRepost(recordURI: String) async throws
+    /// Delete the viewer's own post (`app.bsky.feed.post`). `uri` is the post's
+    /// AT-URI, which carries both the repo DID and the rkey the delete addresses.
+    func deletePost(uri: String) async throws
 }

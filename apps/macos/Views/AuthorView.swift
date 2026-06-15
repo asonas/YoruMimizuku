@@ -18,6 +18,9 @@ struct AuthorView: View {
     var onReply: (PostDisplay) -> Void = { _ in }
     var onQuote: (PostDisplay) -> Void = { _ in }
     var onOpenQuote: (QuotedPost) -> Void = { _ in }
+    /// The signed-in account's DID, forwarded to the feed so the viewer's own posts
+    /// (visible when this is the viewer's own author tab) offer a delete action.
+    var currentDID: String? = nil
 
     init(
         tab: AuthorTab,
@@ -27,7 +30,8 @@ struct AuthorView: View {
         onOpenAuthor: @escaping (PostDisplay) -> Void,
         onReply: @escaping (PostDisplay) -> Void = { _ in },
         onQuote: @escaping (PostDisplay) -> Void = { _ in },
-        onOpenQuote: @escaping (QuotedPost) -> Void = { _ in }
+        onOpenQuote: @escaping (QuotedPost) -> Void = { _ in },
+        currentDID: String? = nil
     ) {
         self.tab = tab
         self.header = tab.header
@@ -38,6 +42,7 @@ struct AuthorView: View {
         self.onReply = onReply
         self.onQuote = onQuote
         self.onOpenQuote = onOpenQuote
+        self.currentDID = currentDID
     }
 
     var body: some View {
@@ -50,7 +55,8 @@ struct AuthorView: View {
                 onReply: onReply,
                 onQuote: onQuote,
                 onOpenAuthor: onOpenAuthor,
-                onOpenQuote: onOpenQuote
+                onOpenQuote: onOpenQuote,
+                currentDID: currentDID
             )
         }
         .background(theme.canvas)

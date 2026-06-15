@@ -1,11 +1,13 @@
 ---
 title: Timeline Fetching and Streaming
 type: behavior
-updated: 2026-06-11
+updated: 2026-06-15
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - core/Sources/YoruMimizukuKit/LinkPreviewLoader.swift
   - core/Sources/YoruMimizukuKit/FeedThreading.swift
+  - core/Sources/YoruMimizukuKit/LoadFailure.swift
+  - core/Sources/YoruMimizukuKit/PostInteracting.swift
   - apps/macos/Views/LinkCardView.swift
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -47,6 +49,18 @@ features:
     windows: full
     ios: full
     android: planned
+  - name: Delete own post
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS offers 削除 in a post row's right-click context menu for the viewer's own posts (author DID == account DID) behind a confirmation dialog, removing the row optimistically; Windows and iPadOS have no delete UI yet ([[windows]], [[ipados]])."
+  - name: Error states (offline / rate-limit / retry)
+    macos: full
+    windows: unknown
+    ios: unknown
+    android: planned
+    note: "macOS classifies a failed feed load (offline / 429 / 5xx / unknown) into a friendly title + message with a kind-specific icon plus a 再試行 button; Windows and iPadOS error rendering is not yet audited against this classification ([[windows]], [[ipados]])."
   - name: External link preview cards (OGP)
     macos: full
     windows: full
@@ -114,6 +128,14 @@ its permalink, and `n` opens compose. Copy uses `UIPasteboard`, browser opening
 uses SwiftUI `openURL`, and hashtag links are intercepted into saved-search tabs
 (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/TimelineListView.swift`,
 `apps/ipados/Views/RootView.swift`).
+
+## Deleting your own posts
+
+A post row's right-click context menu always offers リンクをコピー (copy permalink), and for the viewer's own posts it adds a destructive 削除 (delete) item. Ownership is decided in the view by comparing the post URI's repo authority (`ATURI.repo(post.id)`) against the signed-in account's DID, which `FeedView` receives as `currentDID` threaded from `RootView` through `MainWindowView`. Choosing 削除 opens a confirmation dialog; confirming calls `TimelineViewModel.deletePost`, which removes the row immediately and then deletes the record over the network, restoring the row at its original position if the delete fails. The network side is `PostService.deleteRecord` reached through the `PostInteracting.deletePost(uri:)` port (the post's AT-URI carries both the repo DID and the rkey). This covers the home, filter, and author feeds, all backed by `TimelineViewModel` (`apps/macos/Views/PostRowView.swift`, `apps/macos/Views/FeedView.swift`, `2026-06-11-yorumimizuku-v1.0.0-roadmap.md` B-3).
+
+## Error states (offline / rate limit)
+
+A failed feed load no longer shows a raw Swift error string. `LoadFailure` (`YoruMimizukuKit`, unit-tested) classifies the thrown error into `offline` (URLSession connectivity codes), `rateLimited` (HTTP 429), `server` (HTTP 5xx), or `unknown`, and exposes a Japanese title and one-line message with a next-step hint. `TimelineViewModel.State.failed` carries the `LoadFailure`, and `FeedView` renders a kind-specific SF Symbol (`wifi.slash` / `hourglass` / `exclamationmark.icloud` / `exclamationmark.triangle`), the title, the message, and the existing 再試行 button. The notifications tab and the conversation view reuse the same `LoadFailure(error).message` for their failure text (`core/Sources/YoruMimizukuKit/LoadFailure.swift`, `apps/macos/Views/FeedView.swift`, `2026-06-11-yorumimizuku-v1.0.0-roadmap.md` B-5). Session-expiry (a dead refresh token) is handled separately and drops the account — see [[accounts]].
 
 ## External link preview cards
 

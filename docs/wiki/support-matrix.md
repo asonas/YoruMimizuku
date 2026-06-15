@@ -58,6 +58,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | In-app notifications tab | ○ | ○ | ○ | − |
 | OS banner + unread badge | △ | △ | △ | − |
+| In-app notification settings (interval / badges) | ○ | × | × | − |
 
 ## [[oauth-flow]] — Authentication (OAuth + DPoP)
 
@@ -76,6 +77,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
+| Delete own post | ○ | × | × | − |
+| Error states (offline / rate-limit / retry) | ○ | ? | ? | − |
 | External link preview cards (OGP) | ○ | ○ | × | − |
 | Quote post (record embed) cards | ○ | × | × | − |
 | Video embed poster (no inline playback) | ○ | × | × | − |
@@ -93,8 +96,11 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
 - **OS banner + unread badge** ([[notifications]]): macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]]).
+- **In-app notification settings (interval / badges)** ([[notifications]]): macOS exposes a 通知 settings tab to choose the poll interval (15/30/60/300s) and toggle sidebar unread badges, persisted via NotificationSettingsStore; Windows and iPadOS have no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
+- **Delete own post** ([[timeline-streaming]]): macOS offers 削除 in a post row's right-click context menu for the viewer's own posts (author DID == account DID) behind a confirmation dialog, removing the row optimistically; Windows and iPadOS have no delete UI yet ([[windows]], [[ipados]]).
+- **Error states (offline / rate-limit / retry)** ([[timeline-streaming]]): macOS classifies a failed feed load (offline / 429 / 5xx / unknown) into a friendly title + message with a kind-specific icon plus a 再試行 button; Windows and iPadOS error rendering is not yet audited against this classification ([[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Quote post (record embed) cards** ([[timeline-streaming]]): macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]]).
 - **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]]).

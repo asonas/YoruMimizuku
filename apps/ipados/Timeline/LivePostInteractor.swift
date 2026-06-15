@@ -49,6 +49,10 @@ struct LivePostInteractor: PostInteracting {
         try await delete(recordURI: recordURI, collection: "app.bsky.feed.repost")
     }
 
+    func deletePost(uri: String) async throws {
+        try await delete(recordURI: uri, collection: "app.bsky.feed.post")
+    }
+
     private func delete(recordURI: String, collection: String) async throws {
         guard let rkey = ATURI.rkey(recordURI) else {
             throw InteractionError.malformedRecordURI(recordURI)

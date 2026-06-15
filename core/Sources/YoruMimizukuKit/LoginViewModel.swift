@@ -30,6 +30,13 @@ public final class LoginViewModel: ObservableObject {
         !trimmedHandle.isEmpty && state != .authenticating
     }
 
+    /// Clear the handle input and return to idle, so the same view model can drive
+    /// a fresh login (e.g. reopening the screen to add a second account).
+    public func reset() {
+        handle = ""
+        state = .idle
+    }
+
     /// Run the login. No-op when the handle is blank or a login is already running.
     public func submit() async {
         let account = trimmedHandle

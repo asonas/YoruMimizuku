@@ -19,6 +19,9 @@ struct YoruMimizukuApp: App {
         }
         .defaultSize(width: 940, height: 720)
         .windowStyle(.hiddenTitleBar)
-        .commands { NewPostCommands() }
+        .commands {
+            NewPostCommands()
+            SettingsCommands()
+        }
     }
 }
