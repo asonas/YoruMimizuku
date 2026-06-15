@@ -60,6 +60,14 @@ public struct AccountManager: Sendable {
         try store.index().dids
     }
 
+    /// Lightweight account list for an account-switcher UI: each known account's
+    /// DID and handle, in insertion order, without exposing tokens or the DPoP key.
+    public func summaries() throws -> [AccountSummary] {
+        try allDIDs().compactMap { did in
+            try store.account(did: did).map { AccountSummary(did: $0.did, handle: $0.handle) }
+        }
+    }
+
     /// Switch the current account. Throws `unknownAccount` if the DID is unknown.
     public func switchTo(did: String) throws {
         try store.setCurrent(did: did)
@@ -68,5 +76,29 @@ public struct AccountManager: Sendable {
     /// Remove an account; clears current if it pointed at the removed account.
     public func remove(did: String) throws {
         try store.remove(did: did)
+    }
+
+    /// Remove `did`, then make the first remaining account current and return its
+    /// DID, or nil when none remain. Centralizes the "log out / drop a dead session
+    /// and fall through to the next account" flow so the UI and the session-expiry
+    /// handler share one implementation.
+    @discardableResult
+    public func removeAndAdvance(did: String) throws -> String? {
+        try remove(did: did)
+        guard let next = try allDIDs().first else { return nil }
+        try switchTo(did: next)
+        return next
+    }
+}
+
+/// A single account reduced to what an account-switcher menu needs: the DID and
+/// the handle. Carries no tokens or key material.
+public struct AccountSummary: Equatable, Sendable {
+    public let did: String
+    public let handle: String?
+
+    public init(did: String, handle: String?) {
+        self.did = did
+        self.handle = handle
     }
 }

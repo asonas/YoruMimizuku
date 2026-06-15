@@ -19,6 +19,14 @@ struct MainWindowView: View {
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
     /// can offer a delete action.
     var accountDID: String
+    /// All stored accounts, for the sidebar account switcher.
+    var accounts: [AccountSummary]
+    /// Switch the active account to the given DID.
+    var onSwitchAccount: (String) -> Void
+    /// Start the add-account login flow.
+    var onAddAccount: () -> Void
+    /// Log out of the current account.
+    var onLogout: () -> Void
     /// Builds a composer VM for a new post (nil parent) or a reply (parent post).
     var makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     /// Builds a composer VM that quotes `post`.
@@ -93,7 +101,12 @@ struct MainWindowView: View {
                 workspace: workspace,
                 accountHandle: accountHandle,
                 accountAvatarURL: accountAvatarURL,
+                accountDID: accountDID,
+                accounts: accounts,
                 onOpenSettings: { showSettings = true },
+                onSwitchAccount: onSwitchAccount,
+                onAddAccount: onAddAccount,
+                onLogout: onLogout,
                 homeUnread: model.unreadCount,
                 notificationsUnread: notifications.unreadCount
             )

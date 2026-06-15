@@ -82,6 +82,41 @@ final class AccountManagerTests: XCTestCase {
         XCTAssertEqual(try manager.allDIDs(), ["did:plc:a"])
     }
 
+    func testSummariesListDIDsAndHandlesInOrder() throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: "alice.bsky.social", dpopPrivateKeyRaw: Data([0x01]))
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:b"), handle: nil, dpopPrivateKeyRaw: Data([0x02]))
+
+        let summaries = try manager.summaries()
+
+        XCTAssertEqual(summaries.map(\.did), ["did:plc:a", "did:plc:b"])
+        XCTAssertEqual(summaries.map(\.handle), ["alice.bsky.social", nil])
+    }
+
+    func testRemoveAndAdvanceSwitchesToNextRemaining() throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x01]))
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:b"), handle: nil, dpopPrivateKeyRaw: Data([0x02]))
+
+        // Current is b; removing it advances to the first remaining (a).
+        let next = try manager.removeAndAdvance(did: "did:plc:b")
+
+        XCTAssertEqual(next, "did:plc:a")
+        XCTAssertEqual(try manager.current()?.did, "did:plc:a")
+        XCTAssertEqual(try manager.allDIDs(), ["did:plc:a"])
+    }
+
+    func testRemoveAndAdvanceReturnsNilWhenNoneRemain() throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x01]))
+
+        let next = try manager.removeAndAdvance(did: "did:plc:a")
+
+        XCTAssertNil(next)
+        XCTAssertNil(try manager.current())
+        XCTAssertEqual(try manager.allDIDs(), [])
+    }
+
     func testUpdateTokensThrowsForUnknownAccount() {
         let manager = makeManager()
         XCTAssertThrowsError(

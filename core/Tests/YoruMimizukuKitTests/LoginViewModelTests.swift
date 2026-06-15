@@ -47,6 +47,18 @@ final class LoginViewModelTests: XCTestCase {
         }
     }
 
+    func testResetClearsHandleAndState() async {
+        let vm = LoginViewModel(performer: StubPerformer(result: .success("did:plc:a")))
+        vm.handle = "alice.bsky.social"
+        await vm.submit()
+        XCTAssertEqual(vm.state, .authenticated(did: "did:plc:a"))
+
+        vm.reset()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.handle, "")
+    }
+
     func testSubmitWithBlankHandleDoesNothing() async {
         let performer = StubPerformer(result: .success("did:plc:a"))
         let vm = LoginViewModel(performer: performer)

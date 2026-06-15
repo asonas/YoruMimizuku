@@ -1,4 +1,5 @@
 import SwiftUI
+import BlueskyCore
 import YoruMimizukuKit
 
 /// The cmux-style vertical tab rail: a compact brand header, the pinned
@@ -10,7 +11,17 @@ struct SidebarView: View {
     @EnvironmentObject private var updateController: UpdateController
     var accountHandle: String
     var accountAvatarURL: URL?
+    /// The active account's DID, used to mark the current row in the switcher.
+    var accountDID: String = ""
+    /// All stored accounts shown in the switcher menu.
+    var accounts: [AccountSummary] = []
     var onOpenSettings: () -> Void
+    /// Switch the active account to the given DID.
+    var onSwitchAccount: (String) -> Void = { _ in }
+    /// Start the add-account login flow.
+    var onAddAccount: () -> Void = {}
+    /// Log out of the current account.
+    var onLogout: () -> Void = {}
     /// Unread counts for the pinned tabs, supplied by the owner.
     var homeUnread: Int = 0
     var notificationsUnread: Int = 0
@@ -163,12 +174,7 @@ struct SidebarView: View {
 
     private var accountFooter: some View {
         HStack(spacing: 8) {
-            accountAvatar
-            Text("@\(accountHandle)")
-                .font(.app(.caption, weight: .medium))
-                .foregroundStyle(theme.secondaryText)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            accountMenu
             Spacer(minLength: 4)
             ChromeIconButton(systemImage: "gearshape", help: "設定", action: onOpenSettings)
                 .overlay(alignment: .topTrailing) {
@@ -185,6 +191,59 @@ struct SidebarView: View {
         .overlay(alignment: .top) {
             Rectangle().fill(theme.hairline).frame(height: 1)
         }
+    }
+
+    /// The account switcher: the current avatar + handle open a menu listing every
+    /// stored account (a checkmark marks the active one), plus "add account" and
+    /// "log out". Rendered as a borderless menu so it reads like the old footer.
+    private var accountMenu: some View {
+        Menu {
+            Section("アカウント") {
+                ForEach(accounts, id: \.did) { account in
+                    Button {
+                        onSwitchAccount(account.did)
+                    } label: {
+                        if account.did == accountDID {
+                            Label(accountLabel(account), systemImage: "checkmark")
+                        } else {
+                            Text(accountLabel(account))
+                        }
+                    }
+                }
+            }
+            Divider()
+            Button {
+                onAddAccount()
+            } label: {
+                Label("アカウントを追加…", systemImage: "person.badge.plus")
+            }
+            Button(role: .destructive) {
+                onLogout()
+            } label: {
+                Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                accountAvatar
+                Text("@\(accountHandle)")
+                    .font(.app(.caption, weight: .medium))
+                    .foregroundStyle(theme.secondaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("アカウントを切り替え")
+    }
+
+    /// The display string for one account row: its handle, or its DID when the
+    /// handle is missing.
+    private func accountLabel(_ account: AccountSummary) -> String {
+        if let handle = account.handle, !handle.isEmpty { return "@\(handle)" }
+        return account.did
     }
 
     private var accountAvatar: some View {

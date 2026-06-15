@@ -11,6 +11,8 @@ import PlatformApple
 struct RootView: View {
     @State private var currentDID: String?
     @State private var accountAvatarURL: URL?
+    /// True while the "add account" login sheet is presented over the signed-in UI.
+    @State private var isAddingAccount = false
     @StateObject private var loginModel: LoginViewModel
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
@@ -41,6 +43,10 @@ struct RootView: View {
                     did: did,
                     accountHandle: currentHandle,
                     accountAvatarURL: accountAvatarURL,
+                    accounts: accounts,
+                    onSwitchAccount: { switchAccount(to: $0) },
+                    onAddAccount: { startAddAccount() },
+                    onLogout: { logout() },
                     makeComposer: { parent in
                         ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParent: parent)
                     },
@@ -68,20 +74,50 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
+        // The "add account" login flow, presented over the signed-in UI. On success
+        // the new account is current (AccountManager.add sets it), so adopting its
+        // DID rebuilds the authenticated subtree for the new account.
+        .sheet(isPresented: $isAddingAccount) {
+            LoginView(model: loginModel) { did in
+                isAddingAccount = false
+                currentDID = did
+            }
+            .environmentObject(themeStore)
+            .frame(minWidth: 420, minHeight: 360)
+        }
     }
 
     /// Remove the account whose session can no longer be refreshed, then show the
     /// next stored account or the login screen.
     private func handleSessionExpired() {
         guard let did = currentDID else { return }
-        try? accountManager.remove(did: did)
-        let remaining = (try? accountManager.allDIDs()) ?? []
-        if let next = remaining.first {
-            try? accountManager.switchTo(did: next)
-            currentDID = next
-        } else {
-            currentDID = nil
-        }
+        currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
+    }
+
+    /// Switch the active account to `did` and rebuild the signed-in subtree for it.
+    private func switchAccount(to did: String) {
+        guard did != currentDID else { return }
+        try? accountManager.switchTo(did: did)
+        currentDID = did
+    }
+
+    /// Open the login flow to add another account. Reset the shared login model so
+    /// the sheet starts blank rather than showing the previous login's state.
+    private func startAddAccount() {
+        loginModel.reset()
+        isAddingAccount = true
+    }
+
+    /// Log out of the current account: remove it (clearing its Keychain item) and
+    /// fall through to the next stored account, or the login screen when none remain.
+    private func logout() {
+        guard let did = currentDID else { return }
+        currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
+    }
+
+    /// The stored accounts for the switcher menu. Empty if the read fails.
+    private var accounts: [AccountSummary] {
+        (try? accountManager.summaries()) ?? []
     }
 
     private var currentHandle: String {
@@ -105,6 +141,10 @@ private struct AuthenticatedRootView: View {
     private let accountDID: String
     private let accountHandle: String
     private let accountAvatarURL: URL?
+    private let accounts: [AccountSummary]
+    private let onSwitchAccount: (String) -> Void
+    private let onAddAccount: () -> Void
+    private let onLogout: () -> Void
     private let makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     private let makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
 
@@ -113,6 +153,10 @@ private struct AuthenticatedRootView: View {
         did: String,
         accountHandle: String,
         accountAvatarURL: URL?,
+        accounts: [AccountSummary],
+        onSwitchAccount: @escaping (String) -> Void,
+        onAddAccount: @escaping () -> Void,
+        onLogout: @escaping () -> Void,
         makeComposer: @escaping @MainActor (PostDisplay?) -> ComposerViewModel,
         makeQuoteComposer: @escaping @MainActor (PostDisplay) -> ComposerViewModel
     ) {
@@ -158,6 +202,10 @@ private struct AuthenticatedRootView: View {
         self.accountDID = did
         self.accountHandle = accountHandle
         self.accountAvatarURL = accountAvatarURL
+        self.accounts = accounts
+        self.onSwitchAccount = onSwitchAccount
+        self.onAddAccount = onAddAccount
+        self.onLogout = onLogout
         self.makeComposer = makeComposer
         self.makeQuoteComposer = makeQuoteComposer
     }
@@ -170,6 +218,10 @@ private struct AuthenticatedRootView: View {
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
             accountDID: accountDID,
+            accounts: accounts,
+            onSwitchAccount: onSwitchAccount,
+            onAddAccount: onAddAccount,
+            onLogout: onLogout,
             makeComposer: makeComposer,
             makeQuoteComposer: makeQuoteComposer
         )
