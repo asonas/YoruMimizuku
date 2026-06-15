@@ -17,6 +17,7 @@ struct RootView: View {
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
     @StateObject private var fontSettings = FontSettingsStore()
+    @StateObject private var notificationSettings = NotificationSettingsStore()
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
@@ -65,6 +66,7 @@ struct RootView: View {
         .environmentObject(themeStore)
         .environmentObject(displaySettings)
         .environmentObject(fontSettings)
+        .environmentObject(notificationSettings)
         // Establish the app-wide base font and Japanese typesetting so line metrics
         // and glyph selection are correct regardless of UI locale.
         .font(.app(.body))

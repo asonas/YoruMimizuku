@@ -77,6 +77,8 @@ struct SettingsView: View {
             FontSettingsContentView()
         case .display:
             DisplaySettingsContentView()
+        case .notifications:
+            NotificationSettingsContentView()
         case .update:
             UpdateSettingsView()
         }
@@ -88,6 +90,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
     case appearance
     case font
     case display
+    case notifications
     case update
 
     var id: String { rawValue }
@@ -97,6 +100,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "配色"
         case .font: return "フォント"
         case .display: return "表示"
+        case .notifications: return "通知"
         case .update: return "アップデート"
         }
     }
@@ -106,6 +110,7 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         case .appearance: return "paintpalette"
         case .font: return "textformat"
         case .display: return "rectangle.grid.1x2"
+        case .notifications: return "bell"
         case .update: return "arrow.down.circle"
         }
     }
@@ -362,5 +367,61 @@ private struct DisplaySettingsContentView: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+// MARK: - Notifications
+
+/// In-app notification settings: how often the badge-bearing tabs poll for new
+/// content, and whether the sidebar shows unread badges. OS banners and the Dock
+/// badge are planned for a later release and are not configurable here yet.
+private struct NotificationSettingsContentView: View {
+    @EnvironmentObject private var theme: ThemeStore
+    @EnvironmentObject private var notificationSettings: NotificationSettingsStore
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("通知")
+                    .font(.app(.headline))
+                    .foregroundStyle(theme.primaryText)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("更新間隔")
+                        .font(.app(.caption))
+                        .foregroundStyle(theme.secondaryText)
+                    Picker("更新間隔", selection: $notificationSettings.pollIntervalSeconds) {
+                        ForEach(NotificationSettingsStore.intervalChoices, id: \.self) { seconds in
+                            Text(Self.intervalLabel(seconds)).tag(seconds)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Text("ホーム・通知・フィルターの各タブが新着を確認する間隔です。短くするほど早く反映されますが、通信と電力を多く使います。")
+                        .font(.app(.caption2))
+                        .foregroundStyle(theme.secondaryText)
+                }
+
+                Divider().overlay(theme.divider)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(isOn: $notificationSettings.showsUnreadBadges) {
+                        Text("未読バッジを表示する")
+                            .font(.app(.callout))
+                            .foregroundStyle(theme.primaryText)
+                    }
+                    Text("サイドバーの各タブに未読・新着の件数を表示します。オフにしても新着の確認自体は続きます。")
+                        .font(.app(.caption2))
+                        .foregroundStyle(theme.secondaryText)
+                }
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Human label for a polling interval in seconds (e.g. 15→"15秒", 300→"5分").
+    private static func intervalLabel(_ seconds: Int) -> String {
+        seconds < 60 ? "\(seconds)秒" : "\(seconds / 60)分"
     }
 }

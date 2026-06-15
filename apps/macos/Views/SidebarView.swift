@@ -22,6 +22,9 @@ struct SidebarView: View {
     var onAddAccount: () -> Void = {}
     /// Log out of the current account.
     var onLogout: () -> Void = {}
+    /// Whether unread/new badges are shown at all (a notification setting). When
+    /// false, every tab badge is suppressed regardless of its count.
+    var showsBadges: Bool = true
     /// Unread counts for the pinned tabs, supplied by the owner.
     var homeUnread: Int = 0
     var notificationsUnread: Int = 0
@@ -84,14 +87,14 @@ struct SidebarView: View {
                     icon: "house",
                     title: "ホーム",
                     isSelected: workspace.selection == .home,
-                    badge: homeUnread
+                    badge: showsBadges ? homeUnread : 0
                 ) { workspace.selection = .home }
 
                 SidebarRow(
                     icon: "bell",
                     title: "通知",
                     isSelected: workspace.selection == .notifications,
-                    badge: notificationsUnread
+                    badge: showsBadges ? notificationsUnread : 0
                 ) { workspace.selection = .notifications }
 
                 filterSection
@@ -150,6 +153,7 @@ struct SidebarView: View {
                     title: tab.title,
                     meta: tab.summary,
                     isSelected: workspace.selection == .filter(tab.id),
+                    showsBadges: showsBadges,
                     onClose: { workspace.removeFilter(id: tab.id) },
                     onEdit: {
                         if let saved = workspace.savedFilter(id: tab.id) {
@@ -386,6 +390,7 @@ private struct FilterSidebarRow: View {
     let title: String
     let meta: String
     let isSelected: Bool
+    var showsBadges: Bool = true
     let onClose: () -> Void
     let onEdit: () -> Void
     let onSelect: () -> Void
@@ -398,7 +403,7 @@ private struct FilterSidebarRow: View {
             isSelected: isSelected,
             onClose: onClose,
             onEdit: onEdit,
-            badge: model.unreadCount,
+            badge: showsBadges ? model.unreadCount : 0,
             action: onSelect
         )
     }

@@ -14,6 +14,7 @@ struct MainWindowView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
+    @EnvironmentObject private var notificationSettings: NotificationSettingsStore
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
@@ -47,8 +48,9 @@ struct MainWindowView: View {
     /// could change. Only sub-minute ages ("30s") update in coarser steps now,
     /// which is an acceptable trade for far less render churn while scrolling.
     private let clock = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
-    /// How often every badge-bearing tab polls for new content.
-    private let pollInterval: Duration = .seconds(30)
+    /// How often every badge-bearing tab polls for new content, from the user's
+    /// notification settings.
+    private var pollInterval: Duration { notificationSettings.pollInterval }
 
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
@@ -62,6 +64,8 @@ struct MainWindowView: View {
         .background { tabShortcuts }
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
         .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
+        // Lets the ⌘, settings menu command open this window's settings sheet.
+        .focusedSceneValue(\.openSettings, OpenSettingsAction { showSettings = true })
         .onReceive(clock) { now = $0 }
         .task {
             model.startPolling(every: pollInterval)
@@ -77,6 +81,9 @@ struct MainWindowView: View {
             syncActiveTab()
         }
         .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
+        // Changing the polling interval restarts every poller so the new cadence
+        // takes effect immediately rather than only on the next launch.
+        .onChange(of: notificationSettings.pollIntervalSeconds) { _, _ in restartPolling() }
         .overlay {
             if let lightbox {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
@@ -87,6 +94,7 @@ struct MainWindowView: View {
                 .environmentObject(theme)
                 .environmentObject(displaySettings)
                 .environmentObject(fontSettings)
+                .environmentObject(notificationSettings)
         }
         .sheet(item: $composer) { model in
             ComposerView(model: model) { composer = nil }
@@ -107,6 +115,7 @@ struct MainWindowView: View {
                 onSwitchAccount: onSwitchAccount,
                 onAddAccount: onAddAccount,
                 onLogout: onLogout,
+                showsBadges: notificationSettings.showsUnreadBadges,
                 homeUnread: model.unreadCount,
                 notificationsUnread: notifications.unreadCount
             )
@@ -279,6 +288,18 @@ struct MainWindowView: View {
         let handle = actor.map { "@\($0.handle)" } ?? ""
         let subtitle = group.subjectText ?? group.text ?? (group.subjectImageURL == nil ? "" : "画像")
         workspace.openConversation(anchorID: uri, title: displayName, handle: handle, subtitle: subtitle)
+    }
+
+    /// Stop and restart every poller so a changed polling interval takes effect at
+    /// once. Authors are handled by `syncActiveTab`, which only polls the active one.
+    private func restartPolling() {
+        let interval = pollInterval
+        model.stopPolling(); model.startPolling(every: interval)
+        notifications.stopPolling(); notifications.startPolling(every: interval)
+        for tab in workspace.filters {
+            tab.model.stopPolling(); tab.model.startPolling(every: interval)
+        }
+        syncActiveTab()
     }
 
     /// Mark the selected badge-bearing tab active (badge stays 0 while viewed) and
