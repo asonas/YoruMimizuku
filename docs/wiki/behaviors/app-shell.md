@@ -37,13 +37,13 @@ The app shell is the Yorufukurou-style frame that hosts every timeline: one wind
 
 ## Window layout
 
-A window carries an account switcher (placed in the sidebar footer on macOS rather than the title bar — see [[accounts]]), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
+A window carries an account switcher (the design's §7.1 slot is the title bar's top-right; the macOS build places it in the **sidebar footer** instead — see below), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
 
 The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720; the brand area is padded to clear the traffic-light buttons (`2026-06-05-yorumimizuku-cmux-sidebar.md`). Apple-specific window wiring lives on the [[macos]] page.
 
 On macOS the File menu's default New Window (⌘N) is replaced with **新規投稿**: ⌘N opens the composer sheet over the focused window's current tab instead of spawning another timeline window, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]).
 
-Settings open with the standard macOS **⌘,**. Because settings live in a per-window sheet rather than a separate SwiftUI `Settings` scene, `SettingsCommands` replaces the default app-menu Settings item with one that runs an `openSettings` action published the same way as 新規投稿 — disabled before login, opening the focused window's settings sheet (`apps/macos/Views/NewPostCommand.swift`). The settings sheet's categories (配色 / フォント / 表示 / 通知 / アップデート) include the in-app notification settings described in [[notifications]].
+The standard **⌘, (設定…)** command is wired the same way. Rather than rely on the default settings group, `SettingsCommands` binds ⌘, to a `FocusedValue`-published `OpenSettingsAction` so it opens the focused window's settings sheet (`MainWindowView` publishes the action; the command is disabled when no window owns it). The settings sheet's tabs include the 通知 tab described in [[notifications]] (`apps/macos/Views/NewPostCommand.swift`).
 
 ## Display density (A / B)
 
@@ -67,6 +67,8 @@ The vertical-tab sidebar (home / notifications / conversations / filters) keeps 
 - The accent color is left to `ThemeStore` (cmux's `#0091FF` is not forced); only the selected row fixes "accent fill + white text".
 
 Open questions carried in the plan: whether navigation rows show an unread badge (tied to [[notifications]]), and how much metadata a conversation row should carry.
+
+The sidebar ends in a **footer** that doubles as the macOS account switcher: the current avatar + `@handle` open a borderless menu of stored accounts plus add-account / log-out, and a gear button (carrying the update-available dot) opens settings. This is where the design's top-right switcher actually lives on macOS; the menu's behavior and the `summaries()` / `removeAndAdvance(did:)` plumbing are in [[accounts]] (`apps/macos/Views/SidebarView.swift`).
 
 On [[ipados]], the shell is a separate SwiftUI implementation under
 `apps/ipados`. It uses `NavigationSplitView`, visible touch actions, and a simple

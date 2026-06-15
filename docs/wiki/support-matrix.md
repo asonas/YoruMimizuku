@@ -78,7 +78,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
 | Delete own post | ○ | × | × | − |
-| Error states (offline / rate-limit / retry) | ○ | ? | ? | − |
+| Load error states (offline / 429 / 5xx) with retry | ○ | ? | ? | − |
 | External link preview cards (OGP) | ○ | ○ | × | − |
 | Quote post (record embed) cards | ○ | × | × | − |
 | Video embed poster (no inline playback) | ○ | × | × | − |
@@ -99,8 +99,8 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS exposes a 通知 settings tab to choose the poll interval (15/30/60/300s) and toggle sidebar unread badges, persisted via NotificationSettingsStore; Windows and iPadOS have no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
-- **Delete own post** ([[timeline-streaming]]): macOS offers 削除 in a post row's right-click context menu for the viewer's own posts (author DID == account DID) behind a confirmation dialog, removing the row optimistically; Windows and iPadOS have no delete UI yet ([[windows]], [[ipados]]).
-- **Error states (offline / rate-limit / retry)** ([[timeline-streaming]]): macOS classifies a failed feed load (offline / 429 / 5xx / unknown) into a friendly title + message with a kind-specific icon plus a 再試行 button; Windows and iPadOS error rendering is not yet audited against this classification ([[windows]], [[ipados]]).
+- **Delete own post** ([[timeline-streaming]]): macOS offers a 「削除」 action on the viewer's own rows (author DID == account DID), confirm, then optimistically prune the row via the shared TimelineViewModel.deletePost. The core capability (PostInteracting.deletePost) is shared, but no delete UI is wired on iPadOS or Windows yet ([[windows]], [[ipados]]).
+- **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS classifies a failed first load into offline / rate-limited / server / unknown via the tested LoadFailure and shows a titled message with a 「再試行」 button. The shared NotificationsViewModel / ThreadViewModel reuse LoadFailure's message text; how iPadOS and Windows render these failures is not yet audited against this classification ([[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
 - **Quote post (record embed) cards** ([[timeline-streaming]]): macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]]).
 - **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]]).
