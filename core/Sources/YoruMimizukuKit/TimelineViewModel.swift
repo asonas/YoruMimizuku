@@ -32,7 +32,7 @@ public final class TimelineViewModel: ObservableObject {
         case idle
         case loading
         case loaded([PostDisplay])
-        case failed(String)
+        case failed(LoadFailure)
 
         /// True while the initial load is in flight, used to disable controls.
         public var isLoading: Bool {
@@ -148,7 +148,7 @@ public final class TimelineViewModel: ObservableObject {
             endInterval("loaded \(page.posts.count) posts")
         } catch {
             SessionExpiry.reportIfExpired(error)
-            state = .failed(String(describing: error))
+            state = .failed(LoadFailure(error))
             endInterval("failed")
         }
     }

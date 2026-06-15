@@ -92,7 +92,7 @@ public final class ThreadViewModel: ObservableObject {
             state = .loaded(thread)
         } catch {
             SessionExpiry.reportIfExpired(error)
-            state = .failed(String(describing: error))
+            state = .failed(LoadFailure(error).message)
         }
     }
 }

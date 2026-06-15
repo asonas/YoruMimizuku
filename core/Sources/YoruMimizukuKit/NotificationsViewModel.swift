@@ -54,7 +54,7 @@ public final class NotificationsViewModel: ObservableObject {
             onItemsChanged()
         } catch {
             SessionExpiry.reportIfExpired(error)
-            state = .failed(String(describing: error))
+            state = .failed(LoadFailure(error).message)
         }
     }
 

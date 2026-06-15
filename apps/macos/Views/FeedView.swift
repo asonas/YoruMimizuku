@@ -80,8 +80,8 @@ struct FeedView: View {
                 switch model.state {
                 case .idle, .loading:
                     ScrollView { loadingState }
-                case let .failed(message):
-                    ScrollView { failedState(message) }
+                case let .failed(failure):
+                    ScrollView { failedState(failure) }
                 case let .loaded(posts):
                     if posts.isEmpty {
                         ScrollView { emptyState }
@@ -197,14 +197,14 @@ struct FeedView: View {
         .padding(.top, 80)
     }
 
-    private func failedState(_ message: String) -> some View {
+    private func failedState(_ failure: LoadFailure) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle")
+            Image(systemName: Self.icon(for: failure.kind))
                 .font(.system(size: 26))
                 .foregroundStyle(theme.star)
-            Text("読み込みに失敗しました")
+            Text(failure.title)
                 .font(.app(.callout)).foregroundStyle(theme.secondaryText)
-            Text(message)
+            Text(failure.message)
                 .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
@@ -215,6 +215,16 @@ struct FeedView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
+    }
+
+    /// The SF Symbol that best signals each failure kind.
+    private static func icon(for kind: LoadFailure.Kind) -> String {
+        switch kind {
+        case .offline: return "wifi.slash"
+        case .rateLimited: return "hourglass"
+        case .server: return "exclamationmark.icloud"
+        case .unknown: return "exclamationmark.triangle"
+        }
     }
 
     private var emptyState: some View {
