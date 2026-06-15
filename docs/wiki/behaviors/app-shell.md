@@ -1,13 +1,15 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-06-11
+updated: 2026-06-15
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-shell.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
+  - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
   - apps/macos/Views/NewPostCommand.swift
+  - apps/macos/Views/SidebarView.swift
 features:
   - name: Tabbed single-column shell (sidebar / tabs)
     macos: full
@@ -35,11 +37,13 @@ The app shell is the Yorufukurou-style frame that hosts every timeline: one wind
 
 ## Window layout
 
-A window carries an account switcher (top-right of the title bar), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
+A window carries an account switcher (placed in the sidebar footer on macOS rather than the title bar — see [[accounts]]), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
 
 The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720; the brand area is padded to clear the traffic-light buttons (`2026-06-05-yorumimizuku-cmux-sidebar.md`). Apple-specific window wiring lives on the [[macos]] page.
 
 On macOS the File menu's default New Window (⌘N) is replaced with **新規投稿**: ⌘N opens the composer sheet over the focused window's current tab instead of spawning another timeline window, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]).
+
+Settings open with the standard macOS **⌘,**. Because settings live in a per-window sheet rather than a separate SwiftUI `Settings` scene, `SettingsCommands` replaces the default app-menu Settings item with one that runs an `openSettings` action published the same way as 新規投稿 — disabled before login, opening the focused window's settings sheet (`apps/macos/Views/NewPostCommand.swift`). The settings sheet's categories (配色 / フォント / 表示 / 通知 / アップデート) include the in-app notification settings described in [[notifications]].
 
 ## Display density (A / B)
 

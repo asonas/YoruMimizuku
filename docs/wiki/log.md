@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-15 ingest
+
+- sources: `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md` (B-3 / A-5 / B-4 / B-5 implemented on macOS); `apps/macos/Views/{PostRowView,FeedView,SidebarView,RootView,MainWindowView,SettingsView,NewPostCommand}.swift`, `apps/macos/NotificationSettings.swift`, `core/Sources/YoruMimizukuKit/{LoadFailure,PostInteracting,TimelineViewModel}.swift`, `core/Sources/BlueskyCore/Account/AccountManager.swift`
+- updated: [[timeline-streaming]], [[accounts]], [[notifications]], [[app-shell]]
+- note: Ingested the four v1.0.0 finishing features (macOS). [[timeline-streaming]] gained Delete-own-post (row context menu + confirm, optimistic remove via `PostInteracting.deletePost`) and Error-states (`LoadFailure` classifies offline / 429 / 5xx / unknown into a titled message + icon + retry) rows. [[accounts]] now documents the implemented sidebar-footer account menu (switch / add / logout) and `AccountManager.summaries` / `removeAndAdvance`, replacing the old "top-right switcher" framing. [[notifications]] records the new in-app 通知 settings tab (poll interval 15/30/60/300s + badge toggle) while the OS banner stays deferred to 1.x. [[app-shell]] notes ⌘, settings and the switcher's sidebar-footer location. NSFW label blur remains deferred to 1.x (not implemented).
+
 ## 2026-06-11 ingest
 
 - sources: `apps/windows/App/**`, `core/Sources/YoruMimizukuBridge/**`, `core/Sources/YoruMimizukuKit/PostText.swift` (Windows 0.8.0 parity; no new spec)
