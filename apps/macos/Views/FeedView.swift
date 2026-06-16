@@ -34,6 +34,12 @@ struct FeedView: View {
     var currentDID: String? = nil
 
     @State private var focusedPostID: String?
+    /// Bumped on every j/k move to scroll the focused post into view. Only keyboard
+    /// navigation increments it; a click sets `focusedPostID` (for the highlight)
+    /// without touching it, so tapping a post focuses it in place rather than
+    /// yanking the feed. A counter (not the id) guarantees the scroll fires even
+    /// when navigation lands back on a post a click had already focused.
+    @State private var scrollTick = 0
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
@@ -90,8 +96,8 @@ struct FeedView: View {
                     }
                 }
             }
-            .onChange(of: focusedPostID) { _, id in
-                guard let id else { return }
+            .onChange(of: scrollTick) { _, _ in
+                guard let id = focusedPostID else { return }
                 withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .center) }
             }
         }
@@ -260,6 +266,8 @@ struct FeedView: View {
         } else {
             focusedPostID = ids.first
         }
+        // Keyboard movement scrolls the focused post into view; a click does not.
+        scrollTick += 1
         if focusedPostID == ids.last {
             Task { await model.loadMore() }
         }
