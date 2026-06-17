@@ -55,6 +55,9 @@ struct PostRowView: View, @MainActor Equatable {
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
     @State private var showRepostOptions = false
+    /// Whether the viewer revealed this post's sensitive media. Resets when the row
+    /// leaves and re-enters the view, so a blurred post stays blurred by default.
+    @State private var revealMedia = false
 
     private let timeFormatter = RelativeTimeFormatter()
 
@@ -229,12 +232,8 @@ struct PostRowView: View, @MainActor Equatable {
                 .tint(theme.accent)
                 .lineSpacing(density == .compact ? 1 : 2)
                 .fixedSize(horizontal: false, vertical: true)
-            if !post.images.isEmpty {
-                imageGrid.padding(.top, 3)
-            }
-            if let video = post.video {
-                VideoPosterView(video: video, maxWidth: imageMaxWidth, onTap: openInBrowser)
-                    .padding(.top, 3)
+            if !post.images.isEmpty || post.video != nil {
+                mediaSection.padding(.top, 3)
             }
             // The external-link card sits below the body and images and above the
             // action bar. A post with its own external embed renders it directly;
@@ -279,6 +278,51 @@ struct PostRowView: View, @MainActor Equatable {
 
 
     private var imageMaxWidth: CGFloat { density == .compact ? 320 : 440 }
+
+    /// The post's attached media (image grid and/or video poster). When the post
+    /// carries a sensitive-content label and the viewer has not revealed it, the
+    /// media is blurred behind a tap-to-show overlay; tapping anywhere reveals it.
+    @ViewBuilder
+    private var mediaSection: some View {
+        let media = VStack(alignment: .leading, spacing: 3) {
+            if !post.images.isEmpty { imageGrid }
+            if let video = post.video {
+                VideoPosterView(video: video, maxWidth: imageMaxWidth, onTap: openInBrowser)
+            }
+        }
+        if let warning = post.mediaWarning, !revealMedia {
+            media
+                .blur(radius: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay { sensitiveMediaOverlay(warning) }
+                // Disable the media's own taps (lightbox / video) while blurred so
+                // the first tap only reveals; the overlay's gesture handles reveal.
+                .allowsHitTesting(false)
+                .overlay {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { revealMedia = true }
+                }
+        } else {
+            media
+        }
+    }
+
+    /// The "閲覧注意" curtain shown over blurred sensitive media.
+    private func sensitiveMediaOverlay(_ warning: MediaWarning) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: "eye.slash.fill")
+                .font(.system(size: 18))
+            Text(warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
+                .font(.app(.caption)).fontWeight(.medium)
+            Text("タップで表示")
+                .font(.app(.caption2)).foregroundStyle(.secondary)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 16).padding(.vertical, 12)
+        .background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 
     @ViewBuilder
     private var imageGrid: some View {

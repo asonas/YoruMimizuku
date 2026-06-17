@@ -67,6 +67,7 @@ extension PostDisplay {
             bodySegments: RichText.segments(text: post.record.text, facets: post.record.facets),
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),
             contextLabel: contextLabel,
+            mediaWarning: MediaWarning.from(labels: post.labels),
             images: images,
             linkCard: post.embed?.external.flatMap(LinkCard.init),
             video: post.embed?.video.map(PostVideo.init),

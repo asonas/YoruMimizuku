@@ -45,6 +45,23 @@ public struct ReplyRef: Decodable, Equatable, Sendable {
     }
 }
 
+/// A content label (`com.atproto.label.defs#label`) attached to a post view.
+/// `val` is the label value (e.g. `porn`, `sexual`, `nudity`, `graphic-media`);
+/// `src` is the labeler (or author, for self-labels) DID; `neg` is true when the
+/// label retracts a previously applied one. Self-labels declared on the post
+/// record are surfaced here by the appview with `src` set to the author's DID.
+public struct Label: Decodable, Equatable, Sendable {
+    public let val: String
+    public let src: String?
+    public let neg: Bool?
+
+    public init(val: String, src: String? = nil, neg: Bool? = nil) {
+        self.val = val
+        self.src = src
+        self.neg = neg
+    }
+}
+
 /// A hydrated post (`app.bsky.feed.defs#postView`).
 public struct PostView: Decodable, Equatable, Sendable {
     public let uri: String
@@ -60,6 +77,9 @@ public struct PostView: Decodable, Equatable, Sendable {
     /// viewer's like / repost records when they have liked / reposted it. nil
     /// (or absent fields) means the viewer has not interacted.
     public let viewer: PostViewerState?
+    /// Content labels on this post (self-labels + labeler labels). Empty when the
+    /// post carries none. Drives the sensitive-media warning at the display layer.
+    public let labels: [Label]
 
     public init(
         uri: String,
@@ -71,7 +91,8 @@ public struct PostView: Decodable, Equatable, Sendable {
         likeCount: Int?,
         indexedAt: String,
         embed: PostEmbed? = nil,
-        viewer: PostViewerState? = nil
+        viewer: PostViewerState? = nil,
+        labels: [Label] = []
     ) {
         self.uri = uri
         self.cid = cid
@@ -83,6 +104,26 @@ public struct PostView: Decodable, Equatable, Sendable {
         self.indexedAt = indexedAt
         self.embed = embed
         self.viewer = viewer
+        self.labels = labels
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case uri, cid, author, record, replyCount, repostCount, likeCount, indexedAt, embed, viewer, labels
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uri = try container.decode(String.self, forKey: .uri)
+        self.cid = try container.decode(String.self, forKey: .cid)
+        self.author = try container.decode(ProfileViewBasic.self, forKey: .author)
+        self.record = try container.decode(PostRecord.self, forKey: .record)
+        self.replyCount = try container.decodeIfPresent(Int.self, forKey: .replyCount)
+        self.repostCount = try container.decodeIfPresent(Int.self, forKey: .repostCount)
+        self.likeCount = try container.decodeIfPresent(Int.self, forKey: .likeCount)
+        self.indexedAt = try container.decode(String.self, forKey: .indexedAt)
+        self.embed = try container.decodeIfPresent(PostEmbed.self, forKey: .embed)
+        self.viewer = try container.decodeIfPresent(PostViewerState.self, forKey: .viewer)
+        self.labels = (try? container.decodeIfPresent([Label].self, forKey: .labels)) ?? []
     }
 }
 

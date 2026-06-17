@@ -129,6 +129,35 @@ final class TimelineResponseTests: XCTestCase {
         XCTAssertNil(response.feed[1].post.embed)
     }
 
+    func testDecodesPostLabels() throws {
+        let json = Data(##"""
+        {
+          "uri": "at://did:plc:alice/app.bsky.feed.post/lbl",
+          "cid": "cid",
+          "author": { "did": "did:plc:alice", "handle": "alice.bsky.social" },
+          "record": { "$type": "app.bsky.feed.post", "text": "nsfw", "createdAt": "2026-06-04T12:00:00Z" },
+          "indexedAt": "2026-06-04T12:00:01Z",
+          "labels": [
+            { "src": "did:plc:alice", "uri": "at://did:plc:alice/app.bsky.feed.post/lbl", "val": "porn", "cts": "2026-06-04T12:00:00Z" },
+            { "src": "did:plc:labeler", "uri": "at://did:plc:labeler/x", "val": "spam", "neg": true, "cts": "2026-06-04T12:00:00Z" }
+          ]
+        }
+        """##.utf8)
+
+        let post = try JSONDecoder().decode(PostView.self, from: json)
+
+        XCTAssertEqual(post.labels.count, 2)
+        XCTAssertEqual(post.labels[0].val, "porn")
+        XCTAssertEqual(post.labels[0].src, "did:plc:alice")
+        XCTAssertNil(post.labels[0].neg)
+        XCTAssertEqual(post.labels[1].neg, true)
+    }
+
+    func testPostWithoutLabelsHasEmptyLabels() throws {
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
+        XCTAssertTrue(response.feed[0].post.labels.isEmpty)
+    }
+
     func testDecodesReplyParent() throws {
         let json = Data(##"""
         {

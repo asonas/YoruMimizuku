@@ -1,4 +1,30 @@
 import Foundation
+import BlueskyCore
+
+/// The kind of sensitive-content warning that gates a post's media behind a blur
+/// until the viewer chooses to reveal it. Derived from the post's content labels
+/// (self-labels and labeler labels) at the display layer.
+public enum MediaWarning: Equatable, Sendable {
+    /// Adult / sexual content (`porn`, `sexual`, `nudity`).
+    case adult
+    /// Graphic or disturbing media (`graphic-media`, legacy `gore`).
+    case graphic
+
+    /// Label values that gate media as adult content.
+    private static let adultValues: Set<String> = ["porn", "sexual", "nudity"]
+    /// Label values that gate media as graphic content.
+    private static let graphicValues: Set<String> = ["graphic-media", "gore"]
+
+    /// Resolve the warning for a post's labels, or nil when no adult/graphic label
+    /// applies. A label whose `neg` is true retracts that value, so only labels
+    /// still in force count. Adult takes precedence when both apply.
+    public static func from(labels: [Label]) -> MediaWarning? {
+        let active = Set(labels.filter { $0.neg != true }.map(\.val))
+        if !active.isDisjoint(with: adultValues) { return .adult }
+        if !active.isDisjoint(with: graphicValues) { return .graphic }
+        return nil
+    }
+}
 
 /// An image attached to a post, ready for display: a thumbnail shown inline and a
 /// full-size URL opened in the lightbox, plus alt text for accessibility.
@@ -112,6 +138,9 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let bodyAttributedString: AttributedString
     public let createdAt: Date
     public let contextLabel: String?
+    /// The sensitive-content warning gating this post's media (images / video
+    /// poster) behind a blur, or nil when no adult/graphic label applies.
+    public let mediaWarning: MediaWarning?
     public let images: [PostImage]
     /// The external-link preview card attached to this post, when its embed is
     /// `app.bsky.embed.external#view`. Rendered between the body/images and the
@@ -157,6 +186,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         bodySegments: [RichTextSegment]? = nil,
         createdAt: Date,
         contextLabel: String? = nil,
+        mediaWarning: MediaWarning? = nil,
         images: [PostImage] = [],
         linkCard: LinkCard? = nil,
         video: PostVideo? = nil,
@@ -179,6 +209,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.bodyAttributedString = Self.attributedBody(from: segments)
         self.createdAt = createdAt
         self.contextLabel = contextLabel
+        self.mediaWarning = mediaWarning
         self.images = images
         self.linkCard = linkCard
         self.video = video

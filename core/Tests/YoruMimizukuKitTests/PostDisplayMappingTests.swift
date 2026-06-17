@@ -12,7 +12,8 @@ final class PostDisplayMappingTests: XCTestCase {
         createdAt: String = "2026-06-04T12:00:00.000Z",
         replyCount: Int? = nil,
         repostCount: Int? = nil,
-        likeCount: Int? = nil
+        likeCount: Int? = nil,
+        labels: [Label] = []
     ) -> PostView {
         PostView(
             uri: uri,
@@ -22,7 +23,8 @@ final class PostDisplayMappingTests: XCTestCase {
             replyCount: replyCount,
             repostCount: repostCount,
             likeCount: likeCount,
-            indexedAt: "2026-06-04T12:00:01.000Z"
+            indexedAt: "2026-06-04T12:00:01.000Z",
+            labels: labels
         )
     }
 
@@ -39,6 +41,34 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertEqual(display.replyCount, 1)
         XCTAssertEqual(display.repostCount, 2)
         XCTAssertEqual(display.likeCount, 3)
+    }
+
+    func testMapsAdultSelfLabelToMediaWarning() {
+        let display = PostDisplay(FeedViewPost(post: post(labels: [Label(val: "porn", src: "did:plc:alice")])))
+
+        XCTAssertEqual(display.mediaWarning, .adult)
+    }
+
+    func testMapsGraphicMediaLabelToGraphicWarning() {
+        let display = PostDisplay(FeedViewPost(post: post(labels: [Label(val: "graphic-media", src: "did:plc:labeler")])))
+
+        XCTAssertEqual(display.mediaWarning, .graphic)
+    }
+
+    func testMapsSexualAndNudityLabelsToAdultWarning() {
+        XCTAssertEqual(PostDisplay(FeedViewPost(post: post(labels: [Label(val: "sexual")]))).mediaWarning, .adult)
+        XCTAssertEqual(PostDisplay(FeedViewPost(post: post(labels: [Label(val: "nudity")]))).mediaWarning, .adult)
+    }
+
+    func testPostWithoutSensitiveLabelHasNoMediaWarning() {
+        XCTAssertNil(PostDisplay(FeedViewPost(post: post())).mediaWarning)
+        XCTAssertNil(PostDisplay(FeedViewPost(post: post(labels: [Label(val: "spam")]))).mediaWarning)
+    }
+
+    func testNegatedLabelDoesNotTriggerMediaWarning() {
+        let display = PostDisplay(FeedViewPost(post: post(labels: [Label(val: "porn", src: "did:plc:labeler", neg: true)])))
+
+        XCTAssertNil(display.mediaWarning)
     }
 
     func testMapsExternalEmbedToLinkCard() {
