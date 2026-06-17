@@ -1,13 +1,15 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-06-11
+updated: 2026-06-17
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - core/Sources/YoruMimizukuKit/ComposerViewModel.swift
+  - apps/macos/Views/ComposerView.swift
+  - apps/macos/Media/ImageEncoder.swift
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
@@ -63,6 +65,8 @@ For replies, before sending, the parent URI is resolved via `getRecord` to fill 
 
 Up to 4. Each image is sent to `uploadBlob` as binary with its image MIME, yielding a `BlobRef` (`{ $type: "blob", ref: { $link: <cid> }, mimeType, size }`). Resizing / re-encoding / the 1 MB cap is handled app-side (downscaling on the macOS side if needed, considering the existing `ImageDownsampler`); the core only receives bytes and MIME.
 
+On [[macos]], `ImageEncoder.encodeForUpload` accepts the AT Protocol image formats. PNG, JPEG, GIF, and WebP that already fit under the ~1 MB cap pass through untouched (so an animated GIF keeps its animation and a WebP keeps its encoding); anything larger, or in another format such as HEIC, is downscaled and re-encoded as JPEG. The composer takes attachments three ways — the photo button (`fileImporter` for png/jpeg/gif/webp/heic), drag-and-drop from Finder or another app (file URLs and raw image data, e.g. CleanShot X), and the same encoder path normalizes them all (`apps/macos/Media/ImageEncoder.swift`, `apps/macos/Views/ComposerView.swift`).
+
 On [[windows]], `ComposerViewModel` mirrors the core image payload (`dataBase64`, `mimeType`, `alt`) and caps attachments at 4. The current `ComposerDialog` uses a `FileOpenPicker` for PNG/JPEG files and shows thumbnails before calling `yoru_post_create`; it does not yet expose an alt-text field, drag-and-drop attach, WIC downsampling, or upload re-encode (`apps/windows/App/ViewModels/ComposerViewModel.cs`, `apps/windows/App/Views/ComposerDialog.xaml.cs`, `apps/windows/README.md`).
 
 On [[ipados]], compose is a sheet backed by the same `ComposerViewModel` and
@@ -84,3 +88,10 @@ itself is replaced by a small progress indicator so the sheet does not resize.
 `Command-Return` and `Control-Return` submit the draft when `canSubmit` is true
 (`2026-06-08-macos-compose-notification-followups.md`, `ComposerViewModel.swift`,
 `apps/macos/Views/ComposerView.swift`).
+
+The editor itself uses the app font family (Hiragino Sans) at a slightly larger
+fixed size (15pt) with extra line spacing instead of the smaller raw system body
+face, so the text being typed reads as clearly as the rest of the UI. A `Divider`
+separates the text-input area (and any reply / quote / image previews) from the
+footer controls — the attach button, remaining-character counter, and Post button
+(`apps/macos/Views/ComposerView.swift`).

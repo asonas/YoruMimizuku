@@ -50,11 +50,19 @@ enum ImageEncoder {
         return smallest.map { ($0, "image/jpeg") }
     }
 
-    /// The MIME type if `data` is a PNG or JPEG that may be uploaded as-is, detected
-    /// by magic bytes. Returns nil for other formats so the caller re-encodes them.
+    /// The MIME type if `data` is an image format Bluesky accepts as-is (PNG, JPEG,
+    /// GIF, WebP), detected by magic bytes. Returns nil for other formats so the
+    /// caller re-encodes them as JPEG.
     private static func passthroughMimeType(of data: Data) -> String? {
         if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return "image/png" }
         if data.starts(with: [0xFF, 0xD8, 0xFF]) { return "image/jpeg" }
+        // "GIF8" (GIF87a / GIF89a) — kept as-is so animation survives.
+        if data.starts(with: [0x47, 0x49, 0x46, 0x38]) { return "image/gif" }
+        // "RIFF"<4-byte size>"WEBP" — kept as-is to preserve the WebP encoding.
+        if data.starts(with: [0x52, 0x49, 0x46, 0x46]), data.count >= 12,
+           data[(data.startIndex + 8)..<(data.startIndex + 12)].elementsEqual([0x57, 0x45, 0x42, 0x50]) {
+            return "image/webp"
+        }
         return nil
     }
 

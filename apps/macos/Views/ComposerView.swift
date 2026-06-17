@@ -27,7 +27,11 @@ struct ComposerView: View {
             }
             TextEditor(text: $model.text)
                 .frame(minHeight: 120)
-                .font(.body)
+                // Use the app font family (Hiragino Sans) at a slightly larger size
+                // than the system default so the editor reads as clearly as the rest
+                // of the UI rather than the smaller raw system body face.
+                .font(.appSize(15))
+                .lineSpacing(2)
             if let parent = model.replyParent {
                 replyPreview(parent)
             }
@@ -37,6 +41,7 @@ struct ComposerView: View {
             if !model.images.isEmpty {
                 imageStrip
             }
+            Divider()
             composerFooter
             if let error = model.errorMessage {
                 Text(error).font(.caption).foregroundStyle(.red)
@@ -44,7 +49,8 @@ struct ComposerView: View {
         }
         .padding(16)
         .frame(width: 460)
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.png, .jpeg],
+        .fileImporter(isPresented: $importing,
+                      allowedContentTypes: [.png, .jpeg, .gif, .webP, .heic],
                       allowsMultipleSelection: true) { result in
             handleImport(result)
         }

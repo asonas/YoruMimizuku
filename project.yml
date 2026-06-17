@@ -102,6 +102,7 @@ targets:
       - apps/macos/Update/UpdateChannelStore.swift
       - apps/macos/Update/LaunchUpdatePrompt.swift
       - apps/macos/Update/InstallerVolumeEjection.swift
+      - apps/macos/Media/ImageEncoder.swift
     settings:
       base:
         SWIFT_VERSION: "6.0"
