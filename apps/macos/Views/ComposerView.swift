@@ -32,6 +32,11 @@ struct ComposerView: View {
                 // of the UI rather than the smaller raw system body face.
                 .font(.appSize(15))
                 .lineSpacing(2)
+                // TextEditor (NSTextView) insets its text by the default 5pt
+                // lineFragmentPadding, so without this its first character sits
+                // 5pt right of the header / preview / footer. Pull it back so the
+                // body text is flush-left with the rest of the sheet.
+                .padding(.leading, -5)
             if let parent = model.replyParent {
                 replyPreview(parent)
             }
