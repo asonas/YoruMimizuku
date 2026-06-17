@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-15
+updated: 2026-06-17
 sources: []
 ---
 
@@ -68,6 +68,12 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Browser authorization | ○ | △ | △ | − |
 | Token refresh & session recovery | ○ | ○ | ○ | − |
 
+## [[sensitive-media]] — Sensitive Media Blur
+
+| Feature | macOS | Windows | iOS | Android |
+|---|:--:|:--:|:--:|:--:|
+| Sensitive media blur (content labels) | ○ | × | × | − |
+
 ## [[timeline-streaming]] — Timeline Fetching and Streaming
 
 | Feature | macOS | Windows | iOS | Android |
@@ -98,6 +104,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **OS banner + unread badge** ([[notifications]]): macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]]).
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS exposes a 通知 settings tab to choose the poll interval (15/30/60/300s) and toggle sidebar unread badges, persisted via NotificationSettingsStore; Windows and iPadOS have no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
+- **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS blurs media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain. Label decode and the MediaWarning mapping live in shared core, but only the macOS row gates the UI; Windows and iPadOS render media unblurred ([[windows]], [[ipados]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
 - **Delete own post** ([[timeline-streaming]]): macOS offers a 「削除」 action on the viewer's own rows (author DID == account DID), confirm, then optimistically prune the row via the shared TimelineViewModel.deletePost. The core capability (PostInteracting.deletePost) is shared, but no delete UI is wired on iPadOS or Windows yet ([[windows]], [[ipados]]).
 - **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS classifies a failed first load into offline / rate-limited / server / unknown via the tested LoadFailure and shows a titled message with a 「再試行」 button. The shared NotificationsViewModel / ThreadViewModel reuse LoadFailure's message text; how iPadOS and Windows render these failures is not yet audited against this classification ([[windows]], [[ipados]]).

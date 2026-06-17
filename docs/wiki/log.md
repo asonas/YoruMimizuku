@@ -9,6 +9,13 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-17 ingest
+
+- sources: `core/Sources/BlueskyCore/Models/Timeline.swift`, `core/Sources/YoruMimizukuKit/{PostDisplay,PostDisplay+Mapping}.swift`, `apps/macos/Views/PostRowView.swift`, `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`
+- created: [[sensitive-media]]
+- updated: [[overview]] (linked the new page), `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` §14 (NSFW media blur minimal now in v1.0.0)
+- note: Ingested the minimal NSFW/sensitive-media blur landed on `feature/nsfw-media-blur` (commit 5437d01). New `Label` decode on `PostView.labels`, `MediaWarning.from(labels:)` mapping (adult = porn/sexual/nudity, graphic = graphic-media/gore, honoring `neg`), and a tap-to-reveal blur curtain in the macOS `PostRowView`. New "Sensitive media blur (content labels)" matrix row: macOS full; Windows/iPadOS none (label decode shared in core, but only macOS gates the UI); Android planned. Per-user moderation preferences (getPreferences, subscribed labelers, per-label hide/warn/show, account-level labels) remain deferred. Regenerated support-matrix and index.
+
 ## 2026-06-15 ingest
 
 - sources: `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`, `core/Sources/BlueskyCore/Account/AccountManager.swift`, `core/Sources/YoruMimizukuKit/{PostInteracting,TimelineViewModel,LoadFailure}.swift`, `apps/macos/{NotificationSettings.swift,Views/{SidebarView,FeedView,PostRowView,SettingsView,MainWindowView,RootView,NewPostCommand}.swift}`

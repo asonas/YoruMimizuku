@@ -71,6 +71,7 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 - [[compose-post]] — posting (facet detection, images, replies)
 - [[filters]] — saved-search filters (structured terms and AND/OR)
 - [[notifications]] — in-app tab, OS banner, and Dock badge
+- [[sensitive-media]] — blurring adult / graphic media behind a tap-to-reveal curtain from content labels
 - [[auto-updates]] — planned macOS Sparkle update checks, settings-tab install flow, and release appcast
 
 ## Platforms
