@@ -28,10 +28,10 @@ features:
     note: "macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]])."
   - name: In-app notification settings (interval / badges)
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS exposes a 通知 settings tab to choose the poll interval (15/30/60/300s) and toggle sidebar unread badges, persisted via NotificationSettingsStore; Windows and iPadOS have no such settings UI yet ([[windows]], [[ipados]])."
+    note: "macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]])."
 ---
 
 # Notifications

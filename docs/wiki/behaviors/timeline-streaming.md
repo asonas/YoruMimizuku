@@ -54,16 +54,16 @@ features:
     android: planned
   - name: Delete own post
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS offers a 「削除」 action on the viewer's own rows (author DID == account DID), confirm, then optimistically prune the row via the shared TimelineViewModel.deletePost. The core capability (PostInteracting.deletePost) is shared, but no delete UI is wired on iPadOS or Windows yet ([[windows]], [[ipados]])."
+    note: "macOS and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then optimistically prune the row (Windows via yoru_post_delete; restores on failure). iPadOS has no delete UI yet ([[windows]], [[ipados]])."
   - name: Load error states (offline / 429 / 5xx) with retry
     macos: full
-    windows: unknown
+    windows: full
     ios: unknown
     android: planned
-    note: "macOS classifies a failed first load into offline / rate-limited / server / unknown via the tested LoadFailure and shows a titled message with a 「再試行」 button. The shared NotificationsViewModel / ThreadViewModel reuse LoadFailure's message text; how iPadOS and Windows render these failures is not yet audited against this classification ([[windows]], [[ipados]])."
+    note: "macOS and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows reuses the same shared LoadFailure classification, carried on the bridge error envelope (kind/title/message); how iPadOS renders failures is not yet audited ([[windows]], [[ipados]])."
   - name: External link preview cards (OGP)
     macos: full
     windows: full
@@ -72,16 +72,16 @@ features:
     note: "macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
   - name: Quote post (record embed) cards
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS renders app.bsky.embed.record / recordWithMedia quotes as a bordered card that opens the quoted post's conversation; Windows and iPadOS rows still drop quoted records ([[windows]], [[ipados]])."
+    note: "macOS and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation; iPadOS rows still drop quoted records ([[windows]], [[ipados]])."
   - name: Video embed poster (no inline playback)
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "macOS shows the app.bsky.embed.video poster with a play badge and opens the post in the browser on click; inline playback is post-1.0 everywhere. Windows and iPadOS rows still drop video embeds ([[windows]], [[ipados]])."
+    note: "macOS and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere. iPadOS rows still drop video embeds ([[windows]], [[ipados]])."
   - name: Conversation child reply tree
     macos: full
     windows: full

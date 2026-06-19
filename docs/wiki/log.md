@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-20 ingest
+
+- sources: `apps/windows/App/**`, `core/Sources/YoruMimizukuBridge/{BridgeOperations,CABI}.swift`
+- updated: [[windows]], [[timeline-streaming]], [[sensitive-media]], [[notifications]]
+- note: Brought the Windows app to macOS 1.0.0-dev.8 feature parity. The bridge `PostDisplayDTO` now carries the quoted record, video poster, and `mediaWarning`; a new `yoru_post_delete` deletes own posts; and the error envelope carries the shared `LoadFailure` (kind/title/message). Windows feed rows now render quote cards, video posters (poster + browser open), and a tap-to-reveal sensitive-media curtain (an opaque cover, not a Gaussian blur — WinUI has no cheap subtree blur, so the matrix marks Windows `differs`). Added own-post delete (confirm + optimistic prune via `yoru_post_delete`), classified load-failure states with a 再試行 button, and a 通知 settings section (poll interval 15/30/60/300s + unread-badge toggle, applied live). Remaining macOS-implemented gaps: none in this scope. See `docs/HANDOFF-windows-parity.md` for the blur deviation and other deferrals.
+
 ## 2026-06-17 ingest
 
 - sources: `core/Sources/BlueskyCore/Models/Timeline.swift`, `core/Sources/YoruMimizukuKit/{PostDisplay,PostDisplay+Mapping}.swift`, `apps/macos/Views/PostRowView.swift`, `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`

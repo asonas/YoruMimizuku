@@ -1,7 +1,7 @@
 ---
 title: Platform — Windows
 type: platform
-updated: 2026-06-11
+updated: 2026-06-20
 sources:
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
@@ -159,6 +159,24 @@ lifetime handling is confined here.
   the primary window owns the process-wide singletons (bridge init, updater,
   notification polling, OS toasts); secondary windows reuse the live session and
   keep their own tabs ([[app-shell]]).
+- v1 embed parity in feed rows (the merged core `PostDisplay` maps these; the
+  bridge `PostDisplayDTO` now carries them): a **quote card** for
+  `app.bsky.embed.record` / `recordWithMedia` (author line, body, thumbnails /
+  video poster) that opens the quoted conversation; a **video poster** with a
+  play badge that opens the post in the browser; and a **sensitive-media curtain**
+  that covers (not blurs — no cheap WinUI subtree blur) labelled adult/graphic
+  media until tapped ([[timeline-streaming]], [[sensitive-media]]).
+- **Delete own post**: rows whose post AT-URI repo DID equals the account DID show
+  a 削除 action that confirms, optimistically prunes, and calls `yoru_post_delete`
+  (restoring on failure) ([[timeline-streaming]]).
+- **Classified load failures**: the bridge error envelope carries the shared
+  `LoadFailure` kind + friendly title/message, so a failed first load shows a
+  titled offline / rate-limited / server / unknown message with a 再試行 button
+  ([[timeline-streaming]]).
+- **Notification settings**: a 通知 settings section picks the poll interval
+  (15/30/60/300s) and toggles the unread badge, persisted in `AppSettings` under
+  the same keys as the macOS store and applied live to the timer and tab badge
+  ([[notifications]]).
 - The notifications navigation row has a local unread badge driven by 30-second
   polling and cleared when the tab becomes active. When that poll raises the
   unread count, the app now also shows an OS toast via the Windows App SDK
