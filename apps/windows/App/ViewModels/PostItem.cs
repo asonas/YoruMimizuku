@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,8 +26,11 @@ public sealed class PostItem : ObservableObject
     public IReadOnlyList<RichSegmentDto> Segments { get; }
     public string CreatedAt { get; }
     public string? ContextLabel { get; }
+    public string? MediaWarning { get; }
     public IReadOnlyList<PostImageDto> Images { get; }
     public LinkCardDto? LinkCard { get; }
+    public PostVideoDto? Video { get; }
+    public QuotedPostDto? Quote { get; }
     public ReplyParentDto? ReplyParent { get; }
     public int ReplyCount { get; }
 
@@ -37,6 +41,17 @@ public sealed class PostItem : ObservableObject
     public bool HasImages => Images.Count > 0;
     public bool HasContext => !string.IsNullOrEmpty(ContextLabel);
     public bool IsReply => ReplyParent is not null;
+    public bool HasVideo => Video?.ThumbUrl is { Length: > 0 };
+    public bool HasQuote => Quote is not null;
+    /// <summary>Whether this post's media is gated behind a sensitive-content blur.</summary>
+    public bool IsSensitive => !string.IsNullOrEmpty(MediaWarning);
+
+    /// <summary>The author's repo DID, parsed from the post AT-URI
+    /// (at://&lt;did&gt;/app.bsky.feed.post/&lt;rkey&gt;), used to gate the delete action.</summary>
+    public string? AuthorDid =>
+        Id.StartsWith("at://", StringComparison.Ordinal)
+            ? Id.Substring(5).Split('/')[0]
+            : null;
     public string RelativeTime => Services.RelativeTime.Format(CreatedAt);
     public string ReplyMarkerText => ReplyParent is { } p ? $"@{p.AuthorHandle} への返信" : "";
     public string AuthorHandleAt => "@" + AuthorHandle;
@@ -120,8 +135,11 @@ public sealed class PostItem : ObservableObject
         Segments = dto.Segments;
         CreatedAt = dto.CreatedAt;
         ContextLabel = dto.ContextLabel;
+        MediaWarning = dto.MediaWarning;
         Images = dto.Images;
         LinkCard = dto.LinkCard;
+        Video = dto.Video;
+        Quote = dto.Quote;
         ReplyParent = dto.ReplyParent;
         ReplyCount = dto.ReplyCount;
         _repostCount = dto.RepostCount;

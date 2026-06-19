@@ -22,6 +22,19 @@ public sealed record LinkCardDto(
     string? ThumbUrl,
     string? Host);
 
+public sealed record PostVideoDto(string? ThumbUrl, string? Alt);
+
+public sealed record QuotedPostDto(
+    string Id,
+    string Cid,
+    string AuthorDisplayName,
+    string AuthorHandle,
+    string? AvatarUrl,
+    string Body,
+    string CreatedAt,
+    List<PostImageDto> Images,
+    PostVideoDto? Video);
+
 public sealed record ArrangeResultDto(string Id, bool ConnectsToPrevious, bool ConnectsToNext);
 
 public sealed record ReplyParentDto(
@@ -42,8 +55,11 @@ public sealed record PostDisplayDto(
     List<RichSegmentDto> Segments,
     string CreatedAt,
     string? ContextLabel,
+    string? MediaWarning,
     List<PostImageDto> Images,
     LinkCardDto? LinkCard,
+    PostVideoDto? Video,
+    QuotedPostDto? Quote,
     ReplyParentDto? ReplyParent,
     int ReplyCount,
     int RepostCount,

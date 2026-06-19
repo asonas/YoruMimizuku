@@ -228,6 +228,13 @@ public func yoru_post_unrepost(_ input: UnsafePointer<CChar>?) -> UnsafeMutableP
     }
 }
 
+@_cdecl("yoru_post_delete")
+public func yoru_post_delete(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleAsync(input, UriReq.self) {
+        try await BridgeOps.removeRecord(recordUri: $0.uri, collection: "app.bsky.feed.post")
+    }
+}
+
 @_cdecl("yoru_post_permalink")
 public func yoru_post_permalink(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleSync(input, PermalinkReq.self) {

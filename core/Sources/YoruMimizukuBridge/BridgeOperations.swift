@@ -55,6 +55,39 @@ struct LinkCardDTO: Encodable {
     }
 }
 
+struct PostVideoDTO: Encodable {
+    let thumbUrl: String?
+    let alt: String?
+    init(_ v: PostVideo) {
+        thumbUrl = v.thumbURL?.absoluteString
+        alt = v.alt
+    }
+}
+
+/// The quoted post inside a quote card (one level; a nested quote is dropped).
+struct QuotedPostDTO: Encodable {
+    let id: String
+    let cid: String
+    let authorDisplayName: String
+    let authorHandle: String
+    let avatarUrl: String?
+    let body: String
+    let createdAt: String
+    let images: [PostImageDTO]
+    let video: PostVideoDTO?
+    init(_ q: QuotedPost) {
+        id = q.id
+        cid = q.cid
+        authorDisplayName = q.authorDisplayName
+        authorHandle = q.authorHandle
+        avatarUrl = q.avatarURL?.absoluteString
+        body = q.body
+        createdAt = ISO8601.string(q.createdAt)
+        images = q.images.map(PostImageDTO.init)
+        video = q.video.map(PostVideoDTO.init)
+    }
+}
+
 struct PostDisplayDTO: Encodable {
     let id: String
     let cid: String
@@ -65,8 +98,11 @@ struct PostDisplayDTO: Encodable {
     let segments: [RichSegmentDTO]
     let createdAt: String
     let contextLabel: String?
+    let mediaWarning: String?
     let images: [PostImageDTO]
     let linkCard: LinkCardDTO?
+    let video: PostVideoDTO?
+    let quote: QuotedPostDTO?
     let replyParent: ReplyParentDTO?
     let replyCount: Int
     let repostCount: Int
@@ -86,8 +122,11 @@ struct PostDisplayDTO: Encodable {
         segments = p.bodySegments.map(RichSegmentDTO.init)
         createdAt = ISO8601.string(p.createdAt)
         contextLabel = p.contextLabel
+        mediaWarning = Self.mediaWarningString(p.mediaWarning)
         images = p.images.map(PostImageDTO.init)
         linkCard = p.linkCard.map(LinkCardDTO.init)
+        video = p.video.map(PostVideoDTO.init)
+        quote = p.quote.map(QuotedPostDTO.init)
         replyParent = p.replyParent.map { ReplyParentDTO($0.post) }
         replyCount = p.replyCount
         repostCount = p.repostCount
@@ -96,6 +135,14 @@ struct PostDisplayDTO: Encodable {
         viewerRepostUri = p.viewerRepostURI
         isLiked = p.isLiked
         isReposted = p.isReposted
+    }
+
+    private static func mediaWarningString(_ warning: MediaWarning?) -> String? {
+        switch warning {
+        case .adult: return "adult"
+        case .graphic: return "graphic"
+        case nil: return nil
+        }
     }
 }
 
