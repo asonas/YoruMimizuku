@@ -89,12 +89,24 @@
                                     <RichTextBlock x:Name="BodyRich" Foreground="{ThemeResource AppTextBrush}"
                                                    IsTextSelectionEnabled="True" />
 
-                                    <!-- Image grid populated in OnContainerContentChanging -->
-                                    <Grid x:Name="ImagesHost" Visibility="{x:Bind ImagesVisibility}" Margin="0,3,0,0"
-                                          ColumnSpacing="5" RowSpacing="5" HorizontalAlignment="Left" MaxWidth="440" />
+                                    <!-- Media (image grid + video poster) with a tap-to-reveal
+                                         sensitive-content curtain, populated in OnContainerContentChanging -->
+                                    <Grid x:Name="MediaHost" Margin="0,3,0,0" HorizontalAlignment="Left" MaxWidth="440">
+                                        <StackPanel Spacing="5">
+                                            <Grid x:Name="ImagesHost" Visibility="{x:Bind ImagesVisibility}"
+                                                  ColumnSpacing="5" RowSpacing="5" HorizontalAlignment="Left" />
+                                            <Border x:Name="VideoHost" Visibility="Collapsed" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                        <Border x:Name="MediaCurtain" Visibility="Collapsed" CornerRadius="10"
+                                                Background="#E61A1A1A" Tapped="OnMediaCurtainTapped" />
+                                    </Grid>
 
                                     <!-- External link preview card populated in OnContainerContentChanging -->
                                     <Border x:Name="LinkCardHost" Margin="0,3,0,0" Visibility="Collapsed"
+                                            HorizontalAlignment="Left" />
+
+                                    <!-- Quote post (record embed) card populated in OnContainerContentChanging -->
+                                    <Border x:Name="QuoteHost" Margin="0,3,0,0" Visibility="Collapsed"
                                             HorizontalAlignment="Left" />
 
                                     <!-- Action bar -->

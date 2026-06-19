@@ -56,7 +56,10 @@ public sealed partial class FeedView : UserControl
         if (args.ItemContainer?.ContentTemplateRoot is not FrameworkElement root) return;
         if (root.FindName("BodyRich") is RichTextBlock rich) PopulateRich(rich, post);
         if (root.FindName("ImagesHost") is Grid host) PopulateImages(host, post);
+        if (root.FindName("VideoHost") is Border videoHost) PopulateVideo(videoHost, post);
+        if (root.FindName("MediaCurtain") is Border curtain) PopulateCurtain(curtain, post);
         if (root.FindName("LinkCardHost") is Border cardHost) PopulateLinkCard(cardHost, post);
+        if (root.FindName("QuoteHost") is Border quoteHost) PopulateQuote(quoteHost, post);
     }
 
     private void PopulateRich(RichTextBlock rich, PostItem post)
@@ -244,6 +247,220 @@ public sealed partial class FeedView : UserControl
             ToolTipService.SetToolTip(border, card.Url);
         }
         return border;
+    }
+
+    // -- Video poster (no inline playback) --
+
+    private void PopulateVideo(Border host, PostItem post)
+    {
+        host.Child = null;
+        host.Visibility = Visibility.Collapsed;
+        if (!post.HasVideo) return;
+        host.Child = BuildVideoPoster(post);
+        host.Visibility = Visibility.Visible;
+    }
+
+    /// Mirrors macOS VideoPosterView: the poster image with a centered play badge;
+    /// clicking opens the post in the browser (inline playback is post-1.0).
+    private FrameworkElement BuildVideoPoster(PostItem post)
+    {
+        var grid = new Grid { MaxWidth = 440 };
+        if (TryUri(post.Video!.ThumbUrl, out var thumb))
+        {
+            grid.Children.Add(new Image
+            {
+                Source = new BitmapImage(thumb),
+                Stretch = Stretch.UniformToFill,
+                MaxHeight = 280
+            });
+        }
+        grid.Children.Add(new Border
+        {
+            Width = 52,
+            Height = 52,
+            CornerRadius = new CornerRadius(26),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Black) { Opacity = 0.55 },
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new FontIcon
+            {
+                Glyph = "",
+                FontSize = 22,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White)
+            }
+        });
+
+        var border = new Border
+        {
+            CornerRadius = new CornerRadius(10),
+            BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+            BorderThickness = new Thickness(1),
+            MaxWidth = 440,
+            Child = grid
+        };
+        border.Tapped += async (_, e) => { e.Handled = true; await OpenPermalinkAsync(post); };
+        ToolTipService.SetToolTip(border, "ブラウザで開く");
+        return border;
+    }
+
+    // -- Quote post (record embed) card --
+
+    private void PopulateQuote(Border host, PostItem post)
+    {
+        host.Child = null;
+        host.Visibility = Visibility.Collapsed;
+        if (post.Quote is not { } quote) return;
+        host.Child = BuildQuoteCard(quote);
+        host.Visibility = Visibility.Visible;
+    }
+
+    /// Mirrors macOS QuoteCardView: a bordered card with a compact author line,
+    /// the quoted body, and the quoted post's media; tapping opens its conversation.
+    private FrameworkElement BuildQuoteCard(QuotedPostDto quote)
+    {
+        var content = new StackPanel { Spacing = 4, Padding = new Thickness(10, 8, 10, 8) };
+
+        var author = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
+        author.Children.Add(new PersonPicture
+        {
+            Width = 18,
+            Height = 18,
+            ProfilePicture = quote.AvatarUrl is { Length: > 0 } a ? new BitmapImage(new Uri(a)) : null
+        });
+        author.Children.Add(new TextBlock
+        {
+            Text = quote.AuthorDisplayName,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        author.Children.Add(new TextBlock
+        {
+            Text = "@" + quote.AuthorHandle,
+            FontSize = 11,
+            Foreground = (Brush)Application.Current.Resources["AppTertiaryTextBrush"],
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
+        });
+        content.Children.Add(author);
+
+        if (!string.IsNullOrEmpty(quote.Body))
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = quote.Body,
+                Foreground = (Brush)Application.Current.Resources["AppTextBrush"],
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 6,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+        }
+
+        if (quote.Video?.ThumbUrl is { Length: > 0 } && TryUri(quote.Video.ThumbUrl, out var qVideoThumb))
+        {
+            content.Children.Add(QuoteThumb(qVideoThumb, withPlayBadge: true));
+        }
+        else if (quote.Images.Count > 0)
+        {
+            var thumbs = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            foreach (var image in quote.Images.Take(2))
+            {
+                if (TryUri(image.ThumbUrl, out var t)) thumbs.Children.Add(QuoteThumb(t, withPlayBadge: false));
+            }
+            if (thumbs.Children.Count > 0) content.Children.Add(thumbs);
+        }
+
+        var border = new Border
+        {
+            CornerRadius = new CornerRadius(12),
+            BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+            BorderThickness = new Thickness(1),
+            Background = (Brush)Application.Current.Resources["AppRowHoverBrush"],
+            MaxWidth = 440,
+            Child = content,
+            Tag = quote
+        };
+        border.Tapped += (_, e) =>
+        {
+            e.Handled = true;
+            _workspace.OpenConversation(quote.Id, quote.AuthorDisplayName, quote.Body);
+        };
+        ToolTipService.SetToolTip(border, "@" + quote.AuthorHandle + " の会話を開く");
+        return border;
+    }
+
+    private FrameworkElement QuoteThumb(Uri url, bool withPlayBadge)
+    {
+        var grid = new Grid { Width = 72, Height = 72 };
+        grid.Children.Add(new Image { Source = new BitmapImage(url), Stretch = Stretch.UniformToFill });
+        if (withPlayBadge)
+        {
+            grid.Children.Add(new FontIcon
+            {
+                Glyph = "",
+                FontSize = 16,
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+        }
+        return new Border
+        {
+            CornerRadius = new CornerRadius(6),
+            BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+            BorderThickness = new Thickness(1),
+            Child = grid
+        };
+    }
+
+    // -- Sensitive media curtain (tap to reveal) --
+
+    /// Covers the post's media with a tap-to-reveal curtain when it carries an
+    /// adult/graphic content label, the Windows analogue of the macOS blur. (WinUI
+    /// has no cheap subtree blur, so the media is covered rather than blurred —
+    /// equivalent gating.)
+    private void PopulateCurtain(Border curtain, PostItem post)
+    {
+        var gated = post.IsSensitive && (post.HasImages || post.HasVideo);
+        if (!gated)
+        {
+            curtain.Visibility = Visibility.Collapsed;
+            curtain.Child = null;
+            return;
+        }
+
+        var stack = new StackPanel
+        {
+            Spacing = 4,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        stack.Children.Add(new TextBlock
+        {
+            Text = post.MediaWarning == "graphic" ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）",
+            FontSize = 12,
+            FontWeight = Microsoft.UI.Text.FontWeights.Medium,
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White),
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        stack.Children.Add(new TextBlock
+        {
+            Text = "タップで表示",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White) { Opacity = 0.8 },
+            HorizontalAlignment = HorizontalAlignment.Center
+        });
+        curtain.Child = stack;
+        curtain.Visibility = Visibility.Visible;
+    }
+
+    private void OnMediaCurtainTapped(object sender, TappedRoutedEventArgs e)
+    {
+        if (sender is Border curtain)
+        {
+            e.Handled = true;
+            curtain.Visibility = Visibility.Collapsed;
+        }
     }
 
     // -- Lightbox --
