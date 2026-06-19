@@ -27,6 +27,10 @@ public sealed class AppSettings
     private readonly object _gate = new();
     private Dictionary<string, string> _values;
 
+    /// Raised when a notification setting (poll interval / badge visibility) changes,
+    /// so the shell can re-apply the timer interval and badge display live.
+    public event Action? NotificationSettingsChanged;
+
     private AppSettings()
     {
         _values = Load();
@@ -60,6 +64,26 @@ public sealed class AppSettings
     {
         get => Get("updates.automaticChecks") != "false";
         set => Set("updates.automaticChecks", value ? "true" : "false");
+    }
+
+    /// Notification poll interval in seconds, snapped to the supported set
+    /// (15 / 30 / 60 / 300; default 30) — mirrors the macOS NotificationSettingsStore.
+    public int NotificationPollIntervalSeconds
+    {
+        get
+        {
+            var value = int.TryParse(Get("notifications.pollIntervalSeconds"), out var n) ? n : 30;
+            return value is 15 or 30 or 60 or 300 ? value : 30;
+        }
+        set { Set("notifications.pollIntervalSeconds", value.ToString(CultureInfo.InvariantCulture)); NotificationSettingsChanged?.Invoke(); }
+    }
+
+    /// Whether the sidebar/tab unread badge is shown (default on). When off, counts
+    /// are still tracked but never displayed.
+    public bool ShowsUnreadBadges
+    {
+        get => Get("notifications.showsUnreadBadges") != "false";
+        set { Set("notifications.showsUnreadBadges", value ? "true" : "false"); NotificationSettingsChanged?.Invoke(); }
     }
 
     /// Persisted theme as "RRGGBB|RRGGBB" (background|text); null = default palette.

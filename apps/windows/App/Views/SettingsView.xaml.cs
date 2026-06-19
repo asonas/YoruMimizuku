@@ -15,6 +15,8 @@ public sealed partial class SettingsView : UserControl
         InitializeComponent();
         DensityChoice.SelectedIndex = AppSettings.Shared.Density == DisplayDensity.Compact ? 0 : 1;
         FontSlider.Value = AppSettings.Shared.FontSize;
+        PollIntervalBox.SelectedIndex = IndexForInterval(AppSettings.Shared.NotificationPollIntervalSeconds);
+        BadgeCheck.IsChecked = AppSettings.Shared.ShowsUnreadBadges;
         VersionText.Text = "現在のバージョン: " + _updates.CurrentVersion;
         AutoUpdateCheck.IsChecked = _updates.AutomaticallyChecksForUpdates;
         UpdateChannelBox.SelectedIndex = _updates.ChannelIndex;
@@ -43,6 +45,26 @@ public sealed partial class SettingsView : UserControl
     private void OnFontSizeChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         AppSettings.Shared.FontSize = e.NewValue;
+    }
+
+    private static readonly int[] PollIntervals = { 15, 30, 60, 300 };
+
+    private static int IndexForInterval(int seconds)
+    {
+        var i = System.Array.IndexOf(PollIntervals, seconds);
+        return i >= 0 ? i : 1; // default to 30s
+    }
+
+    private void OnPollIntervalChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_initializing || PollIntervalBox.SelectedIndex < 0) return;
+        AppSettings.Shared.NotificationPollIntervalSeconds = PollIntervals[PollIntervalBox.SelectedIndex];
+    }
+
+    private void OnBadgeChanged(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (_initializing) return;
+        AppSettings.Shared.ShowsUnreadBadges = BadgeCheck.IsChecked == true;
     }
 
     private void OnAutoUpdateChanged(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

@@ -61,6 +61,7 @@ public sealed partial class MainWindow : Window
         Closed += (_, _) =>
         {
             OpenWindows.Remove(this);
+            AppSettings.Shared.NotificationSettingsChanged -= OnNotificationSettingsChanged;
             if (!_isPrimary) return;
             SaveWindowWidth();
             UpdateService.Shared.Shutdown();
@@ -80,7 +81,9 @@ public sealed partial class MainWindow : Window
             }
             _lastNotifiedUnread = unread;
         };
+        _notificationsTimer.Interval = TimeSpan.FromSeconds(AppSettings.Shared.NotificationPollIntervalSeconds);
         _notificationsTimer.Tick += async (_, _) => await _notifications.RefreshAsync();
+        AppSettings.Shared.NotificationSettingsChanged += OnNotificationSettingsChanged;
         RootGrid.KeyDown += OnRootKeyDown;
         _ = InitializeAsync();
     }
@@ -200,6 +203,21 @@ public sealed partial class MainWindow : Window
         if (_isPrimary) _notificationsTimer.Start();
     }
 
+    /// React to a live notification-settings change: re-apply the poll interval
+    /// (primary window owns the timer) and rebuild tabs so the badge respects the
+    /// show/hide preference.
+    private void OnNotificationSettingsChanged()
+    {
+        if (_isPrimary)
+        {
+            var wasRunning = _notificationsTimer.IsEnabled;
+            _notificationsTimer.Stop();
+            _notificationsTimer.Interval = TimeSpan.FromSeconds(AppSettings.Shared.NotificationPollIntervalSeconds);
+            if (wasRunning) _notificationsTimer.Start();
+        }
+        BuildTabs();
+    }
+
     private async Task LoadAccountFooterAsync(AccountDto? account)
     {
         if (account is null) return;
@@ -312,7 +330,7 @@ public sealed partial class MainWindow : Window
 
     private static UIElement TitleWithBadge(string title, int unread)
     {
-        if (unread <= 0) return new TextBlock { Text = title };
+        if (unread <= 0 || !AppSettings.Shared.ShowsUnreadBadges) return new TextBlock { Text = title };
         var grid = new Grid { ColumnSpacing = 8 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
