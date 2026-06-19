@@ -151,6 +151,11 @@
                                                 BorderThickness="0" Padding="2">
                                             <FontIcon Glyph="&#xE71B;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
                                         </Button>
+                                        <Button x:Name="DeleteButton" Click="OnDeleteClick" Tag="{x:Bind}" Background="Transparent"
+                                                ToolTipService.ToolTip="削除" Visibility="Collapsed"
+                                                BorderThickness="0" Padding="2">
+                                            <FontIcon Glyph="&#xE74D;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                                        </Button>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>

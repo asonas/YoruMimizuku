@@ -35,6 +35,10 @@ public sealed class WorkspaceViewModel : ObservableObject
 {
     public ObservableCollection<WorkspaceTab> Tabs { get; } = new();
 
+    /// <summary>The signed-in account's DID, used to gate own-post-only actions
+    /// (e.g. delete). Set when the shell is entered.</summary>
+    public string? AccountDid { get; set; }
+
     /// <summary>Raised when tabs or the selection change so the shell can rebuild
     /// the navigation pane and show the selected tab's content.</summary>
     public event Action? Changed;

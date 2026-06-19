@@ -133,4 +133,23 @@ public sealed class TimelineViewModel : ObservableObject
         for (var i = 0; i < Posts.Count; i++) if (Posts[i].Id == id) return i;
         return -1;
     }
+
+    /// Optimistically remove the viewer's own post, then delete it through the
+    /// bridge; restore the row at its original position if the delete fails.
+    /// Mirrors the macOS TimelineViewModel.deletePost.
+    public async Task DeletePostAsync(string id)
+    {
+        var index = IndexOf(id);
+        if (index < 0) return;
+        var removed = Posts[index];
+        Posts.RemoveAt(index);
+        try
+        {
+            await BridgeClient.Shared.DeletePostAsync(id);
+        }
+        catch
+        {
+            Posts.Insert(Math.Min(index, Posts.Count), removed);
+        }
+    }
 }

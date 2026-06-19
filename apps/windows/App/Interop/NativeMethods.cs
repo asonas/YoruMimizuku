@@ -72,6 +72,9 @@ internal static class NativeMethods
     internal static extern IntPtr yoru_post_permalink([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
+    internal static extern IntPtr yoru_post_delete([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
+
+    [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_profile_avatar([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]

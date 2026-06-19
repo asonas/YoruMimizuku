@@ -189,6 +189,7 @@ public sealed partial class MainWindow : Window
 
     private void EnterShell(AccountDto? account)
     {
+        _workspace.AccountDid = account?.Did;
         _filterStore = account is null ? null : new SavedFilterStore(account.Did);
         _workspace.LoadFilters(_filterStore?.Load() ?? Array.Empty<SavedFilterModel>());
         LoginHost.Visibility = Visibility.Collapsed;

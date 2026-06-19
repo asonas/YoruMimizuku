@@ -102,6 +102,10 @@ public sealed class BridgeClient
     public Task<PermalinkDto> PostPermalinkAsync(string id, string authorHandle) =>
         CallAsync<PermalinkDto>(NativeMethods.yoru_post_permalink, new { id, authorHandle })!;
 
+    /// <summary>Delete the viewer's own post record (app.bsky.feed.post). <paramref name="uri"/> is the post AT-URI.</summary>
+    public Task DeletePostAsync(string uri) =>
+        CallVoidAsync(NativeMethods.yoru_post_delete, new { uri });
+
     // -- Profile --
 
     public Task<AvatarDto> AvatarAsync() =>

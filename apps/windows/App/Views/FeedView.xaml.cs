@@ -60,6 +60,13 @@ public sealed partial class FeedView : UserControl
         if (root.FindName("MediaCurtain") is Border curtain) PopulateCurtain(curtain, post);
         if (root.FindName("LinkCardHost") is Border cardHost) PopulateLinkCard(cardHost, post);
         if (root.FindName("QuoteHost") is Border quoteHost) PopulateQuote(quoteHost, post);
+        if (root.FindName("DeleteButton") is Button deleteButton)
+        {
+            deleteButton.Visibility =
+                post.AuthorDid is { } did && did == _workspace.AccountDid
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+        }
     }
 
     private void PopulateRich(RichTextBlock rich, PostItem post)
@@ -525,6 +532,24 @@ public sealed partial class FeedView : UserControl
     private async void OnCopyLinkClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: PostItem item }) await CopyPermalinkAsync(item);
+    }
+
+    private async void OnDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: PostItem item }) return;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "投稿を削除",
+            Content = "この投稿を削除しますか？",
+            PrimaryButtonText = "削除",
+            CloseButtonText = "キャンセル",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            await Vm.DeletePostAsync(item.Id);
+        }
     }
 
     private async void OnRepostMenuClick(object sender, RoutedEventArgs e)
