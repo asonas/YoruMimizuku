@@ -522,6 +522,7 @@ public sealed partial class FeedView : UserControl
     }
 
     private async void OnRefreshClick(object sender, RoutedEventArgs e) => await Vm.RefreshAsync();
+    private async void OnRetryClick(object sender, RoutedEventArgs e) => await Vm.RetryAsync();
     private void OnComposeClick(object sender, RoutedEventArgs e) => OpenComposer();
 
     private async void OnLikeClick(object sender, RoutedEventArgs e)

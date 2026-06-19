@@ -63,6 +63,12 @@ private struct SuccessEnvelope<T: Encodable>: Encodable {
 private struct ErrorEnvelope: Encodable {
     let ok = false
     let error: String
+    /// Classification + friendly strings from the shared `LoadFailure`, so the
+    /// Windows app can show a tailored failed state with a retry instead of a raw
+    /// error. Nil for non-load internal errors (e.g. an encode failure).
+    var kind: String? = nil
+    var title: String? = nil
+    var message: String? = nil
 }
 
 private func makeResponse<T: Encodable>(_ value: T) -> UnsafeMutablePointer<CChar>? {
@@ -75,7 +81,27 @@ private func makeResponse<T: Encodable>(_ value: T) -> UnsafeMutablePointer<CCha
 }
 
 private func makeError(_ message: String) -> UnsafeMutablePointer<CChar>? {
-    if let data = try? JSONEncoder().encode(ErrorEnvelope(error: message)),
+    encodeError(ErrorEnvelope(error: message))
+}
+
+/// Build an error envelope from a thrown error, classified through the shared
+/// `LoadFailure` so the caller gets a `kind` plus friendly title/message.
+private func makeError(_ error: Error) -> UnsafeMutablePointer<CChar>? {
+    let failure = LoadFailure(error)
+    let kind: String
+    switch failure.kind {
+    case .offline: kind = "offline"
+    case .rateLimited: kind = "rateLimited"
+    case .server: kind = "server"
+    case .unknown: kind = "unknown"
+    }
+    return encodeError(ErrorEnvelope(
+        error: failure.detail, kind: kind, title: failure.title, message: failure.message
+    ))
+}
+
+private func encodeError(_ envelope: ErrorEnvelope) -> UnsafeMutablePointer<CChar>? {
+    if let data = try? JSONEncoder().encode(envelope),
        let string = String(data: data, encoding: .utf8) {
         return strdup(string)
     }
@@ -92,7 +118,7 @@ private func handleSync<Req: Decodable & Sendable, Res: Encodable>(
     _ input: UnsafePointer<CChar>?, _ type: Req.Type, _ body: (Req) throws -> Res
 ) -> UnsafeMutablePointer<CChar>? {
     do { return makeResponse(try body(try decodeRequest(input, as: Req.self))) }
-    catch { return makeError(String(describing: error)) }
+    catch { return makeError(error) }
 }
 
 private func handleAsync<Req: Decodable & Sendable, Res: Encodable & Sendable>(
@@ -103,7 +129,7 @@ private func handleAsync<Req: Decodable & Sendable, Res: Encodable & Sendable>(
         let res = try runBlocking { try await body(req) }
         return makeResponse(res)
     } catch {
-        return makeError(String(describing: error))
+        return makeError(error)
     }
 }
 

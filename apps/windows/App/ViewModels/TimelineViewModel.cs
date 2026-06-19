@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
 
@@ -24,8 +25,23 @@ public sealed class TimelineViewModel : ObservableObject
     private bool _isLoadingMore;
     public bool IsLoadingMore { get => _isLoadingMore; private set => SetProperty(ref _isLoadingMore, value); }
 
-    private string? _errorMessage;
-    public string? ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
+    // Failed-state, classified through the shared LoadFailure (carried on the
+    // BridgeException) so the feed can show a tailored title + message + retry,
+    // matching macOS FeedView.failedState.
+    private string? _failureTitle;
+    public string? FailureTitle { get => _failureTitle; private set => SetProperty(ref _failureTitle, value); }
+
+    private string? _failureMessage;
+    public string? FailureMessage { get => _failureMessage; private set => SetProperty(ref _failureMessage, value); }
+
+    private bool _hasError;
+    public bool HasError
+    {
+        get => _hasError;
+        private set { if (SetProperty(ref _hasError, value)) OnPropertyChanged(nameof(ErrorVisibility)); }
+    }
+
+    public Visibility ErrorVisibility => HasError ? Visibility.Visible : Visibility.Collapsed;
 
     private string? _cursor;
     public bool CanLoadMore => _cursor is not null;
@@ -41,7 +57,7 @@ public sealed class TimelineViewModel : ObservableObject
     public async Task LoadAsync()
     {
         IsLoading = true;
-        ErrorMessage = null;
+        HasError = false;
         try
         {
             var page = await _loadPage(null);
@@ -51,8 +67,28 @@ public sealed class TimelineViewModel : ObservableObject
             OnPropertyChanged(nameof(CanLoadMore));
             await ApplyThreadingAsync();
         }
-        catch (Exception ex) { ErrorMessage = ex.Message; }
+        catch (Exception ex)
+        {
+            var (title, message) = DescribeFailure(ex);
+            FailureTitle = title;
+            FailureMessage = message;
+            HasError = true;
+        }
         finally { IsLoading = false; }
+    }
+
+    /// <summary>Retry the initial load (used by the failed-state 再試行 button).</summary>
+    public Task RetryAsync() => LoadAsync();
+
+    /// <summary>Map a thrown error to a friendly title/message, preferring the shared
+    /// LoadFailure classification carried on a <see cref="BridgeException"/>.</summary>
+    private static (string Title, string Message) DescribeFailure(Exception ex)
+    {
+        if (ex is BridgeException { Title: { } t } be)
+        {
+            return (t, be.FriendlyMessage ?? be.Message);
+        }
+        return ("読み込みに失敗しました", ex.Message);
     }
 
     public async Task LoadMoreAsync()

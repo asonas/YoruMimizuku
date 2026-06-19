@@ -6,10 +6,29 @@ using System.Threading.Tasks;
 
 namespace YoruMimizuku.App.Interop;
 
-/// <summary>Thrown when the bridge returns <c>{ "ok": false, "error": ... }</c>.</summary>
+/// <summary>Thrown when the bridge returns <c>{ "ok": false, "error": ... }</c>.
+/// Carries the shared LoadFailure classification (kind) and friendly title/message
+/// when present, so a view can show a tailored failed state with a retry.</summary>
 public sealed class BridgeException : Exception
 {
-    public BridgeException(string message) : base(message) { }
+    public string? Kind { get; }
+    public string? Title { get; }
+    public string? FriendlyMessage { get; }
+
+    public BridgeException(string message, string? kind = null, string? title = null, string? friendlyMessage = null)
+        : base(message)
+    {
+        Kind = kind;
+        Title = title;
+        FriendlyMessage = friendlyMessage;
+    }
+
+    public static BridgeException FromEnvelope(JsonObject node) =>
+        new(
+            node["error"]?.GetValue<string>() ?? "unknown bridge error",
+            node["kind"]?.GetValue<string>(),
+            node["title"]?.GetValue<string>(),
+            node["message"]?.GetValue<string>());
 }
 
 /// <summary>
@@ -133,7 +152,7 @@ public sealed class BridgeClient
             var node = JsonNode.Parse(json)!.AsObject();
             if (node["ok"]?.GetValue<bool>() != true)
             {
-                throw new BridgeException(node["error"]?.GetValue<string>() ?? "unknown bridge error");
+                throw BridgeException.FromEnvelope(node);
             }
             var data = node["data"];
             return data is null ? default : data.Deserialize<T>(JsonOptions);
@@ -146,7 +165,7 @@ public sealed class BridgeClient
             var node = JsonNode.Parse(json)!.AsObject();
             if (node["ok"]?.GetValue<bool>() != true)
             {
-                throw new BridgeException(node["error"]?.GetValue<string>() ?? "unknown bridge error");
+                throw BridgeException.FromEnvelope(node);
             }
         });
 }
