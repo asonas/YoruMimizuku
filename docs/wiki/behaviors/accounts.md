@@ -10,6 +10,7 @@ sources:
   - core/Sources/BlueskyCore/Account/AccountManager.swift
   - apps/macos/Views/SidebarView.swift
   - apps/macos/Views/RootView.swift
+  - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Multi-account persistence & switching
     macos: full
@@ -51,3 +52,18 @@ Both logout and the existing session-expiry fallback go through one method, `Acc
 On [[ipados]], the same rule is applied per scene: each iPad scene owns its active
 account and `WorkspaceModel`, while the secure account store and shared
 `RefreshGate` remain below that scene boundary (`2026-06-08-yorumimizuku-ipados-design.md` §5).
+
+## Account switcher menu (Windows)
+
+Windows mirrors the macOS switcher in the NavigationView pane footer: the account
+button opens a `MenuFlyout` listing every stored account (the active one prefixed
+with a check), then **「アカウントを追加…」** and **「ログアウト」**. It is fed by the
+token-free `yoru_account_summaries` bridge endpoint (`AccountManager.summaries()`),
+so the menu never touches secrets. Switching calls `yoru_account_switch` and
+re-enters the shell for the new account (rebuilding tabs/filters under its
+per-DID `SavedFilterStore`); "add account" shows the login view while keeping the
+current account stored, and a successful login adds + makes the new account
+current; "ログアウト" and the session-expiry fallback both go through
+`yoru_account_remove_advance` (`AccountManager.removeAndAdvance`), advancing to the
+next stored account or returning to login when none remain
+(`apps/windows/App/MainWindow.xaml.cs`).
