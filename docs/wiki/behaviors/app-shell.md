@@ -1,7 +1,7 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-06-15
+updated: 2026-06-20
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -10,6 +10,9 @@ sources:
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
   - apps/macos/Views/NewPostCommand.swift
   - apps/macos/Views/SidebarView.swift
+  - apps/windows/App/MainWindow.xaml.cs
+  - apps/windows/App/Services/WindowPlacement.cs
+  - apps/windows/App/Services/AppSettings.cs
 features:
   - name: Tabbed single-column shell (sidebar / tabs)
     macos: full
@@ -23,6 +26,12 @@ features:
     ios: differs
     android: planned
     note: "macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS maps the per-window model to per-scene `WorkspaceModel` ([[ipados]], [[windows]])."
+  - name: Window size persistence
+    macos: full
+    windows: full
+    ios: none
+    android: planned
+    note: "macOS restores the window frame automatically via SwiftUI WindowGroup scene restoration; Windows persists the Win32 WINDOWPLACEMENT (position, size, maximized state) to AppSettings and reapplies it after Activate ([[windows]]). iPad scene sizing is OS-managed, so nothing is persisted."
   - name: Display density A / B
     macos: full
     windows: full
@@ -40,6 +49,8 @@ The app shell is the Yorufukurou-style frame that hosts every timeline: one wind
 A window carries an account switcher (the design's §7.1 slot is the title bar's top-right; the macOS build places it in the **sidebar footer** instead — see below), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
 
 The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720; the brand area is padded to clear the traffic-light buttons (`2026-06-05-yorumimizuku-cmux-sidebar.md`). Apple-specific window wiring lives on the [[macos]] page.
+
+**Window size is remembered across launches.** macOS gets this from SwiftUI `WindowGroup` scene restoration automatically (the 940×720 is only the first-run default). Windows has no equivalent built in — WinUI 3 / `AppWindow` exposes no placement persistence, and a width-only `AppWindow.Resize` mixes DPI units and is overwritten by the default size the first `Activate` applies — so it captures the Win32 `WINDOWPLACEMENT` (normal position, size, and maximized state) on window close into `AppSettings` and reapplies it *after* `Activate` on the next launch. Capture and restore both go through `GetWindowPlacement` / `SetWindowPlacement`, so the round-trip is DPI-consistent. Details are on the [[windows]] page.
 
 On macOS the File menu's default New Window (⌘N) is replaced with **新規投稿**: ⌘N opens the composer sheet over the focused window's current tab instead of spawning another timeline window, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]).
 

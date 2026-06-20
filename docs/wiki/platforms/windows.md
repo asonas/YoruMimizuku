@@ -23,6 +23,8 @@ sources:
   - scripts/windows/release.ps1
   - apps/windows/App/Services/ImageProcessing.cs
   - apps/windows/App/Services/NotificationAlerts.cs
+  - apps/windows/App/Services/WindowPlacement.cs
+  - apps/windows/App/Services/AppSettings.cs
   - core/Sources/YoruMimizukuBridge/BridgeOperations.swift
   - core/Sources/YoruMimizukuBridge/BridgeLinkPreview.swift
   - core/Sources/YoruMimizukuKit/PostText.swift
@@ -207,6 +209,16 @@ lifetime handling is confined here.
   generated off the shared macOS owl icon.
 - Theme (randoma11y / monochrome), display density, and font size persist to a JSON
   file (not `ApplicationData.Current`, which is unavailable to an unpackaged app).
+- **Window size/placement persistence**: macOS restores the window frame for free via
+  SwiftUI `WindowGroup` scene restoration; WinUI 3 has no equivalent. `Services/WindowPlacement.cs`
+  P/Invokes Win32 `GetWindowPlacement` / `SetWindowPlacement` to capture the normal
+  position, size, and maximized state on window close (stored in `AppSettings` under
+  `windowPlacement` as `"showCmd,left,top,right,bottom"`) and reapply it on the next
+  launch. The earlier width-only `AppWindow.Resize` never stuck because the first
+  `Activate` applies WinUI's default size and overwrites a pre-Activate resize (and it
+  mixed DPI units — `AppWindow.Size` is physical px, `WindowSizeChanged` is DIPs), so
+  the placement is reapplied **after** `Activate`; capture and restore share the
+  `WINDOWPLACEMENT` coordinate space, making the round-trip DPI-consistent ([[app-shell]]).
 - Targets **.NET 10** + **Windows App SDK 2.1.3**, framework-dependent
   (`SelfContained=false` + `WindowsAppSDKSelfContained=false`): the .NET 10 Desktop
   and Windows App SDK runtimes are kept out of the build (the user installs both

@@ -48,10 +48,14 @@ public sealed class AppSettings
         set => Set("fontSize", value.ToString(CultureInfo.InvariantCulture));
     }
 
-    public double? WindowWidth
+    /// Serialized Win32 window placement ("showCmd,left,top,right,bottom"),
+    /// produced by <see cref="WindowPlacement"/>. Captures position, size, and the
+    /// maximized state so the window relaunches where the user left it; null until
+    /// a window has been shown and closed at least once.
+    public string? WindowPlacement
     {
-        get => double.TryParse(Get("windowWidth"), NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
-        set => Set("windowWidth", value?.ToString(CultureInfo.InvariantCulture));
+        get => Get("windowPlacement");
+        set => Set("windowPlacement", value);
     }
 
     public WindowsUpdateChannel UpdateChannel

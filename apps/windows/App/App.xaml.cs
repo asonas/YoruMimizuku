@@ -33,9 +33,12 @@ public partial class App : Application
         // any failure is shown in the UI (and logged) rather than crashing before
         // a window exists.
         var mainWindow = new MainWindow();
-        mainWindow.RestoreSavedWindowWidth();
         _window = mainWindow;
         _window.Activate();
+        // Restore AFTER Activate: the first Activate applies WinUI's default window
+        // size, so applying the saved placement before it gets overwritten (which is
+        // why the earlier width-only restore never stuck).
+        mainWindow.RestoreSavedWindowPlacement();
         UpdateService.Shared.Initialize();
     }
 }

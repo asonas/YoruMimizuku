@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-17
+updated: 2026-06-20
 sources: []
 ---
 
@@ -25,6 +25,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
 | Multiple windows | ○ | ○ | △ | − |
+| Window size persistence | ○ | ○ | × | − |
 | Display density A / B | ○ | ○ | × | − |
 
 ## [[author-tab]] — Author (User) Tab
@@ -97,6 +98,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Multiple windows** ([[app-shell]]): macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS maps the per-window model to per-scene `WorkspaceModel` ([[ipados]], [[windows]]).
+- **Window size persistence** ([[app-shell]]): macOS restores the window frame automatically via SwiftUI WindowGroup scene restoration; Windows persists the Win32 WINDOWPLACEMENT (position, size, maximized state) to AppSettings and reapplies it after Activate ([[windows]]). iPad scene sizing is OS-managed, so nothing is persisted.
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
 - **Sparkle / WinSparkle update checks and install** ([[auto-updates]]): Windows has WinSparkle wiring, update settings, and installer/appcast generation hooks, but it stays disabled until a Windows EdDSA public key and installer appcast are published ([[windows]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).

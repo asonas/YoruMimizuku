@@ -28,8 +28,6 @@ public sealed partial class MainWindow : Window
     // programmatic selection does not re-enter OnNavSelectionChanged.
     private bool _syncing;
     private int _contentRequest;
-    private bool _restoringWindowWidth;
-    private AppWindow? _appWindow;
     private SavedFilterStore? _filterStore;
     // Last unread count we already alerted on, so a steady or falling count does
     // not re-toast. Starts at 0; the first load anchors unread to 0 (see
@@ -56,17 +54,14 @@ public sealed partial class MainWindow : Window
         Activated += (_, _) => Views.MainWindowAccessor.Current = this;
         AppIcon.TrySetWindowIcon(this);
         if (isPrimary) NotificationAlerts.Shared.Register();
-        if (CurrentAppWindow() is not null)
-        {
-            _appWindow!.Changed += OnAppWindowChanged;
-        }
-        SizeChanged += OnWindowSizeChanged;
         Closed += (_, _) =>
         {
             OpenWindows.Remove(this);
             AppSettings.Shared.NotificationSettingsChanged -= OnNotificationSettingsChanged;
             if (!_isPrimary) return;
-            SaveWindowWidth();
+            // Persist where the user left the primary window so it relaunches at the
+            // same place/size (including the maximized state).
+            SaveWindowPlacement();
             UpdateService.Shared.Shutdown();
             NotificationAlerts.Shared.Unregister();
         };
@@ -131,59 +126,20 @@ public sealed partial class MainWindow : Window
         ShellRoot.Visibility = Visibility.Collapsed;
     }
 
-    private AppWindow? CurrentAppWindow()
+    /// Restore the persisted window placement (position, size, maximized state)
+    /// via Win32 SetWindowPlacement. Called once at launch before Activate so the
+    /// window appears at its remembered geometry instead of the WinUI default.
+    public void RestoreSavedWindowPlacement()
     {
-        try
+        WindowPlacement.Apply(this, AppSettings.Shared.WindowPlacement);
+    }
+
+    private void SaveWindowPlacement()
+    {
+        if (WindowPlacement.Capture(this) is { } placement)
         {
-            if (_appWindow is not null) return _appWindow;
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            var id = Win32Interop.GetWindowIdFromWindow(hwnd);
-            _appWindow = AppWindow.GetFromWindowId(id);
-            if (_appWindow is not null)
-            {
-                _appWindow.Changed -= OnAppWindowChanged;
-                _appWindow.Changed += OnAppWindowChanged;
-            }
-            return _appWindow;
+            AppSettings.Shared.WindowPlacement = placement;
         }
-        catch (Exception ex)
-        {
-            AppLog.Write("resolve app window failed", ex);
-            return null;
-        }
-    }
-
-    public void RestoreSavedWindowWidth()
-    {
-        // TODO: This width-only restore path is still unreliable in WinUI 3.
-        // Replace it with robust window placement restore (Win32 placement APIs, or
-        // AppWindow placement persistence once exposed by this Windows App SDK).
-        var width = AppSettings.Shared.WindowWidth;
-        if (width is null || width < 480) return;
-        if (CurrentAppWindow() is not { } appWindow) return;
-        _restoringWindowWidth = true;
-        appWindow.Resize(new Windows.Graphics.SizeInt32(
-            (int)Math.Round(width.Value),
-            Math.Max(appWindow.Size.Height, 480)));
-        DispatcherQueue.TryEnqueue(() => _restoringWindowWidth = false);
-    }
-
-    private void SaveWindowWidth()
-    {
-        if (CurrentAppWindow() is not { } appWindow) return;
-        AppSettings.Shared.WindowWidth = Math.Max(480, appWindow.Size.Width);
-    }
-
-    private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
-    {
-        if (!args.DidSizeChange || _restoringWindowWidth) return;
-        AppSettings.Shared.WindowWidth = Math.Max(480, sender.Size.Width);
-    }
-
-    private void OnWindowSizeChanged(object sender, WindowSizeChangedEventArgs args)
-    {
-        if (_restoringWindowWidth) return;
-        AppSettings.Shared.WindowWidth = Math.Max(480, args.Size.Width);
     }
 
     private async void OnAuthenticated(string did)
