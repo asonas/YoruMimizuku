@@ -177,7 +177,8 @@ function Enter-MSVC {
 function Build-Launcher {
     param(
         [string]$SourcePath,
-        [string]$OutputPath
+        [string]$OutputPath,
+        [string]$IconPath = ""
     )
     Enter-MSVC
     $source = @'
@@ -221,7 +222,27 @@ int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmd
 }
 '@
     Set-Content -Path $SourcePath -Value $source -Encoding UTF8
-    cl.exe /nologo /O2 /W4 /DUNICODE /D_UNICODE /Fe:$OutputPath $SourcePath user32.lib shell32.lib
+
+    # Embed the app icon as a Win32 resource so Explorer shows the logo on the
+    # top-level launcher exe (the C launcher has no icon otherwise). Resource id 1:
+    # the shell uses the lowest-id icon group as a file's display icon. Falls back
+    # to an icon-less build if the .ico or rc.exe is unavailable.
+    $resArg = @()
+    if ($IconPath -and (Test-Path $IconPath)) {
+        $rcPath = [System.IO.Path]::ChangeExtension($SourcePath, ".rc")
+        $resPath = [System.IO.Path]::ChangeExtension($SourcePath, ".res")
+        Set-Content -Path $rcPath -Value ("1 ICON `"" + $IconPath.Replace('\', '\\') + "`"") -Encoding ascii
+        $rc = Get-Command rc.exe -ErrorAction SilentlyContinue
+        if ($rc) {
+            & $rc.Source /nologo /fo $resPath $rcPath
+            if ($LASTEXITCODE -ne 0) { throw "rc.exe failed (exit $LASTEXITCODE)" }
+            $resArg = @($resPath)
+        } else {
+            Write-Host "rc.exe not found - building launcher without an icon."
+        }
+    }
+
+    cl.exe /nologo /O2 /W4 /DUNICODE /D_UNICODE /Fe:$OutputPath $SourcePath @resArg user32.lib shell32.lib
     if ($LASTEXITCODE -ne 0) { throw "launcher build failed (exit $LASTEXITCODE)" }
 }
 
@@ -339,7 +360,8 @@ Get-ChildItem -LiteralPath $appDir -File |
 
 $launcherSource = Join-Path $buildDir "YoruMimizukuLauncher.cpp"
 $launcherExe = Join-Path $layoutDir "YoruMimizuku.exe"
-Build-Launcher -SourcePath $launcherSource -OutputPath $launcherExe
+$launcherIcon = Join-Path $repoRoot "apps\windows\App\Assets\AppIcon.ico"
+Build-Launcher -SourcePath $launcherSource -OutputPath $launcherExe -IconPath $launcherIcon
 
 # Optional Authenticode signing (no-op unless a cert is provided).
 if ($Thumbprint -or $CertPath) {
