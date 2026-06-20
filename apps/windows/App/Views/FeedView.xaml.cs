@@ -598,6 +598,11 @@ public sealed partial class FeedView : UserControl
 
     private void OnPostClick(object sender, ItemClickEventArgs e)
     {
+        // Tapping an image opens the lightbox via the image Border's Tapped handler,
+        // but the ListView still raises ItemClick — without this guard the row would
+        // also navigate to the conversation behind the lightbox. Skip navigation
+        // while the lightbox is open.
+        if (Lightbox.Visibility == Visibility.Visible) return;
         if (e.ClickedItem is PostItem item)
         {
             _workspace.OpenConversation(item.Id, item.AuthorDisplayName, item.Body);
