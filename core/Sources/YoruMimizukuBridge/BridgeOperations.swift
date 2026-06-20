@@ -13,6 +13,16 @@ struct AccountDTO: Encodable {
     init(_ a: PersistedAccount) { did = a.did; handle = a.handle }
 }
 
+/// Token-free account entry for the switcher menu (DID + handle only).
+struct AccountSummaryDTO: Encodable {
+    let did: String
+    let handle: String?
+    init(_ s: AccountSummary) { did = s.did; handle = s.handle }
+}
+
+/// Result of remove-and-advance: the DID now current, or nil when none remain.
+struct NextAccountDTO: Encodable { let nextDid: String? }
+
 struct RichSegmentDTO: Encodable {
     let kind: String
     let text: String
@@ -293,6 +303,14 @@ enum BridgeOps {
 
     static func accountRemove(did: String) throws -> EmptyDTO {
         try BridgeRuntime.require().accountManager.remove(did: did); return EmptyDTO()
+    }
+
+    static func accountSummaries() throws -> [AccountSummaryDTO] {
+        try BridgeRuntime.require().accountManager.summaries().map(AccountSummaryDTO.init)
+    }
+
+    static func accountRemoveAndAdvance(did: String) throws -> NextAccountDTO {
+        NextAccountDTO(nextDid: try BridgeRuntime.require().accountManager.removeAndAdvance(did: did))
     }
 
     // -- Login (split for WebView2) --

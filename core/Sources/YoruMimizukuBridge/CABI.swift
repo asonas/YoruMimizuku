@@ -197,6 +197,16 @@ public func yoru_account_remove(_ input: UnsafePointer<CChar>?) -> UnsafeMutable
     handleSync(input, DidReq.self) { try BridgeOps.accountRemove(did: $0.did) }
 }
 
+@_cdecl("yoru_account_summaries")
+public func yoru_account_summaries(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleSync(input, EmptyReq.self) { _ in try BridgeOps.accountSummaries() }
+}
+
+@_cdecl("yoru_account_remove_advance")
+public func yoru_account_remove_advance(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
+    handleSync(input, DidReq.self) { try BridgeOps.accountRemoveAndAdvance(did: $0.did) }
+}
+
 @_cdecl("yoru_login_begin")
 public func yoru_login_begin(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, HandleReq.self) { try await BridgeOps.loginBegin(handle: $0.handle) }

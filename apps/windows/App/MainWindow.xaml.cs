@@ -40,6 +40,9 @@ public sealed partial class MainWindow : Window
     // are independent workspaces over the same session, mirroring macOS WindowGroup.
     private readonly bool _isPrimary;
     private static readonly System.Collections.Generic.List<MainWindow> OpenWindows = new();
+    // Cached token-free account list for the footer switcher menu, refreshed when
+    // the shell is entered / switched so the menu builds synchronously on open.
+    private System.Collections.Generic.List<AccountSummaryDto> _accountSummaries = new();
 
     public MainWindow() : this(true) { }
 
@@ -223,6 +226,8 @@ public sealed partial class MainWindow : Window
         if (account is null) return;
         AccountHandle.Text = account.Handle is { Length: > 0 } h ? "@" + h : account.Did;
         AccountFooter.Visibility = Visibility.Visible;
+        try { _accountSummaries = await BridgeClient.Shared.AccountSummariesAsync(); }
+        catch (Exception ex) { AppLog.Write("account summaries load failed", ex); }
         try
         {
             var avatar = await BridgeClient.Shared.AvatarAsync();
@@ -234,30 +239,100 @@ public sealed partial class MainWindow : Window
         catch (BridgeException be) when (be.SessionExpired)
         {
             // The stored refresh token is no longer valid — drop the dead session
-            // and return to login (the Windows counterpart to macOS SessionExpiry).
-            AppLog.Write("session expired restoring account; signing out");
-            await SignOutAsync();
+            // and advance to the next account, or return to login when none remain
+            // (the Windows counterpart to macOS SessionExpiry).
+            AppLog.Write("session expired restoring account; logging out");
+            await LogOutAndAdvanceAsync();
         }
         catch (Exception ex) { AppLog.Write("avatar load failed", ex); }
     }
 
-    private async void OnSignOutClick(object sender, RoutedEventArgs e) => await SignOutAsync();
+    // -- Account switcher (footer menu) --
 
-    /// Drop the current account (manual sign-out or an expired session) and return
-    /// to the login screen; a successful re-login re-enters the shell via
-    /// OnAuthenticated → EnterShell (which reloads tabs/filters cleanly).
-    private async Task SignOutAsync()
+    /// Build the footer account menu from the cached summaries: each stored account
+    /// (active one checked), then "アカウントを追加…" and "ログアウト". Mirrors the
+    /// macOS sidebar account switcher.
+    private void OnAccountMenuOpening(object sender, object e)
+    {
+        if (sender is not MenuFlyout menu) return;
+        menu.Items.Clear();
+        foreach (var summary in _accountSummaries)
+        {
+            var item = new MenuFlyoutItem
+            {
+                Text = summary.Handle is { Length: > 0 } h ? "@" + h : summary.Did,
+                Tag = summary.Did
+            };
+            if (summary.Did == _workspace.AccountDid)
+            {
+                item.Icon = new FontIcon { Glyph = "" }; // checkmark on the active account
+            }
+            item.Click += OnSwitchAccountClick;
+            menu.Items.Add(item);
+        }
+        if (_accountSummaries.Count > 0) menu.Items.Add(new MenuFlyoutSeparator());
+        var add = new MenuFlyoutItem { Text = "アカウントを追加…" };
+        add.Click += OnAddAccountClick;
+        menu.Items.Add(add);
+        var logout = new MenuFlyoutItem { Text = "ログアウト" };
+        logout.Click += OnLogOutClick;
+        menu.Items.Add(logout);
+    }
+
+    private async void OnSwitchAccountClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: string did } && did != _workspace.AccountDid)
+        {
+            await SwitchToAccountAsync(did);
+        }
+    }
+
+    private async void OnAddAccountClick(object sender, RoutedEventArgs e)
+    {
+        // Show the login view while keeping the current account stored; a successful
+        // login adds the new account, makes it current, and re-enters the shell via
+        // OnAuthenticated. Cancelling leaves the current account intact on relaunch.
+        await Task.CompletedTask;
+        ShowLogin();
+    }
+
+    private async void OnLogOutClick(object sender, RoutedEventArgs e) => await LogOutAndAdvanceAsync();
+
+    /// Switch the active account and rebuild the shell for it.
+    private async Task SwitchToAccountAsync(string did)
+    {
+        try
+        {
+            await BridgeClient.Shared.SwitchAccountAsync(did);
+            var account = await BridgeClient.Shared.CurrentAccountAsync();
+            EnterShell(account);
+        }
+        catch (Exception ex) { AppLog.Write("switch account failed", ex); }
+    }
+
+    /// Log out the current account and advance to the next stored one (re-entering
+    /// the shell for it), or fall back to the login screen when none remain. Shared
+    /// by the menu's ログアウト and the session-expiry handler (mirrors macOS
+    /// AccountManager.removeAndAdvance).
+    private async Task LogOutAndAdvanceAsync()
     {
         try
         {
             if (_workspace.AccountDid is { Length: > 0 } did)
             {
-                await BridgeClient.Shared.RemoveAccountAsync(did);
+                var next = await BridgeClient.Shared.RemoveAndAdvanceAsync(did);
+                if (next.NextDid is { Length: > 0 })
+                {
+                    var account = await BridgeClient.Shared.CurrentAccountAsync();
+                    EnterShell(account);
+                    return;
+                }
             }
         }
-        catch (Exception ex) { AppLog.Write("sign out failed", ex); }
+        catch (Exception ex) { AppLog.Write("log out failed", ex); }
         _notificationsTimer.Stop();
         _workspace.AccountDid = null;
+        _accountSummaries = new();
         AccountFooter.Visibility = Visibility.Collapsed;
         ShowLogin();
     }

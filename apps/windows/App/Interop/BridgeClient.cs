@@ -79,6 +79,14 @@ public sealed class BridgeClient
     public Task RemoveAccountAsync(string did) =>
         CallVoidAsync(NativeMethods.yoru_account_remove, new { did });
 
+    /// <summary>Token-free account list for the switcher menu (DID + handle).</summary>
+    public Task<List<AccountSummaryDto>> AccountSummariesAsync() =>
+        CallAsync<List<AccountSummaryDto>>(NativeMethods.yoru_account_summaries, new { })!;
+
+    /// <summary>Remove an account and advance to the next one; NextDid is null when none remain.</summary>
+    public Task<NextAccountDto> RemoveAndAdvanceAsync(string did) =>
+        CallAsync<NextAccountDto>(NativeMethods.yoru_account_remove_advance, new { did })!;
+
     // -- Login (split for WebView2) --
 
     public Task<LoginBeginDto> LoginBeginAsync(string handle) =>

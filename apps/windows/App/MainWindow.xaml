@@ -19,20 +19,24 @@
                 SelectionChanged="OnNavSelectionChanged">
 
                 <muxc:NavigationView.PaneFooter>
-                    <Grid x:Name="AccountFooter" Padding="12,8" ColumnSpacing="8" Visibility="Collapsed">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <PersonPicture x:Name="AccountAvatar" Grid.Column="0" Width="28" Height="28" />
-                        <TextBlock x:Name="AccountHandle" Grid.Column="1" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" Opacity="0.8" />
-                        <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Padding="4"
-                                ToolTipService.ToolTip="サインアウト" Click="OnSignOutClick">
-                            <FontIcon Glyph="&#xF3B1;" FontSize="14" />
-                        </Button>
-                    </Grid>
+                    <Button x:Name="AccountFooter" Padding="12,8" Background="Transparent" BorderThickness="0"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                            Visibility="Collapsed" ToolTipService.ToolTip="アカウント">
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <PersonPicture x:Name="AccountAvatar" Grid.Column="0" Width="28" Height="28" />
+                            <TextBlock x:Name="AccountHandle" Grid.Column="1" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" Opacity="0.8" />
+                            <FontIcon Grid.Column="2" Glyph="&#xE70D;" FontSize="10" Opacity="0.6" />
+                        </Grid>
+                        <Button.Flyout>
+                            <MenuFlyout x:Name="AccountMenu" Opening="OnAccountMenuOpening" />
+                        </Button.Flyout>
+                    </Button>
                 </muxc:NavigationView.PaneFooter>
 
                 <ContentControl x:Name="ContentHost"

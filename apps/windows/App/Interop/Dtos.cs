@@ -9,6 +9,10 @@ namespace YoruMimizuku.App.Interop;
 
 public sealed record AccountDto(string Did, string? Handle);
 
+public sealed record AccountSummaryDto(string Did, string? Handle);
+
+public sealed record NextAccountDto(string? NextDid);
+
 public sealed record OptionalAccountDto(AccountDto? Account);
 
 public sealed record RichSegmentDto(string Kind, string Text, string? Url);
