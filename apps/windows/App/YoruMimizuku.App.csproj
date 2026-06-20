@@ -13,7 +13,7 @@
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <Version>1.0.0-dev.8</Version>
+    <Version>1.0.0-dev.9</Version>
     <!-- Unpackaged run during development; switch to MSIX for distribution. -->
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
