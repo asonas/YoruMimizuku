@@ -20,9 +20,32 @@ public sealed class AppSettings
 {
     public static AppSettings Shared { get; } = new();
 
-    private static readonly string FilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "YoruMimizuku", "settings.json");
+    // A computed property, NOT a static field: as a field it is initialized in
+    // textual order *after* `Shared` above, so the `Shared = new()` constructor ran
+    // `Load()` while FilePath was still null — `File.Exists(null)` is false, so every
+    // launch loaded an empty dict and then re-saved only the default theme, silently
+    // wiping density / font size / window placement. Computing it on each access
+    // removes the initialization-order dependency.
+    private static string FilePath => Path.Combine(
+        LocalAppDataDir(), "YoruMimizuku", "settings.json");
+
+    /// Resolve %LOCALAPPDATA% robustly. <c>Environment.GetFolderPath</c> can return
+    /// an empty string when the known-folder API fails (e.g. a process launched
+    /// without a fully loaded user profile); an empty base would make
+    /// <see cref="FilePath"/> relative, so Load/Save silently target the working
+    /// directory and every launch loses the saved settings. Fall back to the
+    /// LOCALAPPDATA env var, then USERPROFILE, so the path is always absolute.
+    private static string LocalAppDataDir()
+    {
+        var dir = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrEmpty(dir)) return dir;
+
+        dir = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+        if (!string.IsNullOrEmpty(dir)) return dir;
+
+        var profile = Environment.GetEnvironmentVariable("USERPROFILE");
+        return string.IsNullOrEmpty(profile) ? "" : Path.Combine(profile, "AppData", "Local");
+    }
 
     private readonly object _gate = new();
     private Dictionary<string, string> _values;
