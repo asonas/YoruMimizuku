@@ -23,10 +23,15 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <PersonPicture x:Name="AccountAvatar" Grid.Column="0" Width="28" Height="28" />
                         <TextBlock x:Name="AccountHandle" Grid.Column="1" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis" Opacity="0.8" />
+                        <Button Grid.Column="2" Background="Transparent" BorderThickness="0" Padding="4"
+                                ToolTipService.ToolTip="サインアウト" Click="OnSignOutClick">
+                            <FontIcon Glyph="&#xF3B1;" FontSize="14" />
+                        </Button>
                     </Grid>
                 </muxc:NavigationView.PaneFooter>
 

@@ -33,8 +33,12 @@ public struct TokenService: Sendable {
         )
         guard response.statusCode == 200 else {
             let oauth = Self.parseErrorBody(response.body)
+            // When the body carries no RFC 6749 `error`, surface a short raw-body
+            // snippet as the description so a bare/odd 4xx is still diagnosable
+            // instead of showing only the status.
+            let description = oauth.description ?? Self.rawBodySnippet(response.body)
             throw OAuthError.tokenRequestFailed(
-                status: response.statusCode, error: oauth.error, description: oauth.description
+                status: response.statusCode, error: oauth.error, description: description
             )
         }
         do {
@@ -51,5 +55,17 @@ public struct TokenService: Sendable {
             return (nil, nil)
         }
         return (json["error"] as? String, json["error_description"] as? String)
+    }
+
+    /// A short, single-line snippet of a non-OAuth error body for diagnostics
+    /// (whitespace collapsed, capped), or nil when the body carries nothing useful
+    /// (empty, or a content-free `{}` / `[]` — those add noise, not signal).
+    private static func rawBodySnippet(_ body: Data, limit: Int = 200) -> String? {
+        guard let text = String(data: body, encoding: .utf8) else {
+            return body.isEmpty ? nil : "<\(body.count) bytes>"
+        }
+        let collapsed = text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        guard !collapsed.isEmpty, collapsed != "{}", collapsed != "[]" else { return nil }
+        return collapsed.count > limit ? String(collapsed.prefix(limit)) + "…" : collapsed
     }
 }

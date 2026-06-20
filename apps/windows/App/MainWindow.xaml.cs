@@ -231,7 +231,35 @@ public sealed partial class MainWindow : Window
                 AccountAvatar.ProfilePicture = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(url));
             }
         }
+        catch (BridgeException be) when (be.SessionExpired)
+        {
+            // The stored refresh token is no longer valid — drop the dead session
+            // and return to login (the Windows counterpart to macOS SessionExpiry).
+            AppLog.Write("session expired restoring account; signing out");
+            await SignOutAsync();
+        }
         catch (Exception ex) { AppLog.Write("avatar load failed", ex); }
+    }
+
+    private async void OnSignOutClick(object sender, RoutedEventArgs e) => await SignOutAsync();
+
+    /// Drop the current account (manual sign-out or an expired session) and return
+    /// to the login screen; a successful re-login re-enters the shell via
+    /// OnAuthenticated → EnterShell (which reloads tabs/filters cleanly).
+    private async Task SignOutAsync()
+    {
+        try
+        {
+            if (_workspace.AccountDid is { Length: > 0 } did)
+            {
+                await BridgeClient.Shared.RemoveAccountAsync(did);
+            }
+        }
+        catch (Exception ex) { AppLog.Write("sign out failed", ex); }
+        _notificationsTimer.Stop();
+        _workspace.AccountDid = null;
+        AccountFooter.Visibility = Visibility.Collapsed;
+        ShowLogin();
     }
 
     private void OnWorkspaceChanged()

@@ -69,6 +69,10 @@ private struct ErrorEnvelope: Encodable {
     var kind: String? = nil
     var title: String? = nil
     var message: String? = nil
+    /// True when the failure means the stored session is no longer valid (an
+    /// `invalid_grant` on a refresh), so the app should drop it and re-login —
+    /// the Windows counterpart to the macOS SessionExpiry signal.
+    var sessionExpired: Bool = false
 }
 
 private func makeResponse<T: Encodable>(_ value: T) -> UnsafeMutablePointer<CChar>? {
@@ -95,8 +99,13 @@ private func makeError(_ error: Error) -> UnsafeMutablePointer<CChar>? {
     case .server: kind = "server"
     case .unknown: kind = "unknown"
     }
+    var sessionExpired = false
+    if let oauth = error as? OAuthError, case .tokenRequestFailed(_, "invalid_grant", _) = oauth {
+        sessionExpired = true
+    }
     return encodeError(ErrorEnvelope(
-        error: failure.detail, kind: kind, title: failure.title, message: failure.message
+        error: failure.detail, kind: kind, title: failure.title, message: failure.message,
+        sessionExpired: sessionExpired
     ))
 }
 
