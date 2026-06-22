@@ -1,4 +1,6 @@
+import AppKit
 import Combine
+import os
 import SwiftUI
 import BlueskyCore
 import YoruMimizukuKit
@@ -21,6 +23,7 @@ struct RootView: View {
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
+    private static let log = Logger(subsystem: PerfSignpost.subsystem, category: "Session")
 
     init() {
         let storage = KeychainStorage(service: "as.ason.YoruMimizuku")
@@ -76,6 +79,14 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
+        // On wake from sleep the polling tasks were suspended and the access token
+        // has likely expired, so the first post-wake request would 401 (and several
+        // pollers could race to refresh the single-use token). Refresh the session
+        // proactively and up front instead. `didWakeNotification` is posted on the
+        // workspace's own center, not `NotificationCenter.default`.
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in
+            refreshSessionOnWake()
+        }
         // The "add account" login flow, presented over the signed-in UI. On success
         // the new account is current (AccountManager.add sets it), so adopting its
         // DID rebuilds the authenticated subtree for the new account.
@@ -86,6 +97,30 @@ struct RootView: View {
             }
             .environmentObject(themeStore)
             .frame(minWidth: 420, minHeight: 360)
+        }
+    }
+
+    /// Proactively refresh the current account's session when the machine wakes.
+    /// On success the new tokens are persisted, so the imminent poll uses a live
+    /// token. An `invalid_grant` means the refresh token died while asleep; it is
+    /// reported through `SessionExpiry`, which drops the account via the handler
+    /// above. Other errors (e.g. the network not yet up on wake) are left for the
+    /// next request's reactive refresh to retry. Never logs token material.
+    private func refreshSessionOnWake() {
+        guard currentDID != nil else { return }
+        let manager = accountManager
+        Task {
+            do {
+                let context = try LiveServiceContext(accountManager: manager, config: .yoruMimizuku)
+                try await context.refreshSession()
+                Self.log.info("Proactive session refresh on wake succeeded")
+            } catch {
+                if SessionExpiry.reportIfExpired(error) {
+                    Self.log.notice("Session expired while asleep; dropping the account")
+                } else {
+                    Self.log.error("Wake refresh failed; the next request will retry reactively")
+                }
+            }
         }
     }
 

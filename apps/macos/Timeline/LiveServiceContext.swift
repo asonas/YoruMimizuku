@@ -39,6 +39,23 @@ struct LiveServiceContext {
         self.accountManager = accountManager
     }
 
+    /// Proactively renew this account's session — independent of any XRPC 401 —
+    /// and persist the result. Used on wake from sleep, where the in-memory access
+    /// token has likely gone stale, so the next request starts from a fresh token
+    /// instead of paying a 401 round-trip (or racing several pollers to refresh).
+    /// Routes through the shared `RefreshGate`, so it coalesces with any concurrent
+    /// 401-driven refresh on the same single-use token. A nil refresh token is a
+    /// no-op. Throws `invalid_grant` when the token is dead, which the caller can
+    /// hand to `SessionExpiry.reportIfExpired`.
+    func refreshSession() async throws {
+        guard let refreshToken = account.refreshToken else { return }
+        let refresher = SessionRefresher(
+            sender: sender, metadataResolver: metadataResolver, config: config, refreshGate: refreshGate
+        )
+        let tokens = try await refresher.refresh(issuer: issuer, refreshToken: refreshToken)
+        try persist(tokens)
+    }
+
     /// Persist freshly issued tokens after a mid-request refresh; a nil argument
     /// (no refresh happened) is a no-op.
     func persist(_ refreshed: TokenResponse?) throws {

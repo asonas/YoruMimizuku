@@ -1,7 +1,7 @@
 ---
 title: Authentication (OAuth + DPoP)
 type: behavior
-updated: 2026-06-08
+updated: 2026-06-22
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -14,6 +14,7 @@ sources:
   - docs/superpowers/plans/2026-06-04-yorumimizuku-login-integration.md
   - core/Sources/BlueskyCore/OAuth/RefreshGate.swift
   - core/Sources/BlueskyCore/OAuth/SessionExpiry.swift
+  - core/Sources/BlueskyCore/OAuth/SessionRefresher.swift
 features:
   - name: OAuth login (PKCE + DPoP)
     macos: full
@@ -66,6 +67,10 @@ Two pieces address this:
 
 - **`RefreshGate` (coalescing).** A shared actor (`core/Sources/BlueskyCore/OAuth/RefreshGate.swift`) keyed by the refresh-token value. Concurrent renewals for the same token collapse into a single network call, and a straggler still holding the now-consumed token reuses the cached result instead of replaying the dead one. One shared instance lives on `AccountManager.refreshGate` and is threaded through every XRPC service (via `LiveServiceContext`), so all tabs coalesce. Failures are not cached, so a genuinely dead token still surfaces its error. Covered by `RefreshGateTests`.
 - **`SessionExpiry` (recovery).** When a refresh fails irrecoverably (`tokenRequestFailed` with `invalid_grant`; see the parsed OAuth error body in `OAuthError`), `SessionExpiry.reportIfExpired` posts a notification. The view models call it from their error paths (load / refresh / scroll / compose), and `RootView` responds by dropping the dead account and returning to the login screen (switching to another stored account if one exists). Retrying a dead session is futile, so the app routes to re-authentication instead.
+
+### Proactive refresh on wake
+
+Refresh is otherwise purely reactive — it only fires when an XRPC request returns 401. That leaves a gap around sleep: while the Mac is asleep the polling tasks are suspended and nothing renews the token, so on wake the access token has typically expired and several pollers would resume at once and race to refresh. To close it, `RootView` observes `NSWorkspace.didWakeNotification` (posted on the workspace's own notification center, not `NotificationCenter.default`) and proactively renews the current account's session up front via `SessionRefresher` (`core/Sources/BlueskyCore/OAuth/SessionRefresher.swift`), persisting the rotated tokens before the pollers fire. The proactive refresh is routed through the same shared `RefreshGate`, so it coalesces with any concurrent 401-driven refresh on the same single-use token rather than racing it. An `invalid_grant` here (the refresh token died during a long sleep) flows through `SessionExpiry` like any other; transient wake errors (e.g. the network not yet up) are left for the next request's reactive refresh. Wake outcomes are logged under the `Session` category (event-level only — never token material).
 
 ## Multi-account
 
