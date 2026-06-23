@@ -11,16 +11,6 @@ final class TimelineLayoutTests: XCTestCase {
         XCTAssertEqual(TimelineLayout.placement(regionWidth: 1200), .reflow)
     }
 
-    func test_textColumnWidth_fillsRemainderBelowCap() {
-        // region 760 -> 760 - 16 - 300 = 444
-        XCTAssertEqual(TimelineLayout.textColumnWidth(regionWidth: 760), 444, accuracy: 0.001)
-    }
-
-    func test_textColumnWidth_isCappedAtMax() {
-        // region 1200 -> 1200 - 16 - 300 = 884, capped to 620
-        XCTAssertEqual(TimelineLayout.textColumnWidth(regionWidth: 1200), 620, accuracy: 0.001)
-    }
-
     func test_clampedSingleImageRatio_clampsTallToMinimum() {
         // tall image (portrait) ratio 0.45 -> clamped up to 0.8
         XCTAssertEqual(TimelineLayout.clampedSingleImageRatio(0.45), 0.8, accuracy: 0.001)

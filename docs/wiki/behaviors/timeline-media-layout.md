@@ -50,21 +50,20 @@ All layout constants and pure computations live in `TimelineLayout` (`core/Sourc
 | `reflowThreshold` | 680 pt | Region width at which the row switches to two columns |
 | `mediaRailWidth` | 300 pt | Fixed width of the right media rail in reflow mode |
 | `columnGap` | 16 pt | Spacing between text column and media rail |
-| `maxTextColumnWidth` | 620 pt | Upper bound on the left text column width |
 | `minSingleImageRatio` | 0.8 | Lower bound on the single-image aspect ratio (5:4) |
 | `maxSingleImageRatio` | 5.0 | Upper bound (panorama clamp, unchanged) |
 
-The key functions are: `placement(regionWidth:)` → `.vertical` or `.reflow`; `textColumnWidth(regionWidth:)` → width for the text column; `clampedSingleImageRatio(_:)` → clamped ratio; `isTallCropped(_:)` → whether the crop hint should show. All are covered by `TimelineLayoutTests` in `YoruMimizukuKitTests`.
+The key functions are: `placement(regionWidth:)` → `.vertical` or `.reflow`; `clampedSingleImageRatio(_:)` → clamped ratio; `isTallCropped(_:)` → whether the crop hint should show. All are covered by `TimelineLayoutTests` in `YoruMimizukuKitTests`. (There is no text-column-width helper: in reflow the body fills the remaining width, so no width math is needed beyond the placement decision.)
 
 ## Wide-Column Reflow (≥ 680 pt Region Width)
 
 When the feed column is wide enough, the post row's content region reflows from a single vertical stack to two adjacent columns (`2026-06-23-timeline-image-reflow-design.md` §B):
 
-- **Left column (text):** author line, body text, quote card, action bar. Maximum width 620 pt.
-- **Right column (media rail):** single image / image grid, video poster, and link card. Fixed 300 pt.
-- **Gap:** 16 pt between columns.
+- **Left column (text):** author line, body text, quote card, action bar. Fills the remaining width (no cap).
+- **Right column (media rail):** single image / image grid, video poster, and link card. Fixed 300 pt, **pinned to the row's right edge**.
+- **Gap:** 16 pt minimum between columns.
 
-Quote cards stay in the left (text) column in both layouts. At region widths between 680 and 936 pt, the text column grows with the window; above 936 pt (= 620 + 16 + 300) the text column hits its 620 pt cap and the row aligns left, leaving blank space to the right.
+Quote cards stay in the left (text) column in both layouts. The body column grows to fill the region while the media rail stays pinned to the right edge, so no trailing whitespace builds up on the right and the media never strands mid-row. The body's line length therefore grows with the window — accepted deliberately to avoid a right-hand gap (this supersedes the original design, which capped the text column at 620 pt, left-aligned the row, and left blank space on the right; the gap was disliked in a wide window, `2026-06-23-timeline-image-reflow-design.md` §決定事項).
 
 The width that drives this decision is measured **once per feed layout pass** in `FeedView`, not in each row. `FeedView` stores `@State private var contentWidth: CGFloat = 0` and updates it via `.onGeometryChange(for: CGFloat.self)` on the `List` (available on macOS 15+, the app's deployment target). The measured width is passed as `PostRowView.contentWidth` to every row. `PostRowView.regionWidth(forContentWidth:)` subtracts the row's horizontal padding, avatar column width, and column spacing to get the region width that `TimelineLayout.placement` consumes (`2026-06-23-timeline-image-reflow-design.md` §幅の測定方針).
 

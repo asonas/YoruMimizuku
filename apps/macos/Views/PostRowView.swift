@@ -248,7 +248,10 @@ struct PostRowView: View, @MainActor Equatable {
     private var content: some View {
         let region = regionWidth(forContentWidth: contentWidth)
         if TimelineLayout.placement(regionWidth: Double(region)) == .reflow && hasReflowMedia {
-            let textWidth = CGFloat(TimelineLayout.textColumnWidth(regionWidth: Double(region)))
+            // The body grows to fill the row; the media rail is pinned to the right
+            // edge. The text takes whatever width is left (line length grows with the
+            // window — accepted to avoid a right-hand gap), so the media never strands
+            // mid-row and no trailing whitespace appears.
             HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
                 VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
                     authorLine
@@ -256,10 +259,11 @@ struct PostRowView: View, @MainActor Equatable {
                     quoteSection
                     actionBarSection
                 }
-                .frame(maxWidth: textWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 mediaColumn(maxWidth: CGFloat(TimelineLayout.mediaRailWidth))
                     .frame(width: CGFloat(TimelineLayout.mediaRailWidth), alignment: .top)
             }
+            .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
                 authorLine
