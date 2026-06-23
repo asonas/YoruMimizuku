@@ -330,7 +330,7 @@ struct PostRowView: View, @MainActor Equatable {
         // or more share the fixed-height cover-cropped grid where uniform tiles read
         // better than mismatched proportions.
         if post.images.count == 1, let image = post.images.first {
-            singleImage(image)
+            singleImage(image, maxWidth: imageMaxWidth)
         } else {
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 2),
@@ -344,22 +344,51 @@ struct PostRowView: View, @MainActor Equatable {
         }
     }
 
-    /// A single attached image, sized to its real aspect ratio so wide images show
-    /// in full (no left/right crop or overflow) and tall images fill the column
-    /// width with only a slight crop. The ratio is clamped so an extreme panorama or
-    /// portrait can't make the row absurdly short or tall; within the clamp the image
-    /// fills its box exactly (cover == contain), so a crop only ever touches the
-    /// clamped extreme. The decode size follows the box's longer edge to stay sharp.
-    private func singleImage(_ image: PostImage) -> some View {
-        let ratio = min(max(image.aspectRatio ?? 4.0 / 3.0, 0.7), 5.0)
-        let decodeEdge = max(imageMaxWidth, imageMaxWidth / ratio)
-        return RemoteImage(url: image.thumbURL, maxPointSize: decodeEdge) { phase in
-            imagePhaseContent(phase)
+    /// A single attached image. Its display height is capped at 5:4 (height ≤ 1.25×
+    /// width): wider images show in full, taller ones are top-anchored and cropped to
+    /// the cap so the row never grows absurdly tall. When a crop actually happens, a
+    /// bottom gradient with a "全体表示" hint signals there is more; the lightbox always
+    /// shows the full image. The decode size follows the box's longer edge to stay sharp.
+    private func singleImage(_ image: PostImage, maxWidth: CGFloat) -> some View {
+        let natural = image.aspectRatio ?? 4.0 / 3.0
+        let boxRatio = CGFloat(TimelineLayout.clampedSingleImageRatio(natural))
+        let cropped = TimelineLayout.isTallCropped(natural)
+        let decodeEdge = max(maxWidth, maxWidth / boxRatio)
+        return Color.clear
+            .aspectRatio(boxRatio, contentMode: .fit)
+            .frame(maxWidth: maxWidth, alignment: .leading)
+            .overlay(alignment: .top) {
+                RemoteImage(url: image.thumbURL, maxPointSize: decodeEdge) { phase in
+                    imagePhaseContent(phase)
+                }
+            }
+            .clipped()
+            .overlay(alignment: .bottom) {
+                if cropped { tallCropHint }
+            }
+            .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
+    }
+
+    /// Bottom band shown over a tall image that was cropped to the 5:4 cap. Hit testing
+    /// is disabled so a tap falls through to `ThumbnailChrome`'s lightbox gesture.
+    private var tallCropHint: some View {
+        HStack(spacing: 4) {
+            Spacer()
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+            Text("全体表示")
         }
-        .aspectRatio(ratio, contentMode: .fit)
-        .frame(maxWidth: imageMaxWidth, alignment: .leading)
-        .clipped()
-        .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
+        .font(.app(.caption2))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .background(
+            LinearGradient(
+                colors: [.clear, .black.opacity(0.5)],
+                startPoint: .top, endPoint: .bottom
+            )
+        )
+        .allowsHitTesting(false)
     }
 
     private func thumbnail(_ image: PostImage, height: CGFloat, maxPointSize: CGFloat) -> some View {
