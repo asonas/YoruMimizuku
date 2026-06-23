@@ -43,6 +43,7 @@ struct FeedView: View {
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
+    @State private var contentWidth: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -141,7 +142,8 @@ struct FeedView: View {
                         canDelete: isOwnPost(post),
                         onDelete: { pendingDelete = post },
                         connectsToPrevious: item.connectsToPrevious,
-                        connectsToNext: item.connectsToNext
+                        connectsToNext: item.connectsToNext,
+                        contentWidth: contentWidth
                     )
                     // Skip re-rendering rows whose data is unchanged: PostRowView is
                     // Equatable on its value inputs, so a parent re-render that only
@@ -192,6 +194,11 @@ struct FeedView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { newWidth in
+            contentWidth = newWidth
+        }
     }
 
     private var loadMoreFooter: some View {

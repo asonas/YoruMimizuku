@@ -51,6 +51,10 @@ struct PostRowView: View, @MainActor Equatable {
     /// redundant when the parent is the row right above, so it is hidden.
     var connectsToPrevious: Bool = false
     var connectsToNext: Bool = false
+    /// The feed column's measured width (the List row width), injected by `FeedView`
+    /// once per layout pass. Drives the vertical/reflow decision via `TimelineLayout`.
+    /// Default 0 keeps the row vertical until the first measurement arrives.
+    var contentWidth: CGFloat = 0
 
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
@@ -102,6 +106,7 @@ struct PostRowView: View, @MainActor Equatable {
             && lhs.connectsToPrevious == rhs.connectsToPrevious
             && lhs.connectsToNext == rhs.connectsToNext
             && lhs.canDelete == rhs.canDelete
+            && lhs.contentWidth == rhs.contentWidth
     }
 
     var body: some View {
@@ -215,35 +220,95 @@ struct PostRowView: View, @MainActor Equatable {
 
     @ViewBuilder
     private var content: some View {
-        VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
-            authorLine
-            bodyText
+        let region = regionWidth(forContentWidth: contentWidth)
+        switch TimelineLayout.placement(regionWidth: Double(region)) {
+        case .reflow:
+            let textWidth = CGFloat(TimelineLayout.textColumnWidth(regionWidth: Double(region)))
+            HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
+                VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                    authorLine
+                    bodyText
+                    quoteSection
+                    actionBarSection
+                }
+                .frame(maxWidth: textWidth, alignment: .leading)
+                mediaColumn(maxWidth: CGFloat(TimelineLayout.mediaRailWidth))
+                    .frame(width: CGFloat(TimelineLayout.mediaRailWidth), alignment: .top)
+            }
+        case .vertical:
+            VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                authorLine
+                bodyText
+                verticalMedia
+                quoteSection
+                actionBarSection
+            }
+        }
+    }
+
+    /// The available width for the body+media region: the row width minus the row's
+    /// horizontal padding, the avatar column, and the column spacing.
+    private func regionWidth(forContentWidth width: CGFloat) -> CGFloat {
+        let horizontalPadding = (density == .compact ? 12.0 : 16.0) * 2
+        return width - CGFloat(horizontalPadding) - avatarSize - columnSpacing
+    }
+
+    /// Media for the narrow vertical layout: image/video then link card, with the
+    /// original top paddings preserved so the stacked appearance is unchanged.
+    @ViewBuilder
+    private var verticalMedia: some View {
+        if !post.images.isEmpty || post.video != nil {
+            mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
+        }
+        if post.linkCard != nil
+            || (post.images.isEmpty && post.video == nil && post.quote == nil && post.firstLinkURL != nil) {
+            linkCardSection.padding(.top, 3)
+        }
+    }
+
+    /// Media for the wide reflow layout's right rail: image/video then link card,
+    /// stacked at the rail width.
+    @ViewBuilder
+    private func mediaColumn(maxWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             if !post.images.isEmpty || post.video != nil {
-                mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
+                mediaSection(maxWidth: maxWidth)
             }
-            // The external-link card sits below the body and images and above the
-            // action bar. A post with its own external embed renders it directly;
-            // otherwise a bare link in a text-only post resolves its OGP preview
-            // lazily (posts that already carry media or a quote skip the fallback
-            // to keep rows tight).
-            if let card = post.linkCard {
-                LinkCardView(card: card, density: density).padding(.top, 3)
-            } else if post.images.isEmpty, post.video == nil, post.quote == nil,
-                      let url = post.firstLinkURL {
-                LazyLinkCardView(url: url, density: density).padding(.top, 3)
+            linkCardSection
+        }
+    }
+
+    /// The post's external-link (OGP) card: the post's own embed, or a lazily resolved
+    /// preview for a text-only post that carries a bare link.
+    @ViewBuilder
+    private var linkCardSection: some View {
+        if let card = post.linkCard {
+            LinkCardView(card: card, density: density)
+        } else if post.images.isEmpty, post.video == nil, post.quote == nil,
+                  let url = post.firstLinkURL {
+            LazyLinkCardView(url: url, density: density)
+        }
+    }
+
+    /// The quoted post card. Stays in the body (left) column in both layouts.
+    @ViewBuilder
+    private var quoteSection: some View {
+        if let quote = post.quote {
+            QuoteCardView(quote: quote, density: density, now: now) {
+                onQuoteTap(quote)
             }
-            if let quote = post.quote {
-                QuoteCardView(quote: quote, density: density, now: now) {
-                    onQuoteTap(quote)
-                }
-                .padding(.top, 3)
-            }
-            if density == .comfortable {
-                if interactiveActions {
-                    actionBar
-                } else {
-                    staticActionBar
-                }
+            .padding(.top, 3)
+        }
+    }
+
+    /// The action bar (comfortable density only): interactive or static counts.
+    @ViewBuilder
+    private var actionBarSection: some View {
+        if density == .comfortable {
+            if interactiveActions {
+                actionBar
+            } else {
+                staticActionBar
             }
         }
     }
