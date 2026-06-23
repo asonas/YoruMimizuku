@@ -61,7 +61,7 @@ When the feed column is wide enough, the post row's content region reflows from 
 
 - **Left column (text):** author line, body text, quote card, action bar. Fills the remaining width (no cap).
 - **Right column (media rail):** single image / image grid, video poster, and link card. Fixed 300 pt, **pinned to the row's right edge**.
-- **Gap:** 16 pt minimum between columns.
+- **Gap:** fixed 16 pt between the two columns (`HStack` spacing).
 
 Quote cards stay in the left (text) column in both layouts. The body column grows to fill the region while the media rail stays pinned to the right edge, so no trailing whitespace builds up on the right and the media never strands mid-row. The body's line length therefore grows with the window — accepted deliberately to avoid a right-hand gap (this supersedes the original design, which capped the text column at 620 pt, left-aligned the row, and left blank space on the right; the gap was disliked in a wide window, `2026-06-23-timeline-image-reflow-design.md` §決定事項).
 
