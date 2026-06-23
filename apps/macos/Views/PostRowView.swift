@@ -217,23 +217,9 @@ struct PostRowView: View, @MainActor Equatable {
     private var content: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
             authorLine
-            // The body's characters (the costly UTF-8 build) are precomputed on
-            // `PostDisplay`; here we only re-apply the link color, which mutates run
-            // attributes without rebuilding the string.
-            //
-            // No `.textSelection(.enabled)`: on macOS a selectable `Text` and
-            // tappable `.link` runs are mutually incompatible — once the row
-            // re-lays-out (e.g. focus toggling its background) the link spans render
-            // blank, so URLs vanish on focus and become unclickable. Links win over
-            // body selection here; the copy-link action covers sharing a post.
-            Text(bodyAttributed)
-                .font(.app(density == .compact ? .callout : .body))
-                .foregroundStyle(theme.primaryText)
-                .tint(theme.accent)
-                .lineSpacing(density == .compact ? 1 : 2)
-                .fixedSize(horizontal: false, vertical: true)
+            bodyText
             if !post.images.isEmpty || post.video != nil {
-                mediaSection.padding(.top, 3)
+                mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
             }
             // The external-link card sits below the body and images and above the
             // action bar. A post with its own external embed renders it directly;
@@ -262,6 +248,24 @@ struct PostRowView: View, @MainActor Equatable {
         }
     }
 
+    // The body's characters (the costly UTF-8 build) are precomputed on
+    // `PostDisplay`; here we only re-apply the link color, which mutates run
+    // attributes without rebuilding the string.
+    //
+    // No `.textSelection(.enabled)`: on macOS a selectable `Text` and
+    // tappable `.link` runs are mutually incompatible — once the row
+    // re-lays-out (e.g. focus toggling its background) the link spans render
+    // blank, so URLs vanish on focus and become unclickable. Links win over
+    // body selection here; the copy-link action covers sharing a post.
+    private var bodyText: some View {
+        Text(bodyAttributed)
+            .font(.app(density == .compact ? .callout : .body))
+            .foregroundStyle(theme.primaryText)
+            .tint(theme.accent)
+            .lineSpacing(density == .compact ? 1 : 2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
     /// The precomputed body with link spans tinted to the accent color. Starting
     /// from `post.bodyAttributedString` keeps the expensive character build cached
     /// on `PostDisplay`; coloring lives here because the color is theme-derived and
@@ -283,11 +287,11 @@ struct PostRowView: View, @MainActor Equatable {
     /// carries a sensitive-content label and the viewer has not revealed it, the
     /// media is blurred behind a tap-to-show overlay; tapping anywhere reveals it.
     @ViewBuilder
-    private var mediaSection: some View {
+    private func mediaSection(maxWidth: CGFloat) -> some View {
         let media = VStack(alignment: .leading, spacing: 3) {
-            if !post.images.isEmpty { imageGrid }
+            if !post.images.isEmpty { imageGrid(maxWidth: maxWidth) }
             if let video = post.video {
-                VideoPosterView(video: video, maxWidth: imageMaxWidth, onTap: openInBrowser)
+                VideoPosterView(video: video, maxWidth: maxWidth, onTap: openInBrowser)
             }
         }
         if let warning = post.mediaWarning, !revealMedia {
@@ -325,12 +329,12 @@ struct PostRowView: View, @MainActor Equatable {
     }
 
     @ViewBuilder
-    private var imageGrid: some View {
+    private func imageGrid(maxWidth: CGFloat) -> some View {
         // A lone image is laid out at its true aspect ratio (see `singleImage`); two
         // or more share the fixed-height cover-cropped grid where uniform tiles read
         // better than mismatched proportions.
         if post.images.count == 1, let image = post.images.first {
-            singleImage(image, maxWidth: imageMaxWidth)
+            singleImage(image, maxWidth: maxWidth)
         } else {
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 2),
@@ -340,7 +344,7 @@ struct PostRowView: View, @MainActor Equatable {
                     thumbnail(image, height: 140, maxPointSize: 220)
                 }
             }
-            .frame(maxWidth: imageMaxWidth, alignment: .leading)
+            .frame(maxWidth: maxWidth, alignment: .leading)
         }
     }
 
