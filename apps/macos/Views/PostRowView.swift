@@ -78,6 +78,10 @@ struct PostRowView: View, @MainActor Equatable {
 
     private var avatarSize: CGFloat { density == .compact ? 24 : 42 }
     private var columnSpacing: CGFloat { density == .compact ? 8 : 11 }
+    /// The row's horizontal padding. Single-sourced here because both the row
+    /// chrome (`.padding(.horizontal:)`) and `regionWidth` depend on it; if they
+    /// drift apart the reflow width math silently goes wrong.
+    private var horizontalRowPadding: CGFloat { density == .compact ? 12 : 16 }
     private var leadingInset: CGFloat { avatarSize + columnSpacing }
 
     /// The row's rendered output depends only on these value inputs (plus the
@@ -125,7 +129,7 @@ struct PostRowView: View, @MainActor Equatable {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, verticalPadding)
-        .padding(.horizontal, density == .compact ? 12 : 16)
+        .padding(.horizontal, horizontalRowPadding)
         .contextMenu { rowContextMenu }
     }
 
@@ -218,14 +222,26 @@ struct PostRowView: View, @MainActor Equatable {
         .help("@\(post.authorHandle) のページを開く")
     }
 
+    /// Whether the post carries inline media (image or video). Single source for the
+    /// guard repeated by `verticalMedia`, `mediaColumn`, and `hasReflowMedia`.
+    private var hasInlineMedia: Bool {
+        !post.images.isEmpty || post.video != nil
+    }
+
+    /// Whether `linkCardSection` would render something: the post's own link embed,
+    /// or the lazy OGP fallback for a text-only post carrying a bare link. Mirrors
+    /// the binding conditions inside `linkCardSection` so layout guards and the
+    /// renderer can't drift apart.
+    private var hasLinkCard: Bool {
+        post.linkCard != nil
+            || (post.images.isEmpty && post.video == nil && post.quote == nil && post.firstLinkURL != nil)
+    }
+
     /// Whether this post has media that the reflow layout would move to the right
-    /// rail (image, video, or a link card — including the lazy OGP fallback for a
-    /// text-only post carrying a bare link). When false there is nothing to reflow,
-    /// so the row stays vertical even in a wide window.
+    /// rail. When false there is nothing to reflow, so the row stays vertical even
+    /// in a wide window.
     private var hasReflowMedia: Bool {
-        if !post.images.isEmpty || post.video != nil { return true }
-        if post.linkCard != nil { return true }
-        return post.quote == nil && post.firstLinkURL != nil
+        hasInlineMedia || hasLinkCard
     }
 
     @ViewBuilder
@@ -258,19 +274,17 @@ struct PostRowView: View, @MainActor Equatable {
     /// The available width for the body+media region: the row width minus the row's
     /// horizontal padding, the avatar column, and the column spacing.
     private func regionWidth(forContentWidth width: CGFloat) -> CGFloat {
-        let horizontalPadding = (density == .compact ? 12.0 : 16.0) * 2
-        return width - CGFloat(horizontalPadding) - avatarSize - columnSpacing
+        width - horizontalRowPadding * 2 - avatarSize - columnSpacing
     }
 
     /// Media for the narrow vertical layout: image/video then link card, with the
     /// original top paddings preserved so the stacked appearance is unchanged.
     @ViewBuilder
     private var verticalMedia: some View {
-        if !post.images.isEmpty || post.video != nil {
+        if hasInlineMedia {
             mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
         }
-        if post.linkCard != nil
-            || (post.images.isEmpty && post.video == nil && post.quote == nil && post.firstLinkURL != nil) {
+        if hasLinkCard {
             linkCardSection.padding(.top, 3)
         }
     }
@@ -280,10 +294,12 @@ struct PostRowView: View, @MainActor Equatable {
     @ViewBuilder
     private func mediaColumn(maxWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            if !post.images.isEmpty || post.video != nil {
+            if hasInlineMedia {
                 mediaSection(maxWidth: maxWidth)
             }
-            linkCardSection
+            if hasLinkCard {
+                linkCardSection
+            }
         }
     }
 
