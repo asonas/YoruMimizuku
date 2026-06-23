@@ -218,11 +218,20 @@ struct PostRowView: View, @MainActor Equatable {
         .help("@\(post.authorHandle) のページを開く")
     }
 
+    /// Whether this post has media that the reflow layout would move to the right
+    /// rail (image, video, or a link card — including the lazy OGP fallback for a
+    /// text-only post carrying a bare link). When false there is nothing to reflow,
+    /// so the row stays vertical even in a wide window.
+    private var hasReflowMedia: Bool {
+        if !post.images.isEmpty || post.video != nil { return true }
+        if post.linkCard != nil { return true }
+        return post.quote == nil && post.firstLinkURL != nil
+    }
+
     @ViewBuilder
     private var content: some View {
         let region = regionWidth(forContentWidth: contentWidth)
-        switch TimelineLayout.placement(regionWidth: Double(region)) {
-        case .reflow:
+        if TimelineLayout.placement(regionWidth: Double(region)) == .reflow && hasReflowMedia {
             let textWidth = CGFloat(TimelineLayout.textColumnWidth(regionWidth: Double(region)))
             HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
                 VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
@@ -235,7 +244,7 @@ struct PostRowView: View, @MainActor Equatable {
                 mediaColumn(maxWidth: CGFloat(TimelineLayout.mediaRailWidth))
                     .frame(width: CGFloat(TimelineLayout.mediaRailWidth), alignment: .top)
             }
-        case .vertical:
+        } else {
             VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
                 authorLine
                 bodyText
