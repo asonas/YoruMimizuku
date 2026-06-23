@@ -9,6 +9,13 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-23 ingest
+
+- sources: `docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md`, `docs/superpowers/plans/2026-06-23-timeline-image-reflow.md`
+- created: [[timeline-media-layout]]
+- updated: [[overview]] (added link to [[timeline-media-layout]])
+- note: Ingested the timeline image reflow feature landed on `feature/timeline-image-reflow`. New `TimelineLayout` helper (platform-neutral, `YoruMimizukuKit`) supplies the 5:4 crop threshold, reflow threshold (680 pt), media rail width (300 pt), column gap (16 pt), and text column cap (620 pt). macOS `PostRowView` now crops tall single images to 5:4 with a top-anchor + `tallCropHint` fade overlay; wide feed columns (≥ 680 pt region width) reflow to body-left / media-right two-column layout measured once in `FeedView.onGeometryChange`. Quote cards stay in the left (text) column in both layouts. Windows and iOS are `none`/`planned` — the helper constants land in the shared core but the SwiftUI view changes are macOS-only.
+
 ## 2026-06-20 ingest
 
 - sources: `apps/windows/App/**`, `core/Sources/YoruMimizukuBridge/{BridgeOperations,CABI}.swift`

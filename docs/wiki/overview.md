@@ -72,6 +72,7 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 - [[filters]] — saved-search filters (structured terms and AND/OR)
 - [[notifications]] — in-app tab, OS banner, and Dock badge
 - [[sensitive-media]] — blurring adult / graphic media behind a tap-to-reveal curtain from content labels
+- [[timeline-media-layout]] — tall-image 5:4 crop with "全体表示" hint, and wide-column body-left / media-right reflow
 - [[auto-updates]] — planned macOS Sparkle update checks, settings-tab install flow, and release appcast
 
 ## Platforms

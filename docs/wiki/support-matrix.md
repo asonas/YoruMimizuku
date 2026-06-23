@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-22
+updated: 2026-06-23
 sources: []
 ---
 
@@ -75,6 +75,13 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Sensitive media blur (content labels) | ○ | △ | × | − |
 
+## [[timeline-media-layout]] — Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
+
+| Feature | macOS | Windows | iOS | Android |
+|---|:--:|:--:|:--:|:--:|
+| Tall-image crop (5:4 cap with top-anchor and "全体表示" hint) | ○ | × | − | − |
+| Wide-column reflow (body left / media right at ≥ 680 pt) | ○ | × | − | − |
+
 ## [[timeline-streaming]] — Timeline Fetching and Streaming
 
 | Feature | macOS | Windows | iOS | Android |
@@ -107,6 +114,8 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS blurs media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain. Windows gates the same media (the shared MediaWarning now rides the bridge DTO) but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look. iPadOS renders media ungated ([[windows]], [[ipados]]).
+- **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral), but the SwiftUI view changes (PostRowView singleImage, tallCropHint overlay) are macOS-only for now; Windows renders images via the bridge DTO unchanged ([[windows]]).
+- **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow layout is driven by FeedView.contentWidth injected into PostRowView; this SwiftUI plumbing exists only in apps/macos. Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
 - **Delete own post** ([[timeline-streaming]]): macOS and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then optimistically prune the row (Windows via yoru_post_delete; restores on failure). iPadOS has no delete UI yet ([[windows]], [[ipados]]).
 - **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows reuses the same shared LoadFailure classification, carried on the bridge error envelope (kind/title/message); how iPadOS renders failures is not yet audited ([[windows]], [[ipados]]).
