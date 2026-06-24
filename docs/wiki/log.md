@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-06-24 ingest
+
+- sources: `docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md`, `docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md`
+- updated: [[ipados]], [[timeline-media-layout]], [[timeline-streaming]], [[sensitive-media]]
+- note: Ingested the iPadOS timeline parity work on `feature/ipados-parity`. The iPad timeline now renders like macOS: the AppKit-free presentation foundation (ThemeStore, density store, RemoteImage/ImageDownsampler) was duplicated into `apps/ipados`, with a new UIFont-based `Typography`; the link/quote/video cards were ported; `PostRowView` was rewritten to match macOS (themed type/colors, density, 5:4 tall-image crop + 全体表示 hint, RemoteImage grid, video poster, OGP link card + lazy fallback, quote card, sensitive-media blur, reply marker, repost/quote popover, delete context menu, wide-column reflow); `TimelineListView` now does FeedThreading.arrange grouping with the connector line, themed canvas/divider, classified load-failure states, themed empty/loading states, delete confirmation, and scene-width reflow. Flipped the iOS status to `full` on [[timeline-media-layout]] (both rows), [[sensitive-media]], and [[timeline-streaming]] (delete own post, load error states, OGP cards, quote cards, video poster, thread grouping). Also fixed a latent build break: the iPad target did not compile because `TimelineListView` still treated `TimelineViewModel.state` `.failed` as a String. Remaining iPad gaps are settings surfaces only (density/theme/font pickers, structured filter editor, notification settings) — Phase 3, not yet done. Visual confirmation on device by the author is still pending.
+
 ## 2026-06-23 ingest
 
 - sources: `docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md`, `docs/superpowers/plans/2026-06-23-timeline-image-reflow.md`

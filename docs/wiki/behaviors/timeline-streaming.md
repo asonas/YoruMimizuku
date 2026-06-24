@@ -1,9 +1,16 @@
 ---
 title: Timeline Fetching and Streaming
 type: behavior
-updated: 2026-06-15
+updated: 2026-06-24
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
+  - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
+  - apps/ipados/Views/PostRowView.swift
+  - apps/ipados/Views/TimelineListView.swift
+  - apps/ipados/Views/LinkCardView.swift
+  - apps/ipados/Views/QuoteCardView.swift
+  - apps/ipados/Views/VideoPosterView.swift
   - core/Sources/YoruMimizukuKit/LinkPreviewLoader.swift
   - core/Sources/YoruMimizukuKit/FeedThreading.swift
   - apps/macos/Views/LinkCardView.swift
@@ -55,33 +62,33 @@ features:
   - name: Delete own post
     macos: full
     windows: full
-    ios: none
+    ios: full
     android: planned
-    note: "macOS and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then optimistically prune the row (Windows via yoru_post_delete; restores on failure). iPadOS has no delete UI yet ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then prune the row (Windows via yoru_post_delete; restores on failure). iPadOS uses a SwiftUI confirmationDialog ([[windows]], [[ipados]])."
   - name: Load error states (offline / 429 / 5xx) with retry
     macos: full
     windows: full
-    ios: unknown
+    ios: full
     android: planned
-    note: "macOS and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows reuses the same shared LoadFailure classification, carried on the bridge error envelope (kind/title/message); how iPadOS renders failures is not yet audited ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows carries the shared LoadFailure on the bridge error envelope (kind/title/message) ([[windows]], [[ipados]])."
   - name: External link preview cards (OGP)
     macos: full
     windows: full
-    ios: none
+    ios: full
     android: planned
-    note: "macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint; iPadOS via the ported LinkCardView + LazyLinkCardView) ([[windows]], [[ipados]])."
   - name: Quote post (record embed) cards
     macos: full
     windows: full
-    ios: none
+    ios: full
     android: planned
-    note: "macOS and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation; iPadOS rows still drop quoted records ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation ([[windows]], [[ipados]])."
   - name: Video embed poster (no inline playback)
     macos: full
     windows: full
-    ios: none
+    ios: full
     android: planned
-    note: "macOS and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere. iPadOS rows still drop video embeds ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere ([[windows]], [[ipados]])."
   - name: Conversation child reply tree
     macos: full
     windows: full
@@ -91,9 +98,9 @@ features:
   - name: Thread grouping in the feed (web-style)
     macos: full
     windows: full
-    ios: none
+    ios: full
     android: planned
-    note: "macOS and Windows regroup same-thread posts into one oldest-first block (Windows via the yoru_feed_arrange bridge wrapper over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; iPadOS still lists reply-chain posts as independent newest-first rows ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows regroup same-thread posts into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped ([[windows]], [[ipados]])."
 ---
 
 # Timeline Fetching and Streaming

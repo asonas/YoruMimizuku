@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-23
+updated: 2026-06-24
 sources: []
 ---
 
@@ -73,14 +73,14 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Sensitive media blur (content labels) | ○ | △ | × | − |
+| Sensitive media blur (content labels) | ○ | △ | ○ | − |
 
 ## [[timeline-media-layout]] — Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Tall-image crop (5:4 cap with top-anchor and "全体表示" hint) | ○ | × | − | − |
-| Wide-column reflow (body left / media right at ≥ 680 pt) | ○ | × | − | − |
+| Tall-image crop (5:4 cap with top-anchor and "全体表示" hint) | ○ | × | ○ | − |
+| Wide-column reflow (body left / media right at ≥ 680 pt) | ○ | × | ○ | − |
 
 ## [[timeline-streaming]] — Timeline Fetching and Streaming
 
@@ -91,13 +91,13 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
 | Copy post permalink | ○ | ○ | ○ | − |
-| Delete own post | ○ | ○ | × | − |
-| Load error states (offline / 429 / 5xx) with retry | ○ | ○ | ? | − |
-| External link preview cards (OGP) | ○ | ○ | × | − |
-| Quote post (record embed) cards | ○ | ○ | × | − |
-| Video embed poster (no inline playback) | ○ | ○ | × | − |
+| Delete own post | ○ | ○ | ○ | − |
+| Load error states (offline / 429 / 5xx) with retry | ○ | ○ | ○ | − |
+| External link preview cards (OGP) | ○ | ○ | ○ | − |
+| Quote post (record embed) cards | ○ | ○ | ○ | − |
+| Video embed poster (no inline playback) | ○ | ○ | ○ | − |
 | Conversation child reply tree | ○ | ○ | ○ | − |
-| Thread grouping in the feed (web-style) | ○ | ○ | × | − |
+| Thread grouping in the feed (web-style) | ○ | ○ | ○ | − |
 
 ## Notes
 
@@ -113,14 +113,14 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **OS banner + unread badge** ([[notifications]]): macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]]).
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
-- **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS blurs media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain. Windows gates the same media (the shared MediaWarning now rides the bridge DTO) but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look. iPadOS renders media ungated ([[windows]], [[ipados]]).
-- **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral), but the SwiftUI view changes (PostRowView singleImage, tallCropHint overlay) are macOS-only for now; Windows renders images via the bridge DTO unchanged ([[windows]]).
-- **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow layout is driven by FeedView.contentWidth injected into PostRowView; this SwiftUI plumbing exists only in apps/macos. Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]]).
+- **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS and iPadOS blur media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain (the shared MediaWarning + a Gaussian blur in PostRowView). Windows gates the same media but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look ([[windows]], [[ipados]]).
+- **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images via the bridge DTO unchanged ([[windows]], [[ipados]]).
+- **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
-- **Delete own post** ([[timeline-streaming]]): macOS and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then optimistically prune the row (Windows via yoru_post_delete; restores on failure). iPadOS has no delete UI yet ([[windows]], [[ipados]]).
-- **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows reuses the same shared LoadFailure classification, carried on the bridge error envelope (kind/title/message); how iPadOS renders failures is not yet audited ([[windows]], [[ipados]]).
-- **External link preview cards (OGP)** ([[timeline-streaming]]): macOS and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint); iPadOS rows do not render link cards yet ([[windows]], [[ipados]]).
-- **Quote post (record embed) cards** ([[timeline-streaming]]): macOS and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation; iPadOS rows still drop quoted records ([[windows]], [[ipados]]).
-- **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere. iPadOS rows still drop video embeds ([[windows]], [[ipados]]).
+- **Delete own post** ([[timeline-streaming]]): macOS, iPadOS, and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then prune the row (Windows via yoru_post_delete; restores on failure). iPadOS uses a SwiftUI confirmationDialog ([[windows]], [[ipados]]).
+- **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS, iPadOS, and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows carries the shared LoadFailure on the bridge error envelope (kind/title/message) ([[windows]], [[ipados]]).
+- **External link preview cards (OGP)** ([[timeline-streaming]]): macOS, iPadOS, and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint; iPadOS via the ported LinkCardView + LazyLinkCardView) ([[windows]], [[ipados]]).
+- **Quote post (record embed) cards** ([[timeline-streaming]]): macOS, iPadOS, and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation ([[windows]], [[ipados]]).
+- **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS, iPadOS, and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it from the tested ThreadNode.childTree via the extended yoru_thread_load and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]]).
-- **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS and Windows regroup same-thread posts into one oldest-first block (Windows via the yoru_feed_arrange bridge wrapper over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; iPadOS still lists reply-chain posts as independent newest-first rows ([[windows]], [[ipados]]).
+- **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS, iPadOS, and Windows regroup same-thread posts into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped ([[windows]], [[ipados]]).

@@ -1,26 +1,30 @@
 ---
 title: Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 type: behavior
-updated: 2026-06-23
+updated: 2026-06-24
 sources:
   - docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md
   - docs/superpowers/plans/2026-06-23-timeline-image-reflow.md
+  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
+  - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
   - core/Sources/YoruMimizukuKit/TimelineLayout.swift
   - apps/macos/Views/PostRowView.swift
   - apps/macos/Views/FeedView.swift
+  - apps/ipados/Views/PostRowView.swift
+  - apps/ipados/Views/TimelineListView.swift
 features:
   - name: Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)
     macos: full
     windows: none
-    ios: planned
+    ios: full
     android: planned
-    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral), but the SwiftUI view changes (PostRowView singleImage, tallCropHint overlay) are macOS-only for now; Windows renders images via the bridge DTO unchanged ([[windows]])."
+    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images via the bridge DTO unchanged ([[windows]], [[ipados]])."
   - name: Wide-column reflow (body left / media right at ≥ 680 pt)
     macos: full
     windows: none
-    ios: planned
+    ios: full
     android: planned
-    note: "Reflow layout is driven by FeedView.contentWidth injected into PostRowView; this SwiftUI plumbing exists only in apps/macos. Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]])."
+    note: "Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]])."
 ---
 
 # Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)

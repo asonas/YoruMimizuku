@@ -1,12 +1,18 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-06-08
+updated: 2026-06-24
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
+  - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
   - project.yml
   - apps/ipados/YoruMimizukuPadApp.swift
   - apps/ipados/Views/RootView.swift
+  - apps/ipados/Views/PostRowView.swift
+  - apps/ipados/Views/TimelineListView.swift
+  - apps/ipados/Theme.swift
+  - apps/ipados/Typography.swift
   - apps/ipados/Auth/ASWebAuthBrowserSession.swift
 ---
 
@@ -39,8 +45,6 @@ active account and tab set, while secure account data and the shared
 `RefreshGate` remain in the core account layer (`apps/ipados/Views/RootView.swift`,
 `2026-06-08-yorumimizuku-ipados-design.md` §5).
 
-## UI and features
-
 The shell uses `NavigationSplitView` with a touch-first sidebar. Home,
 notifications, saved search tabs, author tabs, and conversation tabs are available.
 Rows expose visible reply, repost, like, quote, copy-link, and open-in-browser
@@ -51,6 +55,30 @@ uses SwiftUI's `openURL`, and hashtag links open saved-search tabs
 (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
 `apps/ipados/Views/TimelineListView.swift`).
 
+## Timeline rendering parity
+
+As of `2026-06-24-yorumimizuku-ipados-parity-design.md`, the iPad timeline renders
+the same way macOS does. The presentation foundation was duplicated into
+`apps/ipados` (decision §5 in that spec — duplicate now, extract a shared module
+later): the framework-agnostic `ThemeStore` (`apps/ipados/Theme.swift`), the density
+store, the downsampling `RemoteImage` / `ImageDownsampler` (`apps/ipados/Media/`),
+and a `UIFont`-based `Typography` (`apps/ipados/Typography.swift`) that mirrors the
+macOS `Font.app(...)` helpers. The link, quote, and video cards were ported verbatim
+(they depend only on `ThemeStore`, `RemoteImage`, and `.app(...)`).
+
+`apps/ipados/Views/PostRowView.swift` is now a structural copy of the macOS row:
+themed typography and colors, the shared `DisplayDensity`, the single-image 5:4
+top-anchored crop with the 「全体表示」 hint (via `TimelineLayout`), the `RemoteImage`
+image grid, the video poster, the external-link (OGP) card with a lazy fallback, the
+quote-post card, the sensitive-media blur curtain, the reply marker, a repost/quote
+popover, and a copy-link / delete context menu. `TimelineListView` applies
+`FeedThreading.arrange` thread grouping with the avatar connector line, a themed
+canvas and divider, classified load-failure states (offline / 429 / 5xx) with retry,
+themed empty and loading states, a delete confirmation dialog, and a scene-width
+measurement that drives the wide-column reflow (body-left / media-right). The macOS
+hover-performance layer (`.equatable()` rows, hover highlight) is intentionally
+absent — iPad has no pointer hover and uses tap-to-focus.
+
 Compose is presented as a sheet. It supports top-level posts, replies, quote
 posts, and up to four image attachments through `PhotosPicker`; images are
 compressed to JPEG on the app side before the shared `PostService` uploads them
@@ -58,27 +86,29 @@ compressed to JPEG on the app side before the shared `PostService` uploads them
 
 ## Known differences
 
-- Jetstream live updates are not wired on iPadOS yet. The shell starts 30-second
-  polling for home and notifications; foreground live sockets and background
-  backfill are future work.
-- The macOS settings surface is not present. Theme, custom font, and display
-  density A/B are implemented in the macOS app, but the current iPadOS views use
-  the default SwiftUI styling and do not apply the shared display-density model.
-- Timeline rows now show relative timestamps, support row focus for hardware
-  keyboard actions, intercept hashtag links into saved-search tabs, and open a
-  full-screen image lightbox. They still use a simpler visual style than macOS and
-  do not have the macOS hover-performance layer.
-- Conversation tabs show the focused post, its ancestor chain, descendant replies,
-  and a 「さらに表示」 re-anchor cue for capped reply branches. The iPad visual
-  treatment is simpler than macOS, but the navigation behavior is now represented.
-- Notifications now show reason icons, relative timestamps, actor taps, and unread
-  row tint. They still use a compact summary list and do not implement the macOS
-  actor expansion UI.
-- OS banners and app badge updates are limited. The in-app notifications tab and
-  sidebar badges work while the app is active, but background polling is not a
-  reliable iPadOS notification strategy.
-- Saved search creation is present as a simple keyword search tab. The full
-  structured filter editor from macOS is not yet replicated in the iPad UI.
-- Compose is functional, including `PhotosPicker`, JPEG re-encoding, alt text,
-  replies, and quotes. It does not yet mirror every macOS affordance such as file
-  import, drag-and-drop attach, or the richer row-style quote preview.
+The timeline rendering gap with macOS is closed (see the section above). The
+remaining differences are settings surfaces and live updates, not row appearance.
+
+- **No settings surface yet.** The shared `ThemeStore` and `DisplayDensity` are now
+  wired into the iPad scene and applied to every row, so the look matches macOS at
+  the default (comfortable density, default palette). But there is **no UI to switch
+  them** on iPad: the display-density A/B toggle, the randoma11y theme picker, and
+  the custom-font-family / size picker from the macOS settings screen are not yet
+  replicated. The font-family picker in particular needs a `UIFont` family
+  enumeration the iPad `Typography` does not yet expose
+  (`2026-06-24-yorumimizuku-ipados-parity-design.md` §3). This is Phase 3 of the
+  parity plan.
+- **Jetstream live updates are not wired** on iPadOS. The shell starts 30-second
+  polling for home and notifications; this matches the v1 decision (interval polling
+  is the supported mode everywhere) rather than being an iPad-specific gap.
+- **Saved search creation is a simple keyword search tab.** The full structured
+  filter editor (multi-row terms, AND/OR) from macOS is not yet replicated.
+- **No in-app notification settings** (poll interval / badge toggle) as macOS and
+  Windows have. OS banners and app badge updates are also limited because iPadOS
+  background polling is not a reliable notification strategy.
+- **Notifications** show reason icons, relative timestamps, actor taps, and unread
+  row tint, but still use a compact summary list rather than the macOS actor
+  expansion UI.
+- **Compose** is functional (`PhotosPicker`, JPEG re-encoding, alt text, replies,
+  quotes) but does not yet mirror every macOS affordance such as file import or
+  drag-and-drop attach.

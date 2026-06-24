@@ -1,22 +1,24 @@
 ---
 title: Sensitive Media Blur
 type: behavior
-updated: 2026-06-17
+updated: 2026-06-24
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
+  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
   - core/Sources/BlueskyCore/Models/Timeline.swift
   - core/Sources/YoruMimizukuKit/PostDisplay.swift
   - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
   - apps/macos/Views/PostRowView.swift
+  - apps/ipados/Views/PostRowView.swift
   - apps/windows/App/Views/FeedView.xaml.cs
 features:
   - name: Sensitive media blur (content labels)
     macos: full
     windows: differs
-    ios: none
+    ios: full
     android: planned
-    note: "macOS blurs media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain. Windows gates the same media (the shared MediaWarning now rides the bridge DTO) but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look. iPadOS renders media ungated ([[windows]], [[ipados]])."
+    note: "macOS and iPadOS blur media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain (the shared MediaWarning + a Gaussian blur in PostRowView). Windows gates the same media but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look ([[windows]], [[ipados]])."
 ---
 
 # Sensitive Media Blur
