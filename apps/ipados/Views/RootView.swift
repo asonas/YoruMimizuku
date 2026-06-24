@@ -81,11 +81,13 @@ private struct AuthenticatedRootView: View {
     private let accountHandle: String
     private let accountAvatarURL: URL?
     private let accountManager: AccountManager
+    private let accountDID: String
 
     init(accountManager: AccountManager, did: String, accountHandle: String, accountAvatarURL: URL?) {
         self.accountManager = accountManager
         self.accountHandle = accountHandle
         self.accountAvatarURL = accountAvatarURL
+        self.accountDID = did
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(
                 loader: LiveTimelineLoader(accountManager: accountManager),
@@ -136,6 +138,7 @@ private struct AuthenticatedRootView: View {
             workspace: workspace,
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
+            accountDID: accountDID,
             makeComposer: { parentURI, quotedPost in
                 ComposerViewModel(
                     submitter: LiveComposer(accountManager: accountManager),
@@ -153,6 +156,7 @@ private struct MainShellView: View {
     @ObservedObject var workspace: WorkspaceModel
     let accountHandle: String
     let accountAvatarURL: URL?
+    let accountDID: String
     let makeComposer: (String?, PostDisplay?) -> ComposerViewModel
 
     @Environment(\.openURL) private var openURL
@@ -283,6 +287,7 @@ private struct MainShellView: View {
                 model: timelineModel,
                 title: "Home",
                 now: now,
+                currentDID: accountDID,
                 onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                 onOpenThread: workspace.openConversation,
                 onOpenAuthor: openAuthor,
@@ -310,6 +315,7 @@ private struct MainShellView: View {
                     model: tab.model,
                     title: tab.title,
                     now: now,
+                    currentDID: accountDID,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                     onOpenThread: workspace.openConversation,
                     onOpenAuthor: openAuthor,
@@ -345,6 +351,7 @@ private struct MainShellView: View {
                         model: tab.model,
                         title: tab.title,
                         now: now,
+                        currentDID: accountDID,
                         onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                         onOpenThread: workspace.openConversation,
                         onOpenAuthor: openAuthor,

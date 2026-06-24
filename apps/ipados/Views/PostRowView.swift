@@ -204,14 +204,59 @@ struct PostRowView: View {
             || (post.images.isEmpty && post.video == nil && post.quote == nil && post.firstLinkURL != nil)
     }
 
+    /// Whether this post has media the reflow layout would move to the right rail.
+    private var hasReflowMedia: Bool {
+        hasInlineMedia || hasLinkCard
+    }
+
     @ViewBuilder
     private var content: some View {
-        VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
-            authorLine
-            bodyText
-            verticalMedia
-            quoteSection
-            actionBarSection
+        let region = regionWidth(forContentWidth: contentWidth)
+        if TimelineLayout.placement(regionWidth: Double(region)) == .reflow && hasReflowMedia {
+            // The body grows to fill the row; the media rail is pinned to the right
+            // edge. The text takes whatever width is left (line length grows with the
+            // window — accepted to avoid a right-hand gap), so the media never strands
+            // mid-row and no trailing whitespace appears.
+            HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
+                VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                    authorLine
+                    bodyText
+                    quoteSection
+                    actionBarSection
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                mediaColumn(maxWidth: CGFloat(TimelineLayout.mediaRailWidth))
+                    .frame(width: CGFloat(TimelineLayout.mediaRailWidth), alignment: .top)
+            }
+            .frame(maxWidth: .infinity)
+        } else {
+            VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                authorLine
+                bodyText
+                verticalMedia
+                quoteSection
+                actionBarSection
+            }
+        }
+    }
+
+    /// The available width for the body+media region: the row width minus the row's
+    /// horizontal padding, the avatar column, and the column spacing.
+    private func regionWidth(forContentWidth width: CGFloat) -> CGFloat {
+        width - horizontalRowPadding * 2 - avatarSize - columnSpacing
+    }
+
+    /// Media for the wide reflow layout's right rail: image/video then link card,
+    /// stacked at the rail width.
+    @ViewBuilder
+    private func mediaColumn(maxWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if hasInlineMedia {
+                mediaSection(maxWidth: maxWidth)
+            }
+            if hasLinkCard {
+                linkCardSection
+            }
         }
     }
 
