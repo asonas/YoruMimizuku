@@ -21,8 +21,8 @@ struct TimelineListView: View {
             case .idle, .loading:
                 ProgressView()
                     .task { await model.load() }
-            case let .failed(message):
-                ContentUnavailableView("読み込みに失敗しました", systemImage: "exclamationmark.triangle", description: Text(message))
+            case let .failed(failure):
+                ContentUnavailableView(failure.title, systemImage: "exclamationmark.triangle", description: Text(failure.message))
                     .overlay(alignment: .bottom) {
                         Button("再試行") { Task { await model.load() } }
                             .buttonStyle(.borderedProminent)
