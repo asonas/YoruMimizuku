@@ -4,6 +4,7 @@ import YoruMimizukuKit
 
 struct ConversationView: View {
     @ObservedObject var model: ThreadViewModel
+    @EnvironmentObject private var displaySettings: DisplaySettingsStore
     let now: Date
     var onImageTap: ([URL], Int) -> Void
     var onOpenThread: (PostDisplay) -> Void
@@ -29,7 +30,9 @@ struct ConversationView: View {
                             ForEach(ancestors) { ancestor in
                                 PostRowView(
                                     post: ancestor,
+                                    density: displaySettings.density,
                                     now: now,
+                                    interactiveActions: false,
                                     onImageTap: onImageTap,
                                     onOpenThread: onOpenThread,
                                     onOpenAuthor: onOpenAuthor,
@@ -45,6 +48,7 @@ struct ConversationView: View {
                     }
                     PostRowView(
                         post: thread.focus,
+                        density: displaySettings.density,
                         now: now,
                         isFocused: true,
                         onImageTap: onImageTap,
@@ -116,6 +120,7 @@ struct ConversationView: View {
 }
 
 private struct ThreadNodeView: View {
+    @EnvironmentObject private var displaySettings: DisplaySettingsStore
     let node: ThreadNode
     let now: Date
     var onImageTap: ([URL], Int) -> Void
@@ -130,7 +135,9 @@ private struct ThreadNodeView: View {
         VStack(alignment: .leading, spacing: 0) {
             PostRowView(
                 post: node.post,
+                density: displaySettings.density,
                 now: now,
+                interactiveActions: false,
                 onImageTap: onImageTap,
                 onOpenThread: onOpenThread,
                 onOpenAuthor: onOpenAuthor,

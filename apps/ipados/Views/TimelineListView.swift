@@ -3,6 +3,7 @@ import YoruMimizukuKit
 
 struct TimelineListView: View {
     @ObservedObject var model: TimelineViewModel
+    @EnvironmentObject private var displaySettings: DisplaySettingsStore
     let title: String
     let now: Date
     var onImageTap: ([URL], Int) -> Void
@@ -33,6 +34,7 @@ struct TimelineListView: View {
                     ForEach(posts) { post in
                         PostRowView(
                             post: post,
+                            density: displaySettings.density,
                             now: now,
                             isFocused: focusedPostID == post.id,
                             onImageTap: onImageTap,
@@ -42,6 +44,7 @@ struct TimelineListView: View {
                             onQuote: onQuote,
                             onToggleLike: { post in Task { await model.toggleLike(post) } },
                             onToggleRepost: { post in Task { await model.toggleRepost(post) } },
+                            onReplyMarkerTap: onOpenThread,
                             onCopyPermalink: onCopyPermalink,
                             onOpenPermalink: onOpenPermalink
                         )
