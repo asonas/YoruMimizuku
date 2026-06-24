@@ -8,6 +8,10 @@ struct RootView: View {
     @State private var currentDID: String?
     @State private var accountAvatarURL: URL?
     @StateObject private var loginModel: LoginViewModel
+    /// Shared look (palette) and timeline density, injected into the whole scene so
+    /// every view reads the same themed colors and `.app(...)` fonts as macOS.
+    @StateObject private var theme = ThemeStore()
+    @StateObject private var displaySettings = DisplaySettingsStore()
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
@@ -39,6 +43,9 @@ struct RootView: View {
                 }
             }
         }
+        .background(theme.canvas)
+        .environmentObject(theme)
+        .environmentObject(displaySettings)
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
