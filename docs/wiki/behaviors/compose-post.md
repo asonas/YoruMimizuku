@@ -1,15 +1,19 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-06-17
+updated: 2026-06-25
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-06-25-compose-image-paste-drop-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
+  - docs/superpowers/plans/2026-06-25-compose-image-paste-drop.md
   - core/Sources/YoruMimizukuKit/ComposerViewModel.swift
   - apps/macos/Views/ComposerView.swift
+  - apps/macos/Views/ComposerTextView.swift
   - apps/macos/Media/ImageEncoder.swift
+  - apps/macos/Media/ComposerMediaIntake.swift
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
@@ -65,9 +69,9 @@ For replies, before sending, the parent URI is resolved via `getRecord` to fill 
 
 Up to 4. Each image is sent to `uploadBlob` as binary with its image MIME, yielding a `BlobRef` (`{ $type: "blob", ref: { $link: <cid> }, mimeType, size }`). Resizing / re-encoding / the 1 MB cap is handled app-side (downscaling on the macOS side if needed, considering the existing `ImageDownsampler`); the core only receives bytes and MIME.
 
-On [[macos]], `ImageEncoder.encodeForUpload` accepts the AT Protocol image formats. PNG, JPEG, GIF, and WebP that already fit under the ~1 MB cap pass through untouched (so an animated GIF keeps its animation and a WebP keeps its encoding); anything larger, or in another format such as HEIC, is downscaled and re-encoded as JPEG. The composer takes attachments three ways — the photo button (`fileImporter` for png/jpeg/gif/webp/heic), drag-and-drop from Finder or another app (file URLs and raw image data, e.g. CleanShot X), and the same encoder path normalizes them all (`apps/macos/Media/ImageEncoder.swift`, `apps/macos/Views/ComposerView.swift`).
+On [[macos]], `ImageEncoder.encodeForUpload` accepts the AT Protocol image formats. PNG, JPEG, GIF, and WebP that already fit under the ~1 MB cap pass through untouched (so an animated GIF keeps its animation and a WebP keeps its encoding); anything larger, or in another format such as HEIC, is downscaled and re-encoded as JPEG. The composer takes attachments four ways, all normalized through the same encoder: the photo button (`fileImporter` for png/jpeg/gif/webp/heic), drag-and-drop onto the sheet outside the editor (`VStack.onDrop`), **drag-and-drop onto the body editor**, and **paste (Cmd+V)**. The body is a custom `AttachingTextView` (an `NSViewRepresentable` wrapping `NSTextView`) rather than `TextEditor`, because `TextEditor`'s own `NSTextView` consumes drops and pastes itself and would insert the file path as text. `AttachingTextView.paste(_:)` / `performDragOperation(_:)` divert image file URLs and raw image data (screenshots, browser copies) to the attach path and fall through to default behavior for plain text; `ComposerMediaIntake` turns a pasteboard snapshot into encoded attachments, preferring file URLs over raw data so a Finder item keeps its original bytes (`apps/macos/Media/ComposerMediaIntake.swift`, `apps/macos/Views/ComposerTextView.swift`, `apps/macos/Views/ComposerView.swift`).
 
-On [[windows]], `ComposerViewModel` mirrors the core image payload (`dataBase64`, `mimeType`, `alt`) and caps attachments at 4. The current `ComposerDialog` uses a `FileOpenPicker` for PNG/JPEG files and shows thumbnails before calling `yoru_post_create`; it does not yet expose an alt-text field, drag-and-drop attach, WIC downsampling, or upload re-encode (`apps/windows/App/ViewModels/ComposerViewModel.cs`, `apps/windows/App/Views/ComposerDialog.xaml.cs`, `apps/windows/README.md`).
+On [[windows]], `ComposerViewModel` mirrors the core image payload (`dataBase64`, `mimeType`, `alt`) and caps attachments at 4. The current `ComposerDialog` uses a `FileOpenPicker` for PNG/JPEG files, shows thumbnails with a per-image alt-text editor, and runs WIC downsampling / JPEG re-encode (`ImageProcessing.PrepareAsync`) before calling `yoru_post_create`. It does **not** yet support paste (Ctrl+V) or drag-and-drop image attach — the `TextBox` has no `AllowDrop` or paste override, so an image paste / file drop simply does nothing (no path is inserted, unlike the old macOS behavior). The implementation plan for adding both is recorded for a Windows-machine follow-up (`2026-06-25-compose-image-paste-drop-design.md` §"Windows", `apps/windows/App/ViewModels/ComposerViewModel.cs`, `apps/windows/App/Views/ComposerDialog.xaml.cs`).
 
 On [[ipados]], compose is a sheet backed by the same `ComposerViewModel` and
 `LiveComposer`. `PhotosPicker` loads images from the photo library, the app
@@ -89,9 +93,10 @@ itself is replaced by a small progress indicator so the sheet does not resize.
 (`2026-06-08-macos-compose-notification-followups.md`, `ComposerViewModel.swift`,
 `apps/macos/Views/ComposerView.swift`).
 
-The editor itself uses the app font family (Hiragino Sans) at a slightly larger
-fixed size (15pt) with extra line spacing instead of the smaller raw system body
-face, so the text being typed reads as clearly as the rest of the UI. A `Divider`
-separates the text-input area (and any reply / quote / image previews) from the
-footer controls — the attach button, remaining-character counter, and Post button
-(`apps/macos/Views/ComposerView.swift`).
+The editor itself (`ComposerTextView` / `AttachingTextView`) uses the app font
+family (Hiragino Sans) at a slightly larger fixed size (15pt) instead of the
+smaller raw system body face, so the text being typed reads as clearly as the
+rest of the UI, and its text container is flush-left with the rest of the sheet.
+A `Divider` separates the text-input area (and any reply / quote / image previews)
+from the footer controls — the attach button, remaining-character counter, and
+Post button (`apps/macos/Views/ComposerView.swift`, `apps/macos/Views/ComposerTextView.swift`).

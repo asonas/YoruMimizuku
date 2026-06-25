@@ -103,6 +103,7 @@ targets:
       - apps/macos/Update/LaunchUpdatePrompt.swift
       - apps/macos/Update/InstallerVolumeEjection.swift
       - apps/macos/Media/ImageEncoder.swift
+      - apps/macos/Media/ComposerMediaIntake.swift
     settings:
       base:
         SWIFT_VERSION: "6.0"

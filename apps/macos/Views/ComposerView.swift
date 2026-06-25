@@ -25,18 +25,18 @@ struct ComposerView: View {
                 Spacer()
                 Button("キャンセル") { onClose() }
             }
-            TextEditor(text: $model.text)
-                .frame(minHeight: 120)
-                // Use the app font family (Hiragino Sans) at a slightly larger size
-                // than the system default so the editor reads as clearly as the rest
-                // of the UI rather than the smaller raw system body face.
-                .font(.appSize(15))
-                .lineSpacing(2)
-                // TextEditor (NSTextView) insets its text by the default 5pt
-                // lineFragmentPadding, so without this its first character sits
-                // 5pt right of the header / preview / footer. Pull it back so the
-                // body text is flush-left with the rest of the sheet.
-                .padding(.leading, -5)
+            // A custom NSTextView wrapper rather than TextEditor so image pastes
+            // (Cmd+V) and Finder drops over the editor become attachments instead
+            // of inserted file-path text — TextEditor's NSTextView would consume
+            // those itself and paste the path. Uses the app font family (Hiragino
+            // Sans) at a slightly larger size than the system default.
+            ComposerTextView(
+                text: $model.text,
+                isDropTargeted: $isDropTargeted,
+                font: Self.editorFont,
+                onAttachImages: attach
+            )
+            .frame(minHeight: 120)
             if let parent = model.replyParent {
                 replyPreview(parent)
             }
@@ -176,14 +176,37 @@ struct ComposerView: View {
         }
     }
 
+    /// The body editor font: the app family at 15pt, scaled by the user's size
+    /// setting, matching the rest of the sheet. Read live so a font-setting change
+    /// is reflected on the next render.
+    private static var editorFont: NSFont {
+        NSFont(name: AppTypography.family, size: 15 * AppTypography.sizeRatio)
+            ?? .systemFont(ofSize: 15 * AppTypography.sizeRatio)
+    }
+
+    /// Append already-encoded attachments while there is still room. Shared by the
+    /// file importer, the editor paste/drop intake, and would-be future sources.
+    private func appendEncoded(_ items: [(data: Data, mimeType: String)]) {
+        for item in items where model.canAddImage {
+            model.images.append(ComposeImage(data: item.data, mimeType: item.mimeType))
+        }
+    }
+
+    /// Attach images pasted or dropped onto the editor (intercepted by
+    /// `AttachingTextView`). The snapshot's bytes are encoded for upload here.
+    private func attach(_ snapshot: PasteboardImageSnapshot) {
+        appendEncoded(ComposerMediaIntake.attachments(from: snapshot))
+    }
+
     private func handleImport(_ result: Result<[URL], Error>) {
         guard case let .success(urls) = result else { return }
-        for url in urls where model.canAddImage {
+        var encoded: [(data: Data, mimeType: String)] = []
+        for url in urls {
             guard url.startAccessingSecurityScopedResource() else { continue }
             defer { url.stopAccessingSecurityScopedResource() }
-            guard let encoded = ImageEncoder.encodeForUpload(url: url) else { continue }
-            model.images.append(ComposeImage(data: encoded.data, mimeType: encoded.mimeType))
+            if let item = ImageEncoder.encodeForUpload(url: url) { encoded.append(item) }
         }
+        appendEncoded(encoded)
     }
 
     /// Accept images dropped onto the sheet. Finder files arrive as file URLs (kept
