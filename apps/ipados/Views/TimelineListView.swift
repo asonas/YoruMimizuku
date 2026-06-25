@@ -138,13 +138,9 @@ struct TimelineListView: View {
     }
 
     private var loadingState: some View {
-        VStack(spacing: 12) {
-            ProgressView().controlSize(.regular)
-            Text("夜空を眺めています…")
-                .font(.app(.callout))
-                .foregroundStyle(theme.tertiaryText)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        ProgressView()
+            .controlSize(.regular)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func failedState(_ failure: LoadFailure) -> some View {
