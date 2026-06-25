@@ -1,7 +1,7 @@
 ---
 title: Accounts (Multi-Account Persistence)
 type: behavior
-updated: 2026-06-15
+updated: 2026-06-25
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -10,6 +10,7 @@ sources:
   - core/Sources/BlueskyCore/Account/AccountManager.swift
   - apps/macos/Views/SidebarView.swift
   - apps/macos/Views/RootView.swift
+  - apps/ipados/Views/RootView.swift
   - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Multi-account persistence & switching
@@ -52,6 +53,13 @@ Both logout and the existing session-expiry fallback go through one method, `Acc
 On [[ipados]], the same rule is applied per scene: each iPad scene owns its active
 account and `WorkspaceModel`, while the secure account store and shared
 `RefreshGate` remain below that scene boundary (`2026-06-08-yorumimizuku-ipados-design.md` §5).
+iPad surfaces the switcher the same way macOS does — a tappable account row in the
+sidebar footer (avatar + `@handle`) that opens a `Menu` of every stored account (the
+active one checkmarked), **「アカウントを追加…」**, and a destructive **「ログアウト」**.
+It is fed by the same token-free `AccountManager.summaries()`; picking an entry calls
+`switchTo(did:)`, "add account" presents a reset `LoginViewModel` in an
+`ASWebAuthenticationSession` sheet and merges via `add`, and both logout and
+session-expiry fall through `removeAndAdvance(did:)` (`apps/ipados/Views/RootView.swift`).
 
 ## Account switcher menu (Windows)
 
