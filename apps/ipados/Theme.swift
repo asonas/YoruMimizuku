@@ -91,6 +91,17 @@ final class ThemeStore: ObservableObject {
     var accent: Color { Self.accentColor }
     var star: Color { Self.starColor }
 
+    /// Whether the active palette reads as light or dark. The app pins the system
+    /// color scheme to this so system-drawn chrome (sidebar/list backgrounds, the
+    /// navigation bar, default control tints) matches the themed canvas instead of
+    /// following the device's auto appearance — otherwise a dark device would paint
+    /// the sidebar and notifications black while the timeline canvas stays light.
+    var preferredColorScheme: ColorScheme {
+        let bg = palette.background
+        let luminance = 0.299 * bg.red + 0.587 * bg.green + 0.114 * bg.blue
+        return luminance < 0.5 ? .dark : .light
+    }
+
     var primaryText: Color { Color(palette.text) }
     var secondaryText: Color { Color(palette.secondaryText) }
     var tertiaryText: Color { Color(palette.text.blended(toward: palette.background, fraction: 0.45)) }

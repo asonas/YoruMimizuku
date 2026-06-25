@@ -44,6 +44,7 @@ struct RootView: View {
             }
         }
         .background(theme.canvas)
+        .preferredColorScheme(theme.preferredColorScheme)
         .environmentObject(theme)
         .environmentObject(displaySettings)
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
@@ -159,15 +160,20 @@ private struct MainShellView: View {
     let accountDID: String
     let makeComposer: (String?, PostDisplay?) -> ComposerViewModel
 
+    @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
     @State private var lightbox: ImageGallery?
     @State private var composer: ComposerViewModel?
     @State private var now = Date()
     @State private var searchText = ""
+    // Pin the sidebar visible. The detail pane hides its navigation bar for a
+    // chromeless canvas (no empty title band), which also removes the toggle that
+    // would otherwise reveal the sidebar — so keep both columns shown, like macOS.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
     private let clock = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             List {
                 Section {
                     SidebarButton(title: "Home", systemImage: "house", isSelected: workspace.selection == .home) {
@@ -244,6 +250,8 @@ private struct MainShellView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { theme.canvas }
             .navigationTitle("YoruMimizuku")
             .toolbar {
                 Button {
@@ -255,7 +263,12 @@ private struct MainShellView: View {
             }
         } detail: {
             detail
+                // The detail views set no title, so the inline navigation bar
+                // would render as an empty band above the timeline/notifications
+                // canvas. Hide it so the themed canvas runs to the top edge.
+                .toolbar(.hidden, for: .navigationBar)
         }
+        .navigationSplitViewStyle(.balanced)
         .environment(\.openURL, OpenURLAction { url in
             if let tag = RichText.hashtag(from: url) {
                 workspace.openHashtagFilter(tag: tag)

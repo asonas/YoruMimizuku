@@ -3,6 +3,7 @@ import YoruMimizukuKit
 
 struct NotificationsListView: View {
     @ObservedObject var model: NotificationsViewModel
+    @EnvironmentObject private var theme: ThemeStore
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void
     /// Open the post a notification is about (the liked/reposted target).
@@ -25,15 +26,20 @@ struct NotificationsListView: View {
                 List(items) { item in
                     NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor, onOpenSubject: onOpenSubject)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 .refreshable { await model.refresh() }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(theme.canvas)
         .onAppear { model.setActive(true) }
         .onDisappear { model.setActive(false) }
     }
 }
 
 private struct NotificationRowView: View {
+    @EnvironmentObject private var theme: ThemeStore
     let item: NotificationGroup
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void
@@ -65,7 +71,8 @@ private struct NotificationRowView: View {
             }
         }
         .padding(.vertical, 8)
-        .listRowBackground(item.isRead ? Color.clear : Color.blue.opacity(0.06))
+        .listRowBackground(item.isRead ? Color.clear : theme.accent.opacity(0.10))
+        .listRowSeparatorTint(theme.divider)
     }
 
     /// What the notification is about: for likes/reposts, a tappable snippet of the
@@ -90,7 +97,7 @@ private struct NotificationRowView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         }
                         Text(item.subjectText?.isEmpty == false ? (item.subjectText ?? "") : "画像")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                             .lineLimit(3)
                             .multilineTextAlignment(.leading)
                         Spacer(minLength: 0)
@@ -103,7 +110,7 @@ private struct NotificationRowView: View {
         default:
             if let text = item.text, !text.isEmpty {
                 Text(text)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                     .lineLimit(3)
             }
         }
@@ -112,8 +119,9 @@ private struct NotificationRowView: View {
     private var summaryLine: Text {
         Text(item.actionSummary)
             .fontWeight(.semibold)
+            .foregroundColor(theme.primaryText)
             + Text("  ·  \(timeFormatter.string(for: item.latestCreatedAt, now: now))")
-            .foregroundColor(.secondary)
+            .foregroundColor(theme.secondaryText)
     }
 
     private var icon: String {
