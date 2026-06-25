@@ -7,6 +7,8 @@ import YoruMimizukuKit
 struct RootView: View {
     @State private var currentDID: String?
     @State private var accountAvatarURL: URL?
+    /// Drives the "add account" login sheet shown over the signed-in UI.
+    @State private var isAddingAccount = false
     @StateObject private var loginModel: LoginViewModel
     /// Shared look (palette) and timeline density, injected into the whole scene so
     /// every view reads the same themed colors and `.app(...)` fonts as macOS.
@@ -33,7 +35,11 @@ struct RootView: View {
                     accountManager: accountManager,
                     did: did,
                     accountHandle: currentHandle,
-                    accountAvatarURL: accountAvatarURL
+                    accountAvatarURL: accountAvatarURL,
+                    accounts: accounts,
+                    onSwitchAccount: { switchAccount(to: $0) },
+                    onAddAccount: { startAddAccount() },
+                    onLogout: { logout() }
                 )
                 .id(did)
                 .task(id: currentDID) { await loadAvatar() }
@@ -50,6 +56,17 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
+        // The "add account" login flow, presented over the signed-in UI. On success
+        // the new account is current (AccountManager.add sets it), so adopting its
+        // DID rebuilds the authenticated subtree for the new account.
+        .sheet(isPresented: $isAddingAccount) {
+            LoginView(model: loginModel) { did in
+                isAddingAccount = false
+                currentDID = did
+            }
+            .environmentObject(theme)
+            .environmentObject(displaySettings)
+        }
     }
 
     private var currentHandle: String {
@@ -57,8 +74,36 @@ struct RootView: View {
         return account?.handle ?? account?.did ?? ""
     }
 
+    /// The stored accounts for the switcher menu. Empty if the read fails.
+    private var accounts: [AccountSummary] {
+        (try? accountManager.summaries()) ?? []
+    }
+
     private func loadAvatar() async {
         accountAvatarURL = try? await profileLoader.loadCurrentAvatar()
+    }
+
+    /// Switch the active account to `did` and rebuild the signed-in subtree for it.
+    private func switchAccount(to did: String) {
+        guard did != currentDID else { return }
+        try? accountManager.switchTo(did: did)
+        accountAvatarURL = nil
+        currentDID = did
+    }
+
+    /// Open the login flow to add another account. Reset the shared login model so
+    /// the sheet starts blank rather than showing the previous login's state.
+    private func startAddAccount() {
+        loginModel.reset()
+        isAddingAccount = true
+    }
+
+    /// Log out of the current account: remove it (clearing its Keychain item) and
+    /// fall through to the next stored account, or the login screen when none remain.
+    private func logout() {
+        guard let did = currentDID else { return }
+        accountAvatarURL = nil
+        currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
     }
 
     private func handleSessionExpired() {
@@ -83,12 +128,29 @@ private struct AuthenticatedRootView: View {
     private let accountAvatarURL: URL?
     private let accountManager: AccountManager
     private let accountDID: String
+    private let accounts: [AccountSummary]
+    private let onSwitchAccount: (String) -> Void
+    private let onAddAccount: () -> Void
+    private let onLogout: () -> Void
 
-    init(accountManager: AccountManager, did: String, accountHandle: String, accountAvatarURL: URL?) {
+    init(
+        accountManager: AccountManager,
+        did: String,
+        accountHandle: String,
+        accountAvatarURL: URL?,
+        accounts: [AccountSummary],
+        onSwitchAccount: @escaping (String) -> Void,
+        onAddAccount: @escaping () -> Void,
+        onLogout: @escaping () -> Void
+    ) {
         self.accountManager = accountManager
         self.accountHandle = accountHandle
         self.accountAvatarURL = accountAvatarURL
         self.accountDID = did
+        self.accounts = accounts
+        self.onSwitchAccount = onSwitchAccount
+        self.onAddAccount = onAddAccount
+        self.onLogout = onLogout
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(
                 loader: LiveTimelineLoader(accountManager: accountManager),
@@ -140,6 +202,10 @@ private struct AuthenticatedRootView: View {
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
             accountDID: accountDID,
+            accounts: accounts,
+            onSwitchAccount: onSwitchAccount,
+            onAddAccount: onAddAccount,
+            onLogout: onLogout,
             makeComposer: { parentURI, quotedPost in
                 ComposerViewModel(
                     submitter: LiveComposer(accountManager: accountManager),
@@ -158,6 +224,10 @@ private struct MainShellView: View {
     let accountHandle: String
     let accountAvatarURL: URL?
     let accountDID: String
+    let accounts: [AccountSummary]
+    let onSwitchAccount: (String) -> Void
+    let onAddAccount: () -> Void
+    let onLogout: () -> Void
     let makeComposer: (String?, PostDisplay?) -> ComposerViewModel
 
     @EnvironmentObject private var theme: ThemeStore
@@ -243,11 +313,7 @@ private struct MainShellView: View {
                 }
 
                 Section {
-                    HStack {
-                        RemoteAvatar(url: accountAvatarURL, size: 24)
-                        Text(accountHandle)
-                            .font(.footnote)
-                    }
+                    accountMenu
                 }
             }
             .scrollContentBackground(.hidden)
@@ -382,6 +448,58 @@ private struct MainShellView: View {
                 ContentUnavailableView("Author not found", systemImage: "person")
             }
         }
+    }
+
+    /// The bottom-of-sidebar account control: shows the current handle and, on tap,
+    /// a menu to switch between stored accounts, add another, or log out. iPad has no
+    /// menu bar, so this mirrors the macOS sidebar account switcher.
+    private var accountMenu: some View {
+        Menu {
+            Section("アカウント") {
+                ForEach(accounts, id: \.did) { account in
+                    Button {
+                        onSwitchAccount(account.did)
+                    } label: {
+                        if account.did == accountDID {
+                            Label(accountLabel(account), systemImage: "checkmark")
+                        } else {
+                            Text(accountLabel(account))
+                        }
+                    }
+                }
+            }
+            Divider()
+            Button {
+                onAddAccount()
+            } label: {
+                Label("アカウントを追加…", systemImage: "person.badge.plus")
+            }
+            Button(role: .destructive) {
+                onLogout()
+            } label: {
+                Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                RemoteAvatar(url: accountAvatarURL, size: 24)
+                Text("@\(accountHandle)")
+                    .font(.footnote)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The display string for one account row: its handle, or its DID when missing.
+    private func accountLabel(_ account: AccountSummary) -> String {
+        if let handle = account.handle, !handle.isEmpty { return "@\(handle)" }
+        return account.did
     }
 
     private func addSearchFilter() {
