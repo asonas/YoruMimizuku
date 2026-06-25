@@ -211,19 +211,13 @@ private struct MainShellView: View {
                         SidebarButton(
                             title: tab.title,
                             systemImage: "bubble.left.and.bubble.right",
-                            isSelected: workspace.selection == .conversation(tab.id)
+                            isSelected: workspace.selection == .conversation(tab.id),
+                            // iPad has no hover, so the close affordance is an always-visible
+                            // trailing button rather than the macOS hover-reveal one.
+                            // closeConversation re-selects an adjacent tab or falls back to home.
+                            onClose: { workspace.closeConversation(tab.id) }
                         ) {
                             workspace.selection = .conversation(tab.id)
-                        }
-                        // Swipe the row left to close the conversation tab (iPad has no
-                        // hover, so the macOS hover-reveal close button does not apply).
-                        // closeConversation re-selects an adjacent tab or falls back to home.
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                workspace.closeConversation(tab.id)
-                            } label: {
-                                Label("閉じる", systemImage: "xmark")
-                            }
                         }
                     }
                 }
@@ -433,13 +427,18 @@ private struct SidebarButton: View {
     let systemImage: String
     var badge = 0
     let isSelected: Bool
+    /// When set, an always-visible trailing close button is shown (e.g. to close a
+    /// conversation tab). iPad has no hover, so it cannot be a hover-reveal control.
+    var onClose: (() -> Void)? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack {
+            HStack(spacing: 6) {
                 Label(title, systemImage: systemImage)
-                Spacer()
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 4)
                 if badge > 0 {
                     Text(badge > 99 ? "99+" : "\(badge)")
                         .font(.caption2.bold())
@@ -448,11 +447,29 @@ private struct SidebarButton: View {
                         .background(Capsule().fill(Color.blue))
                         .foregroundStyle(.white)
                 }
+                // Reserve trailing space so the row label never slides under the
+                // overlaid close button.
+                if onClose != nil { Color.clear.frame(width: 22, height: 22) }
             }
             .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The close button is layered in front of the row button (not nested in its
+        // gesture), so tapping it closes the tab without also selecting the row.
+        .overlay(alignment: .trailing) {
+            if let onClose {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("会話を閉じる")
+            }
+        }
         .listRowBackground(isSelected ? Color.blue.opacity(0.12) : Color.clear)
     }
 }
