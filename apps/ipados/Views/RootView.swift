@@ -215,6 +215,16 @@ private struct MainShellView: View {
                         ) {
                             workspace.selection = .conversation(tab.id)
                         }
+                        // Swipe the row left to close the conversation tab (iPad has no
+                        // hover, so the macOS hover-reveal close button does not apply).
+                        // closeConversation re-selects an adjacent tab or falls back to home.
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                workspace.closeConversation(tab.id)
+                            } label: {
+                                Label("閉じる", systemImage: "xmark")
+                            }
+                        }
                     }
                 }
 
