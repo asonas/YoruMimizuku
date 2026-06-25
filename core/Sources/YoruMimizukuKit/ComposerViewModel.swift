@@ -14,9 +14,21 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
     /// `nonisolated` because `Identifiable`'s `id` requirement is nonisolated.
     nonisolated public let id = UUID()
 
+    /// Progress phase while a post with a video is being sent: the video is
+    /// uploaded, then the service processes it, before the record is created.
+    public enum SubmitPhase: Equatable, Sendable {
+        case idle
+        case uploadingVideo
+        case processingVideo
+        case posting
+    }
+
     @Published public var text: String = ""
     @Published public var images: [ComposeImage] = []
+    /// The single attached video, exclusive with `images`.
+    @Published public var video: ComposeVideo?
     @Published public private(set) var isSubmitting = false
+    @Published public private(set) var submitPhase: SubmitPhase = .idle
     @Published public private(set) var errorMessage: String?
 
     /// The post being replied to, when the composer was opened from a post row.
@@ -48,15 +60,18 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
     /// Grapheme-cluster count (not UTF-16 length) so emoji and combined marks count as one.
     public var graphemeCount: Int { text.count }
     public var remaining: Int { Self.maxGraphemes - graphemeCount }
-    public var canAddImage: Bool { images.count < Self.maxImages }
+    /// Images and a video are mutually exclusive (atproto allows one media kind),
+    /// so a video blocks adding images and vice versa.
+    public var canAddImage: Bool { video == nil && images.count < Self.maxImages }
+    public var canAddVideo: Bool { video == nil && images.isEmpty && !isSubmitting }
 
     public var canSubmit: Bool {
         guard !isSubmitting else { return false }
         guard graphemeCount <= Self.maxGraphemes else { return false }
         let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        // A quote with no text is valid (quoting alone), so the quoted post also
-        // makes the draft submittable.
-        return hasText || !images.isEmpty || quotedPost != nil
+        // A quote with no text is valid (quoting alone), and a video alone is also
+        // a valid post, so each makes the draft submittable.
+        return hasText || !images.isEmpty || video != nil || quotedPost != nil
     }
 
     public func submit() async {
@@ -67,14 +82,18 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
         // Trailing blank lines would be published verbatim, so drop them at the
         // submission boundary while leaving interior line breaks untouched.
         let trimmedText = PostText.trimmingTrailingWhitespace(of: text)
-        let draft = PostDraft(text: trimmedText, images: images, replyParentURI: replyParentURI, quote: quote)
+        let draft = PostDraft(text: trimmedText, images: images, video: video,
+                              replyParentURI: replyParentURI, quote: quote)
+        submitPhase = video == nil ? .posting : .uploadingVideo
         do {
             _ = try await submitter.submit(draft)
             isSubmitting = false
+            submitPhase = .idle
             onPosted?()
         } catch {
             SessionExpiry.reportIfExpired(error)
             isSubmitting = false
+            submitPhase = .idle
             errorMessage = String(describing: error)
         }
     }

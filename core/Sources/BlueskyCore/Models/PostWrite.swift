@@ -88,6 +88,30 @@ public struct ImagesEmbedWrite: Encodable, Equatable, Sendable {
     }
 }
 
+/// The video embed for a record write (`app.bsky.embed.video`): the processed blob
+/// returned by the video service, plus optional pixel dimensions and alt text.
+public struct VideoWrite: Encodable, Equatable, Sendable {
+    public let video: BlobRef
+    public let aspectRatio: ImageAspectRatio?
+    public let alt: String?
+
+    public init(video: BlobRef, aspectRatio: ImageAspectRatio? = nil, alt: String? = nil) {
+        self.video = video
+        self.aspectRatio = aspectRatio
+        self.alt = alt
+    }
+
+    enum CodingKeys: String, CodingKey { case type = "$type", video, aspectRatio, alt }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode("app.bsky.embed.video", forKey: .type)
+        try c.encode(video, forKey: .video)
+        try c.encodeIfPresent(aspectRatio, forKey: .aspectRatio)
+        if let alt, !alt.isEmpty { try c.encode(alt, forKey: .alt) }
+    }
+}
+
 /// A record embed (`app.bsky.embed.record`) wrapping a strong reference to the
 /// quoted post.
 public struct RecordEmbedWrite: Encodable, Equatable, Sendable {
@@ -110,8 +134,10 @@ public struct RecordEmbedWrite: Encodable, Equatable, Sendable {
 /// (`recordWithMedia`). Encodes the right `$type` for each case.
 public enum PostEmbedWrite: Encodable, Equatable, Sendable {
     case images([ImageWrite])
+    case video(VideoWrite)
     case record(StrongRef)
     case recordWithMedia(record: StrongRef, images: [ImageWrite])
+    case recordWithVideo(record: StrongRef, video: VideoWrite)
 
     enum RecordWithMediaKeys: String, CodingKey { case type = "$type", record, media }
 
@@ -119,6 +145,8 @@ public enum PostEmbedWrite: Encodable, Equatable, Sendable {
         switch self {
         case .images(let images):
             try ImagesEmbedWrite(images: images).encode(to: encoder)
+        case .video(let video):
+            try video.encode(to: encoder)
         case .record(let ref):
             try RecordEmbedWrite(record: ref).encode(to: encoder)
         case .recordWithMedia(let ref, let images):
@@ -126,6 +154,11 @@ public enum PostEmbedWrite: Encodable, Equatable, Sendable {
             try c.encode("app.bsky.embed.recordWithMedia", forKey: .type)
             try c.encode(RecordEmbedWrite(record: ref), forKey: .record)
             try c.encode(ImagesEmbedWrite(images: images), forKey: .media)
+        case .recordWithVideo(let ref, let video):
+            var c = encoder.container(keyedBy: RecordWithMediaKeys.self)
+            try c.encode("app.bsky.embed.recordWithMedia", forKey: .type)
+            try c.encode(RecordEmbedWrite(record: ref), forKey: .record)
+            try c.encode(video, forKey: .media)
         }
     }
 }

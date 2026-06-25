@@ -112,4 +112,41 @@ final class ComposerViewModelTests: XCTestCase {
         XCTAssertNotNil(vm.errorMessage)
         XCTAssertFalse(vm.isSubmitting)
     }
+
+    // 13. A video and images are mutually exclusive.
+    func testVideoAndImagesAreMutuallyExclusive() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        XCTAssertTrue(vm.canAddImage)
+        XCTAssertTrue(vm.canAddVideo)
+
+        vm.video = ComposeVideo(data: Data([0x1]), mimeType: "video/mp4")
+        XCTAssertFalse(vm.canAddImage) // video present blocks images
+
+        vm.video = nil
+        vm.images = [ComposeImage(data: Data([0x1]), mimeType: "image/jpeg")]
+        XCTAssertFalse(vm.canAddVideo) // images present block a video
+    }
+
+    // 14. A video alone makes the draft submittable.
+    func testVideoAloneIsSubmittable() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        XCTAssertFalse(vm.canSubmit)
+        vm.video = ComposeVideo(data: Data([0x1]), mimeType: "video/mp4")
+        XCTAssertTrue(vm.canSubmit)
+    }
+
+    // 15. submit() forwards the video on the draft.
+    func testSubmitForwardsVideo() async {
+        let submitter = FakeSubmitter()
+        let vm = ComposerViewModel(submitter: submitter)
+        vm.video = ComposeVideo(data: Data([0xAA]), mimeType: "video/mp4", alt: "clip",
+                                filename: "clip.mp4", width: 720, height: 1280)
+
+        await vm.submit()
+
+        XCTAssertEqual(submitter.received?.video?.alt, "clip")
+        XCTAssertEqual(submitter.received?.video?.mimeType, "video/mp4")
+        XCTAssertEqual(submitter.received?.video?.width, 720)
+        XCTAssertEqual(vm.submitPhase, .idle)
+    }
 }
