@@ -291,7 +291,6 @@ private struct MainShellView: View {
         case .home:
             TimelineListView(
                 model: timelineModel,
-                title: "Home",
                 now: now,
                 currentDID: accountDID,
                 onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
@@ -320,7 +319,6 @@ private struct MainShellView: View {
             if let tab = workspace.filter(id: id) {
                 TimelineListView(
                     model: tab.model,
-                    title: tab.title,
                     now: now,
                     currentDID: accountDID,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
@@ -356,7 +354,6 @@ private struct MainShellView: View {
                     AuthorHeaderView(tab: tab)
                     TimelineListView(
                         model: tab.model,
-                        title: tab.title,
                         now: now,
                         currentDID: accountDID,
                         onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },

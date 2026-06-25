@@ -28,7 +28,6 @@ struct NotificationsListView: View {
                 .refreshable { await model.refresh() }
             }
         }
-        .navigationTitle("Notifications")
         .onAppear { model.setActive(true) }
         .onDisappear { model.setActive(false) }
     }

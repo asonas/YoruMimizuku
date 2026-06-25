@@ -6,7 +6,6 @@ struct TimelineListView: View {
     @ObservedObject var model: TimelineViewModel
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var theme: ThemeStore
-    let title: String
     let now: Date
     /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
     /// context-menu action. Nil disables delete everywhere.
@@ -42,7 +41,6 @@ struct TimelineListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.canvas)
-        .navigationTitle(title)
         .background { keyboardShortcuts }
         .onChange(of: model.state) { _, _ in
             if focusedPostID == nil { focusedPostID = FeedThreading.arrange(model.posts).first?.id }

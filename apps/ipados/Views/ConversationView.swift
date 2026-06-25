@@ -83,7 +83,6 @@ struct ConversationView: View {
                 .refreshable { await model.load() }
             }
         }
-        .navigationTitle("Conversation")
         .background { conversationShortcuts }
     }
 
