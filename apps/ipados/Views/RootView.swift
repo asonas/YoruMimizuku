@@ -199,7 +199,8 @@ private struct MainShellView: View {
                             title: tab.title,
                             systemImage: "magnifyingglass",
                             badge: tab.model.unreadCount,
-                            isSelected: workspace.selection == .filter(tab.id)
+                            isSelected: workspace.selection == .filter(tab.id),
+                            onClose: { workspace.removeFilter(id: tab.id) }
                         ) {
                             workspace.selection = .filter(tab.id)
                         }
@@ -227,7 +228,8 @@ private struct MainShellView: View {
                         SidebarButton(
                             title: tab.title,
                             systemImage: "person",
-                            isSelected: workspace.selection == .author(tab.id)
+                            isSelected: workspace.selection == .author(tab.id),
+                            onClose: { workspace.closeAuthor(tab.id) }
                         ) {
                             workspace.selection = .author(tab.id)
                         }
