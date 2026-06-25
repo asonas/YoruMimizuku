@@ -103,6 +103,7 @@ Test targets: `BlueskyCoreTests` and `YoruMimizukuKitTests` (both under `core/Te
 - Write commit messages in English. Do not use Conventional Commits; capitalize the first letter.
 - Develop with TDD (Red → Green → Refactor). Do not write many tests at once; advance one step at a time.
 - **After merging into `main`, always run `xcodegen generate`.** `YoruMimizuku.xcodeproj` and the `Info.plist`s are generated, gitignored artifacts; a merge that adds or removes sources or changes `project.yml` leaves the local project stale, so regenerate it before building, testing, or releasing from `main`.
+- **After merging a feature branch into `main`, delete its now-unneeded worktree.** Run `git wt remove <path>` (or `git worktree remove <path>`) for the merged worktree so stale worktrees do not accumulate. Do this as part of the same merge step.
 
 ## Coding Conventions
 
