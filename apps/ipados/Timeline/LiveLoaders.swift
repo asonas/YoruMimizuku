@@ -1,6 +1,9 @@
 import Foundation
+import os
 import BlueskyCore
 import YoruMimizukuKit
+
+private let notificationsLog = Logger(subsystem: "as.ason.YoruMimizukuPad", category: "notifications")
 
 struct LiveTimelineLoader: TimelineLoading {
     let accountManager: AccountManager
@@ -57,7 +60,16 @@ struct LiveNotificationsLoader: NotificationsLoading {
         try context.persist(result.refreshed)
 
         let groups = NotificationGroup.group(result.response.notifications.map(NotificationDisplay.init))
-        let subjects = try await resolveSubjects(for: groups)
+        // Subject previews (which post a like/repost was about) are an enhancement.
+        // A failure resolving them via getPosts must not blank the whole notifications
+        // list, so degrade to groups without previews and log the underlying reason.
+        let subjects: [String: PostView]
+        do {
+            subjects = try await resolveSubjects(for: groups)
+        } catch {
+            notificationsLog.error("Resolving notification subjects failed: \(String(describing: error), privacy: .public)")
+            subjects = [:]
+        }
         return groups.map { group in
             guard let uri = group.subjectURI, let post = subjects[uri] else { return group }
             return group.withSubject(text: post.record.text, imageURL: post.embed?.images.first.flatMap { URL(string: $0.thumb) })
