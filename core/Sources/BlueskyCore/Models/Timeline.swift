@@ -262,7 +262,7 @@ public struct EmbedExternal: Decodable, Equatable, Sendable {
 
 /// The pixel dimensions of an embedded image (`app.bsky.embed.defs#aspectRatio`),
 /// used to lay the image out at its true proportions before it has loaded.
-public struct ImageAspectRatio: Decodable, Equatable, Sendable {
+public struct ImageAspectRatio: Codable, Equatable, Sendable {
     public let width: Int
     public let height: Int
 

@@ -33,6 +33,31 @@ public struct PostService: Sendable {
         return (decoded.blob, outcome.refreshed)
     }
 
+    /// Request a short-lived service-auth JWT (`com.atproto.server.getServiceAuth`)
+    /// scoped to `audience` (a service DID) and `lxm` (a lexicon method), expiring
+    /// `expiresInSeconds` from `now`. Used to authorize the video upload to the
+    /// Bluesky video service with a Bearer token. DPoP-bound on the PDS, with the
+    /// same 401→refresh handling as the other calls.
+    public func getServiceAuth(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        audience: String, lxm: String, expiresInSeconds: Int = 30 * 60, now: Date = Date()
+    ) async throws -> (token: String, refreshed: TokenResponse?) {
+        let endpoint = pds.appendingPathComponent("xrpc/com.atproto.server.getServiceAuth")
+        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
+            throw XRPCError.invalidURL(endpoint.absoluteString)
+        }
+        components.queryItems = [
+            URLQueryItem(name: "aud", value: audience),
+            URLQueryItem(name: "lxm", value: lxm),
+            URLQueryItem(name: "exp", value: String(Int(now.timeIntervalSince1970) + expiresInSeconds)),
+        ]
+        guard let url = components.url else { throw XRPCError.invalidURL(endpoint.absoluteString) }
+        let outcome = try await perform(method: .get, url: url, headers: ["Accept": "application/json"],
+                                        body: nil, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken)
+        let decoded: ServiceAuthResponse = try Self.decode(outcome.response)
+        return (decoded.token, outcome.refreshed)
+    }
+
     /// Create a record of any collection (`com.atproto.repo.createRecord`). Used by
     /// the typed `like`/`repost` helpers below; the auth refresh-and-retry is
     /// handled by `perform`. Returns the created record's uri/cid plus refreshed
@@ -112,6 +137,7 @@ public struct PostService: Sendable {
         did: String, text: String, images: [(data: Data, mimeType: String, alt: String)],
         replyParentURI: String?,
         quote: StrongRef? = nil,
+        video: (blob: BlobRef, aspectRatio: ImageAspectRatio?, alt: String)? = nil,
         createdAt: String = Self.timestamp()
     ) async throws -> (response: CreateRecordResponse, refreshed: TokenResponse?) {
         var token = accessToken
@@ -195,14 +221,22 @@ public struct PostService: Sendable {
             reply = try await fetchReplyRefs(parentURI: replyParentURI)
         }
 
-        // 4. Build and send the record. The embed slot holds images, a quoted
-        // record, or both (recordWithMedia) depending on what the draft carries.
+        // 4. Build and send the record. The embed slot holds a video, images, a
+        // quoted record, or a record with one of those as media. A video is
+        // exclusive with images (atproto allows only one media kind), so when a
+        // video blob is present it wins and any images are ignored.
         let embed: PostEmbedWrite?
-        switch (imageWrites.isEmpty, quote) {
-        case (true, nil): embed = nil
-        case (false, nil): embed = .images(imageWrites)
-        case (true, .some(let ref)): embed = .record(ref)
-        case (false, .some(let ref)): embed = .recordWithMedia(record: ref, images: imageWrites)
+        if let video {
+            let write = VideoWrite(video: video.blob, aspectRatio: video.aspectRatio,
+                                   alt: video.alt.isEmpty ? nil : video.alt)
+            embed = quote.map { .recordWithVideo(record: $0, video: write) } ?? .video(write)
+        } else {
+            switch (imageWrites.isEmpty, quote) {
+            case (true, nil): embed = nil
+            case (false, nil): embed = .images(imageWrites)
+            case (true, .some(let ref)): embed = .record(ref)
+            case (false, .some(let ref)): embed = .recordWithMedia(record: ref, images: imageWrites)
+            }
         }
         let record = PostRecordWrite(text: text, createdAt: createdAt, facets: facets, embed: embed, reply: reply)
         let request = CreateRecordRequest(repo: did, collection: "app.bsky.feed.post", record: record)

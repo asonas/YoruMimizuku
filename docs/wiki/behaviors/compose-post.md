@@ -6,14 +6,20 @@ sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-25-compose-image-paste-drop-design.md
+  - docs/superpowers/specs/2026-06-25-compose-video-upload-design.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-compose-post.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - docs/superpowers/plans/2026-06-25-compose-image-paste-drop.md
+  - docs/superpowers/plans/2026-06-25-compose-video-upload.md
   - core/Sources/YoruMimizukuKit/ComposerViewModel.swift
+  - core/Sources/BlueskyCore/XRPC/VideoUploadService.swift
+  - core/Sources/BlueskyCore/XRPC/PostService.swift
   - apps/macos/Views/ComposerView.swift
   - apps/macos/Views/ComposerTextView.swift
   - apps/macos/Media/ImageEncoder.swift
   - apps/macos/Media/ComposerMediaIntake.swift
+  - apps/macos/Media/VideoAttachment.swift
+  - apps/ipados/Media/VideoAttachment.swift
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
@@ -29,6 +35,12 @@ features:
     ios: full
     android: planned
     note: "Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]])."
+  - name: Video attachment (one, alt text, exclusive with images)
+    macos: full
+    windows: planned
+    ios: full
+    android: planned
+    note: "macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]])."
 ---
 
 # Composing Posts
@@ -37,9 +49,9 @@ The app posts to Bluesky. In addition to body text, it supports RichText posts w
 
 ## Scope
 
-Included: top-level posts (`createRecord` / `app.bsky.feed.post`), replies (carrying the conversation root and parent refs), quote posts (`app.bsky.embed.record`, or `app.bsky.embed.recordWithMedia` when images accompany the quote), automatic facet detection (link / tag / mention), image posts (`uploadBlob` → `app.bsky.embed.images`), a 300-grapheme limit with a remaining counter, and submit-state management.
+Included: top-level posts (`createRecord` / `app.bsky.feed.post`), replies (carrying the conversation root and parent refs), quote posts (`app.bsky.embed.record`, or `app.bsky.embed.recordWithMedia` when images accompany the quote), automatic facet detection (link / tag / mention), image posts (`uploadBlob` → `app.bsky.embed.images`), **video posts** (one video, exclusive with images, → `app.bsky.embed.video`), a 300-grapheme limit with a remaining counter, and submit-state management.
 
-Excluded: external embeds (OGP link cards) on the *write* side — a posted URL becomes a link facet, not an `app.bsky.embed.external` record (the display side does render link cards; see [[timeline-streaming]]) — plus video, draft saving / scheduling / threads, post editing (atproto has no edit), and a `langs` UI input.
+Excluded: external embeds (OGP link cards) on the *write* side — a posted URL becomes a link facet, not an `app.bsky.embed.external` record (the display side does render link cards; see [[timeline-streaming]]) — plus client-side video transcoding (the original bytes are sent as-is) and strict client-side video limit checks (`getUploadLimits`), video captions, draft saving / scheduling / threads, post editing (atproto has no edit), and a `langs` UI input.
 
 > Note: the design spec originally listed quote posts as out of scope (`2026-06-05-yorumimizuku-compose-post-design.md` §"含まないもの"). They have since been implemented in the core and both front ends, so this page documents the shipped behavior; the spec text predates that change.
 
@@ -77,6 +89,40 @@ On [[ipados]], compose is a sheet backed by the same `ComposerViewModel` and
 `LiveComposer`. `PhotosPicker` loads images from the photo library, the app
 compresses them to JPEG before upload, and each attachment has an alt-text field
 (`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`).
+
+## Video upload
+
+A post can carry **one** video, which is **mutually exclusive** with images (atproto
+allows a single media kind), enforced in `ComposerViewModel` (`canAddVideo` /
+`canAddImage` each require the other to be empty). Unlike an image's single
+`uploadBlob`, video upload is a multi-step flow against a *different* host with a
+**Bearer** service-auth token (not DPoP), implemented in `VideoUploadService` and
+`PostService.getServiceAuth` (core):
+
+1. `getServiceAuth` on the user's PDS (DPoP) with `aud = did:web:<PDS host>`,
+   `lxm = com.atproto.repo.uploadBlob`, `exp = now + 30m` → a short-lived JWT.
+2. `uploadVideo` POSTs the raw bytes to `https://video.bsky.app/xrpc/app.bsky.video.uploadVideo?did=&name=`
+   with `Authorization: Bearer <token>` → a job.
+3. `pollUntilComplete` polls `app.bsky.video.getJobStatus` until `jobStatus.blob`
+   is ready (or the job fails / times out).
+4. `createPost` embeds the blob as `app.bsky.embed.video` (`video` + optional
+   `aspectRatio` + `alt`), or `app.bsky.embed.recordWithMedia` with the video as
+   media when the post also quotes. `LiveComposer` orchestrates steps 1–4 and
+   threads refreshed tokens forward (the refresh token is single-use).
+
+The flow is unit-tested with fakes (job-status decode for in-progress / completed /
+failed, the polling state machine, the upload request shape, `getServiceAuth` query
+building, the `app.bsky.embed.video` encoding); the live upload path is verified
+manually with a real account.
+
+On [[macos]] the composer adds a video button (`fileImporter` for `.movie` /
+`.mpeg4Movie` / `.quickTimeMovie`); on [[ipados]] a second `PhotosPicker`
+(`matching: .videos`). Both use `VideoAttachment` (AVFoundation) to read the pixel
+dimensions (for `aspectRatio`) and a poster frame for the thumbnail, and show the
+upload/processing phase (`ComposerViewModel.SubmitPhase`) while the post is in
+flight (`apps/macos/Media/VideoAttachment.swift`, `apps/ipados/Media/VideoAttachment.swift`,
+`core/Sources/BlueskyCore/XRPC/VideoUploadService.swift`). [[windows]] video attach
+is specced for a follow-up (`2026-06-25-compose-video-upload-design.md` §"Windows").
 
 ## UI entry points
 

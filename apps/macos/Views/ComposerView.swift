@@ -10,6 +10,8 @@ struct ComposerView: View {
     var onClose: () -> Void
 
     @State private var importing = false
+    @State private var importingVideo = false
+    @State private var videoPoster: NSImage?
     @State private var isDropTargeted = false
 
     private var headerTitle: String {
@@ -46,8 +48,14 @@ struct ComposerView: View {
             if !model.images.isEmpty {
                 imageStrip
             }
+            if model.video != nil {
+                videoStrip
+            }
             Divider()
             composerFooter
+            if model.isSubmitting, let label = phaseLabel {
+                Text(label).font(.caption).foregroundStyle(theme.tertiaryText)
+            }
             if let error = model.errorMessage {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
@@ -58,6 +66,11 @@ struct ComposerView: View {
                       allowedContentTypes: [.png, .jpeg, .gif, .webP, .heic],
                       allowsMultipleSelection: true) { result in
             handleImport(result)
+        }
+        .fileImporter(isPresented: $importingVideo,
+                      allowedContentTypes: [.movie, .mpeg4Movie, .quickTimeMovie],
+                      allowsMultipleSelection: false) { result in
+            handleVideoImport(result)
         }
         .overlay {
             if isDropTargeted {
@@ -77,6 +90,9 @@ struct ComposerView: View {
             Button { importing = true } label: { Image(systemName: "photo.badge.plus") }
                 .disabled(!model.canAddImage)
                 .help("クリック、または画像をドラッグ&ドロップで添付")
+            Button { importingVideo = true } label: { Image(systemName: "video.badge.plus") }
+                .disabled(!model.canAddVideo)
+                .help("動画を1本添付（画像とは併用できません）")
             Spacer()
             Text("\(model.remaining)")
                 .font(.callout).monospacedDigit()
@@ -176,6 +192,43 @@ struct ComposerView: View {
         }
     }
 
+    /// The single attached video: a poster thumbnail with a play badge, an alt-text
+    /// field, and a remove button. A video is exclusive with images.
+    private var videoStrip: some View {
+        HStack(alignment: .top, spacing: 8) {
+            ZStack {
+                if let videoPoster {
+                    Image(nsImage: videoPoster).resizable().scaledToFill()
+                } else {
+                    RoundedRectangle(cornerRadius: 6).fill(theme.surface)
+                }
+                Image(systemName: "play.circle.fill")
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+            }
+            .frame(width: 72, height: 56).clipped().cornerRadius(6)
+            TextField("alt text", text: videoAltBinding)
+            Button { model.video = nil; videoPoster = nil } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+        }
+    }
+
+    /// Binds the alt-text field to the optional video's `alt`.
+    private var videoAltBinding: Binding<String> {
+        Binding(get: { model.video?.alt ?? "" }, set: { model.video?.alt = $0 })
+    }
+
+    /// Status line shown while a video post is in flight (the upload + processing
+    /// can take a while, unlike an image post).
+    private var phaseLabel: String? {
+        switch model.submitPhase {
+        case .uploadingVideo: return "動画をアップロード中…"
+        case .processingVideo: return "動画を変換中…"
+        case .posting, .idle: return nil
+        }
+    }
+
     /// The body editor font: the app family at 15pt, scaled by the user's size
     /// setting, matching the rest of the sheet. Read live so a font-setting change
     /// is reflected on the next render.
@@ -207,6 +260,15 @@ struct ComposerView: View {
             if let item = ImageEncoder.encodeForUpload(url: url) { encoded.append(item) }
         }
         appendEncoded(encoded)
+    }
+
+    private func handleVideoImport(_ result: Result<[URL], Error>) {
+        guard case let .success(urls) = result, let url = urls.first, model.canAddVideo else { return }
+        Task {
+            guard let loaded = await VideoAttachment.load(url: url) else { return }
+            model.video = loaded.video
+            videoPoster = loaded.poster
+        }
     }
 
     /// Accept images dropped onto the sheet. Finder files arrive as file URLs (kept
