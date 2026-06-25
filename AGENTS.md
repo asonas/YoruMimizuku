@@ -102,6 +102,7 @@ Test targets: `BlueskyCoreTests` and `YoruMimizukuKitTests` (both under `core/Te
 - **Always use the `/commit` skill to create commits.** Do not run `git commit` directly. The commit command is `git ai-commit`.
 - Write commit messages in English. Do not use Conventional Commits; capitalize the first letter.
 - Develop with TDD (Red → Green → Refactor). Do not write many tests at once; advance one step at a time.
+- **After merging into `main`, always run `xcodegen generate`.** `YoruMimizuku.xcodeproj` and the `Info.plist`s are generated, gitignored artifacts; a merge that adds or removes sources or changes `project.yml` leaves the local project stale, so regenerate it before building, testing, or releasing from `main`.
 
 ## Coding Conventions
 
