@@ -7,6 +7,7 @@ extension PostVideo {
     public init(_ video: EmbedVideo) {
         self.init(
             thumbURL: video.thumbnail.flatMap(URL.init(string:)),
+            playlistURL: URL(string: video.playlist),
             alt: video.alt,
             aspectRatio: video.aspectRatio.flatMap { ratio in
                 ratio.height > 0 ? Double(ratio.width) / Double(ratio.height) : nil

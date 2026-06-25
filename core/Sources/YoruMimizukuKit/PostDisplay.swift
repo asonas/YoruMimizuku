@@ -52,11 +52,15 @@ public struct PostImage: Identifiable, Equatable, Sendable {
 /// activating the poster opens the post externally.
 public struct PostVideo: Equatable, Sendable {
     public let thumbURL: URL?
+    /// The HLS playlist (`.m3u8`) URL for inline playback. Nil when the embed had no
+    /// usable playlist. The poster thumbnail is shown until playback starts.
+    public let playlistURL: URL?
     public let alt: String?
     public let aspectRatio: Double?
 
-    public init(thumbURL: URL?, alt: String? = nil, aspectRatio: Double? = nil) {
+    public init(thumbURL: URL?, playlistURL: URL? = nil, alt: String? = nil, aspectRatio: Double? = nil) {
         self.thumbURL = thumbURL
+        self.playlistURL = playlistURL
         self.alt = alt
         self.aspectRatio = aspectRatio
     }

@@ -1,4 +1,6 @@
 import SwiftUI
+import AVKit
+import AVFoundation
 import BlueskyCore
 import YoruMimizukuKit
 
@@ -60,6 +62,8 @@ struct PostRowView: View {
     /// Whether the viewer revealed this post's sensitive media. Resets when the row
     /// leaves and re-enters the view, so a blurred post stays blurred by default.
     @State private var revealMedia = false
+    /// The video the viewer tapped to play, presented full-screen with AVKit.
+    @State private var playingVideo: PlayableVideo?
 
     private let timeFormatter = RelativeTimeFormatter()
 
@@ -100,6 +104,9 @@ struct PostRowView: View {
         .contentShape(Rectangle())
         .onTapGesture { onOpenThread?(post) }
         .contextMenu { rowContextMenu }
+        .fullScreenCover(item: $playingVideo) { item in
+            VideoPlayerScreen(url: item.url)
+        }
     }
 
     @ViewBuilder
@@ -332,7 +339,15 @@ struct PostRowView: View {
         let media = VStack(alignment: .leading, spacing: 3) {
             if !post.images.isEmpty { imageGrid(maxWidth: maxWidth) }
             if let video = post.video {
-                VideoPosterView(video: video, maxWidth: maxWidth, onTap: { onOpenPermalink?(post) })
+                VideoPosterView(video: video, maxWidth: maxWidth, onTap: {
+                    // Play inline with AVKit when the embed carries an HLS playlist;
+                    // fall back to opening the post externally only if it does not.
+                    if let url = video.playlistURL {
+                        playingVideo = PlayableVideo(url: url)
+                    } else {
+                        onOpenPermalink?(post)
+                    }
+                })
             }
         }
         if let warning = post.mediaWarning, !revealMedia {
@@ -597,5 +612,44 @@ struct RemoteAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+    }
+}
+
+/// A video the viewer chose to play, wrapped so it can drive `.fullScreenCover(item:)`.
+private struct PlayableVideo: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+/// Full-screen in-app player for a post's video. Plays the HLS playlist with AVKit
+/// instead of bouncing out to the Bluesky app, autoplays on appear, and pauses when
+/// dismissed. A close button sits in the top-leading corner over the player.
+private struct VideoPlayerScreen: View {
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var player = AVPlayer()
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
+            VideoPlayer(player: player)
+                .ignoresSafeArea()
+            Button { dismiss() } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding()
+            }
+            .accessibilityLabel("閉じる")
+        }
+        .onAppear {
+            // Route to the playback category so video audio is heard even when the
+            // hardware mute switch is on, matching how video players normally behave.
+            try? AVAudioSession.sharedInstance().setCategory(.playback)
+            try? AVAudioSession.sharedInstance().setActive(true)
+            player.replaceCurrentItem(with: AVPlayerItem(url: url))
+            player.play()
+        }
+        .onDisappear { player.pause() }
     }
 }

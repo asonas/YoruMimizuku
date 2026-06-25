@@ -336,6 +336,7 @@ final class PostDisplayMappingTests: XCTestCase {
         let video = display.video
 
         XCTAssertEqual(video?.thumbURL, URL(string: "https://video.example/poster.jpg"))
+        XCTAssertEqual(video?.playlistURL, URL(string: "https://video.example/playlist.m3u8"))
         XCTAssertEqual(video?.alt, "a dog")
         XCTAssertEqual(video?.aspectRatio, 1280.0 / 720.0)
     }
