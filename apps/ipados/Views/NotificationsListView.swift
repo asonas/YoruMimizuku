@@ -5,6 +5,8 @@ struct NotificationsListView: View {
     @ObservedObject var model: NotificationsViewModel
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void
+    /// Open the post a notification is about (the liked/reposted target).
+    var onOpenSubject: (NotificationGroup) -> Void = { _ in }
 
     var body: some View {
         Group {
@@ -21,7 +23,7 @@ struct NotificationsListView: View {
                     }
             case let .loaded(items):
                 List(items) { item in
-                    NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor)
+                    NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor, onOpenSubject: onOpenSubject)
                 }
                 .refreshable { await model.refresh() }
             }
@@ -36,6 +38,7 @@ private struct NotificationRowView: View {
     let item: NotificationGroup
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void
+    var onOpenSubject: (NotificationGroup) -> Void
 
     private let timeFormatter = RelativeTimeFormatter()
 
@@ -59,18 +62,52 @@ private struct NotificationRowView: View {
                     }
                 }
                 summaryLine
-                if let text = item.text ?? item.subjectText, !text.isEmpty {
-                    Text(text)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
-                } else if item.subjectImageURL != nil {
-                    Text("画像")
-                        .foregroundStyle(.secondary)
-                }
+                context
             }
         }
         .padding(.vertical, 8)
         .listRowBackground(item.isRead ? Color.clear : Color.blue.opacity(0.06))
+    }
+
+    /// What the notification is about: for likes/reposts, a tappable snippet of the
+    /// target post (its text and/or a thumbnail) that opens that post; for
+    /// replies/mentions/quotes, the incoming body text.
+    @ViewBuilder
+    private var context: some View {
+        switch item.reason {
+        case .like, .repost:
+            if (item.subjectText?.isEmpty == false) || item.subjectImageURL != nil {
+                Button { onOpenSubject(item) } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        if let imageURL = item.subjectImageURL {
+                            RemoteImage(url: imageURL, maxPointSize: 36) { phase in
+                                if case let .success(image) = phase {
+                                    image.resizable().scaledToFill()
+                                } else {
+                                    Color.secondary.opacity(0.2)
+                                }
+                            }
+                            .frame(width: 36, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        }
+                        Text(item.subjectText?.isEmpty == false ? (item.subjectText ?? "") : "画像")
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                            .multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(item.subjectURI == nil)
+            }
+        default:
+            if let text = item.text, !text.isEmpty {
+                Text(text)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+        }
     }
 
     private var summaryLine: Text {

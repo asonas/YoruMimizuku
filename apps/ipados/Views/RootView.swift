@@ -313,7 +313,8 @@ private struct MainShellView: View {
                         displayName: actor.displayName,
                         avatarURL: actor.avatarURL
                     )
-                }
+                },
+                onOpenSubject: openNotificationSubject
             )
         case let .filter(id):
             if let tab = workspace.filter(id: id) {
@@ -382,6 +383,16 @@ private struct MainShellView: View {
 
     private func openAuthor(did: String, handle: String, displayName: String?, avatarURL: URL?) {
         workspace.openAuthor(did: did, handle: handle, displayName: displayName ?? "", avatarURL: avatarURL)
+    }
+
+    /// Open the post a like/repost notification is about as a conversation tab.
+    private func openNotificationSubject(_ group: NotificationGroup) {
+        guard let uri = group.subjectURI else { return }
+        let actor = group.actors.first
+        let displayName = actor.map { $0.displayName.isEmpty ? $0.handle : $0.displayName } ?? "通知"
+        let handle = actor.map { "@\($0.handle)" } ?? ""
+        let subtitle = group.subjectText ?? group.text ?? (group.subjectImageURL == nil ? "" : "画像")
+        workspace.openConversation(anchorID: uri, title: displayName, handle: handle, subtitle: subtitle)
     }
 
     private func copyPermalink(_ post: PostDisplay) {
