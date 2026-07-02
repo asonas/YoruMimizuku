@@ -142,9 +142,6 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 600, minHeight: 540)
-        // Tapping a hashtag in any post body opens a filter tab for that tag
-        // instead of launching the browser; all other links fall through to the
-        // system handler.
         // Tapping a hashtag opens a filter tab; tapping a mention opens the
         // author's tab in-app; every other link falls through to the browser.
         .environment(\.openURL, OpenURLAction { url in
