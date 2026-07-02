@@ -12,6 +12,7 @@ struct ConversationView: View {
     @ObservedObject var model: ThreadViewModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
+    @EnvironmentObject private var toastCenter: ToastCenter
 
     let now: Date
     var onImageTap: ([URL], Int) -> Void
@@ -220,6 +221,7 @@ struct ConversationView: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(url.absoluteString, forType: .string)
+        toastCenter.show("リンクをコピーしました")
     }
 
     /// Hidden f/o shortcuts that act on the anchor post, mirroring FeedView.

@@ -52,6 +52,10 @@ struct MainWindowView: View {
     /// notification settings.
     private var pollInterval: Duration { notificationSettings.pollInterval }
 
+    /// The window's transient toast (e.g. copy-link confirmation), injected into
+    /// the feed / conversation views and rendered as a bottom overlay.
+    @StateObject private var toastCenter = ToastCenter()
+
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
         // re-ids the inner content to refresh every `.font(.app(...))`) never
@@ -59,7 +63,17 @@ struct MainWindowView: View {
         ZStack {
             splitView
                 .id("\(fontSettings.family)|\(fontSettings.baseSize)")
+                .environmentObject(toastCenter)
         }
+        .overlay(alignment: .bottom) {
+            if let toast = toastCenter.current {
+                ToastView(message: toast)
+                    .padding(.bottom, 24)
+                    .onTapGesture { toastCenter.dismiss() }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
         // Cmd-Shift-J/K cycle the sidebar tabs from anywhere in the window.
         .background { tabShortcuts }
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.

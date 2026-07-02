@@ -11,6 +11,7 @@ struct FeedView: View {
     @ObservedObject var model: TimelineViewModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
+    @EnvironmentObject private var toastCenter: ToastCenter
 
     /// Shown in the header. Home passes nil (the sidebar already names the pane);
     /// filter tabs pass the filter name.
@@ -285,6 +286,7 @@ struct FeedView: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(url.absoluteString, forType: .string)
+        toastCenter.show("リンクをコピーしました")
     }
 
     /// The post j/k focus currently sits on, if any.
