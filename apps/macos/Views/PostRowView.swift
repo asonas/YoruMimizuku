@@ -550,9 +550,10 @@ struct PostRowView: View, @MainActor Equatable {
                 .onHover { hovering in
                     isTimestampHovered = hovering
                     #if canImport(AppKit)
-                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                    if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
                     #endif
                 }
+                .help("会話を開く")
         } else {
             base.foregroundStyle(theme.tertiaryText)
         }
