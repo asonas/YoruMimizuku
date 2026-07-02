@@ -236,3 +236,13 @@ v0.8.0 時点のギャップ分析（`docs/superpowers/plans/2026-06-11-yorumimi
 - **OS 通知バナー + Dock バッジ（§2.5 / §9.2）、カスタムフィードタブ・リストタブ（§2.2）は v1.x 系に先送りする。** v1.0.0 のタブソースは home / notifications / author / search / thread の 5 種とする。
 - v1.0.0 に含めるのは、引用ポスト（record / recordWithMedia embed）の表示、動画 embed のポスター表示、自分のポストの削除 UI、アカウントセレクタ / ログアウト UI、通知設定（アプリ内ポーリング間隔）、エラー UX の整備である。
 - **センシティブメディアのぼかし（最小版）を v1.0.0 に含める。** コンテンツラベル（セルフラベル + ラベラーのラベル）の `porn` / `sexual` / `nudity`（アダルト）と `graphic-media` / `gore`（過激）を判定し、該当ポストの画像・動画ポスターを「閲覧注意」カーテンでぼかしてタップで表示する（macOS のみ UI 実装、ラベルのデコードと判定は共有コア）。`getPreferences` による閲覧者ごとのラベル設定・購読ラベラー・per-label の hide/warn/show・アカウントレベルラベルといった完全なモデレーション（§13）は引き続き v1.x 以降に先送りする。
+
+## 15. 追記: 動画アップロードのスコープ変更（2026-06-25）
+
+§2 の非ゴールで対象外としていた動画アップロード（動画投稿）を、v1.0.0 スコープに含める決定に変更した。設計・実装は次を参照。
+
+- spec: `docs/superpowers/specs/2026-06-25-compose-video-upload-design.md`
+- plan: `docs/superpowers/plans/2026-06-25-compose-video-upload.md`
+- フロー: `getServiceAuth` → 動画サービスへ `uploadVideo` → `getJobStatus` ポーリング → `app.bsky.embed.video`。動画は画像と排他。
+- 実装範囲: コア + macOS + iPadOS（実装済み）。Windows は後追い。
+- **§2 非ゴールの他の項目（granular OAuth scopes、DM、高度なモデレーション）は引き続き対象外。**
