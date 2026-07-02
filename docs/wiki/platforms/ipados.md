@@ -1,11 +1,13 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-06-24
+updated: 2026-07-03
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
   - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
+  - docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md
+  - docs/superpowers/plans/2026-07-02-post-interaction-affordances.md
   - project.yml
   - apps/ipados/YoruMimizukuPadApp.swift
   - apps/ipados/Views/RootView.swift
@@ -112,3 +114,13 @@ remaining differences are settings surfaces and live updates, not row appearance
 - **Compose** is functional (`PhotosPicker`, JPEG re-encoding, alt text, replies,
   quotes) but does not yet mirror every macOS affordance such as file import or
   drag-and-drop attach.
+- **The 2026-07-02 post-interaction affordances are macOS-only so far.** A
+  timestamp tap that re-anchors the conversation view, the copy-link toast
+  (`ToastCenter`), and in-app author-tab routing for body `@mention` taps
+  (`RichText.mentionDID`) all landed on macOS only; iPadOS keeps its existing
+  whole-row-tap-opens-thread behavior and its `openURL` handler still
+  intercepts only hashtags, not mentions (`apps/ipados/Views/RootView.swift`).
+  Bringing these to iPad — `ToastCenter` is already shared core — is a
+  documented follow-up, not yet started
+  (`2026-07-02-post-interaction-affordances.md`, "Follow-up" section; see also
+  [[timeline-streaming]]).

@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-06-25
+updated: 2026-07-03
 sources: []
 ---
 
@@ -99,6 +99,9 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Video embed poster (no inline playback) | ○ | ○ | ○ | − |
 | Conversation child reply tree | ○ | ○ | ○ | − |
 | Thread grouping in the feed (web-style) | ○ | ○ | ○ | − |
+| Timestamp tap opens the conversation | ○ | × | − | − |
+| Copy-link toast confirmation | ○ | × | − | − |
+| In-app author tab for body @mentions | ○ | × | − | − |
 
 ## Notes
 
@@ -126,3 +129,6 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS, iPadOS, and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere ([[windows]], [[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it from the tested ThreadNode.childTree via the extended yoru_thread_load and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]]).
 - **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS, iPadOS, and Windows regroup same-thread posts into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped ([[windows]], [[ipados]]).
+- **Timestamp tap opens the conversation** ([[timeline-streaming]]): macOS's relative-time label in the author line is tappable and re-anchors the conversation view on that post, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]]).
+- **Copy-link toast confirmation** ([[timeline-streaming]]): The shared YoruMimizukuKit ToastCenter backs a bottom-overlay pill reading 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink; only macOS renders it today. ToastCenter is core and reusable, but wiring it into iPadOS and Windows is a tracked follow-up ([[ipados]]).
+- **In-app author tab for body @mentions** ([[timeline-streaming]]): macOS routes @mention taps in a post body to the in-app author tab via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]]).

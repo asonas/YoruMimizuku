@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-03 ingest
+
+- sources: `docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md`, `docs/superpowers/plans/2026-07-02-post-interaction-affordances.md`
+- updated: [[timeline-streaming]], [[ipados]]
+- note: Ingested the 2026-07-02 post-interaction affordances (macOS-only, implementation complete). Timestamp tap opens/re-anchors the conversation view (`PostRowView.timestampView`, hover cursor + underline, wired through `FeedView`/`ConversationView`); a copy-link toast via the new shared `YoruMimizukuKit.ToastCenter` (monotonic-token auto-dismiss) + `ToastView`/`MainWindowView` bottom overlay, fired from `FeedView.copyPermalink`/`ConversationView.copyPermalink`; and in-app author-tab routing for body `@mention` taps via `RichText.mentionDID(from:)` checked in `MainWindowView.openURL` right after the hashtag branch. Added three new [[timeline-streaming]] matrix rows (macOS full; Windows none, not addressed; iOS/Android planned, iPad parity tracked as a dedicated follow-up plan per the spec's non-goals) and a new "Post-row interaction affordances" prose section. Added the same follow-up as a known-differences bullet on [[ipados]]. This clears the two lint "uncited source" warnings for the spec/plan pair. Regenerated support-matrix and index.
+
 ## 2026-06-24 ingest
 
 - sources: `docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md`, `docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md`
