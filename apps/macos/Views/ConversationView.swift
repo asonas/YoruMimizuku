@@ -115,6 +115,7 @@ struct ConversationView: View {
                 onRepost: { Task { await model.toggleRepost(focus) } },
                 onAvatarTap: { onOpenAuthor(focus) },
                 onCopyLink: { copyPermalink(focus) },
+                onOpenConversation: { onOpenConversation(focus) },
                 onQuoteTap: { onOpenQuote($0) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -165,6 +166,7 @@ struct ConversationView: View {
                 onRepost: { Task { await model.toggleRepost(node.post) } },
                 onAvatarTap: { onOpenAuthor(node.post) },
                 onCopyLink: { copyPermalink(node.post) },
+                onOpenConversation: { onOpenConversation(node.post) },
                 onQuoteTap: { onOpenQuote($0) }
             )
             .frame(maxWidth: .infinity, alignment: .leading)

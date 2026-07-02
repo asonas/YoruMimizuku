@@ -139,6 +139,7 @@ struct FeedView: View {
                         onQuote: { onQuote(post) },
                         onAvatarTap: { onOpenAuthor(post) },
                         onCopyLink: { copyPermalink(post) },
+                        onOpenConversation: { onOpenConversation(post) },
                         onQuoteTap: { onOpenQuote($0) },
                         canDelete: isOwnPost(post),
                         onDelete: { pendingDelete = post },

@@ -1,5 +1,8 @@
 import SwiftUI
 import YoruMimizukuKit
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// One timeline row, rendered compact (Yorufukurou-tight) or comfortable
 /// (avatars + action counts) per `DisplayDensity`. Avatars sit in a fixed-width
@@ -36,6 +39,9 @@ struct PostRowView: View, @MainActor Equatable {
     var onAvatarTap: () -> Void = {}
     /// Called when the copy-link icon is tapped (copies the post permalink).
     var onCopyLink: () -> Void = {}
+    /// Called when the timestamp is tapped, so the host can open this post's
+    /// conversation. Only wired where the row is interactive.
+    var onOpenConversation: () -> Void = {}
     /// Called when the quote card is tapped, so the host can open the quoted
     /// post's conversation.
     var onQuoteTap: (QuotedPost) -> Void = { _ in }
@@ -62,6 +68,9 @@ struct PostRowView: View, @MainActor Equatable {
     /// Whether the viewer revealed this post's sensitive media. Resets when the row
     /// leaves and re-enters the view, so a blurred post stays blurred by default.
     @State private var revealMedia = false
+    /// Whether the pointer is over the timestamp, so it underlines to signal it
+    /// is clickable (macOS only; the resting timestamp stays unstyled).
+    @State private var isTimestampHovered = false
 
     private let timeFormatter = RelativeTimeFormatter()
 
@@ -522,6 +531,33 @@ struct PostRowView: View, @MainActor Equatable {
         onImageTap(urls, index)
     }
 
+    @ViewBuilder
+    private var timestampView: some View {
+        // Keep the base a `Text` so `.underline(_:)` (a Text method) applies before
+        // `.foregroundStyle` turns it into an opaque View.
+        let base = Text(relativeTime)
+            .font(.app(density == .compact ? .caption2 : .caption))
+            .monospacedDigit()
+            .underline(interactiveActions && isTimestampHovered)
+        if interactiveActions {
+            base
+                .foregroundStyle(theme.tertiaryText)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onSelect()
+                    onOpenConversation()
+                }
+                .onHover { hovering in
+                    isTimestampHovered = hovering
+                    #if canImport(AppKit)
+                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                    #endif
+                }
+        } else {
+            base.foregroundStyle(theme.tertiaryText)
+        }
+    }
+
     private var authorLine: some View {
         HStack(spacing: density == .compact ? 5 : 6) {
             Text(post.authorDisplayName)
@@ -534,10 +570,7 @@ struct PostRowView: View, @MainActor Equatable {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 4)
-            Text(relativeTime)
-                .font(.app(density == .compact ? .caption2 : .caption))
-                .foregroundStyle(theme.tertiaryText)
-                .monospacedDigit()
+            timestampView
         }
     }
 
