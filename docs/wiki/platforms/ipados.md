@@ -13,9 +13,13 @@ sources:
   - apps/ipados/Views/RootView.swift
   - apps/ipados/Views/PostRowView.swift
   - apps/ipados/Views/TimelineListView.swift
+  - apps/ipados/Views/VideoPosterView.swift
+  - apps/ipados/Views/QuoteCardView.swift
   - apps/ipados/Theme.swift
   - apps/ipados/Typography.swift
   - apps/ipados/Auth/ASWebAuthBrowserSession.swift
+  - core/Sources/YoruMimizukuKit/PostDisplay.swift
+  - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
 ---
 
 # Platform — iPadOS
@@ -66,7 +70,9 @@ later): the framework-agnostic `ThemeStore` (`apps/ipados/Theme.swift`), the den
 store, the downsampling `RemoteImage` / `ImageDownsampler` (`apps/ipados/Media/`),
 and a `UIFont`-based `Typography` (`apps/ipados/Typography.swift`) that mirrors the
 macOS `Font.app(...)` helpers. The link, quote, and video cards were ported verbatim
-(they depend only on `ThemeStore`, `RemoteImage`, and `.app(...)`).
+at the time (they depend only on `ThemeStore`, `RemoteImage`, and `.app(...)`). The
+video poster has since diverged from that verbatim port: see "Inline video
+playback" below.
 
 `apps/ipados/Views/PostRowView.swift` is now a structural copy of the macOS row:
 themed typography and colors, the shared `DisplayDensity`, the single-image 5:4
@@ -85,6 +91,25 @@ Compose is presented as a sheet. It supports top-level posts, replies, quote
 posts, and up to four image attachments through `PhotosPicker`; images are
 compressed to JPEG on the app side before the shared `PostService` uploads them
 (`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`).
+
+## Inline video playback (iPad-only, ahead of macOS/Windows)
+
+Tapping a top-level post's video poster on iPadOS plays it inline instead of
+leaving the app: a full-screen `AVKit` `VideoPlayer` (`VideoPlayerScreen` in
+`apps/ipados/Views/PostRowView.swift`) loads the embed's HLS playlist, autoplays
+on appear, routes audio through the `.playback` `AVAudioSession` category so
+it is heard even with the hardware mute switch on, and pauses when dismissed
+via a close button in the top-leading corner. The tap falls back to opening
+the post's public permalink only when the video embed carries no usable
+`playlist` URL. The playlist itself is core data, not iPad-specific: it flows
+from `EmbedVideo.playlist` through the new `PostVideo.playlistURL` field added
+in `core/Sources/YoruMimizukuKit/PostDisplay.swift` /
+`PostDisplay+Mapping.swift`, so [[macos]] and [[windows]] already have the URL
+available whenever they add their own inline player — they still only show the
+poster and open the browser today. This applies to a post's own video only: a
+**quoted** post's video (rendered inside `QuoteCardView`) stays a
+non-interactive poster on every platform, since the quote card's own tap opens
+the quoted post's conversation instead of forwarding to video playback.
 
 ## Known differences
 

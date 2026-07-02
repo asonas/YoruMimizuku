@@ -18,6 +18,8 @@ sources:
   - core/Sources/YoruMimizukuKit/FeedThreading.swift
   - core/Sources/YoruMimizukuKit/ToastCenter.swift
   - core/Sources/YoruMimizukuKit/RichText.swift
+  - core/Sources/YoruMimizukuKit/PostDisplay.swift
+  - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
   - apps/macos/Views/LinkCardView.swift
   - docs/superpowers/specs/2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -91,12 +93,12 @@ features:
     ios: full
     android: planned
     note: "macOS, iPadOS, and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation ([[windows]], [[ipados]])."
-  - name: Video embed poster (no inline playback)
+  - name: Video embed playback
     macos: full
     windows: full
-    ios: full
+    ios: differs
     android: planned
-    note: "macOS, iPadOS, and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere ([[windows]], [[ipados]])."
+    note: "macOS and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click (inline playback is still post-1.0 there); iPadOS instead plays the embed's HLS playlist inline in a full-screen AVKit player, falling back to opening the post's permalink only when the embed carries no playlist URL ([[ipados]])."
   - name: Conversation child reply tree
     macos: full
     windows: full
@@ -193,7 +195,7 @@ The fallback is intentionally skipped for posts that already attach images, keep
 
 A post whose embed is `app.bsky.embed.record#view` (or `recordWithMedia#view`) renders the quoted post inside the row as a bordered, rounded card: a compact author line (small avatar, display name, handle, relative time), the quoted body capped at six lines, and the quoted post's own media — up to two small image thumbnails, or a video poster. Clicking the card opens the quoted post's conversation tab through the same URI-based `WorkspaceModel.openConversation(anchorID:)` entry point notifications use. Decoding is tolerant by shape, not `$type`: `PostEmbed` probes the `record` key both as the bare `viewRecord` (record#view) and as the one-level-deeper wrapper (recordWithMedia#view), and a `viewNotFound` / `viewBlocked` / `viewDetached` variant or a non-post record (a quoted list or feed generator) simply yields no card. A recordWithMedia post's `media` is decoded as a nested `PostEmbed` and merged, so its images / external / video render through the existing paths alongside the quote card (`Timeline.swift`, `PostDisplay+Mapping.swift`, `apps/macos/Views/QuoteCardView.swift`).
 
-A post with `app.bsky.embed.video#view` renders the video's poster frame at its reported aspect ratio (16:9 when omitted) with a centered play badge. Playback is not inline in v1 — clicking the poster opens the post's public permalink in the default browser. The quote card reuses the same poster for a quoted post that carries video (`apps/macos/Views/VideoPosterView.swift`, `2026-06-11-quote-and-video-embeds.md`). The OGP fallback card for bare links is skipped for posts that already carry images, video, or a quote, keeping rows tight. Both renderings are macOS-only today; Windows and iPadOS rows still drop record and video embeds.
+A post with `app.bsky.embed.video#view` renders the video's poster frame at its reported aspect ratio (16:9 when omitted) with a centered play badge. On [[macos]] and [[windows]] playback is not inline — clicking the poster opens the post's public permalink in the default browser (`apps/macos/Views/VideoPosterView.swift`, `2026-06-11-quote-and-video-embeds.md`). **On [[ipados]] this changed on 2026-06-25**: tapping the poster now plays the embed's HLS playlist inline in a full-screen AVKit `VideoPlayerScreen` (autoplays, routes audio through the `.playback` session category so it is audible even with the hardware mute switch on, pauses on dismiss) instead of leaving the app; the fallback to opening the post's permalink is kept only for the rare embed with no usable `playlist` URL. The playlist URL is carried end-to-end as `EmbedVideo.playlist` → the new `PostVideo.playlistURL` field populated in `PostDisplay+Mapping.swift` (unit-tested in `PostDisplayMappingTests`), so macOS and Windows already have the data available whenever they add inline playback. This change is scoped to a top-level post's own video only: `QuoteCardView` (on every platform) still calls `VideoPosterView` without an `onTap` handler for a quoted post's video, so the poster inside a quote card stays non-interactive and the card's own tap keeps opening the quoted post's conversation rather than playing that video, even on iPadOS. The OGP fallback card for bare links is skipped for posts that already carry images, video, or a quote, keeping rows tight. Quote cards render on [[macos]], [[windows]], and [[ipados]] alike; top-level video posters render everywhere too, with iPadOS the only platform that plays inline so far.
 
 ## Conversation view (ancestors + reply tree)
 

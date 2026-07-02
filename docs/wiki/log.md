@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-03 fix
+
+- sources: `apps/ipados/Views/PostRowView.swift` (commit cb5d8e1 "Play post videos inline on iPad instead of opening Bluesky"), `core/Sources/YoruMimizukuKit/PostDisplay.swift`, `core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift`
+- updated: [[timeline-streaming]], [[ipados]]
+- note: Fixed a documentation/reality mismatch: the wiki still said video "inline playback is post-1.0 everywhere", but iPadOS (commit cb5d8e1, 2026-06-25) now plays a top-level post's video inline via a full-screen AVKit player (`PostRowView.VideoPlayerScreen`) using the new `PostVideo.playlistURL` field, falling back to the browser only when the embed has no playlist. Renamed the [[timeline-streaming]] matrix row from "Video embed poster (no inline playback)" to "Video embed playback" and flipped iOS to `differs`; rewrote the video-poster prose and added an "Inline video playback" section plus a known-differences bullet to [[ipados]]. Also corrected a stale claim in the same paragraph ("Both renderings are macOS-only today") that predated the Windows/iPadOS quote-card and video-poster support already reflected elsewhere on the page — quote cards and video posters render on macOS, Windows, and iPadOS alike; only iPadOS plays inline. Noted that a quoted post's video (inside `QuoteCardView`) stays a non-interactive poster on every platform, since the quote card's own tap opens the quoted conversation instead. Regenerated support-matrix and index.
+
 ## 2026-07-03 ingest
 
 - sources: `docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md`, `docs/superpowers/plans/2026-07-02-post-interaction-affordances.md`

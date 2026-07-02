@@ -96,7 +96,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Load error states (offline / 429 / 5xx) with retry | ○ | ○ | ○ | − |
 | External link preview cards (OGP) | ○ | ○ | ○ | − |
 | Quote post (record embed) cards | ○ | ○ | ○ | − |
-| Video embed poster (no inline playback) | ○ | ○ | ○ | − |
+| Video embed playback | ○ | ○ | △ | − |
 | Conversation child reply tree | ○ | ○ | ○ | − |
 | Thread grouping in the feed (web-style) | ○ | ○ | ○ | − |
 | Timestamp tap opens the conversation | ○ | × | − | − |
@@ -126,7 +126,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS, iPadOS, and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows carries the shared LoadFailure on the bridge error envelope (kind/title/message) ([[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS, iPadOS, and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via the yoru_ogp_load bridge endpoint; iPadOS via the ported LinkCardView + LazyLinkCardView) ([[windows]], [[ipados]]).
 - **Quote post (record embed) cards** ([[timeline-streaming]]): macOS, iPadOS, and Windows render app.bsky.embed.record / recordWithMedia quotes as a bordered card (author, body, thumbnails / video poster) that opens the quoted post's conversation ([[windows]], [[ipados]]).
-- **Video embed poster (no inline playback)** ([[timeline-streaming]]): macOS, iPadOS, and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click; inline playback is post-1.0 everywhere ([[windows]], [[ipados]]).
+- **Video embed playback** ([[timeline-streaming]]): macOS and Windows show the app.bsky.embed.video poster with a play badge and open the post in the browser on click (inline playback is still post-1.0 there); iPadOS instead plays the embed's HLS playlist inline in a full-screen AVKit player, falling back to opening the post's permalink only when the embed carries no playlist URL ([[ipados]]).
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it from the tested ThreadNode.childTree via the extended yoru_thread_load and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]]).
 - **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS, iPadOS, and Windows regroup same-thread posts into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped ([[windows]], [[ipados]]).
 - **Timestamp tap opens the conversation** ([[timeline-streaming]]): macOS's relative-time label in the author line is tappable and re-anchors the conversation view on that post, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]]).
