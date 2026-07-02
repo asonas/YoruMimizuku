@@ -131,9 +131,18 @@ struct MainWindowView: View {
         // Tapping a hashtag in any post body opens a filter tab for that tag
         // instead of launching the browser; all other links fall through to the
         // system handler.
+        // Tapping a hashtag opens a filter tab; tapping a mention opens the
+        // author's tab in-app; every other link falls through to the browser.
         .environment(\.openURL, OpenURLAction { url in
             if let tag = RichText.hashtag(from: url) {
                 workspace.openHashtagFilter(tag: tag)
+                return .handled
+            }
+            if let did = RichText.mentionDID(from: url) {
+                // Only the identifier is available at tap time (the openURL action
+                // sees a URL, not the "@handle" span text), so open by DID and let
+                // the author model resolve handle / display name / avatar.
+                workspace.openAuthor(did: did, handle: "", displayName: "", avatarURL: nil)
                 return .handled
             }
             return .systemAction
