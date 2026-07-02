@@ -267,6 +267,32 @@ final class TimelineViewModelTests: XCTestCase {
         XCTAssertEqual(vm.posts.map(\.id), ["p1"])
     }
 
+    func testLoadReportsSuccessAndFailure() async {
+        let ok = TimelineViewModel(loader: StubLoader(result: .success([sample(id: "p1")])))
+        let okResult = await ok.load()
+        XCTAssertTrue(okResult)
+
+        let bad = TimelineViewModel(loader: StubLoader(result: .failure(StubError())))
+        let badResult = await bad.load()
+        XCTAssertFalse(badResult)
+    }
+
+    func testRefreshReportsSuccessAndFailure() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p1")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1")], cursor: "c0")),
+            .failure(StubError())
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+
+        let okResult = await vm.refresh()
+        XCTAssertTrue(okResult)
+
+        let badResult = await vm.refresh()
+        XCTAssertFalse(badResult)
+    }
+
     func testInitialUnreadCountIsZero() {
         let vm = TimelineViewModel(loader: StubLoader(result: .success([])))
         XCTAssertEqual(vm.unreadCount, 0)

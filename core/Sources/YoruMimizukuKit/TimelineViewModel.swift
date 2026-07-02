@@ -137,7 +137,9 @@ public final class TimelineViewModel: ObservableObject {
     /// Load the freshest timeline page, moving through loading -> loaded/failed.
     /// Wrapped in a signposted interval so the end-to-end load time (network +
     /// decode + mapping) is visible in Instruments.
-    public func load() async {
+    /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
+    @discardableResult
+    public func load() async -> Bool {
         let endInterval = tracer.beginInterval("Timeline load")
         state = .loading
         do {
@@ -146,10 +148,12 @@ public final class TimelineViewModel: ObservableObject {
             state = .loaded(page.posts)
             onItemsChanged()
             endInterval("loaded \(page.posts.count) posts")
+            return true
         } catch {
             SessionExpiry.reportIfExpired(error)
             state = .failed(LoadFailure(error))
             endInterval("failed")
+            return false
         }
     }
 
@@ -177,18 +181,21 @@ public final class TimelineViewModel: ObservableObject {
     /// (deduplicated by id) without disturbing the loaded tail or the cursor. If
     /// nothing is loaded yet this behaves like `load()`. Failures are swallowed so
     /// a periodic refresh never replaces good content with an error screen.
-    public func refresh() async {
+    /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
+    @discardableResult
+    public func refresh() async -> Bool {
         guard case let .loaded(current) = state else {
-            await load()
-            return
+            return await load()
         }
         do {
             let page = try await loader.loadPage(cursor: nil)
             state = .loaded(Self.merging(page.posts, appending: current))
             onItemsChanged()
+            return true
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current feed.
+            return false
         }
     }
 
@@ -198,11 +205,14 @@ public final class TimelineViewModel: ObservableObject {
     public func startPolling(every interval: Duration) {
         guard pollingTask == nil else { return }
         pollingTask = Task { [weak self] in
-            await self?.load()
+            var backoff = PollingBackoff(base: interval)
+            let firstOK = await self?.load() ?? false
+            if firstOK { backoff.recordSuccess() } else { backoff.recordFailure() }
             while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
+                try? await Task.sleep(for: backoff.currentInterval)
                 if Task.isCancelled { break }
-                await self?.refresh()
+                let ok = await self?.refresh() ?? false
+                if ok { backoff.recordSuccess() } else { backoff.recordFailure() }
             }
         }
     }

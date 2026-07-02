@@ -46,32 +46,39 @@ public final class NotificationsViewModel: ObservableObject {
     }
 
     /// Load the latest notifications, moving through loading -> loaded/failed.
-    public func load() async {
+    /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
+    @discardableResult
+    public func load() async -> Bool {
         state = .loading
         do {
             let items = try await loader.loadLatest()
             state = .loaded(items)
             onItemsChanged()
+            return true
         } catch {
             SessionExpiry.reportIfExpired(error)
             state = .failed(LoadFailure(error).message)
+            return false
         }
     }
 
     /// Reload the notifications without flashing the loading state, so a periodic
     /// or manual refresh never replaces good content with a spinner. Failures keep
     /// the current list.
-    public func refresh() async {
+    /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
+    @discardableResult
+    public func refresh() async -> Bool {
         guard case .loaded = state else {
-            await load()
-            return
+            return await load()
         }
         do {
             state = .loaded(try await loader.loadLatest())
             onItemsChanged()
+            return true
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep showing the current notifications.
+            return false
         }
     }
 
@@ -81,11 +88,14 @@ public final class NotificationsViewModel: ObservableObject {
     public func startPolling(every interval: Duration) {
         guard pollingTask == nil else { return }
         pollingTask = Task { [weak self] in
-            await self?.load()
+            var backoff = PollingBackoff(base: interval)
+            let firstOK = await self?.load() ?? false
+            if firstOK { backoff.recordSuccess() } else { backoff.recordFailure() }
             while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
+                try? await Task.sleep(for: backoff.currentInterval)
                 if Task.isCancelled { break }
-                await self?.refresh()
+                let ok = await self?.refresh() ?? false
+                if ok { backoff.recordSuccess() } else { backoff.recordFailure() }
             }
         }
     }

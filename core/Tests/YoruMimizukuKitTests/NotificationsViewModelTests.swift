@@ -55,6 +55,29 @@ final class NotificationsViewModelTests: XCTestCase {
         XCTAssertEqual(vm.items, [])
     }
 
+    func testLoadReportsSuccessAndFailure() async {
+        let ok = NotificationsViewModel(loader: StubLoader(result: .success([sample(id: "n1")])))
+        let okResult = await ok.load()
+        XCTAssertTrue(okResult)
+
+        let bad = NotificationsViewModel(loader: StubLoader(result: .failure(StubError())))
+        let badResult = await bad.load()
+        XCTAssertFalse(badResult)
+    }
+
+    func testRefreshReportsSuccessAndFailure() async {
+        let loader = StubLoader(result: .success([sample(id: "n1")]))
+        let vm = NotificationsViewModel(loader: loader)
+        await vm.load()
+
+        let okResult = await vm.refresh()
+        XCTAssertTrue(okResult)
+
+        loader.result = .failure(StubError())
+        let badResult = await vm.refresh()
+        XCTAssertFalse(badResult)
+    }
+
     func testInitialUnreadCountIsZero() {
         let vm = NotificationsViewModel(loader: StubLoader(result: .success([])))
         XCTAssertEqual(vm.unreadCount, 0)
