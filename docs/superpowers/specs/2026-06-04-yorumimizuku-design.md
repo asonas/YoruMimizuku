@@ -239,10 +239,10 @@ v0.8.0 時点のギャップ分析（`docs/superpowers/plans/2026-06-11-yorumimi
 
 ## 15. 追記: 動画アップロードのスコープ変更（2026-06-25）
 
-§13 で対象外としていた動画アップロードを、v1.0.0 スコープに含める決定に変更した。設計・実装は次を参照。
+§2 の非ゴールで対象外としていた動画アップロード（動画投稿）を、v1.0.0 スコープに含める決定に変更した。設計・実装は次を参照。
 
 - spec: `docs/superpowers/specs/2026-06-25-compose-video-upload-design.md`
 - plan: `docs/superpowers/plans/2026-06-25-compose-video-upload.md`
 - フロー: `getServiceAuth` → 動画サービスへ `uploadVideo` → `getJobStatus` ポーリング → `app.bsky.embed.video`。動画は画像と排他。
 - 実装範囲: コア + macOS + iPadOS（実装済み）。Windows は後追い。
-- **granular OAuth scopes と DM は引き続き対象外。** §13 の当該部分に変更はない。
+- **§2 非ゴールの他の項目（granular OAuth scopes、DM、高度なモデレーション）は引き続き対象外。**
