@@ -100,4 +100,29 @@ final class RichTextSegmentTests: XCTestCase {
         XCTAssertNil(RichText.hashtag(from: URL(string: "https://bsky.app/profile/did:plc:bob")!))
         XCTAssertNil(RichText.hashtag(from: URL(string: "https://example.com/page")!))
     }
+
+    func testMentionDIDExtractsDIDFromProfileURL() {
+        let url = URL(string: "https://bsky.app/profile/did:plc:abc123")!
+        XCTAssertEqual(RichText.mentionDID(from: url), "did:plc:abc123")
+    }
+
+    func testMentionDIDExtractsHandleFromProfileURL() {
+        let url = URL(string: "https://bsky.app/profile/alice.bsky.social")!
+        XCTAssertEqual(RichText.mentionDID(from: url), "alice.bsky.social")
+    }
+
+    func testMentionDIDIsNilForPostPermalink() {
+        let url = URL(string: "https://bsky.app/profile/did:plc:abc123/post/3kabc")!
+        XCTAssertNil(RichText.mentionDID(from: url))
+    }
+
+    func testMentionDIDIsNilForHashtagURL() {
+        let url = URL(string: "https://bsky.app/hashtag/swift")!
+        XCTAssertNil(RichText.mentionDID(from: url))
+    }
+
+    func testMentionDIDIsNilForForeignHost() {
+        let url = URL(string: "https://example.com/profile/did:plc:abc123")!
+        XCTAssertNil(RichText.mentionDID(from: url))
+    }
 }

@@ -79,6 +79,17 @@ public enum RichText {
         return parts[1]
     }
 
+    /// Reverse of the mention URL built in `feature(_:)`: pulls the actor
+    /// identifier back out of a bare `https://bsky.app/profile/<id>` URL, or nil
+    /// for anything else (post permalinks, hashtags, foreign hosts). Lets the UI
+    /// route mention taps to an in-app author tab instead of the browser.
+    public static func mentionDID(from url: URL) -> String? {
+        guard url.host == "bsky.app" else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 2, parts[0] == "profile", !parts[1].isEmpty else { return nil }
+        return parts[1]
+    }
+
     private static func feature(_ feature: FacetFeature) -> (kind: RichTextSegment.Kind, url: URL?)? {
         switch feature {
         case .link(let uri):
