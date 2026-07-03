@@ -241,6 +241,12 @@ private struct MainShellView: View {
     // would otherwise reveal the sidebar — so keep both columns shown, like macOS.
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     private let clock = Timer.publish(every: 15, on: .main, in: .common).autoconnect()
+    #if DEBUG
+    /// Opens the DEBUG-only design catalog. The iPad app has no settings screen
+    /// yet, so this hangs off the sidebar instead — see
+    /// `docs/superpowers/specs/2026-07-03-design-catalog-design.md`.
+    @State private var showsCatalog = false
+    #endif
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -312,6 +318,16 @@ private struct MainShellView: View {
                     }
                 }
 
+                #if DEBUG
+                Section {
+                    Button {
+                        showsCatalog = true
+                    } label: {
+                        Label("デザインカタログ", systemImage: "square.grid.2x2")
+                    }
+                }
+                #endif
+
                 Section {
                     accountMenu
                 }
@@ -350,6 +366,11 @@ private struct MainShellView: View {
         .sheet(item: $composer) { model in
             ComposerView(model: model)
         }
+        #if DEBUG
+        .sheet(isPresented: $showsCatalog) {
+            DesignCatalogView()
+        }
+        #endif
         .onReceive(clock) { now = $0 }
         .task {
             timelineModel.startPolling(every: .seconds(30))
