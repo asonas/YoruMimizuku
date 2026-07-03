@@ -344,9 +344,9 @@ struct PostRowView: View, @MainActor Equatable {
     private var actionBarSection: some View {
         if density == .comfortable {
             if interactiveActions {
-                actionBar
+                actionBar.padding(.top, 6)
             } else {
-                staticActionBar
+                staticActionBar.padding(.top, 6)
             }
         }
     }
