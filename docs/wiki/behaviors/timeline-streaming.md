@@ -110,7 +110,7 @@ features:
     windows: full
     ios: full
     android: planned
-    note: "macOS, iPadOS, and Windows regroup same-thread posts into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped ([[windows]], [[ipados]])."
+    note: "macOS, iPadOS, and Windows group only a single author's self-thread into one oldest-first block (all over the tested FeedThreading.arrange; Windows via the yoru_feed_arrange bridge wrapper) with a connector line under the avatar and the in-block reply marker/divider dropped; multi-author/branching replies stay independent rows with their reply-context marker ([[windows]], [[ipados]])."
   - name: Timestamp tap opens the conversation
     macos: full
     windows: none
@@ -139,7 +139,7 @@ On the display side, the state machine (idle / loading / loaded / failed), polli
 
 ## Thread grouping in the feed
 
-A feed page that contains several posts of the same reply chain — typically an author's self-thread ("1/3 … 3/3") — no longer lists them as independent newest-first rows. Mirroring Bluesky's web client, the pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) resolves each post to its topmost ancestor present on the page and emits the whole chain as one block, oldest first, at the feed position of the block's newest member; posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders the block with a thread connector line between the grouped rows' avatars, hides the now-redundant "@x への返信" marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`).
+A feed page that contains several posts of the same author's self-thread ("1/3 … 3/3") no longer lists them as independent newest-first rows. The pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) climbs each post's `replyParent` links **only while the parent shares the post's author**, resolving it to the topmost same-author ancestor present on the page and emitting that self-thread as one block, oldest first, at the feed position of the block's newest member. The climb stops where the author changes, so a multi-author, branching conversation is **not** collapsed into one flat chronological block: each reply to (or from) another account stays an independent row and keeps its "@x への返信" context marker. Posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders a grouped self-thread block with a thread connector line between the grouped rows' avatars, hides the now-redundant reply marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`).
 
 ## Home / List (Jetstream live) — designed, deferred
 
