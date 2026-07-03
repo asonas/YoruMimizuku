@@ -74,10 +74,14 @@ public enum CatalogFixtures {
                 authorDisplayName: base.0, authorHandle: base.1,
                 body: "画像4枚グリッドの見本。",
                 createdAt: now.addingTimeInterval(-1440),
-                images: [image("sample-wide", w: 728, h: 410),
-                         image("sample-wide2", w: 960, h: 540),
-                         image("sample-tall", w: 400, h: 640),
-                         image("sample-wide", w: 728, h: 410)])
+                // Distinct alt per tile: PostImage.id is url + "|" + alt, so the
+                // reused sample-wide would otherwise collide with the first tile
+                // and SwiftUI's ForEach would drop it ("undefined results"),
+                // collapsing the grid to three tiles.
+                images: [image("sample-wide", w: 728, h: 410, alt: "1枚目"),
+                         image("sample-wide2", w: 960, h: 540, alt: "2枚目"),
+                         image("sample-tall", w: 400, h: 640, alt: "3枚目"),
+                         image("sample-wide", w: 728, h: 410, alt: "4枚目")])
         case .postRowQuote, .quoteCard:
             return PostDisplay(
                 id: "at://did:plc:catalog/app.bsky.feed.post/quote",

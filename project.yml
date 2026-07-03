@@ -11,6 +11,9 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: 2.7.0
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: 1.17.0
 targets:
   YoruMimizuku:
     type: application
@@ -120,6 +123,8 @@ targets:
         product: YoruMimizukuKit
       - package: BlueskyCore
         product: PlatformApple
+      - package: SnapshotTesting
+        product: SnapshotTesting
     settings:
       base:
         SWIFT_VERSION: "6.0"
