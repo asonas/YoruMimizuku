@@ -11,6 +11,13 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-07-03 ingest
 
+- sources: `docs/superpowers/specs/2026-07-03-feed-self-thread-grouping-design.md`, `docs/superpowers/plans/2026-07-03-feed-self-thread-grouping.md`
+- updated: [[timeline-streaming]] (Thread grouping in the feed: restricted to single-author self-threads; matrix note + support-matrix bullet), `support-matrix.md`
+- note: Ingested the feed self-thread-only grouping change (merged to main as `81f3034`). `FeedThreading.arrange` now climbs `replyParent` only while the parent shares the post's `authorHandle`, so a multi-author/branching conversation no longer collapses into one flat chronological block — each foreign-author reply stays an independent row with its "@X への返信" marker (the reported symptom: a whole DDJ-FLX4 reply tree rendered as one time-sorted column in the macOS feed). Root cause was diagnosed against live `getPostThread` data: the conversation tab (`ConversationView` + `ThreadNode.childTree`) already renders a correct depth-indented tree; only the feed's `FeedThreading` over-grouped by topmost ancestor regardless of author. Behavior applies to macOS and iPadOS (both call `FeedThreading.arrange` with real `PostDisplay` handles). Windows is the exception and its matrix note/prose now say so: the `yoru_feed_arrange` bridge (`BridgeOperations.swift`) passes an empty `authorHandle` (the `ArrangeItem` DTO carries no author), so the same-author check is always trivially true and Windows keeps full-chain grouping — carrying the author through the bridge is a tracked follow-up (no regression: Windows behavior is unchanged pre/post branch). This clears the feed-self-thread-grouping spec/plan pair from the lint "uncited source" warning.
+- deferred (follow-up, not wiki): thread `authorHandle` through `yoru_feed_arrange` so Windows gets the fix; consider gitignoring `core/Package.resolved` (running `swift test` in `core/` strips Sparkle from it).
+
+## 2026-07-03 ingest
+
 - sources: `docs/superpowers/specs/2026-07-03-design-catalog-design.md`, `docs/superpowers/plans/2026-07-03-design-catalog.md`
 - created: [[design-system]]
 - updated: [[overview]] (added link to [[design-system]]), `AGENTS.md` (Coding Conventions pointer)
