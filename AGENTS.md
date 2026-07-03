@@ -110,3 +110,4 @@ Test targets: `BlueskyCoreTests` and `YoruMimizukuKitTests` (both under `core/Te
 - Swift 6.0 / strict concurrency. Be mindful of `MainActor` isolation and `Sendable`.
 - Abstract side effects (networking, Keychain, browser launch) behind protocols, and inject fakes in tests. Keep the `BlueskyCore` core logic free of direct Apple-framework dependencies.
 - The reference implementation is the same author's Ruby terminal client `tempest` (`/Users/asonas/ghq/github.com/asonas/tempest`), whose proven logic serves as the blueprint. This is a high-quality Swift reimplementation, not a port.
+- Layout spacing/radius values shared across platforms live in `DesignMetrics` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`); see `docs/wiki/design-system.md` for the vocabulary and the design catalog.

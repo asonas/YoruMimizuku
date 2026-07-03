@@ -60,6 +60,7 @@ OAuth auth, multi-account, automatic token refresh; a single column with tabs fo
 ## Architecture & reference
 
 - [[architecture]] — the ports-and-adapters backbone (two layers, six OS ports, core modules, concurrency)
+- [[design-system]] — the component/spacing naming vocabulary (`DesignMetrics`), the DEBUG-only in-app design catalog, and snapshot-test operations
 - [[glossary]] — AT Protocol / OAuth terms used across the wiki
 
 ## Behaviors
