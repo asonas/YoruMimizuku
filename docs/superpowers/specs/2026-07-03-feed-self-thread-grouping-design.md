@@ -108,5 +108,6 @@ root: kdmsnr「おじさんの趣味にしては高いけどDDJ-FLX4買うかー
 - 変更: `core/Sources/YoruMimizukuKit/FeedThreading.swift`（`groupKey` の遡上条件のみ。import 追加は不要）。
 - 変更: `core/Tests/YoruMimizukuKitTests/FeedThreadingTests.swift`（テスト追加・期待値更新）。
 - 変更なし: `apps/macos/Views/FeedView.swift`、`apps/macos/Views/PostRowView.swift`（既存の `connectsToPrevious/Next` とラベル機構をそのまま利用）。
-- iPadOS / Windows: どちらも同じ `FeedThreading.arrange` を共有（Windows は `yoru_feed_arrange` ブリッジ経由）しているため、本修正は自動的に全プラットフォームへ波及する。追加のプラットフォーム別コード変更は不要。
+- iPadOS: `FeedThreading.arrange(model.posts)` を実 `PostDisplay`（実際の `authorHandle` を保持）で呼ぶため、本修正が自動的に波及する。追加のコード変更は不要。
+- Windows: `yoru_feed_arrange` ブリッジは `ArrangeItem` DTO（`id` / `createdAt` / `replyParentId` のみ）で `PostDisplay` を組み立て、`authorHandle` を空文字で渡す（`BridgeOperations.swift` `feedArrange`）。そのため新条件は常に `"" == ""` = 真となり、Windows では従来どおり全リプライチェーンを著者非依存で束ねる挙動のままで、本修正は効かない。ブランチ前後で Windows の挙動は不変（デグレなし）。Windows へ修正を届けるには DTO に著者ハンドルを追加し C# 側の送信ペイロードに載せる必要があり、これは別 follow-up とする（本設計のスコープ外）。
 - ドキュメント: `docs/wiki/behaviors/timeline-streaming.md` と `docs/wiki/support-matrix.md` のフィードスレッドグループ化の記述を、「最上位祖先で束ねる」から「同一著者の自己スレッドのみ束ねる」に更新する（`wiki-update` スキルで実施）。
