@@ -8,7 +8,7 @@ public enum CatalogFixtures {
     public static let now = Date(timeIntervalSince1970: 1_751_500_000)
 
     public static func imageURL(_ name: String) -> URL {
-        Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Resources")!
+        Bundle.module.url(forResource: name, withExtension: "png")!
     }
 
     private static func image(_ name: String, w: Double, h: Double, alt: String = "") -> PostImage {
