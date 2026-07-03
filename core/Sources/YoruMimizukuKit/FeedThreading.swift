@@ -27,16 +27,18 @@ public enum FeedThreading {
     public static func arrange(_ posts: [PostDisplay]) -> [ThreadedFeedItem] {
         let byID = Dictionary(posts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // Resolve each post to the topmost ancestor that is also on this page.
-        // That ancestor's id is the group key, so every member of a loaded chain
-        // lands in the same bucket. A visited set guards against (malformed)
-        // parent cycles.
+        // Resolve each post to the topmost ancestor on this page that is still part
+        // of the same author's self-thread: climb replyParent links only while the
+        // parent shares the current post's author. The climb stops where the author
+        // changes, so multi-author / branching replies do not collapse into one
+        // chronological block. A visited set guards against (malformed) parent cycles.
         func groupKey(for post: PostDisplay) -> String {
             var current = post
             var visited: Set<String> = [post.id]
             while let parentID = current.replyParent?.post.id,
                   let parent = byID[parentID],
-                  !visited.contains(parentID) {
+                  !visited.contains(parentID),
+                  parent.authorHandle == current.authorHandle {
                 visited.insert(parentID)
                 current = parent
             }

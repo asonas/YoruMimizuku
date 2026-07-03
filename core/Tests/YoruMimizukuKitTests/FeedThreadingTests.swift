@@ -2,12 +2,18 @@ import XCTest
 @testable import YoruMimizukuKit
 
 final class FeedThreadingTests: XCTestCase {
-    /// Build a post; `parent` links it to the given post as its reply parent.
-    private func post(_ id: String, createdAt: TimeInterval, parent: PostDisplay? = nil) -> PostDisplay {
+    /// Build a post; `author` sets both display name and handle (defaults keep
+    /// existing single-author tests unchanged); `parent` links it as reply parent.
+    private func post(
+        _ id: String,
+        createdAt: TimeInterval,
+        author: String = "a.example",
+        parent: PostDisplay? = nil
+    ) -> PostDisplay {
         PostDisplay(
             id: id,
-            authorDisplayName: "a",
-            authorHandle: "a.example",
+            authorDisplayName: author,
+            authorHandle: author,
             body: "body \(id)",
             createdAt: Date(timeIntervalSince1970: createdAt),
             replyParent: parent.map(ReplyParent.init)
@@ -92,5 +98,38 @@ final class FeedThreadingTests: XCTestCase {
 
         XCTAssertEqual(Set(items.map(\.post.id)), ["a", "b"])
         XCTAssertEqual(items.count, 2)
+    }
+
+    func testMultiAuthorRepliesDoNotMergeIntoOneBlock() {
+        // root by A; two replies to root by different authors B and C. The old
+        // behavior merged all three into one chronological block; now each reply
+        // is an independent row (parent author != reply author).
+        let root = post("root", createdAt: 100, author: "a.example")
+        let b = post("b", createdAt: 200, author: "b.example", parent: root)
+        let c = post("c", createdAt: 300, author: "c.example", parent: root)
+
+        // Realistic newest-first page order.
+        let items = FeedThreading.arrange([c, b, root])
+
+        XCTAssertEqual(items.map(\.post.id), ["c", "b", "root"])
+        XCTAssertEqual(items.map(\.connectsToPrevious), [false, false, false])
+        XCTAssertEqual(items.map(\.connectsToNext), [false, false, false])
+    }
+
+    func testSelfThreadGroupsWhileForeignReplySplitsOff() {
+        // A's self-thread root -> a2 (same author) stays one block; B's reply to
+        // a2 (different author) splits into its own row.
+        let root = post("root", createdAt: 100, author: "a.example")
+        let a2 = post("a2", createdAt: 200, author: "a.example", parent: root)
+        let b = post("b", createdAt: 300, author: "b.example", parent: a2)
+
+        // Newest-first page order.
+        let items = FeedThreading.arrange([b, a2, root])
+
+        // b is emitted first (its group is encountered first in page order); the
+        // {root, a2} self-thread block is emitted oldest-first at a2's position.
+        XCTAssertEqual(items.map(\.post.id), ["b", "root", "a2"])
+        XCTAssertEqual(items.map(\.connectsToPrevious), [false, false, true])
+        XCTAssertEqual(items.map(\.connectsToNext), [false, true, false])
     }
 }
