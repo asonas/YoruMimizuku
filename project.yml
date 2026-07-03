@@ -105,6 +105,16 @@ targets:
       - apps/macos/Media/ImageEncoder.swift
       - apps/macos/Media/ComposerMediaIntake.swift
       - apps/macos/Media/ImageDownsampler.swift
+      - apps/macos/Media/RemoteImage.swift
+      - apps/macos/Catalog/CatalogRegistry.swift
+      - apps/macos/Views/PostRowView.swift
+      - apps/macos/Views/QuoteCardView.swift
+      - apps/macos/Views/LinkCardView.swift
+      - apps/macos/Views/VideoPosterView.swift
+      - apps/macos/Views/ToastView.swift
+      - apps/macos/Theme.swift
+      - apps/macos/DisplaySettings.swift
+      - apps/macos/Typography.swift
     dependencies:
       - package: BlueskyCore
         product: YoruMimizukuKit
