@@ -498,14 +498,20 @@ struct PostRowView: View, @MainActor Equatable {
         .allowsHitTesting(false)
     }
 
+    // Like `singleImage`, the image lives in an overlay of a fixed container:
+    // `scaledToFill` reports a size larger than the proposal on one axis, so a
+    // bare frame lets a grid cell outgrow its column and overlap the neighbor.
     private func thumbnail(_ image: PostImage, height: CGFloat, maxPointSize: CGFloat) -> some View {
-        RemoteImage(url: image.thumbURL, maxPointSize: maxPointSize) { phase in
-            imagePhaseContent(phase)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: height)
-        .clipped()
-        .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .overlay {
+                RemoteImage(url: image.thumbURL, maxPointSize: maxPointSize) { phase in
+                    imagePhaseContent(phase)
+                }
+            }
+            .clipped()
+            .modifier(ThumbnailChrome(alt: image.alt) { openLightbox(at: image) })
     }
 
     /// The loaded / failed / loading appearance shared by single and grid thumbnails.
