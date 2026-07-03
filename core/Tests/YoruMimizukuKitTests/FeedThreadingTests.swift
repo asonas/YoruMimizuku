@@ -115,4 +115,21 @@ final class FeedThreadingTests: XCTestCase {
         XCTAssertEqual(items.map(\.connectsToPrevious), [false, false, false])
         XCTAssertEqual(items.map(\.connectsToNext), [false, false, false])
     }
+
+    func testSelfThreadGroupsWhileForeignReplySplitsOff() {
+        // A's self-thread root -> a2 (same author) stays one block; B's reply to
+        // a2 (different author) splits into its own row.
+        let root = post("root", createdAt: 100, author: "a.example")
+        let a2 = post("a2", createdAt: 200, author: "a.example", parent: root)
+        let b = post("b", createdAt: 300, author: "b.example", parent: a2)
+
+        // Newest-first page order.
+        let items = FeedThreading.arrange([b, a2, root])
+
+        // b is emitted first (its group is encountered first in page order); the
+        // {root, a2} self-thread block is emitted oldest-first at a2's position.
+        XCTAssertEqual(items.map(\.post.id), ["b", "root", "a2"])
+        XCTAssertEqual(items.map(\.connectsToPrevious), [false, false, true])
+        XCTAssertEqual(items.map(\.connectsToNext), [false, true, false])
+    }
 }
