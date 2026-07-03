@@ -10,6 +10,7 @@ final class ImageDownsamplerFileURLTests: XCTestCase {
         // Write a tiny 4x4 PNG to a temp file.
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("catalog-probe-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: url) }
         let ctx = CGContext(
             data: nil, width: 4, height: 4, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),

@@ -46,7 +46,7 @@ Adopting `DesignMetrics` on both platforms surfaced two drift points between the
 
 A DEBUG-only in-app catalog renders the real production views (`PostRowView`, `ActionBar`, `QuoteCardView`, `LinkCardView`, `VideoPosterView`, and — macOS only — `ToastView`) against deterministic fixtures from `CatalogFixtures` (`core/Sources/YoruMimizukuKit/Catalog/CatalogFixtures.swift`). It never duplicates a component's implementation; adding a sample is one `CatalogVariant` case plus one registry line per app (`2026-07-03-design-catalog-design.md` §ギャラリー).
 
-`CatalogVariant` (`core/Sources/YoruMimizukuKit/Catalog/CatalogVariant.swift`) declares 14 variants across 5 components (PostRow ×9, ActionBar, QuoteCard, LinkCard, VideoPoster, Toast). Each variant declares which platforms it applies to; `Toast` is macOS-only (there is no iPad toast UI), so the iPad catalog and its snapshot suite carry 13 variants. `CatalogVariant.metricsUsed` lists the `DesignMetrics` identifiers each sample exercises, shown as a gallery caption.
+`CatalogVariant` (`core/Sources/YoruMimizukuKit/Catalog/CatalogVariant.swift`) declares 14 variants across 6 components (PostRow ×9, ActionBar, QuoteCard, LinkCard, VideoPoster, Toast). Each variant declares which platforms it applies to; `Toast` is macOS-only (there is no iPad toast UI), so the iPad catalog and its snapshot suite carry 13 variants. `CatalogVariant.metricsUsed` lists the `DesignMetrics` identifiers each sample exercises, shown as a gallery caption.
 
 ### Opening the gallery
 

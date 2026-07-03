@@ -662,7 +662,7 @@ struct PostRowView: View, @MainActor Equatable {
     /// Non-interactive action bar (counts only), used for conversation ancestor rows
     /// that are themselves wrapped in a re-anchor button.
     private var staticActionBar: some View {
-        HStack(spacing: 26) {
+        HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             actionLabel("\(post.replyCount)", systemImage: "bubble.left")
             actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent)
             actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star)

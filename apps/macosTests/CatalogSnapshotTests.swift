@@ -31,6 +31,7 @@ final class CatalogSnapshotTests: XCTestCase {
         // suite reset to the built-in palette keeps the recorded colors stable
         // regardless of any persisted randoma11y state on the machine.
         let sandbox = UserDefaults(suiteName: "as.ason.YoruMimizuku.snapshot-tests")!
+        defer { UserDefaults.standard.removePersistentDomain(forName: "as.ason.YoruMimizuku.snapshot-tests") }
         let theme = ThemeStore(defaults: sandbox)
         theme.reset()
         let display = DisplaySettingsStore(defaults: sandbox)
