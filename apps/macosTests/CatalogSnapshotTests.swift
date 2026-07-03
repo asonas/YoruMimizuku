@@ -7,10 +7,31 @@ import YoruMimizukuKit
 /// the recorded reference PNGs. perceptualPrecision absorbs GPU/AA noise while
 /// still catching layout shifts like the 2026-07-03 grid overlap.
 ///
+/// SCALE PIN (record environment, decided 2026-07-03):
+/// **The bitmap is rendered at a fixed 2x scale, independent of NSScreen.**
+/// The previous implementation snapshotted an `NSHostingView` via the `.image`
+/// strategy, whose bitmap scale follows the current display: the committed
+/// references were @2x (1120px wide for the 560pt column), but a 4K display set
+/// to a "looks like native" (1x) mode renders @1x (560px) and every PostRow
+/// snapshot fails. The suite was environment-dependent and flapped whenever the
+/// display configuration changed. To make it deterministic we lay out an
+/// `NSHostingView` at the fixed width and draw it into an explicitly-sized
+/// `NSBitmapImageRep` whose pixel dimensions are exactly 2x the point size, so
+/// output is the same regardless of screen. (`ImageRenderer` was tried first but
+/// deterministically dropped to 1x for the `postRowLinkCard` variant, so it could
+/// not guarantee a uniform scale.) This mirrors how the iPad file pins its
+/// simulator.
+///
 /// No `@testable import YoruMimizuku`: this target lists the production files it
 /// exercises directly in `project.yml` sources, so `CatalogRegistry`,
 /// `RemoteImage`, and `ImageDownsampler` are compiled into the test bundle.
 final class CatalogSnapshotTests: XCTestCase {
+    /// Fixed rendering scale for the recorded references. Pinned so the bitmap
+    /// resolution never follows the machine's NSScreen configuration.
+    private static let renderScale: CGFloat = 2.0
+    /// Fixed content width, in points.
+    private static let contentWidth: CGFloat = 560
+
     @MainActor
     func testCatalogVariants() async throws {
         // RemoteImage decodes off the main actor and publishes a runloop turn
@@ -37,34 +58,58 @@ final class CatalogSnapshotTests: XCTestCase {
         let display = DisplaySettingsStore(defaults: sandbox)
 
         for variant in CatalogVariant.allCases where variant.platforms.contains(.macOS) {
-            guard let view = CatalogRegistry.view(for: variant, width: 560) else { continue }
+            guard let view = CatalogRegistry.view(for: variant, width: Self.contentWidth) else { continue }
             let host = NSHostingView(
                 rootView: view
                     .environment(\.catalogPreloadedImages, preloaded)
                     .environmentObject(theme)
                     .environmentObject(display)
-                    .frame(width: 560)
+                    .frame(width: Self.contentWidth)
                     .fixedSize(horizontal: false, vertical: true))
-            host.frame = NSRect(x: 0, y: 0, width: 560, height: host.fittingSize.height)
+            host.frame = NSRect(x: 0, y: 0, width: Self.contentWidth, height: host.fittingSize.height)
+            host.layoutSubtreeIfNeeded()
 
-            // Give RemoteImage's .task a few runloop turns to publish the cached
-            // image before the snapshot is captured.
-            Self.pumpRunLoop(turns: 5, each: 0.05)
+            guard let image = Self.pinnedScaleImage(of: host) else {
+                XCTFail("Could not render bitmap for variant \(variant.rawValue)")
+                continue
+            }
 
             assertSnapshot(
-                of: host,
+                of: image,
                 as: .image(perceptualPrecision: 0.98),
                 named: variant.rawValue)
         }
     }
 
-    /// Pumps the main runloop synchronously. `RunLoop.run(until:)` is annotated
-    /// `noasync`, so it lives here in a synchronous helper and is called from the
-    /// async test body.
+    /// Draws `view` into an `NSBitmapImageRep` whose pixel dimensions are exactly
+    /// `renderScale` times the view's point size, so the captured bitmap is @2x
+    /// regardless of the machine's screen backing scale. `NSView`'s own
+    /// `bitmapImageRepForCachingDisplay(in:)` would pick up the current screen
+    /// scale, which is precisely the environment dependency we are eliminating.
     @MainActor
-    private static func pumpRunLoop(turns: Int, each seconds: TimeInterval) {
-        for _ in 0..<turns {
-            RunLoop.main.run(until: Date().addingTimeInterval(seconds))
-        }
+    private static func pinnedScaleImage(of view: NSView) -> NSImage? {
+        let pointSize = view.bounds.size
+        let pixelWidth = Int((pointSize.width * renderScale).rounded())
+        let pixelHeight = Int((pointSize.height * renderScale).rounded())
+        guard pixelWidth > 0, pixelHeight > 0,
+              let rep = NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: pixelWidth,
+                pixelsHigh: pixelHeight,
+                bitsPerSample: 8,
+                samplesPerPixel: 4,
+                hasAlpha: true,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 0)
+        else { return nil }
+        // Setting the rep's point size while its pixel dimensions are 2x makes
+        // `cacheDisplay` draw the view at 2x scale into the buffer.
+        rep.size = pointSize
+        view.cacheDisplay(in: view.bounds, to: rep)
+        let image = NSImage(size: pointSize)
+        image.addRepresentation(rep)
+        return image
     }
 }
