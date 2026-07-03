@@ -104,6 +104,12 @@ targets:
       - apps/macos/Update/InstallerVolumeEjection.swift
       - apps/macos/Media/ImageEncoder.swift
       - apps/macos/Media/ComposerMediaIntake.swift
+      - apps/macos/Media/ImageDownsampler.swift
+    dependencies:
+      - package: BlueskyCore
+        product: YoruMimizukuKit
+      - package: BlueskyCore
+        product: PlatformApple
     settings:
       base:
         SWIFT_VERSION: "6.0"
