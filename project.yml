@@ -129,6 +129,32 @@ targets:
       base:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
+  YoruMimizukuPadTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - apps/ipadosTests
+      - apps/ipados/Media/ImageDownsampler.swift
+      - apps/ipados/Media/RemoteImage.swift
+      - apps/ipados/Catalog/CatalogRegistry.swift
+      - apps/ipados/Views/PostRowView.swift
+      - apps/ipados/Views/QuoteCardView.swift
+      - apps/ipados/Views/LinkCardView.swift
+      - apps/ipados/Views/VideoPosterView.swift
+      - apps/ipados/Theme.swift
+      - apps/ipados/DisplaySettings.swift
+      - apps/ipados/Typography.swift
+    dependencies:
+      - package: BlueskyCore
+        product: YoruMimizukuKit
+      - package: BlueskyCore
+        product: PlatformApple
+      - package: SnapshotTesting
+        product: SnapshotTesting
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   YoruMimizuku:
     build:
@@ -143,5 +169,9 @@ schemes:
     build:
       targets:
         YoruMimizukuPad: all
+        YoruMimizukuPadTests: [test]
     run:
       config: Debug
+    test:
+      targets:
+        - YoruMimizukuPadTests
