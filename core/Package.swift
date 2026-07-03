@@ -26,7 +26,11 @@ let package = Package(
             name: "BlueskyCore",
             dependencies: [.product(name: "Crypto", package: "swift-crypto")]
         ),
-        .target(name: "YoruMimizukuKit", dependencies: ["BlueskyCore"]),
+        .target(
+            name: "YoruMimizukuKit",
+            dependencies: ["BlueskyCore"],
+            resources: [.process("Catalog/Resources")]
+        ),
         // Apple-only adapters: Keychain (Security), SecRandom (Security), os.signpost logger.
         // Cross-platform concretes (URLSession HTTP, swift-crypto DPoP) stay in BlueskyCore/Adapters.
         .target(name: "PlatformApple", dependencies: ["BlueskyCore"]),

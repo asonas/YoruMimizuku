@@ -76,7 +76,7 @@ struct PostRowView: View {
     private var horizontalRowPadding: CGFloat { density == .compact ? 12 : 16 }
     private var verticalPadding: CGFloat { density == .compact ? 6 : 11 }
     private var leadingInset: CGFloat { avatarSize + columnSpacing }
-    private var imageMaxWidth: CGFloat { density == .compact ? 320 : 440 }
+    private var imageMaxWidth: CGFloat { CGFloat(DesignMetrics.mediaMaxWidth(density)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: density == .compact ? 1 : 3) {
@@ -225,7 +225,7 @@ struct PostRowView: View {
             // window — accepted to avoid a right-hand gap), so the media never strands
             // mid-row and no trailing whitespace appears.
             HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
-                VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
                     authorLine
                     bodyText
                     quoteSection
@@ -237,7 +237,7 @@ struct PostRowView: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+            VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
                 authorLine
                 bodyText
                 verticalMedia
@@ -271,10 +271,10 @@ struct PostRowView: View {
     @ViewBuilder
     private var verticalMedia: some View {
         if hasInlineMedia {
-            mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
+            mediaSection(maxWidth: imageMaxWidth).padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
         if hasLinkCard {
-            linkCardSection.padding(.top, 3)
+            linkCardSection.padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
     }
 
@@ -297,7 +297,7 @@ struct PostRowView: View {
             QuoteCardView(quote: quote, density: density, now: now) {
                 onQuoteTap?(quote)
             }
-            .padding(.top, 3)
+            .padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
     }
 
@@ -353,7 +353,7 @@ struct PostRowView: View {
         if let warning = post.mediaWarning, !revealMedia {
             media
                 .blur(radius: 28)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius), style: .continuous))
                 .overlay { sensitiveMediaOverlay(warning) }
                 .allowsHitTesting(false)
                 .overlay {
@@ -388,11 +388,11 @@ struct PostRowView: View {
             singleImage(image, maxWidth: maxWidth)
         } else {
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 2),
-                spacing: 5
+                columns: Array(repeating: GridItem(.flexible(), spacing: CGFloat(DesignMetrics.gridGutter)), count: 2),
+                spacing: CGFloat(DesignMetrics.gridGutter)
             ) {
                 ForEach(post.images) { image in
-                    thumbnail(image, height: 140, maxPointSize: 220)
+                    thumbnail(image, height: CGFloat(DesignMetrics.gridTileHeight), maxPointSize: 220)
                 }
             }
             .frame(maxWidth: maxWidth, alignment: .leading)
@@ -499,7 +499,7 @@ struct PostRowView: View {
     }
 
     private var actionBar: some View {
-        HStack(spacing: 26) {
+        HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             Button { onReply?(post) } label: {
                 actionLabel("\(post.replyCount)", systemImage: "bubble.left")
             }
@@ -565,7 +565,7 @@ struct PostRowView: View {
     /// Non-interactive action bar (counts only), used for conversation ancestor rows
     /// that are themselves wrapped in a re-anchor button.
     private var staticActionBar: some View {
-        HStack(spacing: 26) {
+        HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             actionLabel("\(post.replyCount)", systemImage: "bubble.left")
             actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent)
             actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star)
@@ -593,9 +593,9 @@ private struct ThumbnailChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
+            .overlay(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)).strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
             .accessibilityLabel(alt.isEmpty ? "画像" : alt)
             .onTapGesture(perform: onTap)
     }

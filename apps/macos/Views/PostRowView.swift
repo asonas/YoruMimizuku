@@ -262,7 +262,7 @@ struct PostRowView: View, @MainActor Equatable {
             // window — accepted to avoid a right-hand gap), so the media never strands
             // mid-row and no trailing whitespace appears.
             HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
-                VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+                VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
                     authorLine
                     bodyText
                     quoteSection
@@ -274,7 +274,7 @@ struct PostRowView: View, @MainActor Equatable {
             }
             .frame(maxWidth: .infinity)
         } else {
-            VStack(alignment: .leading, spacing: density == .compact ? 2 : 4) {
+            VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
                 authorLine
                 bodyText
                 verticalMedia
@@ -295,10 +295,10 @@ struct PostRowView: View, @MainActor Equatable {
     @ViewBuilder
     private var verticalMedia: some View {
         if hasInlineMedia {
-            mediaSection(maxWidth: imageMaxWidth).padding(.top, 3)
+            mediaSection(maxWidth: imageMaxWidth).padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
         if hasLinkCard {
-            linkCardSection.padding(.top, 3)
+            linkCardSection.padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
     }
 
@@ -335,7 +335,7 @@ struct PostRowView: View, @MainActor Equatable {
             QuoteCardView(quote: quote, density: density, now: now) {
                 onQuoteTap(quote)
             }
-            .padding(.top, 3)
+            .padding(.top, CGFloat(DesignMetrics.mediaTopGap))
         }
     }
 
@@ -344,9 +344,9 @@ struct PostRowView: View, @MainActor Equatable {
     private var actionBarSection: some View {
         if density == .comfortable {
             if interactiveActions {
-                actionBar.padding(.top, 6)
+                actionBar.padding(.top, CGFloat(DesignMetrics.actionBarTopGap))
             } else {
-                staticActionBar.padding(.top, 6)
+                staticActionBar.padding(.top, CGFloat(DesignMetrics.actionBarTopGap))
             }
         }
     }
@@ -384,7 +384,7 @@ struct PostRowView: View, @MainActor Equatable {
     }
 
 
-    private var imageMaxWidth: CGFloat { density == .compact ? 320 : 440 }
+    private var imageMaxWidth: CGFloat { CGFloat(DesignMetrics.mediaMaxWidth(density)) }
 
     /// The post's attached media (image grid and/or video poster). When the post
     /// carries a sensitive-content label and the viewer has not revealed it, the
@@ -400,7 +400,7 @@ struct PostRowView: View, @MainActor Equatable {
         if let warning = post.mediaWarning, !revealMedia {
             media
                 .blur(radius: 28)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius), style: .continuous))
                 .overlay { sensitiveMediaOverlay(warning) }
                 // Disable the media's own taps (lightbox / video) while blurred so
                 // the first tap only reveals; the overlay's gesture handles reveal.
@@ -440,11 +440,11 @@ struct PostRowView: View, @MainActor Equatable {
             singleImage(image, maxWidth: maxWidth)
         } else {
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 2),
-                spacing: 5
+                columns: Array(repeating: GridItem(.flexible(), spacing: CGFloat(DesignMetrics.gridGutter)), count: 2),
+                spacing: CGFloat(DesignMetrics.gridGutter)
             ) {
                 ForEach(post.images) { image in
-                    thumbnail(image, height: 140, maxPointSize: 220)
+                    thumbnail(image, height: CGFloat(DesignMetrics.gridTileHeight), maxPointSize: 220)
                 }
             }
             .frame(maxWidth: maxWidth, alignment: .leading)
@@ -582,7 +582,7 @@ struct PostRowView: View, @MainActor Equatable {
     }
 
     private var actionBar: some View {
-        HStack(spacing: 26) {
+        HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             Button {
                 onSelect()
                 onReplyTap(post)
@@ -662,7 +662,7 @@ struct PostRowView: View, @MainActor Equatable {
     /// Non-interactive action bar (counts only), used for conversation ancestor rows
     /// that are themselves wrapped in a re-anchor button.
     private var staticActionBar: some View {
-        HStack(spacing: 26) {
+        HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             actionLabel("\(post.replyCount)", systemImage: "bubble.left")
             actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent)
             actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star)
@@ -726,9 +726,9 @@ private struct ThumbnailChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(theme.hairline, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
+            .overlay(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)).strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
             .accessibilityLabel(alt.isEmpty ? "画像" : alt)
             .onTapGesture(perform: onTap)
     }

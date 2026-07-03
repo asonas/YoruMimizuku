@@ -9,6 +9,13 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-03 ingest
+
+- sources: `docs/superpowers/specs/2026-07-03-design-catalog-design.md`, `docs/superpowers/plans/2026-07-03-design-catalog.md`
+- created: [[design-system]]
+- updated: [[overview]] (added link to [[design-system]]), `AGENTS.md` (Coding Conventions pointer)
+- note: Ingested the design catalog work on `feature/design-catalog` (Tasks 1–10 complete). Documented the naming rule (component = view type name minus `View`; slots = existing computed-property names; spacing/radius = `DesignMetrics` identifiers) with a full reference table of all 8 `DesignMetrics` members and their values/call sites. Documented the DEBUG-only in-app gallery on both platforms (macOS: ヘルプ > デザインカタログ window; iPadOS: sidebar row → sheet, no theme menu) and its toolbar controls (density, theme [macOS only], width slider crossing the 680pt reflow boundary, caption toggle). Documented snapshot-test operations: `YoruMimizukuTests`/`YoruMimizukuPadTests`, the iPad Pro 13-inch (M5) / iOS 26.5 simulator pin, the `EnvironmentValues.catalogPreloadedImages` determinism mechanism, and the actual re-record procedure verified against the resolved `swift-snapshot-testing` source (`SNAPSHOT_TESTING_RECORD=all|missing` env var, since neither test file passes an explicit `record:` argument). Recorded two verified parity findings between the macOS and iPad `PostRowView` implementations as drift candidates, not yet fixed: (1) iPad's `actionBarSection` is missing the external `actionBarTopGap` (6pt) wrap that macOS applies around `actionBar`/`staticActionBar` — both platforms share an identical internal `.padding(.top, 3)` inside those views, so this is a missing 6pt wrap on iPad, not a 3-vs-6 value mismatch; (2) macOS's `staticActionBar` still uses raw literals (`HStack(spacing: 26)`, `.padding(.top, 3)`) while macOS's own `actionBar` and iPad's `staticActionBar` already use the `DesignMetrics` constants. This clears the 2026-07-03 design-catalog spec/plan pair from the lint "uncited source" warning. Regenerated index (no `features:` block on this page — it is a `concept` page, not a `behavior` page, so the support matrix is unaffected).
+
 ## 2026-07-03 fix
 
 - sources: `apps/ipados/Views/PostRowView.swift` (commit cb5d8e1 "Play post videos inline on iPad instead of opening Bluesky"), `core/Sources/YoruMimizukuKit/PostDisplay.swift`, `core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift`
