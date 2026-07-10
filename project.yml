@@ -141,6 +141,8 @@ targets:
       - apps/ipados/Views/QuoteCardView.swift
       - apps/ipados/Views/LinkCardView.swift
       - apps/ipados/Views/VideoPosterView.swift
+      - apps/ipados/Views/SettingsView.swift
+      - apps/ipados/Views/FilterEditorView.swift
       - apps/ipados/Theme.swift
       - apps/ipados/DisplaySettings.swift
       - apps/ipados/NotificationSettings.swift
