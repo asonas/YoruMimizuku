@@ -85,6 +85,12 @@ targets:
         CFBundleDisplayName: YoruMimizuku
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # The app uses only standard encryption (HTTPS/TLS for XRPC, OAuth PKCE +
+        # DPoP), which is exempt from export compliance. Declaring this here stops
+        # TestFlight from marking each build "Missing Compliance" — that state
+        # blocks distribution to testers and hangs the Xcode Cloud TestFlight
+        # post-action.
+        ITSAppUsesNonExemptEncryption: false
         UIRequiresFullScreen: true
         UILaunchScreen: {}
         CFBundleURLTypes:
