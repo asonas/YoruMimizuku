@@ -46,6 +46,12 @@ private struct NotificationRowView: View {
     var onOpenSubject: (NotificationGroup) -> Void
 
     private let timeFormatter = RelativeTimeFormatter()
+    @State private var isExpanded = false
+
+    /// Only aggregated groups (more than one actor) offer the expand/collapse toggle.
+    private var canExpand: Bool { item.actors.count > 1 }
+
+    private var displayedActors: ArraySlice<NotificationGroup.Actor> { item.actors.prefix(12) }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -56,15 +62,10 @@ private struct NotificationRowView: View {
                 .padding(.top, 6)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    ForEach(Array(item.actors.prefix(5).enumerated()), id: \.offset) { _, actor in
-                        Button {
-                            onOpenAuthor(actor)
-                        } label: {
-                            RemoteAvatar(url: actor.avatarURL, size: 28)
-                        }
-                        .buttonStyle(.plain)
-                    }
+                HStack(alignment: .top, spacing: 6) {
+                    if isExpanded { actorList } else { avatarRow }
+                    Spacer(minLength: 4)
+                    if canExpand { expandToggle }
                 }
                 summaryLine
                 context
@@ -73,6 +74,56 @@ private struct NotificationRowView: View {
         .padding(.vertical, 8)
         .listRowBackground(item.isRead ? Color.clear : theme.accent.opacity(0.10))
         .listRowSeparatorTint(theme.divider)
+    }
+
+    /// Collapsed state: a horizontal row of the actors' avatars.
+    private var avatarRow: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(displayedActors.enumerated()), id: \.offset) { _, actor in
+                Button {
+                    onOpenAuthor(actor)
+                } label: {
+                    RemoteAvatar(url: actor.avatarURL, size: 28)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Expanded state: one tappable row per actor with avatar, display name and handle.
+    private var actorList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(item.actors.enumerated()), id: \.offset) { _, actor in
+                Button {
+                    onOpenAuthor(actor)
+                } label: {
+                    HStack(spacing: 8) {
+                        RemoteAvatar(url: actor.avatarURL, size: 24)
+                        Text(actor.displayName.isEmpty ? actor.handle : actor.displayName)
+                            .font(.app(.caption, weight: .semibold))
+                            .foregroundStyle(theme.primaryText).lineLimit(1)
+                        Text("@\(actor.handle)")
+                            .font(.app(.caption2)).foregroundStyle(theme.tertiaryText)
+                            .lineLimit(1).truncationMode(.tail)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var expandToggle: some View {
+        Button { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } } label: {
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.tertiaryText)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isExpanded ? "非表示" : "すべて表示")
     }
 
     /// What the notification is about: for likes/reposts, a tappable snippet of the

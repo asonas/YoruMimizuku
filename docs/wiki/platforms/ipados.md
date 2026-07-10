@@ -1,25 +1,34 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-07-03
+updated: 2026-07-10
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
   - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
   - docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md
   - docs/superpowers/plans/2026-07-02-post-interaction-affordances.md
+  - docs/superpowers/plans/2026-07-10-yorumimizuku-ipados-parity-phase3.md
   - project.yml
   - apps/ipados/YoruMimizukuPadApp.swift
   - apps/ipados/Views/RootView.swift
   - apps/ipados/Views/PostRowView.swift
   - apps/ipados/Views/TimelineListView.swift
+  - apps/ipados/Views/NotificationsListView.swift
   - apps/ipados/Views/VideoPosterView.swift
   - apps/ipados/Views/QuoteCardView.swift
+  - apps/ipados/Views/ComposerView.swift
+  - apps/ipados/Views/SettingsView.swift
+  - apps/ipados/Views/FilterEditorView.swift
+  - apps/ipados/Views/ToastView.swift
   - apps/ipados/Theme.swift
   - apps/ipados/Typography.swift
+  - apps/ipados/DisplaySettings.swift
+  - apps/ipados/NotificationSettings.swift
   - apps/ipados/Auth/ASWebAuthBrowserSession.swift
   - core/Sources/YoruMimizukuKit/PostDisplay.swift
   - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
+  - core/Sources/YoruMimizukuKit/ToastCenter.swift
 ---
 
 # Platform — iPadOS
@@ -56,10 +65,45 @@ notifications, saved search tabs, author tabs, and conversation tabs are availab
 Rows expose visible reply, repost, like, quote, copy-link, and open-in-browser
 actions. Hardware-keyboard parity is also wired without visible toolbar clutter:
 `j` / `k` move timeline focus, `f` likes the focused post, `o` opens it in the
-browser, and `n` opens compose. Copying uses `UIPasteboard`, opening a permalink
-uses SwiftUI's `openURL`, and hashtag links open saved-search tabs
-(`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
-`apps/ipados/Views/TimelineListView.swift`).
+browser, and `n` opens compose. Copying uses `UIPasteboard` and now raises a
+transient "リンクをコピーしました" toast (`ToastCenter` + an iPad `ToastView`,
+mirroring macOS); opening a permalink uses SwiftUI's `openURL`. Body links are
+routed by the shell's `OpenURLAction`: hashtag links open saved-search tabs and
+`@mention` links open the author's tab in-app (via `RichText.mentionDID` →
+`WorkspaceModel.openAuthor`), matching macOS; every other link falls through to
+the browser (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
+`apps/ipados/Views/TimelineListView.swift`, `apps/ipados/Views/ToastView.swift`,
+`2026-07-10-yorumimizuku-ipados-parity-phase3.md`).
+
+## Settings, filters, and notifications parity (Phase 3)
+
+As of `2026-07-10-yorumimizuku-ipados-parity-phase3.md`, the iPad gained the
+surfaces that were previously macOS-only:
+
+- **Settings sheet.** A `gearshape` toolbar button opens `SettingsView`, an
+  iPad-native `NavigationStack` + `Form` with four sections: 配色 (paste a
+  randoma11y URL to recolor via the shared `ThemeStore`), 表示 (timeline
+  `DisplayDensity`), フォント (UI font family via `UIFont.familyNames`, driven by an
+  iPad `FontSettingsStore`), and 通知 (poll interval + unread-badge toggle via an
+  iPad `NotificationSettingsStore` copied from macOS). Changing the font family
+  re-ids the split view so every `.font(.app(...))` re-renders. There is **no
+  update tab** — the iPad ships via TestFlight, not Sparkle
+  (`apps/ipados/Views/SettingsView.swift`, `apps/ipados/DisplaySettings.swift`,
+  `apps/ipados/NotificationSettings.swift`).
+- **Structured filter editor.** Alongside the inline single-keyword quick-add, a
+  `slider.horizontal.3` button opens `FilterEditorView` (multi-row typed terms —
+  keyword / user / hashtag / mention — with an AND/OR combinator), and each filter
+  row's context menu offers 編集 / 削除. It reuses the shared `SavedFilter` /
+  `WorkspaceModel` filter APIs, so a blank name falls back to the generated
+  `fallbackName` exactly as on macOS (`apps/ipados/Views/FilterEditorView.swift`).
+- **Notification actor expansion.** Grouped like/repost rows with more than one
+  actor show a chevron toggle that expands the collapsed avatar strip into a
+  per-actor list (avatar + display name + `@handle`), mirroring macOS
+  (`apps/ipados/Views/NotificationsListView.swift`).
+- **Notification polling is now settings-driven.** The shell starts and restarts
+  home / notifications / filter polling at the user's chosen interval and gates
+  the sidebar badges on the "show unread badges" preference, replacing the
+  previously hardcoded 30-second cadence.
 
 ## Timeline rendering parity
 
@@ -88,9 +132,14 @@ hover-performance layer (`.equatable()` rows, hover highlight) is intentionally
 absent — iPad has no pointer hover and uses tap-to-focus.
 
 Compose is presented as a sheet. It supports top-level posts, replies, quote
-posts, and up to four image attachments through `PhotosPicker`; images are
-compressed to JPEG on the app side before the shared `PostService` uploads them
-(`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`).
+posts, up to four image attachments through `PhotosPicker`, and a single video
+attachment (mutually exclusive with images). Images are compressed to JPEG on the
+app side before the shared `PostService` uploads them; a picked video is loaded
+through `VideoAttachment` with an upload/processing status line, matching macOS
+(`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`,
+`apps/ipados/Media/VideoAttachment.swift`). Video upload landed on iPad and macOS
+together (`Add video upload to composer`); the remaining compose gap is macOS-only
+file import / drag-and-drop attach.
 
 ## Inline video playback (iPad-only, ahead of macOS/Windows)
 
@@ -113,39 +162,27 @@ the quoted post's conversation instead of forwarding to video playback.
 
 ## Known differences
 
-The timeline rendering gap with macOS is closed (see the section above). The
-remaining differences are settings surfaces and live updates, not row appearance.
+Timeline rendering, the settings surface, the structured filter editor, the
+mention-tap / copy-link-toast affordances, notification actor expansion, and video
+upload have all reached parity (see the sections above). The remaining differences
+are narrow:
 
-- **No settings surface yet.** The shared `ThemeStore` and `DisplayDensity` are now
-  wired into the iPad scene and applied to every row, so the look matches macOS at
-  the default (comfortable density, default palette). But there is **no UI to switch
-  them** on iPad: the display-density A/B toggle, the randoma11y theme picker, and
-  the custom-font-family / size picker from the macOS settings screen are not yet
-  replicated. The font-family picker in particular needs a `UIFont` family
-  enumeration the iPad `Typography` does not yet expose
-  (`2026-06-24-yorumimizuku-ipados-parity-design.md` §3). This is Phase 3 of the
-  parity plan.
-- **Jetstream live updates are not wired** on iPadOS. The shell starts 30-second
-  polling for home and notifications; this matches the v1 decision (interval polling
-  is the supported mode everywhere) rather than being an iPad-specific gap.
-- **Saved search creation is a simple keyword search tab.** The full structured
-  filter editor (multi-row terms, AND/OR) from macOS is not yet replicated.
-- **No in-app notification settings** (poll interval / badge toggle) as macOS and
-  Windows have. OS banners and app badge updates are also limited because iPadOS
-  background polling is not a reliable notification strategy.
-- **Notifications** show reason icons, relative timestamps, actor taps, and unread
-  row tint, but still use a compact summary list rather than the macOS actor
-  expansion UI.
-- **Compose** is functional (`PhotosPicker`, JPEG re-encoding, alt text, replies,
-  quotes) but does not yet mirror every macOS affordance such as file import or
-  drag-and-drop attach.
-- **The 2026-07-02 post-interaction affordances are macOS-only so far.** A
-  timestamp tap that re-anchors the conversation view, the copy-link toast
-  (`ToastCenter`), and in-app author-tab routing for body `@mention` taps
-  (`RichText.mentionDID`) all landed on macOS only; iPadOS keeps its existing
-  whole-row-tap-opens-thread behavior and its `openURL` handler still
-  intercepts only hashtags, not mentions (`apps/ipados/Views/RootView.swift`).
-  Bringing these to iPad — `ToastCenter` is already shared core — is a
-  documented follow-up, not yet started
-  (`2026-07-02-post-interaction-affordances.md`, "Follow-up" section; see also
-  [[timeline-streaming]]).
+- **Font settings are family-only.** The iPad font tab picks a UI font family but
+  has no body-size stepper: the iPad `AppTypography` deliberately pins its size
+  ratio to 1, and reviving the `baseSize` machinery macOS drives is out of scope
+  for now (user decision, `2026-07-10-yorumimizuku-ipados-parity-phase3.md`). This
+  is the one settings control macOS has that the iPad does not.
+- **Jetstream live updates are not wired** on iPadOS. The shell polls (now at the
+  user-chosen interval, default 30s) for home, notifications, and filters. This
+  matches the v1 decision (interval polling is the supported mode everywhere)
+  rather than being an iPad-specific gap (see [[timeline-streaming]]).
+- **Timestamp-tap re-anchor is not narrowed on iPad — by design.** macOS narrows
+  the conversation re-anchor gesture to the timestamp because a pointer UI keeps
+  the row otherwise inert; the iPad already re-anchors on the **whole row tap**
+  (`apps/ipados/Views/PostRowView.swift`), which is equal-or-broader on touch, so
+  no timestamp-only tap was added (`2026-07-10-yorumimizuku-ipados-parity-phase3.md`).
+- **OS notification banners and the app badge** are still limited on iPadOS,
+  because background polling is not a reliable OS-notification strategy. Only the
+  in-app poll interval and sidebar unread badges are configurable.
+- **Compose** does not yet mirror macOS file import / drag-and-drop attach (image
+  and video attach via `PhotosPicker` is at parity).
