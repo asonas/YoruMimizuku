@@ -232,6 +232,10 @@ private struct MainShellView: View {
 
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
+    /// The scene's transient toast (e.g. copy-link confirmation), rendered as a
+    /// bottom overlay. `copyPermalink` lives here in `MainShellView`, so no
+    /// env-object plumbing into child views is needed (unlike macOS).
+    @StateObject private var toastCenter = ToastCenter()
     @State private var lightbox: ImageGallery?
     @State private var composer: ComposerViewModel?
     @State private var now = Date()
@@ -356,6 +360,13 @@ private struct MainShellView: View {
                 workspace.openHashtagFilter(tag: tag)
                 return .handled
             }
+            if let did = RichText.mentionDID(from: url) {
+                // Only the identifier is available at tap time (the openURL action
+                // sees a URL, not the "@handle" span text), so open by DID and let
+                // the author model resolve handle / display name / avatar.
+                workspace.openAuthor(did: did, handle: "", displayName: "", avatarURL: nil)
+                return .handled
+            }
             return .systemAction
         })
         .overlay {
@@ -363,6 +374,15 @@ private struct MainShellView: View {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
             }
         }
+        .overlay(alignment: .bottom) {
+            if let toast = toastCenter.current {
+                ToastView(message: toast)
+                    .padding(.bottom, 24)
+                    .onTapGesture { toastCenter.dismiss() }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
         .sheet(item: $composer) { model in
             ComposerView(model: model)
         }
@@ -547,6 +567,7 @@ private struct MainShellView: View {
     private func copyPermalink(_ post: PostDisplay) {
         guard let url = PostPermalink.url(for: post) else { return }
         UIPasteboard.general.string = url.absoluteString
+        toastCenter.show("リンクをコピーしました")
     }
 
     private func openPermalink(_ post: PostDisplay) {
