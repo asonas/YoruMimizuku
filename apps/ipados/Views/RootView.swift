@@ -217,6 +217,20 @@ private struct AuthenticatedRootView: View {
     }
 }
 
+/// Drives the create/edit filter sheet. `.new` opens a blank editor; `.edit`
+/// prefills from an existing filter and preserves its id/createdAt on save.
+private enum FilterEditorRequest: Identifiable {
+    case new
+    case edit(SavedFilter)
+
+    var id: String {
+        switch self {
+        case .new: return "new"
+        case let .edit(filter): return filter.id.uuidString
+        }
+    }
+}
+
 private struct MainShellView: View {
     @ObservedObject var timelineModel: TimelineViewModel
     @ObservedObject var notificationsModel: NotificationsViewModel
@@ -240,6 +254,8 @@ private struct MainShellView: View {
     @State private var composer: ComposerViewModel?
     @State private var now = Date()
     @State private var searchText = ""
+    /// Drives the structured filter create/edit sheet.
+    @State private var filterEditorRequest: FilterEditorRequest?
     // Pin the sidebar visible. The detail pane hides its navigation bar for a
     // chromeless canvas (no empty title band), which also removes the toggle that
     // would otherwise reveal the sidebar — so keep both columns shown, like macOS.
@@ -273,12 +289,20 @@ private struct MainShellView: View {
                     HStack {
                         TextField("検索語", text: $searchText)
                             .textInputAutocapitalization(.never)
+                        // Fast path: a single-keyword filter from the inline field.
                         Button {
                             addSearchFilter()
                         } label: {
                             Image(systemName: "plus")
                         }
                         .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        // Structured editor: multi-row terms with AND/OR.
+                        Button {
+                            filterEditorRequest = .new
+                        } label: {
+                            Image(systemName: "slider.horizontal.3")
+                        }
+                        .accessibilityLabel("詳細な条件でフィルターを追加")
                     }
                     ForEach(workspace.filters) { tab in
                         SidebarButton(
@@ -289,6 +313,18 @@ private struct MainShellView: View {
                             onClose: { workspace.removeFilter(id: tab.id) }
                         ) {
                             workspace.selection = .filter(tab.id)
+                        }
+                        .contextMenu {
+                            Button {
+                                filterEditorRequest = .edit(tab.filter)
+                            } label: {
+                                Label("編集", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                workspace.removeFilter(id: tab.id)
+                            } label: {
+                                Label("削除", systemImage: "trash")
+                            }
                         }
                     }
                 }
@@ -385,6 +421,9 @@ private struct MainShellView: View {
         .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
         .sheet(item: $composer) { model in
             ComposerView(model: model)
+        }
+        .sheet(item: $filterEditorRequest) { request in
+            filterEditor(for: request).environmentObject(theme)
         }
         #if DEBUG
         .sheet(isPresented: $showsCatalog) {
@@ -548,6 +587,26 @@ private struct MainShellView: View {
         guard !query.isEmpty else { return }
         workspace.addFilter(name: query, terms: [FilterTerm(kind: .keyword, value: query)], combinator: .and)
         searchText = ""
+    }
+
+    /// The create/edit filter sheet body. `.new` adds a fresh filter; `.edit`
+    /// preserves the filter's id/createdAt and falls back to a generated name when
+    /// the name is left blank. Mirrors macOS `SidebarView.editor(for:)`.
+    @ViewBuilder
+    private func filterEditor(for request: FilterEditorRequest) -> some View {
+        switch request {
+        case .new:
+            FilterEditorView(name: "", terms: [], combinator: .and, isEditing: false) { name, terms, combinator in
+                workspace.addFilter(name: name, terms: terms, combinator: combinator)
+            }
+        case let .edit(filter):
+            FilterEditorView(name: filter.name, terms: filter.terms, combinator: filter.combinator, isEditing: true) { name, terms, combinator in
+                var edited = SavedFilter(id: filter.id, name: name, terms: terms, combinator: combinator, createdAt: filter.createdAt)
+                let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                edited.name = trimmed.isEmpty ? edited.fallbackName : trimmed
+                workspace.updateFilter(edited)
+            }
+        }
     }
 
     private func openAuthor(did: String, handle: String, displayName: String?, avatarURL: URL?) {
