@@ -297,6 +297,15 @@ private struct MainShellView: View {
             .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
             .sheet(item: $composer) { model in
                 ComposerView(model: model)
+                    // Dismiss the sheet once the post succeeds and refresh home, so
+                    // the composer can't linger and let the same draft be posted
+                    // again. Mirrors macOS `vm.onPosted = { composer = nil; refresh }`.
+                    .onAppear {
+                        model.onPosted = {
+                            composer = nil
+                            Task { _ = await timelineModel.refresh() }
+                        }
+                    }
             }
             .sheet(item: $filterEditorRequest) { request in
                 filterEditor(for: request).environmentObject(theme)
