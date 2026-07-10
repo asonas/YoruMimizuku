@@ -143,6 +143,7 @@ targets:
       - apps/ipados/Views/VideoPosterView.swift
       - apps/ipados/Theme.swift
       - apps/ipados/DisplaySettings.swift
+      - apps/ipados/NotificationSettings.swift
       - apps/ipados/Typography.swift
     dependencies:
       - package: BlueskyCore

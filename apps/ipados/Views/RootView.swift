@@ -14,6 +14,8 @@ struct RootView: View {
     /// every view reads the same themed colors and `.app(...)` fonts as macOS.
     @StateObject private var theme = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
+    @StateObject private var fontSettings = FontSettingsStore()
+    @StateObject private var notificationSettings = NotificationSettingsStore()
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
@@ -53,6 +55,8 @@ struct RootView: View {
         .preferredColorScheme(theme.preferredColorScheme)
         .environmentObject(theme)
         .environmentObject(displaySettings)
+        .environmentObject(fontSettings)
+        .environmentObject(notificationSettings)
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
@@ -66,6 +70,8 @@ struct RootView: View {
             }
             .environmentObject(theme)
             .environmentObject(displaySettings)
+            .environmentObject(fontSettings)
+            .environmentObject(notificationSettings)
         }
     }
 
@@ -245,6 +251,9 @@ private struct MainShellView: View {
     let makeComposer: (String?, PostDisplay?) -> ComposerViewModel
 
     @EnvironmentObject private var theme: ThemeStore
+    @EnvironmentObject private var displaySettings: DisplaySettingsStore
+    @EnvironmentObject private var fontSettings: FontSettingsStore
+    @EnvironmentObject private var notificationSettings: NotificationSettingsStore
     @Environment(\.openURL) private var openURL
     /// The scene's transient toast (e.g. copy-link confirmation), rendered as a
     /// bottom overlay. `copyPermalink` lives here in `MainShellView`, so no
@@ -256,6 +265,8 @@ private struct MainShellView: View {
     @State private var searchText = ""
     /// Drives the structured filter create/edit sheet.
     @State private var filterEditorRequest: FilterEditorRequest?
+    /// Drives the settings sheet.
+    @State private var showsSettings = false
     // Pin the sidebar visible. The detail pane hides its navigation bar for a
     // chromeless canvas (no empty title band), which also removes the toggle that
     // would otherwise reveal the sidebar — so keep both columns shown, like macOS.
@@ -269,6 +280,51 @@ private struct MainShellView: View {
     #endif
 
     var body: some View {
+        splitView
+            .overlay {
+                if let lightbox {
+                    ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let toast = toastCenter.current {
+                    ToastView(message: toast)
+                        .padding(.bottom, 24)
+                        .onTapGesture { toastCenter.dismiss() }
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
+            .sheet(item: $composer) { model in
+                ComposerView(model: model)
+            }
+            .sheet(item: $filterEditorRequest) { request in
+                filterEditor(for: request).environmentObject(theme)
+            }
+            .sheet(isPresented: $showsSettings) {
+                SettingsView()
+                    .environmentObject(theme)
+                    .environmentObject(displaySettings)
+                    .environmentObject(fontSettings)
+                    .environmentObject(notificationSettings)
+            }
+            .onReceive(clock) { now = $0 }
+            .task {
+                restartPolling()
+                syncActiveTab()
+            }
+            .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
+            // Changing the polling interval restarts every poller so the new
+            // cadence takes effect immediately rather than only on the next launch.
+            .onChange(of: notificationSettings.pollIntervalSeconds) { _, _ in restartPolling() }
+            .onDisappear {
+                timelineModel.stopPolling()
+                notificationsModel.stopPolling()
+                workspace.filters.forEach { $0.model.stopPolling() }
+            }
+    }
+
+    private var splitView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List {
                 Section {
@@ -278,7 +334,7 @@ private struct MainShellView: View {
                     SidebarButton(
                         title: "Notifications",
                         systemImage: "bell",
-                        badge: notificationsModel.unreadCount,
+                        badge: badge(notificationsModel.unreadCount),
                         isSelected: workspace.selection == .notifications
                     ) {
                         workspace.selection = .notifications
@@ -308,7 +364,7 @@ private struct MainShellView: View {
                         SidebarButton(
                             title: tab.title,
                             systemImage: "magnifyingglass",
-                            badge: tab.model.unreadCount,
+                            badge: badge(tab.model.unreadCount),
                             isSelected: workspace.selection == .filter(tab.id),
                             onClose: { workspace.removeFilter(id: tab.id) }
                         ) {
@@ -376,12 +432,21 @@ private struct MainShellView: View {
             .background { theme.canvas }
             .navigationTitle("YoruMimizuku")
             .toolbar {
-                Button {
-                    composer = makeComposer(nil, nil)
-                } label: {
-                    Label("投稿", systemImage: "square.and.pencil")
+                ToolbarItem {
+                    Button {
+                        composer = makeComposer(nil, nil)
+                    } label: {
+                        Label("投稿", systemImage: "square.and.pencil")
+                    }
+                    .keyboardShortcut("n", modifiers: [])
                 }
-                .keyboardShortcut("n", modifiers: [])
+                ToolbarItem {
+                    Button {
+                        showsSettings = true
+                    } label: {
+                        Label("設定", systemImage: "gearshape")
+                    }
+                }
             }
         } detail: {
             detail
@@ -405,43 +470,18 @@ private struct MainShellView: View {
             }
             return .systemAction
         })
-        .overlay {
-            if let lightbox {
-                ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if let toast = toastCenter.current {
-                ToastView(message: toast)
-                    .padding(.bottom, 24)
-                    .onTapGesture { toastCenter.dismiss() }
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: toastCenter.current)
-        .sheet(item: $composer) { model in
-            ComposerView(model: model)
-        }
-        .sheet(item: $filterEditorRequest) { request in
-            filterEditor(for: request).environmentObject(theme)
-        }
         #if DEBUG
         .sheet(isPresented: $showsCatalog) {
             DesignCatalogView()
         }
         #endif
-        .onReceive(clock) { now = $0 }
-        .task {
-            timelineModel.startPolling(every: .seconds(30))
-            notificationsModel.startPolling(every: .seconds(30))
-            syncActiveTab()
-        }
-        .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
-        .onDisappear {
-            timelineModel.stopPolling()
-            notificationsModel.stopPolling()
-            workspace.filters.forEach { $0.model.stopPolling() }
-        }
+        // Re-id the shell when the font family changes so every `.font(.app(...))`
+        // (which reads the AppTypography static, not an observed value) re-renders.
+        // Scoped to the split view only — the account/timeline StateObjects live in
+        // the parent and the sheets/overlays attach in `body` outside this id, so a
+        // font change never rebuilds them or dismisses an open sheet. Mirrors the
+        // macOS `.id(fontSettings.family|…)` trick.
+        .id(fontSettings.family)
     }
 
     @ViewBuilder
@@ -580,6 +620,20 @@ private struct MainShellView: View {
     private func accountLabel(_ account: AccountSummary) -> String {
         if let handle = account.handle, !handle.isEmpty { return "@\(handle)" }
         return account.did
+    }
+
+    /// Sidebar badge count, gated on the user's "show unread badges" preference.
+    private func badge(_ count: Int) -> Int {
+        notificationSettings.showsUnreadBadges ? count : 0
+    }
+
+    /// (Re)start every poller at the user's chosen interval. Called on appear and
+    /// whenever the interval changes, so a new cadence takes effect immediately.
+    private func restartPolling() {
+        let interval = notificationSettings.pollInterval
+        timelineModel.startPolling(every: interval)
+        notificationsModel.startPolling(every: interval)
+        workspace.filters.forEach { $0.model.startPolling(every: interval) }
     }
 
     private func addSearchFilter() {
