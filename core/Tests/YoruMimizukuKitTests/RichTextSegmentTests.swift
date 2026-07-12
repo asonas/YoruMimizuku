@@ -24,6 +24,35 @@ final class RichTextSegmentTests: XCTestCase {
         XCTAssertEqual(segments[1].url, URL(string: "https://example.com"))
     }
 
+    func testNonWebLinkFacetFallsBackToPlainText() {
+        // A hostile post could carry a link facet whose URI is a non-web scheme
+        // (file://, custom app scheme). It must render as plain, non-tappable text
+        // so tapping it can never hand a file:// or app-scheme URL to the system.
+        let text = "open file:///etc/passwd now"
+        let uri = "file:///etc/passwd"
+        let start = "open ".utf8.count
+        let facets = [Facet(byteStart: start, byteEnd: start + uri.utf8.count,
+                            features: [.link(uri: uri)])]
+
+        let segments = RichText.segments(text: text, facets: facets)
+
+        XCTAssertEqual(segments.map(\.kind), [.text])
+        XCTAssertEqual(segments.map(\.text), ["open file:///etc/passwd now"])
+        XCTAssertNil(segments[0].url)
+    }
+
+    func testJavascriptLinkFacetFallsBackToPlainText() {
+        let text = "tap javascript:alert(1)"
+        let uri = "javascript:alert(1)"
+        let start = "tap ".utf8.count
+        let facets = [Facet(byteStart: start, byteEnd: start + uri.utf8.count,
+                            features: [.link(uri: uri)])]
+
+        let segments = RichText.segments(text: text, facets: facets)
+
+        XCTAssertEqual(segments.map(\.kind), [.text])
+    }
+
     func testTagFacetUsesHashtagURL() {
         let text = "love #swift"
         let facets = [Facet(byteStart: 5, byteEnd: 11, features: [.tag(tag: "swift")])]
