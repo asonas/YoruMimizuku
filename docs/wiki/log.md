@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-12 ingest
+
+- sources: commit `c0c1307` (URL scheme allowlist), `core/Sources/YoruMimizukuKit/WebURL.swift`, `RichText.swift`, `LinkCard.swift` — from a 1.0.0 pre-release security review, not a spec/plan
+- updated: [[architecture]] (added an "Untrusted server content" section: RichText facet byte-offset bounds-checking as a trust boundary, and the new `http`/`https` allowlist that stops a hostile post's facet-link / external-embed URL from reaching the system opener via a non-web scheme)
+- note: Behavior change with no originating spec/plan. No support-matrix change — the guard lives in shared `YoruMimizukuKit`, so it applies uniformly across Apple platforms and the Windows bridge (no platform divergence).
+
 ## 2026-07-03 ingest
 
 - sources: `docs/superpowers/specs/2026-07-03-design-catalog-design.md` (§背景と問題), `docs/superpowers/plans/2026-07-03-design-catalog.md`; post-branch commits `9561ec8`, `4426a11`

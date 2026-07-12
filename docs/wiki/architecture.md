@@ -1,11 +1,14 @@
 ---
 title: Architecture (Ports & Adapters)
 type: concept
-updated: 2026-06-08
+updated: 2026-07-12
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-core-foundation.md
+  - core/Sources/YoruMimizukuKit/RichText.swift
+  - core/Sources/YoruMimizukuKit/WebURL.swift
+  - core/Sources/YoruMimizukuKit/LinkCard.swift
 ---
 
 # Architecture (Ports & Adapters)
@@ -49,5 +52,15 @@ The ports are realized per platform: `PlatformApple` provides the Apple adapters
 Avatars and post images do not use SwiftUI's `AsyncImage`, which keeps no decoded cache and decodes at full resolution. The app loads them through `RemoteImage`, an `AsyncImage`-shaped view backed by the `ImageDownsampler` actor. `RemoteImage` asks for a thumbnail sized to the view's longest edge in points times the display scale, so an image decodes no larger than it is shown and reloads only when its URL or the display scale changes.
 
 `ImageDownsampler` serves each request through three layers. An in-memory `NSCache` of already-decoded bitmaps (cost-limited to roughly 64 MB, keyed by URL plus target pixel size) answers repeat requests immediately; concurrent requests for the same key are coalesced onto a single in-flight task; and the raw network bytes go through a `URLSession` whose `URLCache` persists to disk (16 MB in memory, 256 MB on disk) under the user's Caches directory. Decoding itself uses ImageIO's `CGImageSourceCreateThumbnailAtIndex` bounded by the target pixel size, so the full-resolution bitmap is never materialized.
+
+## Untrusted server content
+
+> Derived from code (`core/Sources/YoruMimizukuKit/RichText.swift`, `LinkCard.swift`, `WebURL.swift`), from a security review rather than a spec.
+
+In atproto the PDS and every post are chosen or authored by other parties, so all server-derived content is treated as untrusted at the display boundary. Two measures matter most.
+
+Facet ranges are UTF-8 **byte offsets** supplied by the server. `RichText.segments` bounds-checks every range (`byteStart >= 0`, `byteEnd <= bytes.count`, `byteStart < byteEnd`) and slices on the byte array with `String(decoding:as:)`, so a hostile or misaligned offset yields Unicode replacement characters rather than a crash. This is why the byte-offset detail called out in [[glossary]] is a trust boundary, not just a correctness note.
+
+Server-supplied link URLs are restricted to web schemes. `URL.isWebLink` (`WebURL.swift`) accepts only `http` / `https`; a facet `.link` carrying any other scheme is dropped and rendered as plain, non-tappable text (`RichText`), and an external embed whose `uri` is non-web produces no link card (`LinkCard.init?`). A hostile post therefore cannot hand a `file://` or custom app-scheme URL to the system opener (`openURL` / `NSWorkspace.open`), which is only ever reached for `http(s)` links — the same guard the OGP fetcher already applied to preview fetches, now extended to the tap/open path. Hashtag and mention facets are routed to in-app tabs (see [[filters]], [[author-tab]]), not the system opener.
 
 The on-disk cache must be created with `URLCache`'s `directory:` initializer: the legacy `diskPath:` form resolved its bare name against the filesystem root on modern macOS, failed to open, and silently fell back to memory-only caching while logging a stream of SQLite errors on every request.
