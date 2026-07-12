@@ -27,9 +27,11 @@ public struct LinkCard: Equatable, Sendable {
 
 extension LinkCard {
     /// Map the hydrated external embed into a card; nil when its `uri` is not a
-    /// parseable URL (nothing to open).
+    /// parseable http(s) URL. A non-web scheme (file://, custom app scheme) from a
+    /// hostile post produces no card, so tapping it can never hand that URL to the
+    /// system opener.
     public init?(_ external: EmbedExternal) {
-        guard let url = URL(string: external.uri) else { return nil }
+        guard let url = URL(string: external.uri), url.isWebLink else { return nil }
         self.init(
             url: url,
             title: external.title,

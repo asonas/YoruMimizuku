@@ -104,6 +104,23 @@ final class PostDisplayMappingTests: XCTestCase {
         XCTAssertNil(display.linkCard)
     }
 
+    func testExternalEmbedWithNonWebURIProducesNoLinkCard() {
+        // A hostile post could set the external embed's uri to a non-web scheme so
+        // that tapping the card hands file:// / an app scheme to the system opener.
+        // Such an embed must produce no card at all.
+        let card = LinkCard(EmbedExternal(
+            uri: "file:///etc/passwd", title: "Local", description: "", thumb: nil
+        ))
+        XCTAssertNil(card)
+    }
+
+    func testExternalEmbedWithWebURIStillProducesCard() {
+        let card = LinkCard(EmbedExternal(
+            uri: "https://example.com/article", title: "Article", description: "", thumb: nil
+        ))
+        XCTAssertEqual(card?.url, URL(string: "https://example.com/article"))
+    }
+
     func testMapsCidAndViewerState() {
         let postView = PostView(
             uri: "at://did:plc:alice/app.bsky.feed.post/aaa",

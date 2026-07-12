@@ -93,7 +93,10 @@ public enum RichText {
     private static func feature(_ feature: FacetFeature) -> (kind: RichTextSegment.Kind, url: URL?)? {
         switch feature {
         case .link(let uri):
-            return (.link, URL(string: uri))
+            // Only http(s) links are tappable; a non-web scheme (file://, custom
+            // app scheme) from a hostile post falls through to plain text.
+            guard let url = URL(string: uri), url.isWebLink else { return nil }
+            return (.link, url)
         case .tag(let tag):
             let encoded = tag.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? tag
             return (.tag, URL(string: "https://bsky.app/hashtag/\(encoded)"))
