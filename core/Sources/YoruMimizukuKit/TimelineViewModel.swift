@@ -49,6 +49,15 @@ public final class TimelineViewModel: ObservableObject {
     /// the sidebar badge. Always 0 while the tab is active.
     @Published public private(set) var unreadCount = 0
 
+    /// The id of the row that was at the top of the feed the last time it was
+    /// scrolled. Survives the tab switch that tears the `FeedView` down (the view
+    /// model outlives it), so returning to this tab restores the scroll position
+    /// instead of snapping to the top. Deliberately not `@Published`: the feed
+    /// updates it on every scroll, and republishing that churn would re-render the
+    /// whole list. An id (not an offset) stays correct when a poll merges fresh
+    /// posts above the current rows.
+    public var scrollAnchorID: String?
+
     /// Cursor for the next older page; nil before the first load and once the
     /// feed has been exhausted.
     private var cursor: String?
