@@ -173,6 +173,8 @@ struct RootView: View {
     private func switchAccount(to did: String) {
         guard did != currentDID else { return }
         try? accountManager.switchTo(did: did)
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = did
     }
 
@@ -187,6 +189,8 @@ struct RootView: View {
     /// fall through to the next stored account, or the login screen when none remain.
     private func logout() {
         guard let did = currentDID else { return }
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
     }
 

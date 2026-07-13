@@ -121,6 +121,8 @@ struct RootView: View {
         guard did != currentDID else { return }
         try? accountManager.switchTo(did: did)
         accountAvatarURL = nil
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = did
     }
 
@@ -136,6 +138,8 @@ struct RootView: View {
     private func logout() {
         guard let did = currentDID else { return }
         accountAvatarURL = nil
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
     }
 
