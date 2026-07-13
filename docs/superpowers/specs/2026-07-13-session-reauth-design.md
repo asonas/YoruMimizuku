@@ -96,24 +96,34 @@ Replace the delete handler with:
 - On success (`LoginViewModel.State.authenticated(did:)`), the login performer has already
   called `AccountManager.add(loginResult:handle:dpopPrivateKeyRaw:)`, which writes
   `account.<did>` (overwriting the same DID's tokens + DPoP key when the re-authed DID
-  matches) and sets it current. The app then clears the re-auth state and sets
-  `currentDID = did`. When the re-authed DID **differs** from the previous `currentDID`,
-  this rebuilds the authenticated subtree (`.id(did)`) for the new account. When it is the
-  **same** DID (the common case), `currentDID` is unchanged so the subtree is not rebuilt;
-  correctness does not depend on a rebuild because each request builds a fresh
-  `LiveServiceContext` from `accountManager.current()` and therefore picks up the replaced
-  tokens on its next cycle. To avoid waiting a poll interval, the app triggers an immediate
-  refresh of the visible sources after clearing the re-auth state.
+  matches) and sets it current. The app then clears the re-auth state and forces the
+  authenticated subtree to rebuild so it reloads immediately with the fresh tokens rather
+  than waiting up to a poll interval. The subtree's identity is a composite
+  `"\(did)#\(reauthGeneration)"`; setting `currentDID = did` and incrementing
+  `reauthGeneration` changes the id in both the different-DID case (new account) and the
+  same-DID case (the common re-login), so a fresh set of view models mounts and their
+  first `load()` runs against `accountManager.current()`'s replaced tokens. Rebuilding
+  resets transient subtree state (scroll position, open filter tabs) — an accepted
+  trade-off for a fresh post-re-login session.
 - The stale authenticated UI stays mounted **behind** the sheet, so the timeline the user
   was looking at is still there if they cancel.
 
-### 5.3 Cancel and persistent affordance
+### 5.3 State model, cancel, and persistent affordance
 
-- If the user dismisses the sheet without completing re-auth, the re-auth state stays set
-  but the sheet is not re-presented automatically (the guard in §5.1.2 prevents a loop).
-- While re-auth is pending, a persistent affordance is shown so the user can retry: a
-  toolbar / menu item labeled "再ログイン" (macOS) and an equivalent control (iPad) that
-  re-presents the sheet on tap. The account remains fully listed in the switcher.
+Each `RootView` holds two pieces of state: `reauth: ReauthRequest?` — the pending fact,
+which persists until re-auth succeeds — and `isReauthSheetShown: Bool` — which drives the
+sheet. On expiry both are set (`reauth = <request>`, `isReauthSheetShown = true`). The
+sheet is presented with `.sheet(isPresented: $isReauthSheetShown)`.
+
+- If the user dismisses the sheet without completing re-auth, `isReauthSheetShown` becomes
+  `false` but `reauth` stays set; the sheet is not re-presented automatically (no loop).
+- While `reauth != nil`, a slim banner at the top of `RootView.body` (above the
+  authenticated subtree, so the stale timeline stays visible below it) shows
+  "セッションが期限切れです" with a "再ログイン" button that sets `isReauthSheetShown = true`
+  again. The account remains fully listed in the switcher. Keeping this affordance in
+  `RootView` (not the child account menu) avoids threading the pending state down into
+  `MainWindowView` / the iPad `accountMenu`.
+- On success, both `reauth` and `isReauthSheetShown` are cleared (see §5.2).
 
 ### 5.4 Edge cases
 
