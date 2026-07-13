@@ -16,6 +16,17 @@ struct RootView: View {
     /// True while the "add account" login sheet is presented over the signed-in UI.
     @State private var isAddingAccount = false
     @StateObject private var loginModel: LoginViewModel
+    /// The pending re-auth request for the expired current account (nil when the
+    /// session is healthy). Persists across a sheet cancel so the banner stays.
+    @State private var reauth: ReauthRequest?
+    /// Drives the re-auth login sheet; separate from `isAddingAccount` so the two
+    /// flows never interfere.
+    @State private var isReauthSheetShown = false
+    /// Bumped on each successful re-auth and folded into the authenticated
+    /// subtree's `.id`, forcing an immediate rebuild + fresh load with new tokens.
+    @State private var reauthGeneration = 0
+    /// A login model dedicated to re-auth, pre-filled with the expired handle.
+    @StateObject private var reauthLoginModel: LoginViewModel
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
     @StateObject private var fontSettings = FontSettingsStore()
@@ -34,35 +45,43 @@ struct RootView: View {
         _loginModel = StateObject(
             wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager))
         )
+        _reauthLoginModel = StateObject(
+            wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager))
+        )
         // current() returns PersistedAccount?; try? wraps it again, so flatten first.
         let existing = (try? manager.current()) ?? nil
         _currentDID = State(initialValue: existing?.did)
     }
 
     var body: some View {
-        Group {
-            if let did = currentDID {
-                AuthenticatedRootView(
-                    accountManager: accountManager,
-                    did: did,
-                    accountHandle: currentHandle,
-                    accountAvatarURL: accountAvatarURL,
-                    accounts: accounts,
-                    onSwitchAccount: { switchAccount(to: $0) },
-                    onAddAccount: { startAddAccount() },
-                    onLogout: { logout() },
-                    makeComposer: { parent in
-                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParent: parent)
-                    },
-                    makeQuoteComposer: { post in
-                        ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), quotedPost: post)
+        VStack(spacing: 0) {
+            if reauth != nil {
+                SessionReauthBanner(onReauth: { isReauthSheetShown = true })
+            }
+            Group {
+                if let did = currentDID {
+                    AuthenticatedRootView(
+                        accountManager: accountManager,
+                        did: did,
+                        accountHandle: currentHandle,
+                        accountAvatarURL: accountAvatarURL,
+                        accounts: accounts,
+                        onSwitchAccount: { switchAccount(to: $0) },
+                        onAddAccount: { startAddAccount() },
+                        onLogout: { logout() },
+                        makeComposer: { parent in
+                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParent: parent)
+                        },
+                        makeQuoteComposer: { post in
+                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), quotedPost: post)
+                        }
+                    )
+                    .id("\(did)#\(reauthGeneration)")
+                    .task(id: currentDID) { await loadAvatar() }
+                } else {
+                    LoginView(model: loginModel) { did in
+                        currentDID = did
                     }
-                )
-                .id(did)
-                .task(id: currentDID) { await loadAvatar() }
-            } else {
-                LoginView(model: loginModel) { did in
-                    currentDID = did
                 }
             }
         }
@@ -74,8 +93,8 @@ struct RootView: View {
         // and glyph selection are correct regardless of UI locale.
         .font(.app(.body))
         .typesettingLanguage(.init(languageCode: .japanese))
-        // A dead refresh token can't be recovered by retrying; drop the account
-        // and return to login (or switch to another stored account).
+        // A dead refresh token can't be recovered by retrying; keep the account
+        // and prompt the user to re-authenticate via the banner + sheet.
         .onReceive(NotificationCenter.default.publisher(for: SessionExpiry.notification)) { _ in
             handleSessionExpired()
         }
@@ -98,12 +117,23 @@ struct RootView: View {
             .environmentObject(themeStore)
             .frame(minWidth: 420, minHeight: 360)
         }
+        .sheet(isPresented: $isReauthSheetShown) {
+            LoginView(model: reauthLoginModel) { did in
+                reauth = nil
+                isReauthSheetShown = false
+                reauthGeneration += 1
+                accountAvatarURL = nil
+                currentDID = did
+            }
+            .environmentObject(themeStore)
+            .frame(minWidth: 420, minHeight: 360)
+        }
     }
 
     /// Proactively refresh the current account's session when the machine wakes.
     /// On success the new tokens are persisted, so the imminent poll uses a live
     /// token. An `invalid_grant` means the refresh token died while asleep; it is
-    /// reported through `SessionExpiry`, which drops the account via the handler
+    /// reported through `SessionExpiry`, which prompts re-auth via the handler
     /// above. Other errors (e.g. the network not yet up on wake) are left for the
     /// next request's reactive refresh to retry. Never logs token material.
     private func refreshSessionOnWake() {
@@ -116,7 +146,7 @@ struct RootView: View {
                 Self.log.info("Proactive session refresh on wake succeeded")
             } catch {
                 if SessionExpiry.reportIfExpired(error) {
-                    Self.log.notice("Session expired while asleep; dropping the account")
+                    Self.log.notice("Session expired while asleep; prompting re-auth")
                 } else {
                     Self.log.error("Wake refresh failed; the next request will retry reactively")
                 }
@@ -124,11 +154,19 @@ struct RootView: View {
         }
     }
 
-    /// Remove the account whose session can no longer be refreshed, then show the
-    /// next stored account or the login screen.
+    /// Keep the account whose session can no longer be refreshed, and prompt the
+    /// user to re-authenticate via the banner + sheet instead of dropping it.
     private func handleSessionExpired() {
-        guard let did = currentDID else { return }
-        currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
+        guard let request = SessionReauth.onExpiry(
+            currentDID: currentDID,
+            currentHandle: currentHandle,
+            isPending: reauth != nil
+        ) else { return }
+        Self.log.notice("Session expired; prompting re-auth")
+        reauth = request
+        reauthLoginModel.reset()
+        reauthLoginModel.handle = request.handle
+        isReauthSheetShown = true
     }
 
     /// Switch the active account to `did` and rebuild the signed-in subtree for it.
