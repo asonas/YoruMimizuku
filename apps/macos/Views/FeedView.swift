@@ -45,6 +45,21 @@ struct FeedView: View {
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
     @State private var contentWidth: CGFloat = 0
+    /// Row ids currently laid out on screen, gathered from each row's
+    /// appear/disappear. Their top-most (in display order) is the scroll anchor.
+    /// A reference type mutated in place so recording the anchor on every scroll
+    /// crossing never invalidates the body — the same per-scroll churn the
+    /// `.equatable()` rows and the non-`@Published` `scrollAnchorID` avoid. Held in
+    /// `@State` so it is recreated empty each time the tab (and thus this view) is.
+    @State private var visibleRows = VisibleRows()
+    /// Guards the one-shot scroll restore. The `FeedView` is torn down and rebuilt
+    /// on every tab switch, so this starts false again each time the tab is shown;
+    /// restore runs once, then live scroll tracking takes over.
+    @State private var hasRestored = false
+
+    /// Mutable set of on-screen row ids. A class (not a `@State Set`) so inserting
+    /// or removing an id does not trigger a view update.
+    private final class VisibleRows { var ids: Set<String> = [] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -94,7 +109,7 @@ struct FeedView: View {
                     if posts.isEmpty {
                         ScrollView { emptyState }
                     } else {
-                        postList(posts)
+                        postList(posts, proxy: proxy)
                     }
                 }
             }
@@ -105,6 +120,39 @@ struct FeedView: View {
         }
     }
 
+    /// Restore the saved scroll position once, when the recreated list first lays
+    /// out. Driven from `onGeometryChange` rather than `onAppear` because a
+    /// `scrollTo` issued before the list has laid out silently no-ops; a geometry
+    /// callback fires after layout. Runs at most once per `FeedView` lifetime, and
+    /// only unlocks live anchor tracking afterward so the initial top-down layout
+    /// (rows a, b, c appearing first) cannot overwrite the saved anchor before we
+    /// scroll to it.
+    private func restoreScrollIfNeeded(_ proxy: ScrollViewProxy) {
+        guard !hasRestored else { return }
+        hasRestored = true
+        guard let id = model.scrollAnchorID else { return }
+        proxy.scrollTo(id, anchor: .top)
+        // The pre-restore top-down layout registered the first rows (a, b, c…) as
+        // visible; drop them so the onAppears fired by the jump rebuild the set from
+        // the actual restored viewport instead of leaving stale top rows to win the
+        // next `topVisibleID`.
+        visibleRows.ids.removeAll()
+    }
+
+    /// Record the top-most visible row as the scroll anchor. Called only from row
+    /// `onAppear` (never `onDisappear`): a tab switch tears the list down with a
+    /// burst of `onDisappear`s, and recomputing there would rewrite the anchor from
+    /// a draining set — down to `nil` once empty — corrupting the value the very
+    /// moment it is needed. No-op until the one-shot restore has run, so the saved
+    /// anchor survives the rebuild; and never overwrites a good anchor with `nil`.
+    private func recordScrollAnchor() {
+        guard hasRestored else { return }
+        let order = FeedThreading.arrange(model.posts).map(\.id)
+        if let top = FeedScrollAnchor.topVisibleID(order: order, visible: visibleRows.ids) {
+            model.scrollAnchorID = top
+        }
+    }
+
     /// The loaded feed. Uses `List` rather than `ScrollView { LazyVStack }`: with a
     /// LazyVStack, rows whose height was first estimated (before the row was actually
     /// measured) keep that stale slot height until a full re-layout — a normal body
@@ -112,7 +160,7 @@ struct FeedView: View {
     /// blank gap below the row that only collapses on scroll or scene-phase change.
     /// `List` measures variable row heights correctly and recycles rows, so the gap
     /// never appears and memory stays bounded.
-    private func postList(_ posts: [PostDisplay]) -> some View {
+    private func postList(_ posts: [PostDisplay], proxy: ScrollViewProxy) -> some View {
         // Same-thread posts are regrouped the way Bluesky's web feed shows them
         // (oldest first within the block, connector line, no divider inside).
         let items = FeedThreading.arrange(posts)
@@ -181,9 +229,14 @@ struct FeedView: View {
                 .listRowBackground(Color.clear)
                 .id(post.id)
                 .onAppear {
+                    visibleRows.ids.insert(post.id)
+                    recordScrollAnchor()
                     if post.id == items.last?.id {
                         Task { await model.loadMore() }
                     }
+                }
+                .onDisappear {
+                    visibleRows.ids.remove(post.id)
                 }
             }
             if model.isLoadingMore {
@@ -196,10 +249,11 @@ struct FeedView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .environment(\.defaultMinListRowHeight, 0)
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
+        .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.size.width
         } action: { newWidth in
             contentWidth = newWidth
+            restoreScrollIfNeeded(proxy)
         }
     }
 
