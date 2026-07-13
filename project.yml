@@ -149,6 +149,7 @@ targets:
       - apps/ipados/Views/LinkCardView.swift
       - apps/ipados/Views/VideoPosterView.swift
       - apps/ipados/Views/SettingsView.swift
+      - apps/ipados/Views/SessionReauthBanner.swift
       - apps/ipados/Views/FilterEditorView.swift
       - apps/ipados/Theme.swift
       - apps/ipados/DisplaySettings.swift
