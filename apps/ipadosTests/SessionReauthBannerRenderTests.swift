@@ -1,7 +1,6 @@
 import XCTest
 import SwiftUI
 import YoruMimizukuKit
-@testable import YoruMimizuku
 
 @MainActor
 final class SessionReauthBannerRenderTests: XCTestCase {

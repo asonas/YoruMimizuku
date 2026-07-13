@@ -77,7 +77,7 @@ Refresh is otherwise purely reactive — it only fires when an XRPC request retu
 
 ## Multi-account
 
-A successful login is persisted per-DID and managed by `AccountManager`; each window holds its own active account and switching is instant. How accounts are stored, indexed, and switched is covered in [[accounts]] (§8).
+A successful login is persisted per-DID and managed by `AccountManager`; each window holds its own active account and switching is instant. How accounts are stored, indexed, and switched is covered in [[accounts]].
 
 ## Where it lives in the core
 

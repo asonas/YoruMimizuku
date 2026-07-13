@@ -1,5 +1,3 @@
-import Foundation
-
 /// A request to re-authenticate an existing account whose OAuth session expired.
 /// `handle` pre-fills the login field (empty when the stored account has no handle).
 public struct ReauthRequest: Equatable, Sendable {
