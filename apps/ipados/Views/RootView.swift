@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import os
 import BlueskyCore
 import PlatformApple
 import YoruMimizukuKit
@@ -17,6 +18,13 @@ struct RootView: View {
     @StateObject private var fontSettings = FontSettingsStore()
     @StateObject private var notificationSettings = NotificationSettingsStore()
 
+    private static let log = Logger(subsystem: PerfSignpost.subsystem, category: "Session")
+
+    @State private var reauth: ReauthRequest?
+    @State private var isReauthSheetShown = false
+    @State private var reauthGeneration = 0
+    @StateObject private var reauthLoginModel: LoginViewModel
+
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
 
@@ -26,28 +34,34 @@ struct RootView: View {
         self.accountManager = manager
         self.profileLoader = LiveProfileLoader(accountManager: manager)
         _loginModel = StateObject(wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager)))
+        _reauthLoginModel = StateObject(wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager)))
         let existing = (try? manager.current()) ?? nil
         _currentDID = State(initialValue: existing?.did)
     }
 
     var body: some View {
-        Group {
-            if let did = currentDID {
-                AuthenticatedRootView(
-                    accountManager: accountManager,
-                    did: did,
-                    accountHandle: currentHandle,
-                    accountAvatarURL: accountAvatarURL,
-                    accounts: accounts,
-                    onSwitchAccount: { switchAccount(to: $0) },
-                    onAddAccount: { startAddAccount() },
-                    onLogout: { logout() }
-                )
-                .id(did)
-                .task(id: currentDID) { await loadAvatar() }
-            } else {
-                LoginView(model: loginModel) { did in
-                    currentDID = did
+        VStack(spacing: 0) {
+            if reauth != nil {
+                SessionReauthBanner(onReauth: { isReauthSheetShown = true })
+            }
+            Group {
+                if let did = currentDID {
+                    AuthenticatedRootView(
+                        accountManager: accountManager,
+                        did: did,
+                        accountHandle: currentHandle,
+                        accountAvatarURL: accountAvatarURL,
+                        accounts: accounts,
+                        onSwitchAccount: { switchAccount(to: $0) },
+                        onAddAccount: { startAddAccount() },
+                        onLogout: { logout() }
+                    )
+                    .id("\(did)#\(reauthGeneration)")
+                    .task(id: currentDID) { await loadAvatar() }
+                } else {
+                    LoginView(model: loginModel) { did in
+                        currentDID = did
+                    }
                 }
             }
         }
@@ -66,6 +80,19 @@ struct RootView: View {
         .sheet(isPresented: $isAddingAccount) {
             LoginView(model: loginModel) { did in
                 isAddingAccount = false
+                currentDID = did
+            }
+            .environmentObject(theme)
+            .environmentObject(displaySettings)
+            .environmentObject(fontSettings)
+            .environmentObject(notificationSettings)
+        }
+        .sheet(isPresented: $isReauthSheetShown) {
+            LoginView(model: reauthLoginModel) { did in
+                reauth = nil
+                isReauthSheetShown = false
+                reauthGeneration += 1
+                accountAvatarURL = nil
                 currentDID = did
             }
             .environmentObject(theme)
@@ -94,6 +121,8 @@ struct RootView: View {
         guard did != currentDID else { return }
         try? accountManager.switchTo(did: did)
         accountAvatarURL = nil
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = did
     }
 
@@ -109,19 +138,22 @@ struct RootView: View {
     private func logout() {
         guard let did = currentDID else { return }
         accountAvatarURL = nil
+        reauth = nil
+        isReauthSheetShown = false
         currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
     }
 
     private func handleSessionExpired() {
-        guard let did = currentDID else { return }
-        try? accountManager.remove(did: did)
-        let remaining = (try? accountManager.allDIDs()) ?? []
-        if let next = remaining.first {
-            try? accountManager.switchTo(did: next)
-            currentDID = next
-        } else {
-            currentDID = nil
-        }
+        guard let request = SessionReauth.onExpiry(
+            currentDID: currentDID,
+            currentHandle: currentHandle,
+            isPending: reauth != nil
+        ) else { return }
+        Self.log.notice("Session expired; prompting re-auth")
+        reauth = request
+        reauthLoginModel.reset()
+        reauthLoginModel.handle = request.handle
+        isReauthSheetShown = true
     }
 }
 

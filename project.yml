@@ -121,6 +121,7 @@ targets:
       - apps/macos/Views/LinkCardView.swift
       - apps/macos/Views/VideoPosterView.swift
       - apps/macos/Views/ToastView.swift
+      - apps/macos/Views/SessionReauthBanner.swift
       - apps/macos/Theme.swift
       - apps/macos/DisplaySettings.swift
       - apps/macos/Typography.swift
@@ -148,6 +149,7 @@ targets:
       - apps/ipados/Views/LinkCardView.swift
       - apps/ipados/Views/VideoPosterView.swift
       - apps/ipados/Views/SettingsView.swift
+      - apps/ipados/Views/SessionReauthBanner.swift
       - apps/ipados/Views/FilterEditorView.swift
       - apps/ipados/Theme.swift
       - apps/ipados/DisplaySettings.swift
