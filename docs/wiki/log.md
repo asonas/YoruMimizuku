@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-13 ingest
+
+- sources: `docs/superpowers/specs/2026-07-13-session-reauth-design.md`, `docs/superpowers/plans/2026-07-13-session-reauth.md`; `core/Sources/YoruMimizukuKit/SessionReauth.swift`, `apps/macos/Views/RootView.swift`, `apps/ipados/Views/RootView.swift`
+- updated: [[oauth-flow]] (`SessionExpiry` recovery bullet and the wake-path paragraph rewritten for the new keep-and-re-auth handling and its two log lines), [[accounts]] (macOS and iPad switcher sections corrected — only user-initiated logout goes through `removeAndAdvance`; session expiry no longer does)
+- note: Behavior change on `feature/session-reauth`: on OAuth session expiry the app no longer deletes the account (`AccountManager.removeAndAdvance`) — it keeps the DID/handle/DPoP key, sets in-memory re-auth state (`SessionReauth.onExpiry`, a pure/unit-tested helper), auto-presents a handle-pre-filled re-auth login sheet, and falls back to a persistent "セッションが期限切れです" / "再ログイン" banner over the still-visible timeline if the user cancels. Both the reactive and wake expiry paths now log under the `Session` os.Logger category (the wake line reworded from "...dropping the account" to "...prompting re-auth"; the reactive path is newly logged). Switching accounts or logging out clears the re-auth state; core (`SessionExpiry`, `RefreshGate`, `AccountManager`) is unchanged — this is app-state wiring only (Approach A, no `PersistedAccount` schema change). Applies uniformly to macOS and iPadOS (shared `SessionReauth` helper + per-app `RootView` wiring); no support-matrix change since it is uniform across those platforms and Windows is out of scope for this spec (Windows keeps its existing drop-and-advance expiry behavior, unchanged).
+
 ## 2026-07-12 ingest
 
 - sources: commit `c0c1307` (URL scheme allowlist), `core/Sources/YoruMimizukuKit/WebURL.swift`, `RichText.swift`, `LinkCard.swift` — from a 1.0.0 pre-release security review, not a spec/plan

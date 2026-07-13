@@ -1,10 +1,12 @@
 ---
 title: Authentication (OAuth + DPoP)
 type: behavior
-updated: 2026-06-22
+updated: 2026-07-13
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-07-13-session-reauth-design.md
+  - docs/superpowers/plans/2026-07-13-session-reauth.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-discovery.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-par-authz-url.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-oauth-pkce-dpop-sender.md
@@ -15,6 +17,7 @@ sources:
   - core/Sources/BlueskyCore/OAuth/RefreshGate.swift
   - core/Sources/BlueskyCore/OAuth/SessionExpiry.swift
   - core/Sources/BlueskyCore/OAuth/SessionRefresher.swift
+  - core/Sources/YoruMimizukuKit/SessionReauth.swift
 features:
   - name: OAuth login (PKCE + DPoP)
     macos: full
@@ -66,11 +69,11 @@ atproto refresh tokens are **single-use and rotated** — each `refresh_token` g
 Two pieces address this:
 
 - **`RefreshGate` (coalescing).** A shared actor (`core/Sources/BlueskyCore/OAuth/RefreshGate.swift`) keyed by the refresh-token value. Concurrent renewals for the same token collapse into a single network call, and a straggler still holding the now-consumed token reuses the cached result instead of replaying the dead one. One shared instance lives on `AccountManager.refreshGate` and is threaded through every XRPC service (via `LiveServiceContext`), so all tabs coalesce. Failures are not cached, so a genuinely dead token still surfaces its error. Covered by `RefreshGateTests`.
-- **`SessionExpiry` (recovery).** When a refresh fails irrecoverably (`tokenRequestFailed` with `invalid_grant`; see the parsed OAuth error body in `OAuthError`), `SessionExpiry.reportIfExpired` posts a notification. The view models call it from their error paths (load / refresh / scroll / compose), and `RootView` responds by dropping the dead account and returning to the login screen (switching to another stored account if one exists). Retrying a dead session is futile, so the app routes to re-authentication instead.
+- **`SessionExpiry` (recovery).** When a refresh fails irrecoverably (`tokenRequestFailed` with `invalid_grant`; see the parsed OAuth error body in `OAuthError`), `SessionExpiry.reportIfExpired` posts a notification. The view models call it from their error paths (load / refresh / scroll / compose). On both macOS and iPad, `RootView` now **keeps** the account instead of dropping it: the pure helper `SessionReauth.onExpiry(currentDID:currentHandle:isPending:)` (`core/Sources/YoruMimizukuKit/SessionReauth.swift`) turns the event into a `ReauthRequest?` (nil if there is no current account, or if a re-auth is already pending — the idempotency guard against repeated poll-driven notifications). `RootView` sets its in-memory re-auth state from that request and auto-presents the existing `LoginView` in a sheet, bound to a dedicated re-auth `LoginViewModel` pre-filled with the expired account's handle, while the stale authenticated UI stays mounted behind the sheet. If the user cancels, the sheet closes but the re-auth state is not cleared, so a persistent `SessionReauthBanner` ("セッションが期限切れです" / "再ログイン") sits above the still-visible timeline as the fallback to re-open the sheet. On success, `AccountManager.add` replaces the same DID's tokens and DPoP key in place, the re-auth state clears, and the authenticated subtree's id (`"\(did)#\(reauthGeneration)"`) changes to force a fresh mount that reloads with the new tokens. Switching accounts or explicit logout also clears the re-auth state; only logout still deletes the account via `removeAndAdvance` (§ [[accounts]]). Retrying a dead session is futile, so the app routes to re-authentication instead of requiring a from-scratch re-add (`2026-07-13-session-reauth-design.md` §5).
 
 ### Proactive refresh on wake
 
-Refresh is otherwise purely reactive — it only fires when an XRPC request returns 401. That leaves a gap around sleep: while the Mac is asleep the polling tasks are suspended and nothing renews the token, so on wake the access token has typically expired and several pollers would resume at once and race to refresh. To close it, `RootView` observes `NSWorkspace.didWakeNotification` (posted on the workspace's own notification center, not `NotificationCenter.default`) and proactively renews the current account's session up front via `SessionRefresher` (`core/Sources/BlueskyCore/OAuth/SessionRefresher.swift`), persisting the rotated tokens before the pollers fire. The proactive refresh is routed through the same shared `RefreshGate`, so it coalesces with any concurrent 401-driven refresh on the same single-use token rather than racing it. An `invalid_grant` here (the refresh token died during a long sleep) flows through `SessionExpiry` like any other; transient wake errors (e.g. the network not yet up) are left for the next request's reactive refresh. Wake outcomes are logged under the `Session` category (event-level only — never token material).
+Refresh is otherwise purely reactive — it only fires when an XRPC request returns 401. That leaves a gap around sleep: while the Mac is asleep the polling tasks are suspended and nothing renews the token, so on wake the access token has typically expired and several pollers would resume at once and race to refresh. To close it, `RootView` observes `NSWorkspace.didWakeNotification` (posted on the workspace's own notification center, not `NotificationCenter.default`) and proactively renews the current account's session up front via `SessionRefresher` (`core/Sources/BlueskyCore/OAuth/SessionRefresher.swift`), persisting the rotated tokens before the pollers fire. The proactive refresh is routed through the same shared `RefreshGate`, so it coalesces with any concurrent 401-driven refresh on the same single-use token rather than racing it. An `invalid_grant` here (the refresh token died during a long sleep) flows through `SessionExpiry` into the same keep-and-re-auth handling as any other expiry (no longer a drop); transient wake errors (e.g. the network not yet up) are left for the next request's reactive refresh. Wake outcomes are logged under the `Session` category (event-level only — never token material): the wake path logs `"Session expired while asleep; prompting re-auth"` (reworded from the old "...dropping the account", since the account is no longer dropped). The reactive expiry path is now logged too — a single `"Session expired; prompting re-auth"` line in the notification handler covers it, closing the gap where only the wake path used to be traceable.
 
 ## Multi-account
 

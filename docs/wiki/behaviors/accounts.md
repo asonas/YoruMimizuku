@@ -1,10 +1,11 @@
 ---
 title: Accounts (Multi-Account Persistence)
 type: behavior
-updated: 2026-06-25
+updated: 2026-07-13
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-07-13-session-reauth-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-account-persistence.md
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
   - core/Sources/BlueskyCore/Account/AccountManager.swift
@@ -48,7 +49,7 @@ The account model is per-window, not global. A window holds one active account, 
 
 On macOS the switcher is the **sidebar footer**, not the design's title-bar top-right slot (`2026-06-11-yorumimizuku-v1.0.0-roadmap.md` A-5). The footer's avatar + `@handle` open a borderless `Menu` listing every stored account — the active one marked with a checkmark — plus **「アカウントを追加…」** and a destructive **「ログアウト」**. The menu is fed by `AccountManager.summaries() -> [AccountSummary]`, which maps the accounts index to a token-free `AccountSummary` (DID + optional handle only), so the switcher never touches secrets. Picking an entry calls `switchTo(did:)`; "add account" starts a fresh OAuth login in an add-account sheet (driven by a reset `LoginViewModel`, see [[oauth-flow]]) and merges the result via `AccountManager.add`; "log out" removes the current account.
 
-Both logout and the existing session-expiry fallback go through one method, `AccountManager.removeAndAdvance(did:) throws -> String?`: it removes the account, then switches to the first remaining DID and returns it, or returns `nil` when none remain (the window falls back to the login screen). Centralizing the "remove and fall through to the next account" rule here replaced the previously duplicated expiry logic. The menu and its handlers are wired SidebarView → MainWindowView → RootView (`AccountManager.swift`, `apps/macos/Views/SidebarView.swift`, `apps/macos/Views/RootView.swift`). The footer layout that hosts this menu is described in [[app-shell]].
+User-initiated logout goes through `AccountManager.removeAndAdvance(did:) throws -> String?`: it removes the account, then switches to the first remaining DID and returns it, or returns `nil` when none remain (the window falls back to the login screen). Session expiry no longer shares this path: it keeps the account and routes to re-authentication instead (see the "Token refresh & session recovery" section in [[oauth-flow]]). The menu and its handlers are wired SidebarView → MainWindowView → RootView (`AccountManager.swift`, `apps/macos/Views/SidebarView.swift`, `apps/macos/Views/RootView.swift`). The footer layout that hosts this menu is described in [[app-shell]].
 
 On [[ipados]], the same rule is applied per scene: each iPad scene owns its active
 account and `WorkspaceModel`, while the secure account store and shared
@@ -58,8 +59,10 @@ sidebar footer (avatar + `@handle`) that opens a `Menu` of every stored account 
 active one checkmarked), **「アカウントを追加…」**, and a destructive **「ログアウト」**.
 It is fed by the same token-free `AccountManager.summaries()`; picking an entry calls
 `switchTo(did:)`, "add account" presents a reset `LoginViewModel` in an
-`ASWebAuthenticationSession` sheet and merges via `add`, and both logout and
-session-expiry fall through `removeAndAdvance(did:)` (`apps/ipados/Views/RootView.swift`).
+`ASWebAuthenticationSession` sheet and merges via `add`. Only logout falls through
+`removeAndAdvance(did:)`; session expiry keeps the account and routes to
+re-authentication instead, mirroring macOS (`apps/ipados/Views/RootView.swift`, see
+[[oauth-flow]]).
 
 ## Account switcher menu (Windows)
 
