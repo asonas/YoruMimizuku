@@ -109,6 +109,8 @@ restore. This is an accepted v1 gap, not a regression introduced by this
 change — multi-scening simply makes an existing shared-storage design
 reachable through a new OS entry point.
 
+The full device/simulator verification matrix for Split View, Slide Over, Stage Manager, two simultaneous scenes, rotation, and composer-sheet resizing is still pending — see [[manual-verification]] "P0-3".
+
 ## Tap targets and tap accessibility (S2)
 
 As of `2026-07-24-apple-hig-remediation.md` (S2), every small iPad control
@@ -155,7 +157,7 @@ Two changes landed together:
    (24pt glyph) is likewise not exercised by the automated suite (it always
    renders at `.comfortable`, see [[design-system]] "Snapshot operations" §
    Density coverage gap), so its 44pt hit area is also reasoned rather than
-   snapshot-verified.
+   snapshot-verified. See [[manual-verification]] "S2" for the consolidated pending checklist.
 
 ## Settings, filters, and notifications parity (Phase 3)
 
@@ -250,7 +252,7 @@ context menu uses; the existing close button keeps working throughout. There is
 no automated test for this path — `AVPlayerItem` failure is not deterministically
 reproducible in XCTest (it depends on real network/CDN conditions) — so it is
 covered only by a manual checklist item (機内モードで HLS 再生 → エラー表示と
-「ブラウザで開く」の動作).
+「ブラウザで開く」の動作), still pending — see [[manual-verification]] "S5".
 
 The playlist itself is core data, not iPad-specific: it flows
 from `EmbedVideo.playlist` through the new `PostVideo.playlistURL` field added

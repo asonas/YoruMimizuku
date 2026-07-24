@@ -83,6 +83,8 @@ The sidebar's per-row close/edit affordances (`SidebarRow` in [[app-shell]]) wer
 
 Post row and notification avatars used `.onTapGesture` (no keyboard/VoiceOver path, no pointer affordances like Space-to-activate); both are now `Button`s (`.buttonStyle(.plain)`, `.accessibilityLabel("@handle のプロフィール")`) with unchanged visual appearance — a structural, behavior-preserving change (`2026-07-24-apple-hig-remediation.md` S3, `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`).
 
+VoiceOver / Accessibility Inspector verification of the sidebar's context menu and custom actions is still pending on a real macOS session — see [[manual-verification]] "P0-2".
+
 ## New windows and window titles
 
 The `WindowGroup` carries an explicit `id: "main"` (`apps/macos/YoruMimizukuApp.swift`) so the File menu can open more instances of it: **新規ウィンドウ** (⇧⌘N, matching the Windows build's Ctrl+Shift+N) calls `openWindow(id: "main")` via `@Environment(\.openWindow)`. This was previously removed with a comment claiming a timeline client has no use for extra windows, which contradicted the design spec's per-window account viewing (`2026-06-04-yorumimizuku-design.md` §8); the path is restored and the comment corrected. ⌘N is unchanged and stays 新規投稿, the client's established convention (`2026-07-24-apple-hig-remediation.md` S4, `apps/macos/Views/NewPostCommand.swift`).
@@ -90,6 +92,8 @@ The `WindowGroup` carries an explicit `id: "main"` (`apps/macos/YoruMimizukuApp.
 Each window's title (shown in Mission Control, the Window menu, and the Dock, even under `.windowStyle(.hiddenTitleBar)`) tracks the selected sidebar tab and the signed-in account, e.g. "ホーム — @asonas.bsky.social", via `.navigationTitle(WindowTitle.compose(tabTitle:accountHandle:))` on `MainWindowView`'s `NavigationSplitView`. `WorkspaceModel.selectionTitle` derives the tab half (pinned ホーム/通知 labels, a filter/conversation tab's title, or an author tab's display name falling back to its handle) and `WindowTitle.compose` joins it to the handle, dropping the handle segment when empty and avoiding a doubled "@" (`core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`).
 
 Multiple open windows on the same account now live-sync per-window UI settings (theme / display density / font / notification polling): the four settings stores were lifted from `RootView`'s per-window `@StateObject`s to app-level `@StateObject`s owned by `YoruMimizukuApp`, injected via `.environmentObject` into every `WindowGroup(id: "main")` window and the `Settings` scene alike. A change made in one window — or in the Settings window itself — is visible everywhere immediately, since every consumer reads the same `@Published` state rather than independently re-reading `UserDefaults` at its own init; this resolves the cross-window staleness this page previously documented here (`2026-07-24-apple-hig-remediation.md` S7, `apps/macos/YoruMimizukuApp.swift`, `apps/macos/Views/RootView.swift`). See [[app-shell]] for the cross-platform multi-window matrix entry and for how ⌘, and the sidebar gear now open the settings screen.
+
+Real-window verification of ⇧⌘N, window titles in Mission Control/Window menu/Dock, and per-window account viewing is still pending — see [[manual-verification]] "S4".
 
 ## App icon
 
