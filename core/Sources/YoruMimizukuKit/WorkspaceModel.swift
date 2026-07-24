@@ -371,6 +371,22 @@ public final class WorkspaceModel: ObservableObject {
         authors.first { $0.id == id }
     }
 
+    // MARK: - Window title
+
+    /// The selected tab's human-readable title, e.g. for the macOS window title.
+    /// Pinned tabs use their fixed labels; a closed tab id falls back to ホーム.
+    public var selectionTitle: String {
+        switch selection {
+        case .home: return "ホーム"
+        case .notifications: return "通知"
+        case let .filter(id): return filter(id: id)?.title ?? "ホーム"
+        case let .conversation(id): return conversation(id: id)?.title ?? "ホーム"
+        case let .author(id):
+            guard let tab = author(id: id) else { return "ホーム" }
+            return tab.displayName.isEmpty ? tab.handle : tab.displayName
+        }
+    }
+
     // MARK: - Cycling
 
     /// All tabs in display order: the two pinned tabs, the filters, then the open

@@ -243,4 +243,46 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(restored.conversations.map(\.anchorID), ["at://a"])
         XCTAssertEqual(restored.conversations.first?.title, "Alice")
     }
+
+    func testSelectionTitleForHome() async {
+        let model = makeModel(persistence: FakePersistence())
+        XCTAssertEqual(model.selectionTitle, "ホーム")
+    }
+
+    func testSelectionTitleForNotifications() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.selection = .notifications
+        XCTAssertEqual(model.selectionTitle, "通知")
+    }
+
+    func testSelectionTitleForFilterTab() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "Swift", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+        XCTAssertEqual(model.selectionTitle, "Swift")
+    }
+
+    func testSelectionTitleForConversationTab() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.openConversation(post(id: "at://a", name: "Alice"))
+        XCTAssertEqual(model.selectionTitle, "Alice")
+    }
+
+    func testSelectionTitleForAuthorTabUsesDisplayNameThenHandle() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.openAuthor(did: "did:plc:a", handle: "a.bsky.social", displayName: "Alice", avatarURL: nil)
+        XCTAssertEqual(model.selectionTitle, "Alice")
+
+        model.openAuthor(did: "did:plc:b", handle: "b.bsky.social", displayName: "", avatarURL: nil)
+        XCTAssertEqual(model.selectionTitle, "b.bsky.social")
+    }
+
+    func testSelectionTitleFallsBackToHomeWhenTabClosed() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.openConversation(post(id: "at://a", name: "Alice"))
+        guard case let .conversation(id) = model.selection else { return XCTFail("expected conversation selection") }
+        model.closeConversation(id)
+        // closeConversation already re-selects, so force the stale-id case directly.
+        model.selection = .conversation(id)
+        XCTAssertEqual(model.selectionTitle, "ホーム")
+    }
 }
