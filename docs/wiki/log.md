@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-25 ingest (iPad video playback failure fallback)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 2); `apps/ipados/Views/PostRowView.swift`
+- updated: [[ipados]] (new "Playback-failure fallback" paragraph under "Inline video playback")
+- note: `VideoPlayerScreen` now builds its `AVPlayerItem` eagerly in `init` (previously created inside `onAppear`) so `.onReceive(item.publisher(for: \.status))` can observe a `.failed` status from the first frame; on failure an overlay shows 「動画を再生できませんでした」 + 「ブラウザで開く」 (dismisses and calls the row's existing `onOpenPermalink`), close button unaffected. No automated test — AVPlayerItem failure is not deterministically reproducible in XCTest (network/CDN-dependent); added a manual checklist item instead (機内モードで HLS 再生 → エラー表示と「ブラウザで開く」の動作), pending human verification.
+
 ## 2026-07-25 ingest (iPad notifications empty state)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 1); `apps/ipados/Views/NotificationsListView.swift`, `apps/ipadosTests/NotificationsEmptySnapshotTests.swift`

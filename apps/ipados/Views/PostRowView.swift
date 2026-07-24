@@ -1,6 +1,7 @@
 import SwiftUI
 import AVKit
 import AVFoundation
+import Combine
 import BlueskyCore
 import YoruMimizukuKit
 
@@ -105,7 +106,7 @@ struct PostRowView: View {
         .onTapGesture { onOpenThread?(post) }
         .contextMenu { rowContextMenu }
         .fullScreenCover(item: $playingVideo) { item in
-            VideoPlayerScreen(url: item.url)
+            VideoPlayerScreen(url: item.url, onOpenExternally: { onOpenPermalink?(post) })
         }
     }
 
@@ -635,17 +636,42 @@ private struct PlayableVideo: Identifiable {
 
 /// Full-screen in-app player for a post's video. Plays the HLS playlist with AVKit
 /// instead of bouncing out to the Bluesky app, autoplays on appear, and pauses when
-/// dismissed. A close button sits in the top-leading corner over the player.
+/// dismissed. A close button sits in the top-leading corner over the player. If
+/// playback fails (offline, an unplayable playlist, etc.), an overlay replaces the
+/// spinner with an explanation and a way to fall back to the browser instead of
+/// leaving the viewer staring at a stuck player.
 private struct VideoPlayerScreen: View {
     let url: URL
+    /// Opens the post's permalink in the browser, used by the failure overlay's
+    /// fallback button.
+    var onOpenExternally: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
-    @State private var player = AVPlayer()
+    @State private var player: AVPlayer
+    @State private var item: AVPlayerItem
+    @State private var failed = false
+
+    init(url: URL, onOpenExternally: (() -> Void)? = nil) {
+        self.url = url
+        self.onOpenExternally = onOpenExternally
+        // Built eagerly (not in onAppear) so `item.status` can be observed from the
+        // very first frame — a failure that happens immediately (e.g. a malformed
+        // playlist) must still be caught.
+        let item = AVPlayerItem(url: url)
+        _item = State(initialValue: item)
+        _player = State(initialValue: AVPlayer(playerItem: item))
+    }
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
             VideoPlayer(player: player)
                 .ignoresSafeArea()
+            // The failure overlay must render (and hit-test) below the close
+            // button, not above it, so 閉じる keeps working even when playback
+            // has failed — "ブラウザで開く" is an additional exit, not the only one.
+            if failed {
+                failureOverlay
+            }
             Button { dismiss() } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 30))
@@ -659,9 +685,28 @@ private struct VideoPlayerScreen: View {
             // hardware mute switch is on, matching how video players normally behave.
             try? AVAudioSession.sharedInstance().setCategory(.playback)
             try? AVAudioSession.sharedInstance().setActive(true)
-            player.replaceCurrentItem(with: AVPlayerItem(url: url))
             player.play()
         }
         .onDisappear { player.pause() }
+        .onReceive(item.publisher(for: \.status)) { status in
+            if status == .failed { failed = true }
+        }
+    }
+
+    private var failureOverlay: some View {
+        VStack(spacing: 16) {
+            Text("動画を再生できませんでした")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+            Button {
+                dismiss()
+                onOpenExternally?()
+            } label: {
+                Text("ブラウザで開く")
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.75))
     }
 }

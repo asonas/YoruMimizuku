@@ -1,7 +1,7 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-07-24
+updated: 2026-07-25
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
@@ -188,7 +188,23 @@ on appear, routes audio through the `.playback` `AVAudioSession` category so
 it is heard even with the hardware mute switch on, and pauses when dismissed
 via a close button in the top-leading corner. The tap falls back to opening
 the post's public permalink only when the video embed carries no usable
-`playlist` URL. The playlist itself is core data, not iPad-specific: it flows
+`playlist` URL.
+
+**Playback-failure fallback** (`2026-07-24-apple-hig-remediation.md`, S5 Task 2):
+the `AVPlayerItem` is built eagerly in `VideoPlayerScreen.init` (rather than
+inside `onAppear`) so its `status` KVO can be observed via `.onReceive(item
+.publisher(for: \.status))` from the very first frame. If playback fails
+(offline, an unplayable HLS playlist, a dead poster CDN URL, etc.), a
+semi-opaque overlay replaces the otherwise-stuck black player with
+「動画を再生できませんでした」 and a 「ブラウザで開く」 button that dismisses
+the player and forwards to the same `onOpenPermalink` callback the row's
+context menu uses; the existing close button keeps working throughout. There is
+no automated test for this path — `AVPlayerItem` failure is not deterministically
+reproducible in XCTest (it depends on real network/CDN conditions) — so it is
+covered only by a manual checklist item (機内モードで HLS 再生 → エラー表示と
+「ブラウザで開く」の動作).
+
+The playlist itself is core data, not iPad-specific: it flows
 from `EmbedVideo.playlist` through the new `PostVideo.playlistURL` field added
 in `core/Sources/YoruMimizukuKit/PostDisplay.swift` /
 `PostDisplay+Mapping.swift`, so [[macos]] and [[windows]] already have the URL
