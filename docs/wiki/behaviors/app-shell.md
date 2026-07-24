@@ -12,6 +12,8 @@ sources:
   - apps/macos/Views/NewPostCommand.swift
   - apps/macos/Views/SidebarView.swift
   - apps/macos/Views/ConversationView.swift
+  - apps/macos/Views/PostRowView.swift
+  - apps/ipados/Views/PostRowView.swift
   - core/Sources/YoruMimizukuKit/ThreadViewModel.swift
   - apps/windows/App/MainWindow.xaml.cs
   - apps/windows/App/Services/WindowPlacement.cs
@@ -75,6 +77,10 @@ A tab is one of the seven v1 sources (home / notifications / custom feed / list 
 ## Conversation tab (thread view)
 
 Opening a post's conversation anchors the thread on that post: ancestors render above it and replies render below, but only the focused post is interactive — `ThreadViewModel.post(id:)` (`core/Sources/YoruMimizukuKit/ThreadViewModel.swift`) resolves a post only when its id matches the current focus, so like/repost/quote never reach anything else in the tree. Ancestor rows and reply rows are accordingly rendered with `PostRowView(interactiveActions: false)`, which turns their action bar into static labels, and each row is wrapped in a plain button that re-anchors the tab on that post when tapped; this also stands in for the timestamp tap that `interactiveActions: false` otherwise disables (`apps/macos/Views/ConversationView.swift`, `parentBlock` / `replyRow`). [[ipados]] already renders both ancestor and reply rows this way; on macOS the reply rows previously left the action bar live even though it had no effect, until the row was brought in line with the ancestor rows.
+
+## Post row action paths
+
+Every post row's right-click (macOS) or long-press (iPadOS) context menu offers the same three paths regardless of platform: 「リンクをコピー」(copy the public permalink), 「ブラウザで開く」(open that permalink in the default browser), and — only on the viewer's own posts — 「削除」(destructive), which still goes through the existing `confirmationDialog` unchanged (`apps/macos/Views/FeedView.swift`, `apps/ipados/Views/TimelineListView.swift`). On iPadOS the action bar already carries a visible `safari` button wired to the same `onOpenPermalink` closure, so the context-menu entry is a second, more discoverable route to an action that already existed; on macOS there is no visible action-bar Safari button, so the context menu is the only browser-open path for now — adding a visible macOS action-bar button was deliberately left open for later reconsideration (`apps/macos/Views/PostRowView.swift`, `apps/ipados/Views/PostRowView.swift`, `2026-07-24-apple-hig-remediation.md` S6).
 
 ## Sidebar / tab UI
 

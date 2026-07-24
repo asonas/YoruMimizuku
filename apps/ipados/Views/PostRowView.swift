@@ -114,14 +114,20 @@ struct PostRowView: View {
         if isFocused { theme.rowHover } else { Color.clear }
     }
 
-    /// The row's context menu. Always offers "リンクをコピー"; own posts also offer
-    /// "削除" (destructive), which the host confirms before deleting.
+    /// The row's context menu. Always offers "リンクをコピー" and "ブラウザで開く";
+    /// own posts also offer "削除" (destructive), which the host confirms before
+    /// deleting.
     @ViewBuilder
     private var rowContextMenu: some View {
         Button {
             onCopyPermalink?(post)
         } label: {
             Label("リンクをコピー", systemImage: "link")
+        }
+        Button {
+            onOpenPermalink?(post)
+        } label: {
+            Label("ブラウザで開く", systemImage: "safari")
         }
         if canDelete {
             Divider()

@@ -142,8 +142,9 @@ struct PostRowView: View, @MainActor Equatable {
         .contextMenu { rowContextMenu }
     }
 
-    /// The row's right-click menu. Always offers "リンクをコピー"; own posts also
-    /// offer "削除" (destructive), which the host confirms before deleting.
+    /// The row's right-click menu. Always offers "リンクをコピー" and "ブラウザで開く";
+    /// own posts also offer "削除" (destructive), which the host confirms before
+    /// deleting.
     @ViewBuilder
     private var rowContextMenu: some View {
         Button {
@@ -151,6 +152,12 @@ struct PostRowView: View, @MainActor Equatable {
             onCopyLink()
         } label: {
             Label("リンクをコピー", systemImage: "link")
+        }
+        Button {
+            onSelect()
+            openInBrowser()
+        } label: {
+            Label("ブラウザで開く", systemImage: "safari")
         }
         if canDelete {
             Divider()

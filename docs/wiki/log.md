@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 ingest (open-in-browser context menu)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S6)
+- updated: [[app-shell]] (new "Post row action paths" section describing the unified リンクをコピー / ブラウザで開く / 削除 context-menu inventory on both platforms; `sources` extended with `apps/macos/Views/PostRowView.swift` and `apps/ipados/Views/PostRowView.swift`)
+- note: iPad's `rowContextMenu` gained a `ブラウザで開く` entry reusing the existing `onOpenPermalink` closure (already wired to the action bar's visible Safari button); macOS's `rowContextMenu` gained the same label reusing the existing private `openInBrowser()` + `onSelect()`. No visible macOS action-bar Safari button was added (left open per the plan's unresolved item 5). No feature-matrix change (existing "Copy post permalink" row's platform status is unaffected).
+
 ## 2026-07-24 ingest (iPad multi-scene)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-3); commits `69323ac` (project.yml: drop `UIRequiresFullScreen`, declare `UIApplicationSupportsMultipleScenes`, add `PortraitUpsideDown`), `8aa74f6` (`apps/ipados/Views/RootView.swift`: compact-width nav bar)
