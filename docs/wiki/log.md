@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 review fixup
+
+- sources: review of commits `1c8e959`/`c776a69` (P0-4); `docs/wiki/behaviors/compose-post.md`, `docs/wiki/platforms/ipados.md`
+- updated: [[compose-post]] (reworded "Draft discard protection" — swipe/Esc dismissal is silently blocked, not routed through the confirmation dialog; only the Cancel button shows the dialog); [[ipados]] (added the missing platform note for swipe-down-dismiss blocking, which the task brief named as a required file that the original commit missed)
+- note: A task-review pass caught two documentation defects in the first pass of this ingest: compose-post.md implied "closing the sheet" triggers the confirmation dialog (it doesn't — interactive dismiss is just blocked with no dialog), and ipados.md — explicitly named in the P0-4 plan's file list — was never touched. Both fixed without any Swift code changes.
+
 ## 2026-07-24 ingest
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-4); commits `d1c6985` (`hasUnsavedContent` detection, 8 tests), `1c8e959` (confirmation dialog + submit-time lock); `core/Sources/YoruMimizukuKit/ComposerViewModel.swift` (hasUnsavedContent logic); `apps/macos/Views/ComposerView.swift`, `apps/ipados/Views/ComposerView.swift` (confirmation dialog, dismissal guards, disabled submit during flight)

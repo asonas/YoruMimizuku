@@ -1,7 +1,7 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-07-10
+updated: 2026-07-24
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
@@ -139,7 +139,11 @@ through `VideoAttachment` with an upload/processing status line, matching macOS
 (`apps/ipados/Views/ComposerView.swift`, `apps/ipados/Media/ImageEncoder.swift`,
 `apps/ipados/Media/VideoAttachment.swift`). Video upload landed on iPad and macOS
 together (`Add video upload to composer`); the remaining compose gap is macOS-only
-file import / drag-and-drop attach.
+file import / drag-and-drop attach. Swiping the sheet down to dismiss is blocked
+whenever the draft has unsaved content or a post is submitting — the composer's
+sheet dismiss gesture is the platform-specific HIG fix this protection targets,
+since iPad (unlike macOS) has no title-bar close button to gate; see
+[[compose-post]] for the full discard-confirmation behavior shared with macOS.
 
 ## Inline video playback (iPad-only, ahead of macOS/Windows)
 
