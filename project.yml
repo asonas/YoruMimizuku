@@ -91,14 +91,16 @@ targets:
         # blocks distribution to testers and hangs the Xcode Cloud TestFlight
         # post-action.
         ITSAppUsesNonExemptEncryption: false
-        UIRequiresFullScreen: true
         UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
         CFBundleURLTypes:
           - CFBundleURLName: as.ason.YoruMimizukuPad
             CFBundleURLSchemes:
               - as.ason
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
   YoruMimizukuTests:
