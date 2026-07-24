@@ -13,6 +13,7 @@ struct ComposerView: View {
     @State private var importingVideo = false
     @State private var videoPoster: NSImage?
     @State private var isDropTargeted = false
+    @State private var confirmingDiscard = false
 
     private var headerTitle: String {
         if model.quotedPost != nil { return "引用投稿" }
@@ -25,7 +26,19 @@ struct ComposerView: View {
                 Text(headerTitle)
                     .font(.headline)
                 Spacer()
-                Button("キャンセル") { onClose() }
+                Button("キャンセル") {
+                    if model.hasUnsavedContent {
+                        confirmingDiscard = true
+                    } else {
+                        onClose()
+                    }
+                }
+                .disabled(model.isSubmitting)
+                .confirmationDialog("下書きを破棄しますか？", isPresented: $confirmingDiscard,
+                                    titleVisibility: .visible) {
+                    Button("破棄する", role: .destructive) { onClose() }
+                    Button("編集を続ける", role: .cancel) {}
+                }
             }
             // A custom NSTextView wrapper rather than TextEditor so image pastes
             // (Cmd+V) and Finder drops over the editor become attachments instead
@@ -62,6 +75,7 @@ struct ComposerView: View {
         }
         .padding(16)
         .frame(width: 460)
+        .interactiveDismissDisabled(model.hasUnsavedContent || model.isSubmitting)
         .fileImporter(isPresented: $importing,
                       allowedContentTypes: [.png, .jpeg, .gif, .webP, .heic],
                       allowsMultipleSelection: true) { result in

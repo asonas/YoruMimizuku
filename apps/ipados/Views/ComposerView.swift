@@ -8,6 +8,7 @@ struct ComposerView: View {
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var selectedVideo: [PhotosPickerItem] = []
     @State private var videoPoster: UIImage?
+    @State private var confirmingDiscard = false
 
     var body: some View {
         NavigationStack {
@@ -21,7 +22,14 @@ struct ComposerView: View {
             .navigationTitle(model.replyParentURI == nil ? "投稿" : "返信")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { dismiss() }
+                    Button("キャンセル") {
+                        if model.hasUnsavedContent {
+                            confirmingDiscard = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .disabled(model.isSubmitting)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -42,6 +50,12 @@ struct ComposerView: View {
             .onChange(of: selectedVideo) { _, items in
                 Task { await attachVideo(from: items) }
             }
+            .confirmationDialog("下書きを破棄しますか？", isPresented: $confirmingDiscard,
+                                titleVisibility: .visible) {
+                Button("破棄する", role: .destructive) { dismiss() }
+                Button("編集を続ける", role: .cancel) {}
+            }
+            .interactiveDismissDisabled(model.hasUnsavedContent || model.isSubmitting)
         }
     }
 
