@@ -9,6 +9,7 @@ sources:
   - docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md
   - docs/superpowers/plans/2026-07-02-post-interaction-affordances.md
   - docs/superpowers/plans/2026-07-10-yorumimizuku-ipados-parity-phase3.md
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - project.yml
   - apps/ipados/YoruMimizukuPadApp.swift
   - apps/ipados/Views/RootView.swift
@@ -74,6 +75,39 @@ routed by the shell's `OpenURLAction`: hashtag links open saved-search tabs and
 the browser (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
 `apps/ipados/Views/TimelineListView.swift`, `apps/ipados/Views/ToastView.swift`,
 `2026-07-10-yorumimizuku-ipados-parity-phase3.md`).
+
+## Multi-scene and Stage Manager
+
+As of `2026-07-24-apple-hig-remediation.md` (P0-3), the app declares
+`UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes: true` and no
+longer sets `UIRequiresFullScreen`, so the OS is free to run more than one
+scene of the app (Split View, Slide Over, Stage Manager, and App Exposé's
+"add another window"). `UISupportedInterfaceOrientations` also lists all four
+orientations now (portrait, portrait-upside-down, and both landscapes),
+which Apple requires of any multitasking-capable iPad app. `WorkspaceModel`
+was already a per-scene `@StateObject` (`AuthenticatedRootView`, see
+"Architecture" above), so each scene keeps an independent account and tab
+set with no further wiring needed for that part.
+
+`MainShellView`'s `NavigationSplitView` collapses to a single column at
+compact width (Split View 1/3, Slide Over, or a narrow Stage Manager scene).
+The detail pane's navigation bar — normally hidden (`.toolbar(.hidden, for:
+.navigationBar)`) so the themed canvas runs chromeless to the top edge — is
+kept visible in that case (`horizontalSizeClass == .compact`), since it is
+otherwise the only way to reach the sidebar toggle in a collapsed split view.
+At regular width the bar stays hidden as before, and `columnVisibility`
+remains pinned to `.all` unconditionally: SwiftUI ignores that pinning once
+`NavigationSplitView` has already collapsed to one column, so it does not
+need to be conditioned on size class too (`apps/ipados/Views/RootView.swift`).
+
+**Known limitation:** running two scenes signed into the *same* account is
+not crash-prone, but their persistence is last-writer-wins with no merge.
+Conversation-tab state (`ConversationPersisting`, `UserDefaults`-backed) and
+saved filters are keyed per account, not per scene, so whichever scene saves
+last overwrites the other's tab/filter changes on the next launch or scene
+restore. This is an accepted v1 gap, not a regression introduced by this
+change — multi-scening simply makes an existing shared-storage design
+reachable through a new OS entry point.
 
 ## Settings, filters, and notifications parity (Phase 3)
 
@@ -190,3 +224,6 @@ are narrow:
   in-app poll interval and sidebar unread badges are configurable.
 - **Compose** does not yet mirror macOS file import / drag-and-drop attach (image
   and video attach via `PhotosPicker` is at parity).
+- **Two scenes on the same account race on persistence.** See "Multi-scene and
+  Stage Manager" above — conversation-tab and filter state is last-writer-wins
+  across scenes, with no cross-scene merge or live sync.

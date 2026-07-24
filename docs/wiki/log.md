@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 ingest (iPad multi-scene)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-3); commits `69323ac` (project.yml: drop `UIRequiresFullScreen`, declare `UIApplicationSupportsMultipleScenes`, add `PortraitUpsideDown`), `8aa74f6` (`apps/ipados/Views/RootView.swift`: compact-width nav bar)
+- updated: [[ipados]] (new "Multi-scene and Stage Manager" section; added a "Known limitation" bullet to "Known differences"; `sources` extended with the P0-3 plan); [[app-shell]] ("Multiple windows" feature row's `ios` note rewritten to describe real OS-level multi-scening and the shared-persistence caveat); `support-matrix.md` regenerated from the updated note
+- note: Dropped `UIRequiresFullScreen` and declared `UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes: true` so the OS can run more than one scene (Split View / Slide Over / Stage Manager / App Exposé); added the missing `PortraitUpsideDown` orientation Apple requires of multitasking-capable apps. `MainShellView` now keeps the detail navigation bar visible at compact width (`horizontalSizeClass == .compact`) since it is otherwise the only way back to the sidebar once `NavigationSplitView` collapses to one column; `columnVisibility = .all` is left unconditioned since SwiftUI ignores it once already collapsed. Two scenes on the same account are not crash-prone but share `UserDefaults`-backed conversation-tab/filter persistence with last-writer-wins semantics — documented as a known limitation, not fixed here. No automated test was added (a size-class conditional would only produce a tautological test); coverage is a manual verification matrix in the plan, marked pending human/device verification.
+
 ## 2026-07-24 ingest (thread reply rows)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-1); `apps/macos/Views/ConversationView.swift`, `core/Sources/YoruMimizukuKit/ThreadViewModel.swift`

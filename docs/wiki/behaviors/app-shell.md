@@ -28,7 +28,7 @@ features:
     windows: full
     ios: differs
     android: planned
-    note: "macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS maps the per-window model to per-scene `WorkspaceModel` ([[ipados]], [[windows]])."
+    note: "macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS now permits real OS-level multi-scening (Split View / Slide Over / Stage Manager / App Exposé) since `UIRequiresFullScreen` was dropped, mapping the per-window model to a per-scene `WorkspaceModel` — but two scenes signed into the same account race on the shared `UserDefaults`-backed conversation-tab and filter persistence (last-writer-wins, no merge) ([[ipados]], [[windows]])."
   - name: Window size persistence
     macos: full
     windows: full

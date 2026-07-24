@@ -287,6 +287,7 @@ private struct MainShellView: View {
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
     @Environment(\.openURL) private var openURL
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     /// The scene's transient toast (e.g. copy-link confirmation), rendered as a
     /// bottom overlay. `copyPermalink` lives here in `MainShellView`, so no
     /// env-object plumbing into child views is needed (unlike macOS).
@@ -493,8 +494,12 @@ private struct MainShellView: View {
             detail
                 // The detail views set no title, so the inline navigation bar
                 // would render as an empty band above the timeline/notifications
-                // canvas. Hide it so the themed canvas runs to the top edge.
-                .toolbar(.hidden, for: .navigationBar)
+                // canvas. Hide it so the themed canvas runs to the top edge — but
+                // only at regular width: in compact (Split View 1/3, Slide Over,
+                // or a narrowed Stage Manager scene) NavigationSplitView collapses
+                // to a single column and this bar is the only way back to the
+                // sidebar, so it must stay visible there.
+                .toolbar(horizontalSizeClass == .compact ? .automatic : .hidden, for: .navigationBar)
         }
         .navigationSplitViewStyle(.balanced)
         .environment(\.openURL, OpenURLAction { url in
