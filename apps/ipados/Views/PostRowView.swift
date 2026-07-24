@@ -73,10 +73,15 @@ struct PostRowView: View {
     }
 
     private var avatarSize: CGFloat { density == .compact ? 24 : 42 }
+    /// The avatar column's actual width: the avatar's visual size, widened to the
+    /// 44pt minimum touch target when the glyph itself is smaller (both densities
+    /// today). Every offset derived from the avatar column (leading inset, reflow
+    /// region width) must use this, not `avatarSize`, so alignment holds.
+    private var avatarColumnWidth: CGFloat { max(avatarSize, CGFloat(DesignMetrics.minimumTouchTarget)) }
     private var columnSpacing: CGFloat { density == .compact ? 8 : 11 }
     private var horizontalRowPadding: CGFloat { density == .compact ? 12 : 16 }
     private var verticalPadding: CGFloat { density == .compact ? 6 : 11 }
-    private var leadingInset: CGFloat { avatarSize + columnSpacing }
+    private var leadingInset: CGFloat { avatarColumnWidth + columnSpacing }
     private var imageMaxWidth: CGFloat { CGFloat(DesignMetrics.mediaMaxWidth(density)) }
 
     var body: some View {
@@ -160,7 +165,7 @@ struct PostRowView: View {
                     .padding(.bottom, -verticalPadding)
             }
         }
-        .frame(width: avatarSize)
+        .frame(width: avatarColumnWidth)
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
@@ -206,7 +211,9 @@ struct PostRowView: View {
             .frame(width: avatarSize, height: avatarSize)
             .clipShape(Circle())
             .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
-            .contentShape(Circle())
+            .frame(minWidth: CGFloat(DesignMetrics.minimumTouchTarget),
+                   minHeight: CGFloat(DesignMetrics.minimumTouchTarget))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("@\(post.authorHandle) のプロフィール")
@@ -262,7 +269,7 @@ struct PostRowView: View {
     /// The available width for the body+media region: the row width minus the row's
     /// horizontal padding, the avatar column, and the column spacing.
     private func regionWidth(forContentWidth width: CGFloat) -> CGFloat {
-        width - horizontalRowPadding * 2 - avatarSize - columnSpacing
+        width - horizontalRowPadding * 2 - avatarColumnWidth - columnSpacing
     }
 
     /// Media for the wide reflow layout's right rail: image/video then link card,

@@ -109,6 +109,54 @@ restore. This is an accepted v1 gap, not a regression introduced by this
 change — multi-scening simply makes an existing shared-storage design
 reachable through a new OS entry point.
 
+## Tap targets and tap accessibility (S2)
+
+As of `2026-07-24-apple-hig-remediation.md` (S2), every small iPad control
+reaches the Apple HIG 44×44pt minimum tappable area, named as
+`DesignMetrics.minimumTouchTarget` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`).
+Two changes landed together:
+
+1. **`onTapGesture` → `Button`/accessibility, hit area unchanged.** In
+   `apps/ipados/Views/PostRowView.swift`, the row-wide tap (opens the
+   conversation) keeps its `onTapGesture` — wrapping the whole `List` row in a
+   `Button` would nest a button inside the row's own action-bar buttons — but
+   gained `.accessibilityAddTraits(.isButton)` and an
+   `.accessibilityAction(named: "スレッドを開く")` so VoiceOver exposes it as
+   activatable. The avatar tap and the sensitive-media reveal curtain became
+   real `Button`s (`.buttonStyle(.plain)` + an accessibility label), and the
+   shared `ThumbnailChrome` view modifier (image thumbnails) moved from
+   `.onTapGesture(perform:)` to `Button(action:)`. This step was purely
+   structural — no hit-area or rendered-pixel change, confirmed by a clean run
+   of the `CatalogSnapshotTests` suite with zero diffs.
+2. **44pt frame expansion, a real (small) layout change.** The sidebar's
+   conversation-close xmark (`RootView.swift`, `SidebarButton`), the
+   notification actor-list expand/collapse chevron
+   (`NotificationsListView.swift`, `expandToggle`), and the PostRow avatar
+   button (`PostRowView.swift`) each keep their visual glyph size (22pt icons,
+   the avatar's density-driven 24pt/42pt circle) inside an inner `.frame`, then
+   add an outer `.frame(minWidth: DesignMetrics.minimumTouchTarget, minHeight:
+   ...)` plus `.contentShape(Rectangle())` so the tappable area grows to 44pt
+   without changing what is drawn. The avatar's *column* width
+   (`avatarColumnWidth = max(avatarSize, minimumTouchTarget)`) grows along with
+   it — not just the button — so the enlarged hit area sits inside the row's
+   own layout rather than overflowing into the text column; `leadingInset` and
+   the reflow region-width calculation were updated to match, so the reply
+   marker / context header stay aligned with the body text and the
+   vertical/reflow layout decision is unaffected. The net visible effect on
+   `CatalogSnapshotTests` (recorded at `.comfortable` density, avatar 42pt) is
+   a uniform ~2pt widening of the avatar column and everything after it — no
+   overlap, clipping, or broken layout in any of the 10 affected `PostRow`
+   variants. The sidebar xmark and notification chevron are not covered by
+   `CatalogSnapshotTests` (that suite only exercises `PostRowView` and a few
+   standalone components, see [[design-system]]); their 44pt frames were
+   verified by code reasoning only, plus a manual Accessibility Inspector Hit
+   Target check (`docs/superpowers/plans/2026-07-24-apple-hig-remediation.md`
+   S2 Task 3, pending human verification). The `.compact` density avatar
+   (24pt glyph) is likewise not exercised by the automated suite (it always
+   renders at `.comfortable`, see [[design-system]] "Snapshot operations" §
+   Density coverage gap), so its 44pt hit area is also reasoned rather than
+   snapshot-verified.
+
 ## Settings, filters, and notifications parity (Phase 3)
 
 As of `2026-07-10-yorumimizuku-ipados-parity-phase3.md`, the iPad gained the

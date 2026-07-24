@@ -128,6 +128,8 @@ private struct NotificationRowView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(theme.tertiaryText)
                 .frame(width: 22, height: 22)
+                .frame(minWidth: CGFloat(DesignMetrics.minimumTouchTarget),
+                       minHeight: CGFloat(DesignMetrics.minimumTouchTarget))
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

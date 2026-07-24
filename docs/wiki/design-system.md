@@ -5,6 +5,7 @@ updated: 2026-07-25
 sources:
   - docs/superpowers/specs/2026-07-03-design-catalog-design.md
   - docs/superpowers/plans/2026-07-03-design-catalog.md
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
 ---
 
 # Design System (Vocabulary, Catalog, Snapshots)
@@ -32,6 +33,7 @@ All members of `DesignMetrics`, their values, and where each applies:
 | `thumbnailCornerRadius` | 10 | Corner radius of thumbnails, video posters, and media curtains |
 | `bodyStackSpacing(_:)` | 2 (`.compact`) / 4 (`.comfortable`) | Vertical spacing of the author/body/media/actions stack, by `DisplayDensity` |
 | `mediaMaxWidth(_:)` | 320 (`.compact`) / 440 (`.comfortable`) | Maximum media width in the vertical (non-reflow) layout, by `DisplayDensity` |
+| `minimumTouchTarget` | 44 | Apple HIG minimum tappable area on touch platforms (iPad only; macOS pointer targets are exempt). Small iPad controls (PostRow avatar, sidebar close xmark, notification expand chevron) reach it via an outer `.frame(minWidth:minHeight:)` around the existing glyph-sized frame, added `2026-07-24-apple-hig-remediation.md` S2 — see [[ipados]] "Tap targets and tap accessibility (S2)" |
 
 `DesignMetrics` lives in `YoruMimizukuKit` (platform-neutral) and is consumed by both `apps/macos/Views/PostRowView.swift` and `apps/ipados/Views/PostRowView.swift`, wrapped in `CGFloat(...)` at each SwiftUI call site since the constants are `Double`. Introducing the enum was a pure rename — it did not change any rendered value (`2026-07-03-design-catalog-design.md` §命名規約).
 
@@ -72,6 +74,9 @@ Each app has its own XCTest target that renders every catalog variant (filtered 
 - **iPadOS**: `YoruMimizukuPadTests` (`apps/ipadosTests/CatalogSnapshotTests.swift`), 13 references (no `toast`) under `apps/ipadosTests/__Snapshots__/CatalogSnapshotTests/`. The record environment is **pinned to the iPad Pro 13-inch (M5) / iOS 26.5 simulator** — iOS renders at the device's display scale, so recording (or re-recording) on any other simulator produces different bitmaps and fails the comparison. This pin is documented in the test file's header comment.
 
 Both suites compare with `.image(perceptualPrecision: 0.98)` at width 560, which absorbs GPU/antialiasing noise while still catching real layout shifts (the motivating case was the 2026-07-03 two-image grid overlap).
+
+**Density coverage gap:** both test files call `CatalogRegistry.view(for:width:)` without passing `density`, so every variant renders at the parameter's default, `.comfortable`
+(`apps/{macos,ipados}/Catalog/CatalogRegistry.swift`). `.compact`-density rendering (smaller avatar, tighter spacing) is exercised by the in-app gallery's density picker (manual) but **not** by `CatalogSnapshotTests` — a `.compact`-only regression (e.g. the PostRow avatar's 24pt vs. 42pt touch-target math, `2026-07-24-apple-hig-remediation.md` S2) has no automated coverage and must be checked by hand or reasoned about from the code.
 
 ### Determinism
 

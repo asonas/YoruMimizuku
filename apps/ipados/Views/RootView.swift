@@ -790,8 +790,12 @@ private struct SidebarButton: View {
                         .foregroundStyle(.white)
                 }
                 // Reserve trailing space so the row label never slides under the
-                // overlaid close button.
-                if onClose != nil { Color.clear.frame(width: 22, height: 22) }
+                // overlaid close button. Matches the button's 44pt minimum touch
+                // target, not its 22pt glyph, so the label still clears it.
+                if onClose != nil {
+                    Color.clear.frame(width: CGFloat(DesignMetrics.minimumTouchTarget),
+                                       height: CGFloat(DesignMetrics.minimumTouchTarget))
+                }
             }
             .padding(.vertical, 4)
             .contentShape(Rectangle())
@@ -806,6 +810,8 @@ private struct SidebarButton: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(width: 22, height: 22)
+                        .frame(minWidth: CGFloat(DesignMetrics.minimumTouchTarget),
+                               minHeight: CGFloat(DesignMetrics.minimumTouchTarget))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-25 ingest (iPad tap targets, S2)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S2 Tasks 1-3); `core/Sources/YoruMimizukuKit/DesignMetrics.swift`; `apps/ipados/Views/PostRowView.swift`, `RootView.swift`, `NotificationsListView.swift`
+- updated: [[ipados]] (new "Tap targets and tap accessibility (S2)" section); [[design-system]] (new `minimumTouchTarget` row in the DesignMetrics reference table; new "Density coverage gap" note under "Snapshot operations")
+- note: Three commits. (1) TDD-added `DesignMetrics.minimumTouchTarget = 44` (Red: compile error on the undefined member; Green: full `swift test --package-path core` regression, 484/484). (2) Structural: converted 4 `onTapGesture` sites in `PostRowView.swift` (row-wide tap, avatar, sensitive-media curtain, `ThumbnailChrome`) to `Button`/accessibility semantics with no hit-area change — `CatalogSnapshotTests` (iPad) passed with zero diffs, confirming true no-op on rendering. (3) Behavioral: gave the sidebar close xmark, notification expand chevron, and PostRow avatar Button a 44pt minimum frame while keeping their glyph visual size in an inner frame; also widened the avatar *column* (`avatarColumnWidth = max(avatarSize, 44)`) and updated `leadingInset`/the reflow region-width calc to match, so alignment holds. Re-recorded 10 `PostRow`-family snapshot references after visually inspecting each diff (reference vs. failure vs. difference images, via `xcresulttool export attachments`): all showed only the expected ~2pt column-width/margin increase at `.comfortable` density, no overlap/clipping/broken layout. Sidebar xmark and notification chevron are outside `CatalogSnapshotTests` coverage (not `PostRowView`); `.compact`-density avatar (24pt glyph) is also outside coverage since the suite always renders `.comfortable` (newly documented in [[design-system]]) — all three verified by code reasoning only, plus a manual Accessibility Inspector Hit Target check left as pending human verification (S2 Task 3 Step 3).
+
 ## 2026-07-25 ingest (iPad video playback failure fallback)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 2); `apps/ipados/Views/PostRowView.swift`
