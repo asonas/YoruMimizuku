@@ -199,9 +199,9 @@ private struct NotificationRowView: View {
 
     private var iconColor: Color {
         switch item.reason {
-        case .like: return .pink
-        case .repost: return .blue
-        default: return .secondary
+        case .like: return theme.star
+        case .repost: return theme.accent
+        default: return theme.secondaryText
         }
     }
 }

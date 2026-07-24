@@ -765,6 +765,7 @@ private struct AuthorHeaderView: View {
 }
 
 private struct SidebarButton: View {
+    @EnvironmentObject private var theme: ThemeStore
     let title: String
     let systemImage: String
     var badge = 0
@@ -786,7 +787,7 @@ private struct SidebarButton: View {
                         .font(.caption2.bold())
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.blue))
+                        .background(Capsule().fill(theme.accent))
                         .foregroundStyle(.white)
                 }
                 // Reserve trailing space so the row label never slides under the
@@ -818,6 +819,6 @@ private struct SidebarButton: View {
                 .accessibilityLabel("会話を閉じる")
             }
         }
-        .listRowBackground(isSelected ? Color.blue.opacity(0.12) : Color.clear)
+        .listRowBackground(isSelected ? theme.accent.opacity(0.12) : Color.clear)
     }
 }
