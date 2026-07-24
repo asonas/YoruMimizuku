@@ -104,6 +104,8 @@ struct PostRowView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture { onOpenThread?(post) }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: "スレッドを開く") { onOpenThread?(post) }
         .contextMenu { rowContextMenu }
         .fullScreenCover(item: $playingVideo) { item in
             VideoPlayerScreen(url: item.url, onOpenExternally: { onOpenPermalink?(post) })
@@ -189,22 +191,25 @@ struct PostRowView: View {
     }
 
     private var avatar: some View {
-        RemoteImage(url: post.avatarURL, maxPointSize: avatarSize) { phase in
-            if case let .success(image) = phase {
-                image.resizable().scaledToFill()
-            } else {
-                theme.avatarPlaceholder
-            }
-        }
-        .frame(width: avatarSize, height: avatarSize)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
-        .contentShape(Circle())
-        .onTapGesture {
+        Button {
             if let did = ATURI.repo(post.id) {
                 onOpenAuthor?(did, post.authorHandle, post.authorDisplayName, post.avatarURL)
             }
+        } label: {
+            RemoteImage(url: post.avatarURL, maxPointSize: avatarSize) { phase in
+                if case let .success(image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    theme.avatarPlaceholder
+                }
+            }
+            .frame(width: avatarSize, height: avatarSize)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(Circle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel("@\(post.authorHandle) のプロフィール")
     }
 
     /// Whether the post carries inline media (image or video).
@@ -364,9 +369,13 @@ struct PostRowView: View {
                 .overlay { sensitiveMediaOverlay(warning) }
                 .allowsHitTesting(false)
                 .overlay {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture { revealMedia = true }
+                    Button {
+                        revealMedia = true
+                    } label: {
+                        Color.clear.contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("閲覧注意メディアを表示")
                 }
         } else {
             media
@@ -599,12 +608,15 @@ private struct ThumbnailChrome: ViewModifier {
     let onTap: () -> Void
 
     func body(content: Content) -> some View {
-        content
-            .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
-            .overlay(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)).strokeBorder(theme.hairline, lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
-            .accessibilityLabel(alt.isEmpty ? "画像" : alt)
-            .onTapGesture(perform: onTap)
+        Button(action: onTap) {
+            content
+                .clipShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
+                .overlay(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)).strokeBorder(theme.hairline, lineWidth: 1))
+                .contentShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(alt.isEmpty ? "画像" : alt)
     }
 }
 
