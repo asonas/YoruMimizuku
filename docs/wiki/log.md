@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 ingest (thread reply rows)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-1); `apps/macos/Views/ConversationView.swift`, `core/Sources/YoruMimizukuKit/ThreadViewModel.swift`
+- updated: [[app-shell]] (new "Conversation tab (thread view)" section documenting that only the focused post is interactive and ancestor/reply rows are static-action-bar re-anchor buttons; `sources` frontmatter extended with `ConversationView.swift` and `ThreadViewModel.swift`)
+- note: macOS's reply-tree rows (`replyRow`) previously passed `onLike`/`onRepost` through to a fully interactive `PostRowView`, but `ThreadViewModel.post(id:)` only ever resolves the focused post's id, so those taps were silent no-ops. Degraded `replyRow` to `interactiveActions: false` (matching the existing `parentBlock` ancestor rows) and wrapped the whole row in a re-anchor button, since `interactiveActions: false` also disables the timestamp-tap-to-open-conversation affordance the row relied on. iPadOS already had both ancestor and reply rows non-interactive, so this is a macOS-only fix.
+
 ## 2026-07-24 review fixup
 
 - sources: review of commits `1c8e959`/`c776a69` (P0-4); `docs/wiki/behaviors/compose-post.md`, `docs/wiki/platforms/ipados.md`

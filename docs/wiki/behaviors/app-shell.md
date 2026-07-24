@@ -1,15 +1,18 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-06-20
+updated: 2026-07-24
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-shell.md
   - docs/superpowers/plans/2026-06-05-yorumimizuku-cmux-sidebar.md
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - apps/macos/Views/NewPostCommand.swift
   - apps/macos/Views/SidebarView.swift
+  - apps/macos/Views/ConversationView.swift
+  - core/Sources/YoruMimizukuKit/ThreadViewModel.swift
   - apps/windows/App/MainWindow.xaml.cs
   - apps/windows/App/Services/WindowPlacement.cs
   - apps/windows/App/Services/AppSettings.cs
@@ -68,6 +71,10 @@ The density model is UI-framework-agnostic so it can be unit-tested: `DisplayDen
 ## Tabs (sources)
 
 A tab is one of the seven v1 sources (home / notifications / custom feed / list / author / search / thread). Every tab runs under the window's active account, and the tab composition is persisted per window (`2026-06-04-yorumimizuku-design.md` §7.3). The data behind each tab is abstracted by the `TimelineSource` protocol — see [[timeline-streaming]]. Tapping a user's avatar opens a view-only author tab for that user, deduplicated by DID and not persisted — see [[author-tab]].
+
+## Conversation tab (thread view)
+
+Opening a post's conversation anchors the thread on that post: ancestors render above it and replies render below, but only the focused post is interactive — `ThreadViewModel.post(id:)` (`core/Sources/YoruMimizukuKit/ThreadViewModel.swift`) resolves a post only when its id matches the current focus, so like/repost/quote never reach anything else in the tree. Ancestor rows and reply rows are accordingly rendered with `PostRowView(interactiveActions: false)`, which turns their action bar into static labels, and each row is wrapped in a plain button that re-anchors the tab on that post when tapped; this also stands in for the timestamp tap that `interactiveActions: false` otherwise disables (`apps/macos/Views/ConversationView.swift`, `parentBlock` / `replyRow`). [[ipados]] already renders both ancestor and reply rows this way; on macOS the reply rows previously left the action bar live even though it had no effect, until the row was brought in line with the ancestor rows.
 
 ## Sidebar / tab UI
 

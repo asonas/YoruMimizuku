@@ -154,23 +154,29 @@ struct ConversationView: View {
             Rectangle()
                 .fill(theme.divider)
                 .frame(width: 2)
-            // Phase D: like/repost on a reply node are intentionally inert — the view model
-            // only mutates the focused post. Per-reply re-anchoring by row tap is out of
-            // Phase D scope; re-anchoring is available on truncated subtrees via the
-            // "さらに表示" button below. Unlike parentBlock (interactiveActions: false),
-            // reply rows keep the action bar visible for visual consistency with the focus row.
-            PostRowView(
-                post: node.post, density: displaySettings.density, now: now,
-                showReplyMarker: false, onImageTap: onImageTap,
-                onLike: { Task { await model.toggleLike(node.post) } },
-                onRepost: { Task { await model.toggleRepost(node.post) } },
-                onAvatarTap: { onOpenAuthor(node.post) },
-                onCopyLink: { copyPermalink(node.post) },
-                onOpenConversation: { onOpenConversation(node.post) },
-                onQuoteTap: { onOpenQuote($0) }
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .rowHoverHighlight()
+            // Reply rows are re-anchor targets, not interactive posts: only the
+            // focused post can be liked/reposted (`ThreadViewModel.post(id:)`
+            // resolves the focused id only), so the action bar renders as static
+            // labels here (`interactiveActions: false`, matching parentBlock) and
+            // the whole row is wrapped in a button that re-anchors the tab on this
+            // reply, standing in for the timestamp tap that interactiveActions:
+            // false disables.
+            Button {
+                onOpenConversation(node.post)
+            } label: {
+                PostRowView(
+                    post: node.post, density: displaySettings.density, now: now,
+                    showReplyMarker: false, interactiveActions: false, onImageTap: onImageTap,
+                    onAvatarTap: { onOpenAuthor(node.post) },
+                    onCopyLink: { copyPermalink(node.post) },
+                    onOpenConversation: { onOpenConversation(node.post) },
+                    onQuoteTap: { onOpenQuote($0) }
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .rowHoverHighlight()
+            }
+            .buttonStyle(.plain)
+            .help("この返信を中心に会話を開く")
         }
         .padding(.leading, CGFloat(node.depth + 1) * indentStep)
     }
