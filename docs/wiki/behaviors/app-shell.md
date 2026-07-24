@@ -88,6 +88,8 @@ Open questions carried in the plan: whether navigation rows show an unread badge
 
 The sidebar ends in a **footer** that doubles as the macOS account switcher: the current avatar + `@handle` open a borderless menu of stored accounts plus add-account / log-out, and a gear button (carrying the update-available dot) opens settings. This is where the design's top-right switcher actually lives on macOS; the menu's behavior and the `summaries()` / `removeAndAdvance(did:)` plumbing are in [[accounts]] (`apps/macos/Views/SidebarView.swift`).
 
+Close/edit are not hover-only: `SidebarRow` also exposes a `.contextMenu` (Control-click or right-click) with the same "フィルターを編集" / "タブを閉じる" actions, and VoiceOver users reach them through `.accessibilityActions` (the row is one combined element labeled with title + subtitle, so a rotor/VO+Command+Space custom-actions sweep surfaces both without needing the hover-revealed icon buttons at all) (`2026-07-24-apple-hig-remediation.md` P0-2).
+
 On [[ipados]], the shell is a separate SwiftUI implementation under
 `apps/ipados`. It uses `NavigationSplitView`, visible touch actions, and a simple
 search-field path to create saved-search tabs. Hover-only affordances are not

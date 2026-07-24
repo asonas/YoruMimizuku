@@ -344,6 +344,42 @@ private struct SidebarRow: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.1), value: isHovered)
+        .contextMenu {
+            if let onEdit {
+                Button {
+                    onEdit()
+                } label: {
+                    Label("フィルターを編集", systemImage: "pencil")
+                }
+            }
+            if let onClose {
+                Button(role: .destructive) {
+                    onClose()
+                } label: {
+                    Label("タブを閉じる", systemImage: "xmark")
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityRowLabel)
+        .accessibilityActions {
+            if let onEdit {
+                Button("フィルターを編集") { onEdit() }
+            }
+            if let onClose {
+                Button("タブを閉じる") { onClose() }
+            }
+        }
+    }
+
+    /// Combines title + subtitle into one string for VoiceOver, since
+    /// `.accessibilityElement(children: .combine)` merges the row's Text
+    /// views but drops structure (e.g. reading order/pauses between them).
+    private var accessibilityRowLabel: String {
+        if let subtitle, !subtitle.isEmpty {
+            return "\(title)、\(subtitle)"
+        }
+        return title
     }
 
     @ViewBuilder
@@ -370,6 +406,7 @@ private struct SidebarRow: View {
         }
         .buttonStyle(.plain)
         .help(help)
+        .accessibilityLabel(help)
     }
 
     private var rowBackground: Color {

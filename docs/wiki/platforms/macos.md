@@ -1,7 +1,7 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-06-08
+updated: 2026-07-24
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -9,6 +9,8 @@ sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-app-icon-design.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-icon.md
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
+  - apps/macos/Views/SidebarView.swift
 ---
 
 # Platform — macOS
@@ -67,6 +69,10 @@ The post body `Text` does **not** use `.textSelection(.enabled)`. On macOS, a se
 ### Inline images respect their aspect ratio
 
 A lone attached image is laid out at its true aspect ratio rather than a fixed-height center crop, so a wide image shows in full (no left/right crop and no horizontal overflow) and a tall image fills the column width with only a slight crop. The source ratio comes from the embed's `aspectRatio` (`app.bsky.embed.images#view`), which the core now decodes onto `EmbedImage` and carries to the view as `PostImage.aspectRatio` (width / height; nil when the embed omits it). The view clamps that ratio to `[0.7, 5.0]` so an extreme panorama or portrait can't make the row absurdly short or tall — within the clamp the image fills its box exactly (cover equals contain, so a crop only ever touches the clamped extreme), and the decode size follows the box's longer edge to stay sharp. Two or more images keep the fixed-height cover-cropped grid, where uniform tiles read better than mismatched proportions (`apps/macos/Views/PostRowView.swift`, `PostDisplay.swift`, `Timeline.swift`).
+
+## Accessibility
+
+The sidebar's per-row close/edit affordances (`SidebarRow` in [[app-shell]]) were originally hover-only, with no keyboard or VoiceOver path. `SidebarRow` now also exposes a `.contextMenu` (right-click / Control-click) and `.accessibilityActions` mirroring the same "フィルターを編集" / "タブを閉じる" actions, plus a combined `.accessibilityElement` label (title + subtitle) so VoiceOver reads one row instead of fragments (`2026-07-24-apple-hig-remediation.md` P0-2, `apps/macos/Views/SidebarView.swift`).
 
 ## App icon
 
