@@ -27,10 +27,13 @@ struct RootView: View {
     @State private var reauthGeneration = 0
     /// A login model dedicated to re-auth, pre-filled with the expired handle.
     @StateObject private var reauthLoginModel: LoginViewModel
-    @StateObject private var themeStore = ThemeStore()
-    @StateObject private var displaySettings = DisplaySettingsStore()
-    @StateObject private var fontSettings = FontSettingsStore()
-    @StateObject private var notificationSettings = NotificationSettingsStore()
+    // Owned by `YoruMimizukuApp` (app-level `@StateObject`s) so every open window
+    // and the `Settings` scene share the same instances instead of each window
+    // reading `UserDefaults` into its own independent copy at init.
+    @EnvironmentObject private var themeStore: ThemeStore
+    @EnvironmentObject private var displaySettings: DisplaySettingsStore
+    @EnvironmentObject private var fontSettings: FontSettingsStore
+    @EnvironmentObject private var notificationSettings: NotificationSettingsStore
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
