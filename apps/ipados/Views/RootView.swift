@@ -575,7 +575,7 @@ private struct MainShellView: View {
                     onOpenPermalink: openPermalink
                 )
             } else {
-                ContentUnavailableView("Filter not found", systemImage: "magnifyingglass")
+                ContentUnavailableView("フィルターが見つかりません", systemImage: "magnifyingglass")
             }
         case let .conversation(id):
             if let tab = workspace.conversation(id: id) {
@@ -591,7 +591,7 @@ private struct MainShellView: View {
                     onOpenPermalink: openPermalink
                 )
             } else {
-                ContentUnavailableView("Conversation not found", systemImage: "bubble.left.and.bubble.right")
+                ContentUnavailableView("会話が見つかりません", systemImage: "bubble.left.and.bubble.right")
             }
         case let .author(id):
             if let tab = workspace.author(id: id) {
@@ -611,7 +611,7 @@ private struct MainShellView: View {
                     )
                 }
             } else {
-                ContentUnavailableView("Author not found", systemImage: "person")
+                ContentUnavailableView("投稿者が見つかりません", systemImage: "person")
             }
         }
     }

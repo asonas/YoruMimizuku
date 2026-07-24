@@ -116,7 +116,7 @@ struct ComposerView: View {
                     ProgressView().controlSize(.small)
                         .frame(minWidth: 44)
                 } else {
-                    Text("Post")
+                    Text("投稿")
                         .frame(minWidth: 44)
                 }
             }
@@ -197,7 +197,7 @@ struct ComposerView: View {
                         Image(nsImage: nsImage).resizable().scaledToFill()
                             .frame(width: 56, height: 56).clipped().cornerRadius(6)
                     }
-                    TextField("alt text", text: $image.alt)
+                    TextField("代替テキスト", text: $image.alt)
                     Button { model.images.removeAll { $0.id == image.id } } label: {
                         Image(systemName: "xmark.circle.fill")
                     }
@@ -221,7 +221,7 @@ struct ComposerView: View {
                     .shadow(radius: 2)
             }
             .frame(width: 72, height: 56).clipped().cornerRadius(6)
-            TextField("alt text", text: videoAltBinding)
+            TextField("代替テキスト", text: videoAltBinding)
             Button { model.video = nil; videoPoster = nil } label: {
                 Image(systemName: "xmark.circle.fill")
             }

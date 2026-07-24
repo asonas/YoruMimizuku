@@ -38,7 +38,7 @@ struct ComposerView: View {
                         if model.isSubmitting {
                             ProgressView()
                         } else {
-                            Text("Post")
+                            Text("投稿")
                         }
                     }
                     .disabled(!model.canSubmit)
@@ -108,7 +108,7 @@ struct ComposerView: View {
                                 model.images.removeAll { $0.id == image.id }
                             }
                         }
-                        TextField("Alt text", text: $image.alt)
+                        TextField("代替テキスト", text: $image.alt)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -127,7 +127,7 @@ struct ComposerView: View {
                             model.video = nil
                             videoPoster = nil
                         }
-                        TextField("Alt text", text: videoAltBinding)
+                        TextField("代替テキスト", text: videoAltBinding)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
