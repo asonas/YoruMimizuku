@@ -89,7 +89,7 @@ The `WindowGroup` carries an explicit `id: "main"` (`apps/macos/YoruMimizukuApp.
 
 Each window's title (shown in Mission Control, the Window menu, and the Dock, even under `.windowStyle(.hiddenTitleBar)`) tracks the selected sidebar tab and the signed-in account, e.g. "ホーム — @asonas.bsky.social", via `.navigationTitle(WindowTitle.compose(tabTitle:accountHandle:))` on `MainWindowView`'s `NavigationSplitView`. `WorkspaceModel.selectionTitle` derives the tab half (pinned ホーム/通知 labels, a filter/conversation tab's title, or an author tab's display name falling back to its handle) and `WindowTitle.compose` joins it to the handle, dropping the handle segment when empty and avoiding a doubled "@" (`core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`).
 
-Multiple open windows on the same account currently do not live-sync per-window UI settings (theme / display density / font / notification polling): each window's `RootView` owns independent `@StateObject` settings stores that only read the shared `UserDefaults` at init, so a change made in one window is not reflected in another already-open window until it is reopened. See [[app-shell]] for the cross-platform multi-window matrix entry.
+Multiple open windows on the same account now live-sync per-window UI settings (theme / display density / font / notification polling): the four settings stores were lifted from `RootView`'s per-window `@StateObject`s to app-level `@StateObject`s owned by `YoruMimizukuApp`, injected via `.environmentObject` into every `WindowGroup(id: "main")` window and the `Settings` scene alike. A change made in one window — or in the Settings window itself — is visible everywhere immediately, since every consumer reads the same `@Published` state rather than independently re-reading `UserDefaults` at its own init; this resolves the cross-window staleness this page previously documented here (`2026-07-24-apple-hig-remediation.md` S7, `apps/macos/YoruMimizukuApp.swift`, `apps/macos/Views/RootView.swift`). See [[app-shell]] for the cross-platform multi-window matrix entry and for how ⌘, and the sidebar gear now open the settings screen.
 
 ## App icon
 
@@ -99,7 +99,8 @@ The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月
 
 macOS is the only platform covered by the Sparkle auto-update design. Sparkle 2
 is wired into `apps/macos`, the settings gear can show a non-modal update dot, and
-the existing settings sheet has an **アップデート** tab with release/development
+the settings screen (now a native `Settings` scene rather than a per-window
+sheet, see [[app-shell]]) has an **アップデート** tab with release/development
 channel selection. Development updates are served from `appcast-dev.xml` on the
 repository's `gh-pages` branch, and a development-channel update test has passed.
 The stable `v0.7.0` production release has also shipped with a GitHub Release,
