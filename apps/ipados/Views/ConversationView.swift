@@ -26,7 +26,7 @@ struct ConversationView: View {
                 List {
                     let ancestors = ancestors(of: thread.focus)
                     if !ancestors.isEmpty {
-                        Section("Ancestors") {
+                        Section("これまでの投稿") {
                             ForEach(ancestors) { ancestor in
                                 PostRowView(
                                     post: ancestor,
@@ -62,7 +62,7 @@ struct ConversationView: View {
                         onOpenPermalink: onOpenPermalink
                     )
                     if !thread.replies.isEmpty {
-                        Section("Replies") {
+                        Section("返信") {
                             ForEach(thread.replies) { node in
                                 ThreadNodeView(
                                     node: node,

@@ -27,7 +27,7 @@ struct UpdateBadgeState: Equatable {
         case (.none, let .some(build)):
             return build
         case (.none, .none):
-            return "Unknown"
+            return "不明"
         }
     }
 }

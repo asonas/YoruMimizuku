@@ -370,11 +370,11 @@ private struct MainShellView: View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             List {
                 Section {
-                    SidebarButton(title: "Home", systemImage: "house", isSelected: workspace.selection == .home) {
+                    SidebarButton(title: "ホーム", systemImage: "house", isSelected: workspace.selection == .home) {
                         workspace.selection = .home
                     }
                     SidebarButton(
-                        title: "Notifications",
+                        title: "通知",
                         systemImage: "bell",
                         badge: badge(notificationsModel.unreadCount),
                         isSelected: workspace.selection == .notifications
@@ -383,7 +383,7 @@ private struct MainShellView: View {
                     }
                 }
 
-                Section("Filters") {
+                Section("フィルター") {
                     HStack {
                         TextField("検索語", text: $searchText)
                             .textInputAutocapitalization(.never)
@@ -427,7 +427,7 @@ private struct MainShellView: View {
                     }
                 }
 
-                Section("Conversations") {
+                Section("会話") {
                     ForEach(workspace.conversations) { tab in
                         SidebarButton(
                             title: tab.title,
@@ -443,7 +443,7 @@ private struct MainShellView: View {
                     }
                 }
 
-                Section("Authors") {
+                Section("ユーザー") {
                     ForEach(workspace.authors) { tab in
                         SidebarButton(
                             title: tab.title,
