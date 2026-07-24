@@ -1,18 +1,22 @@
 import SwiftUI
 
-/// The File-menu command set: replaces the WindowGroup's default New Window
-/// (⌘N) with 新規投稿, opening the composer in the focused window. A timeline
-/// client has no use for extra timeline windows, and ⌘N matches what every
-/// other Bluesky/Twitter client binds to "new post". Disabled (greyed out)
-/// before login, when no window exposes the action.
+/// The File-menu command set. The spec requires multi-window support (per-window
+/// account viewing, `design.md` §8), so the WindowGroup's default New Window is
+/// kept, just moved off ⌘N: this client's established convention is ⌘N =
+/// 新規投稿 (matching what every other Bluesky/Twitter client binds ⌘N to), so a
+/// new window opens on ⇧⌘N instead, matching the Windows build's Ctrl+Shift+N.
+/// 新規投稿 is disabled (greyed out) before login, when no window exposes the action.
 struct NewPostCommands: Commands {
     @FocusedValue(\.newPost) private var newPost
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
             Button("新規投稿") { newPost?.run() }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(newPost == nil)
+            Button("新規ウィンドウ") { openWindow(id: "main") }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
         }
     }
 }

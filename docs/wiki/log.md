@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-25 ingest (macOS new window and window titles, S4)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S4 Tasks 1-2); `core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`; `apps/macos/YoruMimizukuApp.swift`, `Views/NewPostCommand.swift`, `Views/MainWindowView.swift`, `Views/RootView.swift`
+- updated: [[app-shell]] (Multiple windows feature note rewritten for ⇧⌘N + window titles + the per-window-settings-not-live-syncing limitation; ⌘N/⇧⌘N prose in "Window layout" corrected — the old text claimed a timeline client has no use for extra windows, contradicting the design spec's per-window account viewing); [[macos]] (new "New windows and window titles" section); `support-matrix.md` regenerated via `mise run wiki:matrix`
+- note: Two commits. (1) Kit/TDD: added `WindowTitle.compose(tabTitle:accountHandle:)` (built up incrementally: plain concat → empty-handle guard → `@`-dedup, each Red confirmed via compile error or assertion failure before Green) and `WorkspaceModel.selectionTitle` (6 tests, each branch driven in from a real Red against a minimal hardcoded impl — the last test, falling back to ホーム for a closed tab, passed without a new Red since the `?? "ホーム"` fallback was already forced by the filter/conversation/author tests). Full `swift test --package-path core` regression: 493/493. (2) View: `WindowGroup(id: "main")`, restored **新規ウィンドウ** on ⇧⌘N via `openWindow(id:)` alongside the unchanged ⌘N=新規投稿, rewrote the stale NewPostCommand.swift header comment to cite the spec, and wired `.navigationTitle(WindowTitle.compose(...))` on `MainWindowView`'s `NavigationSplitView`. `xcodebuild test -scheme YoruMimizuku` passed in full including `CatalogSnapshotTests` (zero snapshot diffs, as expected since window chrome isn't in the catalog). Manual verification (⇧⌘N opening a window, Mission Control/Window-menu/Dock title text, title tracking tab switches, real per-window account viewing) is pending human verification — not exercised by the agent.
+
 ## 2026-07-25 ingest (iPad tap targets, S2)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S2 Tasks 1-3); `core/Sources/YoruMimizukuKit/DesignMetrics.swift`; `apps/ipados/Views/PostRowView.swift`, `RootView.swift`, `NotificationsListView.swift`

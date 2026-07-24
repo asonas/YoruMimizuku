@@ -1,7 +1,7 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-07-24
+updated: 2026-07-25
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -13,8 +13,13 @@ sources:
   - apps/macos/Views/SidebarView.swift
   - apps/macos/Views/ConversationView.swift
   - apps/macos/Views/PostRowView.swift
+  - apps/macos/Views/MainWindowView.swift
+  - apps/macos/Views/RootView.swift
+  - apps/macos/YoruMimizukuApp.swift
   - apps/ipados/Views/PostRowView.swift
   - core/Sources/YoruMimizukuKit/ThreadViewModel.swift
+  - core/Sources/YoruMimizukuKit/WorkspaceModel.swift
+  - core/Sources/YoruMimizukuKit/WindowTitle.swift
   - apps/windows/App/MainWindow.xaml.cs
   - apps/windows/App/Services/WindowPlacement.cs
   - apps/windows/App/Services/AppSettings.cs
@@ -30,7 +35,7 @@ features:
     windows: full
     ios: differs
     android: planned
-    note: "macOS opens multiple SwiftUI WindowGroup windows; Windows opens additional workspace windows with Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); iPadOS now permits real OS-level multi-scening (Split View / Slide Over / Stage Manager / App Exposé) since `UIRequiresFullScreen` was dropped, mapping the per-window model to a per-scene `WorkspaceModel` — but two scenes signed into the same account race on the shared `UserDefaults`-backed conversation-tab and filter persistence (last-writer-wins, no merge) ([[ipados]], [[windows]])."
+    note: "macOS opens additional windows of the same `WindowGroup(id: \"main\")` via ⇧⌘N (`apps/macos/Views/NewPostCommand.swift`), matching Windows' Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); each macOS window shows a meaningful title (selected tab + `@handle`, via `WindowTitle.compose` / `WorkspaceModel.selectionTitle`) in Mission Control, the Window menu, and the Dock even under `.hiddenTitleBar`. Known limitation: each window's theme/display-density/font/notification settings stores are independent `@StateObject`s reading the same shared `UserDefaults` at init (`apps/macos/Views/RootView.swift`), so a settings change in one open window does not live-propagate to another already-open window — it only takes effect there after that window is closed and reopened (or the app relaunches); moving these stores to a shared/live-synced representation is tracked separately (S7). iPadOS now permits real OS-level multi-scening (Split View / Slide Over / Stage Manager / App Exposé) since `UIRequiresFullScreen` was dropped, mapping the per-window model to a per-scene `WorkspaceModel` — but two scenes signed into the same account race on the shared `UserDefaults`-backed conversation-tab and filter persistence (last-writer-wins, no merge) ([[ipados]], [[windows]])."
   - name: Window size persistence
     macos: full
     windows: full
@@ -57,7 +62,7 @@ The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) a
 
 **Window size is remembered across launches.** macOS gets this from SwiftUI `WindowGroup` scene restoration automatically (the 940×720 is only the first-run default). Windows has no equivalent built in — WinUI 3 / `AppWindow` exposes no placement persistence, and a width-only `AppWindow.Resize` mixes DPI units and is overwritten by the default size the first `Activate` applies — so it captures the Win32 `WINDOWPLACEMENT` (normal position, size, and maximized state) on window close into `AppSettings` and reapplies it *after* `Activate` on the next launch. Capture and restore both go through `GetWindowPlacement` / `SetWindowPlacement`, so the round-trip is DPI-consistent. Details are on the [[windows]] page.
 
-On macOS the File menu's default New Window (⌘N) is replaced with **新規投稿**: ⌘N opens the composer sheet over the focused window's current tab instead of spawning another timeline window, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]).
+On macOS the File menu's ⌘N is **新規投稿**: it opens the composer sheet over the focused window's current tab, matching what timeline clients conventionally bind to ⌘N. The command reaches the window through a `FocusedValues` entry published by `MainWindowView`, is disabled before login, and is a no-op while another sheet is already presented (`apps/macos/Views/NewPostCommand.swift`). The unmodified `n` shortcut inside a feed keeps opening the composer as before ([[timeline-streaming]]). The spec requires multi-window support (per-window account viewing, `2026-06-04-yorumimizuku-design.md` §8), so the File menu also keeps a **新規ウィンドウ** command on **⇧⌘N** (matching the Windows build's Ctrl+Shift+N) that opens another `WindowGroup(id: "main")` window via `openWindow(id:)`; ⌘N itself was deliberately left on 新規投稿 rather than reverted to New Window, since that is this client's established convention (`2026-07-24-apple-hig-remediation.md` S4).
 
 The standard **⌘, (設定…)** command is wired the same way. Rather than rely on the default settings group, `SettingsCommands` binds ⌘, to a `FocusedValue`-published `OpenSettingsAction` so it opens the focused window's settings sheet (`MainWindowView` publishes the action; the command is disabled when no window owns it). The settings sheet's tabs include the 通知 tab described in [[notifications]] (`apps/macos/Views/NewPostCommand.swift`).
 

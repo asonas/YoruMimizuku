@@ -11,7 +11,7 @@ struct YoruMimizukuApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             RootView()
                 .environmentObject(updateController)
                 .modifier(DebugPerfOverlay())

@@ -142,6 +142,9 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 600, minHeight: 540)
+        // Meaningful title for Mission Control / the Window menu / the Dock, even
+        // under `.hiddenTitleBar`; tracks the selected tab and account.
+        .navigationTitle(WindowTitle.compose(tabTitle: workspace.selectionTitle, accountHandle: accountHandle))
         // Tapping a hashtag opens a filter tab; tapping a mention opens the
         // author's tab in-app; every other link falls through to the browser.
         .environment(\.openURL, OpenURLAction { url in
