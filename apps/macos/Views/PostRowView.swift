@@ -599,7 +599,8 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 onReplyTap(post)
             } label: {
-                actionLabel("\(post.replyCount)", systemImage: "bubble.left")
+                actionLabel("\(post.replyCount)", systemImage: "bubble.left",
+                            accessibilityDescription: "返信 \(post.replyCount)件")
             }
             .help("会話を開く")
 
@@ -612,7 +613,8 @@ struct PostRowView: View, @MainActor Equatable {
                 showRepostOptions = true
             } label: {
                 actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
-                            active: post.isReposted, activeColor: theme.accent)
+                            active: post.isReposted, activeColor: theme.accent,
+                            accessibilityDescription: "リポスト \(post.repostCount)件")
             }
             .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
             .popover(isPresented: $showRepostOptions, arrowEdge: .bottom) {
@@ -624,7 +626,8 @@ struct PostRowView: View, @MainActor Equatable {
                 onLike()
             } label: {
                 actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart",
-                            active: post.isLiked, activeColor: theme.star)
+                            active: post.isLiked, activeColor: theme.star,
+                            accessibilityDescription: "いいね \(post.likeCount)件")
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
 
@@ -675,9 +678,12 @@ struct PostRowView: View, @MainActor Equatable {
     /// that are themselves wrapped in a re-anchor button.
     private var staticActionBar: some View {
         HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
-            actionLabel("\(post.replyCount)", systemImage: "bubble.left")
-            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent)
-            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star)
+            actionLabel("\(post.replyCount)", systemImage: "bubble.left",
+                        accessibilityDescription: "返信 \(post.replyCount)件")
+            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent,
+                        accessibilityDescription: "リポスト \(post.repostCount)件")
+            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star,
+                        accessibilityDescription: "いいね \(post.likeCount)件")
         }
         .font(.app(.caption))
         .labelStyle(.titleAndIcon)
@@ -687,11 +693,16 @@ struct PostRowView: View, @MainActor Equatable {
 
     /// One action-bar label: tinted `activeColor` when the viewer has acted on the
     /// post (liked / reposted), otherwise the muted tertiary text color.
+    /// `accessibilityDescription` gives VoiceOver a spoken count (e.g. "返信 3件")
+    /// instead of reading the bare digit `text`, since `Label`'s icon carries no
+    /// accessible name of its own.
     private func actionLabel(
-        _ text: String, systemImage: String, active: Bool = false, activeColor: Color? = nil
+        _ text: String, systemImage: String, active: Bool = false, activeColor: Color? = nil,
+        accessibilityDescription: String
     ) -> some View {
         Label(text, systemImage: systemImage)
             .foregroundStyle(active ? (activeColor ?? theme.accent) : theme.tertiaryText)
+            .accessibilityLabel(accessibilityDescription)
     }
 }
 
