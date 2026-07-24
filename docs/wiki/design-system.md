@@ -1,7 +1,7 @@
 ---
 title: Design System (Vocabulary, Catalog, Snapshots)
 type: concept
-updated: 2026-07-03
+updated: 2026-07-25
 sources:
   - docs/superpowers/specs/2026-07-03-design-catalog-design.md
   - docs/superpowers/plans/2026-07-03-design-catalog.md
@@ -98,8 +98,14 @@ SNAPSHOT_TESTING_RECORD=all xcodebuild test -scheme YoruMimizuku \
   -project YoruMimizuku.xcodeproj -destination 'platform=macOS' \
   -only-testing:YoruMimizukuTests
 
-# iPadOS — must run on the pinned simulator above
-SNAPSHOT_TESTING_RECORD=all xcodebuild test -scheme YoruMimizukuPad \
+# iPadOS — must run on the pinned simulator above. Note the TEST_RUNNER_ prefix:
+# `xcodebuild test` launches the iOS Simulator test process through Xcode's own
+# test runner, which does not forward a bare shell env var (confirmed 2026-07-25 —
+# `SNAPSHOT_TESTING_RECORD=all` silently no-ops, leaving the stale reference on
+# disk with no size/mtime change). `TEST_RUNNER_`-prefixed variables are the
+# documented Xcode mechanism for passing env vars through to the hosted test
+# process and do work.
+TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all xcodebuild test -scheme YoruMimizukuPad \
   -project YoruMimizuku.xcodeproj \
   -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' \
   -only-testing:YoruMimizukuPadTests

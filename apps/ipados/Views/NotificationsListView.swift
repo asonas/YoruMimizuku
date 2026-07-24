@@ -23,12 +23,20 @@ struct NotificationsListView: View {
                             .padding()
                     }
             case let .loaded(items):
-                List(items) { item in
-                    NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor, onOpenSubject: onOpenSubject)
+                if items.isEmpty {
+                    ScrollView {
+                        ContentUnavailableView("通知はまだありません", systemImage: "bell.slash")
+                            .padding(.top, 80)
+                    }
+                    .refreshable { await model.refresh() }
+                } else {
+                    List(items) { item in
+                        NotificationRowView(item: item, now: now, onOpenAuthor: onOpenAuthor, onOpenSubject: onOpenSubject)
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .refreshable { await model.refresh() }
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .refreshable { await model.refresh() }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

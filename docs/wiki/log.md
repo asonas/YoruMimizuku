@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-25 ingest (iPad notifications empty state)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 1); `apps/ipados/Views/NotificationsListView.swift`, `apps/ipadosTests/NotificationsEmptySnapshotTests.swift`
+- updated: [[notifications]] (new "Empty state (iPadOS)" subsection under the iPadOS badge section)
+- note: Confirmed the defect with a pixel-diff Red before implementing: recorded a reference PNG against the unmodified `.loaded([])` branch and visually inspected it — a blank themed-canvas gradient with no text, icon, or list rows. After adding the `ContentUnavailableView("通知はまだありません", systemImage: "bell.slash")` branch, the same test failed against that reference (0.994 pixel match, below the 1.0/0.98 threshold), which is the genuine Red. Re-recorded and visually confirmed the new reference shows the bell.slash icon and copy before committing it. Also noted for future re-recording: `xcodebuild test` on the iOS Simulator does not forward a bare `SNAPSHOT_TESTING_RECORD=all` shell env var to the test process (unlike the macOS suite) — it must be prefixed `TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all` for Xcode's test runner to pass it through.
+
 ## 2026-07-24 ingest (macOS pointer buttons)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S3); `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`

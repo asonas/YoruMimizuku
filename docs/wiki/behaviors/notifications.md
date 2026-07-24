@@ -1,7 +1,7 @@
 ---
 title: Notifications
 type: behavior
-updated: 2026-06-15
+updated: 2026-07-25
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - core/Sources/BlueskyCore/XRPC/NotificationsService.swift
@@ -14,6 +14,9 @@ sources:
   - apps/macos/Views/MainWindowView.swift
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
+  - apps/ipados/Views/NotificationsListView.swift
+  - apps/ipadosTests/NotificationsEmptySnapshotTests.swift
 features:
   - name: In-app notifications tab
     macos: full
@@ -67,6 +70,17 @@ On [[ipados]], `NotificationsViewModel` drives the in-app tab and sidebar badge
 through foreground polling. The MVP intentionally does not promise background
 polling-based banners; push notifications would need a separate design
 (`2026-06-08-yorumimizuku-ipados-design.md` §9).
+
+### Empty state (iPadOS)
+
+As of `2026-07-24-apple-hig-remediation.md` (S5), an empty `.loaded([])` state in
+`NotificationsListView` shows a `ContentUnavailableView("通知はまだありません",
+systemImage: "bell.slash")` inside a `ScrollView` with `.refreshable`, instead of a
+bare, un-refreshable blank `List`. This matches the copy and icon macOS has used
+since `NotificationsView.swift`'s `emptyState` (§"Opening notification subjects"
+above references the same file). A snapshot regression test
+(`apps/ipadosTests/NotificationsEmptySnapshotTests.swift`) pins this against a
+recorded reference PNG.
 
 ## Opening notification subjects
 

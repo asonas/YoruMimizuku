@@ -153,6 +153,7 @@ targets:
       - apps/ipados/Views/SettingsView.swift
       - apps/ipados/Views/SessionReauthBanner.swift
       - apps/ipados/Views/FilterEditorView.swift
+      - apps/ipados/Views/NotificationsListView.swift
       - apps/ipados/Theme.swift
       - apps/ipados/DisplaySettings.swift
       - apps/ipados/NotificationSettings.swift

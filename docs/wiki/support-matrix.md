@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-07-24
+updated: 2026-07-25
 sources: []
 ---
 
