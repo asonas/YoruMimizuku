@@ -18,4 +18,8 @@ final class DesignMetricsTests: XCTestCase {
         XCTAssertEqual(DesignMetrics.mediaMaxWidth(.compact), 320)
         XCTAssertEqual(DesignMetrics.mediaMaxWidth(.comfortable), 440)
     }
+
+    func testMinimumTouchTargetIs44() {
+        XCTAssertEqual(DesignMetrics.minimumTouchTarget, 44)
+    }
 }

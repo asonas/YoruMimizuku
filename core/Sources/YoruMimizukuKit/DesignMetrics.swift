@@ -17,6 +17,10 @@ public enum DesignMetrics {
     public static let gridTileHeight: Double = 140
     /// Corner radius of thumbnails, posters, and media curtains.
     public static let thumbnailCornerRadius: Double = 10
+    /// Minimum tappable area on touch platforms (Apple HIG: 44×44pt). macOS
+    /// pointer targets are exempt; iPadOS controls reach this by giving the
+    /// Button a 44pt minimum frame while keeping the glyph at its visual size.
+    public static let minimumTouchTarget: Double = 44
 
     /// Vertical spacing of the author/body/media/actions stack, by density.
     public static func bodyStackSpacing(_ density: DisplayDensity) -> Double {
