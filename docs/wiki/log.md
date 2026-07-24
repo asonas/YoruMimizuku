@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 ingest
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-4); commits `d1c6985` (`hasUnsavedContent` detection, 8 tests), `1c8e959` (confirmation dialog + submit-time lock); `core/Sources/YoruMimizukuKit/ComposerViewModel.swift` (hasUnsavedContent logic); `apps/macos/Views/ComposerView.swift`, `apps/ipados/Views/ComposerView.swift` (confirmation dialog, dismissal guards, disabled submit during flight)
+- updated: [[compose-post]] (features table: added "Draft discard confirmation" row macos/ios: full; new "Draft discard protection" section documenting unsaved-content definition, confirmation UX, submit-time locking, and the in-flight-cancel limitation)
+- note: Composer now confirms before discarding unsaved drafts (text / images / video, excluding reply/quote targets). While a post is submitting, Cancel is disabled and interactive dismissal is blocked (Esc on macOS, swipe-down on iPad), forcing users to wait for completion or failure. Both behaviors apply uniformly to macOS and iPadOS; Windows planned for later (spec is in P0-4 but implementation depends on the per-platform View wiring). This is part of the P0 HIG remediation for "no-op operations" and "breakage without warning" (design.md §6, feature/hig-composer-draft-protection).
+
 ## 2026-07-13 ingest
 
 - sources: `docs/superpowers/specs/2026-07-13-session-reauth-design.md`, `docs/superpowers/plans/2026-07-13-session-reauth.md`; `core/Sources/YoruMimizukuKit/SessionReauth.swift`, `apps/macos/Views/RootView.swift`, `apps/ipados/Views/RootView.swift`

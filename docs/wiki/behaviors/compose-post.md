@@ -1,7 +1,7 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-06-25
+updated: 2026-07-24
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -11,6 +11,7 @@ sources:
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - docs/superpowers/plans/2026-06-25-compose-image-paste-drop.md
   - docs/superpowers/plans/2026-06-25-compose-video-upload.md
+  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - core/Sources/YoruMimizukuKit/ComposerViewModel.swift
   - core/Sources/BlueskyCore/XRPC/VideoUploadService.swift
   - core/Sources/BlueskyCore/XRPC/PostService.swift
@@ -41,6 +42,12 @@ features:
     ios: full
     android: planned
     note: "macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]])."
+  - name: Draft discard confirmation
+    macos: full
+    windows: planned
+    ios: full
+    android: planned
+    note: "A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail."
 ---
 
 # Composing Posts
@@ -146,3 +153,7 @@ rest of the UI, and its text container is flush-left with the rest of the sheet.
 A `Divider` separates the text-input area (and any reply / quote / image previews)
 from the footer controls — the attach button, remaining-character counter, and
 Post button (`apps/macos/Views/ComposerView.swift`, `apps/macos/Views/ComposerTextView.swift`).
+
+## Draft discard protection
+
+A draft has unsaved content when it holds non-blank text, images, or a video; reply or quote targets alone do not count as unsaved content since reopening the composer recreates them. `ComposerViewModel.hasUnsavedContent` exposes this distinction. When a user tries to discard an unsaved draft (via the Cancel button on [[macos]] or iPad, or by closing the sheet), a confirmation dialog asks "下書きを破棄しますか？" with "破棄する" (discard) and "編集を続ける" (keep editing) buttons. While a post submission is in flight, the Cancel button is disabled and interactive dismissal (Esc / sheet swipe-down on [[ipados]]) is blocked, forcing the user to wait for the post to complete or fail. In-flight post cancellation is not implemented; this is a known limitation for future enhancement.
