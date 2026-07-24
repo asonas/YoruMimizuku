@@ -149,4 +149,62 @@ final class ComposerViewModelTests: XCTestCase {
         XCTAssertEqual(submitter.received?.video?.width, 720)
         XCTAssertEqual(vm.submitPhase, .idle)
     }
+
+    // 16. hasUnsavedContent is false when empty.
+    func testHasUnsavedContentIsFalseWhenEmpty() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        XCTAssertFalse(vm.hasUnsavedContent)
+    }
+
+    // 17. hasUnsavedContent is false with whitespace-only text.
+    func testHasUnsavedContentIsFalseWithWhitespaceOnlyText() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        vm.text = "  \n  "
+        XCTAssertFalse(vm.hasUnsavedContent)
+    }
+
+    // 18. hasUnsavedContent is true with text.
+    func testHasUnsavedContentIsTrueWithText() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        vm.text = "hi"
+        XCTAssertTrue(vm.hasUnsavedContent)
+    }
+
+    // 19. hasUnsavedContent is true with image.
+    func testHasUnsavedContentIsTrueWithImage() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        vm.images = [ComposeImage(data: Data([0x1]), mimeType: "image/jpeg")]
+        XCTAssertTrue(vm.hasUnsavedContent)
+    }
+
+    // 20. hasUnsavedContent is true with video.
+    func testHasUnsavedContentIsTrueWithVideo() {
+        let vm = ComposerViewModel(submitter: FakeSubmitter())
+        vm.video = ComposeVideo(data: Data([0x1]), mimeType: "video/mp4")
+        XCTAssertTrue(vm.hasUnsavedContent)
+    }
+
+    // 21. hasUnsavedContent is false with only a quote target.
+    func testHasUnsavedContentIsFalseWithOnlyQuoteTarget() {
+        let quoted = PostDisplay(
+            id: "at://did:plc:a/app.bsky.feed.post/x", cid: "bafyquote",
+            authorDisplayName: "Alice", authorHandle: "alice.bsky.social",
+            body: "original", createdAt: Date()
+        )
+        let vm = ComposerViewModel(submitter: FakeSubmitter(), quotedPost: quoted)
+        XCTAssertFalse(vm.hasUnsavedContent)
+    }
+
+    // 22. hasUnsavedContent is false with only a reply target.
+    func testHasUnsavedContentIsFalseWithOnlyReplyTarget() {
+        let parent = PostDisplay(
+            id: "at://did:plc:parent/app.bsky.feed.post/abc",
+            authorDisplayName: "Alice",
+            authorHandle: "alice.bsky.social",
+            body: "This is the post being replied to",
+            createdAt: Date(timeIntervalSince1970: 0)
+        )
+        let vm = ComposerViewModel(submitter: FakeSubmitter(), replyParent: parent)
+        XCTAssertFalse(vm.hasUnsavedContent)
+    }
 }

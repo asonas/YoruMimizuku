@@ -74,6 +74,14 @@ public final class ComposerViewModel: ObservableObject, Identifiable {
         return hasText || !images.isEmpty || video != nil || quotedPost != nil
     }
 
+    /// Whether discarding the composer would lose something the user produced:
+    /// non-blank text, attached images, or a video. Reply/quote targets alone
+    /// don't count — reopening the composer recreates them.
+    public var hasUnsavedContent: Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !images.isEmpty || video != nil
+    }
+
     public func submit() async {
         guard canSubmit else { return }
         isSubmitting = true
