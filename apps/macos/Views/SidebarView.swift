@@ -9,13 +9,15 @@ struct SidebarView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var updateController: UpdateController
+    /// Opens the app's native `Settings { }` scene (⌘,'s target); the gear
+    /// button below calls this directly instead of toggling a per-window sheet.
+    @Environment(\.openSettings) private var openSettings
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The active account's DID, used to mark the current row in the switcher.
     var accountDID: String = ""
     /// All stored accounts shown in the switcher menu.
     var accounts: [AccountSummary] = []
-    var onOpenSettings: () -> Void
     /// Switch the active account to the given DID.
     var onSwitchAccount: (String) -> Void = { _ in }
     /// Start the add-account login flow.
@@ -180,7 +182,7 @@ struct SidebarView: View {
         HStack(spacing: 8) {
             accountMenu
             Spacer(minLength: 4)
-            ChromeIconButton(systemImage: "gearshape", help: "設定", action: onOpenSettings)
+            ChromeIconButton(systemImage: "gearshape", help: "設定", action: { openSettings() })
                 .overlay(alignment: .topTrailing) {
                     if updateController.updateAvailable {
                         Circle()

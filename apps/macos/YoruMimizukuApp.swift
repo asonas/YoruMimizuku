@@ -34,7 +34,6 @@ struct YoruMimizukuApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             NewPostCommands()
-            SettingsCommands()
             #if DEBUG
             CommandGroup(after: .help) {
                 OpenCatalogButton()
@@ -46,6 +45,23 @@ struct YoruMimizukuApp: App {
             DesignCatalogView()
         }
         #endif
+        // The standard ⌘, "設定…" menu item now opens this scene automatically —
+        // no custom `CommandGroup(replacing: .appSettings)` needed. It shares the
+        // same app-level store instances as every `WindowGroup(id: "main")`
+        // window, so a change here is immediately visible in any open window and
+        // vice versa. `updateController` is not one of the four settings stores
+        // but is also app-level already, and the settings screen's アップデート
+        // tab (`UpdateSettingsView`) reads it via `@EnvironmentObject`.
+        Settings {
+            SettingsView()
+                .environmentObject(themeStore)
+                .environmentObject(displaySettings)
+                .environmentObject(fontSettings)
+                .environmentObject(notificationSettings)
+                .environmentObject(updateController)
+                .font(.app(.body))
+                .typesettingLanguage(.init(languageCode: .japanese))
+        }
     }
 }
 

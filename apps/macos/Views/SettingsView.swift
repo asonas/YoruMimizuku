@@ -3,37 +3,25 @@ import YoruMimizukuKit
 
 /// The settings screen: a left sidebar listing categories and a right pane that
 /// shows the controls for the selected category. Currently exposes appearance
-/// (randoma11y theming) and display (timeline density) settings.
+/// (randoma11y theming) and display (timeline density) settings. Hosted as the
+/// content of the app's `Settings { }` scene (`YoruMimizukuApp.swift`), so the
+/// window's title bar and close control are the OS's own — this view no longer
+/// draws its own title/close row, which would otherwise double up with (and, for
+/// close, be redundant with) the native window chrome.
 struct SettingsView: View {
     @EnvironmentObject private var theme: ThemeStore
-    @Environment(\.dismiss) private var dismiss
 
     @State private var selection: SettingsTab = .appearance
 
     var body: some View {
-        VStack(spacing: 0) {
-            titleBar
+        HStack(spacing: 0) {
+            sidebar
             Divider().overlay(theme.divider)
-            HStack(spacing: 0) {
-                sidebar
-                Divider().overlay(theme.divider)
-                detail
-            }
+            detail
         }
         .frame(minWidth: 640, minHeight: 440)
         .background(theme.background)
-    }
-
-    private var titleBar: some View {
-        HStack {
-            Text("設定")
-                .font(.app(.title3, weight: .bold))
-                .foregroundStyle(theme.primaryText)
-            Spacer()
-            Button("閉じる") { dismiss() }
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .navigationTitle("設定")
     }
 
     private var sidebar: some View {

@@ -6,13 +6,14 @@ import YoruMimizukuKit
 /// The main window: a cmux-style vertical tab rail (home, notifications, filter,
 /// and closable conversation tabs) on the left, with the selected tab's content
 /// on the right. Home and filter tabs render a `FeedView`; Cmd-Shift-J/K cycle the
-/// tabs. The lightbox, settings, and composer sheets float above everything.
+/// tabs. The lightbox and composer sheet float above everything; settings now
+/// open in their own native `Settings { }` scene window (⌘,) rather than a
+/// per-window sheet (`YoruMimizukuApp.swift`, `2026-07-24-apple-hig-remediation.md` S7).
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
     @ObservedObject var notifications: NotificationsViewModel
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
     var accountHandle: String
@@ -34,7 +35,6 @@ struct MainWindowView: View {
     var makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
 
     @State private var lightbox: ImageGallery?
-    @State private var showSettings = false
     /// The composer sheet's view model; non-nil while the sheet is open.
     @State private var composer: ComposerViewModel?
 
@@ -59,7 +59,7 @@ struct MainWindowView: View {
     var body: some View {
         // A stable ZStack hosts the sheet/overlays so changing the font (which
         // re-ids the inner content to refresh every `.font(.app(...))`) never
-        // dismisses the settings sheet or resets `showSettings`.
+        // dismisses the composer sheet.
         ZStack {
             splitView
                 .id("\(fontSettings.family)|\(fontSettings.baseSize)")
@@ -78,8 +78,6 @@ struct MainWindowView: View {
         .background { tabShortcuts }
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
         .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
-        // Lets the ⌘, settings menu command open this window's settings sheet.
-        .focusedSceneValue(\.openSettings, OpenSettingsAction { showSettings = true })
         .onReceive(clock) { now = $0 }
         .task {
             model.startPolling(every: pollInterval)
@@ -103,13 +101,6 @@ struct MainWindowView: View {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
             }
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-                .environmentObject(theme)
-                .environmentObject(displaySettings)
-                .environmentObject(fontSettings)
-                .environmentObject(notificationSettings)
-        }
         .sheet(item: $composer) { model in
             ComposerView(model: model) { composer = nil }
                 .environmentObject(theme)
@@ -125,7 +116,6 @@ struct MainWindowView: View {
                 accountAvatarURL: accountAvatarURL,
                 accountDID: accountDID,
                 accounts: accounts,
-                onOpenSettings: { showSettings = true },
                 onSwitchAccount: onSwitchAccount,
                 onAddAccount: onAddAccount,
                 onLogout: onLogout,
@@ -261,10 +251,11 @@ struct MainWindowView: View {
     }
 
     /// ⌘N from the File menu: open a new-post composer over the current tab.
-    /// No-op while another sheet is already up so the command cannot stack or
-    /// replace an in-progress draft.
+    /// No-op while the composer is already open so the command cannot stack or
+    /// replace an in-progress draft. (Settings now lives in its own window, so
+    /// it can no longer conflict with the composer sheet.)
     private func composeFromMenu() {
-        guard composer == nil, !showSettings else { return }
+        guard composer == nil else { return }
         compose(refreshing: activeTimelineModel)
     }
 
