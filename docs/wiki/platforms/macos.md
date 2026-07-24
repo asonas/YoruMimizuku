@@ -11,6 +11,8 @@ sources:
   - docs/superpowers/plans/2026-06-04-yorumimizuku-app-icon.md
   - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - apps/macos/Views/SidebarView.swift
+  - apps/macos/Views/PostRowView.swift
+  - apps/macos/Views/NotificationsView.swift
 ---
 
 # Platform — macOS
@@ -73,6 +75,8 @@ A lone attached image is laid out at its true aspect ratio rather than a fixed-h
 ## Accessibility
 
 The sidebar's per-row close/edit affordances (`SidebarRow` in [[app-shell]]) were originally hover-only, with no keyboard or VoiceOver path. `SidebarRow` now also exposes a `.contextMenu` (right-click / Control-click) and `.accessibilityActions` mirroring the same "フィルターを編集" / "タブを閉じる" actions, plus a combined `.accessibilityElement` label (title + subtitle) so VoiceOver reads one row instead of fragments (`2026-07-24-apple-hig-remediation.md` P0-2, `apps/macos/Views/SidebarView.swift`).
+
+Post row and notification avatars used `.onTapGesture` (no keyboard/VoiceOver path, no pointer affordances like Space-to-activate); both are now `Button`s (`.buttonStyle(.plain)`, `.accessibilityLabel("@handle のプロフィール")`) with unchanged visual appearance — a structural, behavior-preserving change (`2026-07-24-apple-hig-remediation.md` S3, `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`).
 
 ## App icon
 

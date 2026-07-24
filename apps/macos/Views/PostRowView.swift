@@ -223,18 +223,23 @@ struct PostRowView: View, @MainActor Equatable {
     }
 
     private var avatar: some View {
-        RemoteImage(url: post.avatarURL, maxPointSize: avatarSize) { phase in
-            if case let .success(image) = phase {
-                image.resizable().scaledToFill()
-            } else {
-                theme.avatarPlaceholder
+        Button {
+            onAvatarTap()
+        } label: {
+            RemoteImage(url: post.avatarURL, maxPointSize: avatarSize) { phase in
+                if case let .success(image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    theme.avatarPlaceholder
+                }
             }
+            .frame(width: avatarSize, height: avatarSize)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(Circle())
         }
-        .frame(width: avatarSize, height: avatarSize)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
-        .contentShape(Circle())
-        .onTapGesture { onAvatarTap() }
+        .buttonStyle(.plain)
+        .accessibilityLabel("@\(post.authorHandle) のプロフィール")
         .help("@\(post.authorHandle) のページを開く")
     }
 

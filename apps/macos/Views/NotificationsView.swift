@@ -240,18 +240,23 @@ private struct NotificationRowView: View {
     }
 
     private func avatarCircle(_ actor: NotificationGroup.Actor, size: CGFloat) -> some View {
-        RemoteImage(url: actor.avatarURL, maxPointSize: size) { phase in
-            if case let .success(image) = phase {
-                image.resizable().scaledToFill()
-            } else {
-                theme.avatarPlaceholder
+        Button {
+            onOpenAuthor(actor)
+        } label: {
+            RemoteImage(url: actor.avatarURL, maxPointSize: size) { phase in
+                if case let .success(image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    theme.avatarPlaceholder
+                }
             }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
+            .contentShape(Circle())
         }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        .overlay(Circle().strokeBorder(theme.hairline, lineWidth: 1))
-        .contentShape(Circle())
-        .onTapGesture { onOpenAuthor(actor) }
+        .buttonStyle(.plain)
+        .accessibilityLabel("@\(actor.handle) のプロフィール")
         .help("@\(actor.handle) のページを開く")
     }
 

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-24 ingest (macOS pointer buttons)
+
+- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S3); `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`
+- updated: [[macos]] (new one-line note under "Accessibility" describing the avatar `Button` conversion)
+- note: Converted the post-row and notification avatar `.onTapGesture` handlers to `Button { ... } label: { ... }.buttonStyle(.plain)` with an added `.accessibilityLabel`, restoring a keyboard/VoiceOver/pointer-standard activation path (Space, VoiceOver double-tap) that a bare `.onTapGesture` never offered. Purely structural: the existing avatar rendering is unchanged inside the label, `.buttonStyle(.plain)` keeps the visual output identical, and no 44pt minimum-frame sizing was added since macOS is a pointer environment (that's an iPad-only concern handled by a separate subproject). `xcodebuild test` (including `CatalogSnapshotTests`) passed with zero snapshot diffs.
+
 ## 2026-07-24 ingest (open-in-browser context menu)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S6)
