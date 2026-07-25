@@ -20,6 +20,13 @@ struct TimelineListView: View {
 
     @State private var focusedPostID: String?
     @State private var contentWidth: CGFloat = 0
+    /// Cancels/restarts on every geometry change so a continuous resize (e.g. the
+    /// split view collapsing/expanding across the compact/regular width boundary,
+    /// firing a new width every frame) commits `contentWidth` once, after the width
+    /// settles, instead of on every frame — otherwise every visible row re-renders
+    /// each frame of the transition (`PostRowView` has no `Equatable` guard on iPad,
+    /// so any state change here already re-renders every row unconditionally).
+    @State private var contentWidthDebounce: Task<Void, Never>?
     /// The own-post the viewer asked to delete, pending confirmation.
     @State private var pendingDelete: PostDisplay?
 
@@ -123,7 +130,12 @@ struct TimelineListView: View {
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
         } action: { newWidth in
-            contentWidth = newWidth
+            contentWidthDebounce?.cancel()
+            contentWidthDebounce = Task {
+                try? await Task.sleep(for: .milliseconds(80))
+                guard !Task.isCancelled else { return }
+                contentWidth = newWidth
+            }
         }
         .refreshable { await model.refresh() }
     }
