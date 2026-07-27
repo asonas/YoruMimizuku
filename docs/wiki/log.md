@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-07-26 ingest (macOS composer IME synchronization)
+
+- sources: `apps/macos/Views/ComposerTextView.swift`; `apps/macosTests/ComposerTextViewTests.swift`
+- updated: [[compose-post]] (the macOS editor now defers binding-to-view text replacement while AppKit reports marked text)
+- note: Prevents SwiftUI updates from invalidating the `NSTextView` marked/selection ranges during IME conversion while preserving normal external text synchronization. No support-matrix change because this corrects the existing macOS composer behavior rather than adding a platform capability.
+
 ## 2026-07-25 ingest (P2 inventory and consolidated manual-verification checklist, S8)
 
 - sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S8 section, "実機・シミュレータ検証項目"); `apps/ipados/Views/ComposerView.swift`, `RootView.swift`, `ConversationView.swift`, `NotificationsListView.swift`, `PostRowView.swift`; `apps/macos/Views/ComposerView.swift`, `Update/UpdateBadgeState.swift`, `Views/PostRowView.swift`

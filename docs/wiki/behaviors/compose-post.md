@@ -1,7 +1,7 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-07-24
+updated: 2026-07-26
 sources:
   - docs/superpowers/specs/2026-06-05-yorumimizuku-compose-post-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -150,6 +150,10 @@ The editor itself (`ComposerTextView` / `AttachingTextView`) uses the app font
 family (Hiragino Sans) at a slightly larger fixed size (15pt) instead of the
 smaller raw system body face, so the text being typed reads as clearly as the
 rest of the UI, and its text container is flush-left with the rest of the sheet.
+While an input method has marked text (for example, during Japanese conversion),
+binding-to-view synchronization is deferred until composition finishes. This
+keeps AppKit's marked and selection ranges valid while SwiftUI state updates
+(`apps/macos/Views/ComposerTextView.swift`).
 A `Divider` separates the text-input area (and any reply / quote / image previews)
 from the footer controls — the attach button, remaining-character counter, and
 Post button (`apps/macos/Views/ComposerView.swift`, `apps/macos/Views/ComposerTextView.swift`).

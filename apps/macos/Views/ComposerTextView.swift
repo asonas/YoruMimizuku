@@ -50,6 +50,11 @@ final class AttachingTextView: NSTextView {
     var onAttachImages: ((PasteboardImageSnapshot) -> Void)?
     var onDragTargeted: ((Bool) -> Void)?
 
+    func synchronizeTextFromBinding(_ text: String) {
+        guard !hasMarkedText(), string != text else { return }
+        string = text
+    }
+
     override func paste(_ sender: Any?) {
         let snapshot = PasteboardImageSnapshot(NSPasteboard.general)
         if snapshot.hasImages {
@@ -131,9 +136,7 @@ struct ComposerTextView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.parent = self
         guard let textView = scrollView.documentView as? AttachingTextView else { return }
-        if textView.string != text {
-            textView.string = text
-        }
+        textView.synchronizeTextFromBinding(text)
         if textView.font != font {
             textView.font = font
         }
