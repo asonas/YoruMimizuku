@@ -49,13 +49,13 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            trafficLightInset
             tabList
             Spacer(minLength: 0)
             accountFooter
         }
-        .background(theme.background)
-        .ignoresSafeArea(.container, edges: .top)
+        .background {
+            theme.background.ignoresSafeArea(.container, edges: .top)
+        }
         .sheet(item: $editorRequest) { request in
             editor(for: request).environmentObject(theme)
         }
@@ -76,10 +76,6 @@ struct SidebarView: View {
                 workspace.updateFilter(edited)
             }
         }
-    }
-
-    private var trafficLightInset: some View {
-        Color.clear.frame(height: 28)
     }
 
     private var tabList: some View {

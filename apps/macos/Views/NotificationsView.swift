@@ -14,12 +14,9 @@ struct NotificationsView: View {
     var onOpenSubject: (NotificationGroup) -> Void = { _ in }
 
     var body: some View {
-        VStack(spacing: 0) {
-            DetailHeader { EmptyView() }
-            content
-        }
-        .background(theme.canvas)
-        .ignoresSafeArea(.container, edges: .top)
+        content
+            .background(theme.canvas)
+            .ignoresSafeArea(.container, edges: .top)
     }
 
     @ViewBuilder

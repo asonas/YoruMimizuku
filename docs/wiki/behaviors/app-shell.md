@@ -1,7 +1,7 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-07-25
+updated: 2026-10-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -11,6 +11,8 @@ sources:
   - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - apps/macos/Views/NewPostCommand.swift
   - apps/macos/Views/SidebarView.swift
+  - apps/macos/Views/FeedView.swift
+  - apps/macos/Views/NotificationsView.swift
   - apps/macos/Views/ConversationView.swift
   - apps/macos/Views/PostRowView.swift
   - apps/macos/Views/MainWindowView.swift
@@ -59,7 +61,7 @@ The app shell is the Yorufukurou-style frame that hosts every timeline: one wind
 
 A window carries an account switcher (the design's §7.1 slot is the title bar's top-right; the macOS build places it in the **sidebar footer** instead — see below), a top tab area whose right-edge `+` opens a source picker for a new tab, a single-column feed in the center, and a composer at the bottom (text box + Post). Clicking a post opens its thread (conversation tree). The app is multi-window: it uses SwiftUI `WindowGroup` with per-window state, so each window keeps its own tab set and active account (`2026-06-04-yorumimizuku-design.md` §7.1, §8). Tab composition is persisted per window (§7.3).
 
-The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720; the brand area is padded to clear the traffic-light buttons (`2026-06-05-yorumimizuku-cmux-sidebar.md`). Apple-specific window wiring lives on the [[macos]] page.
+The macOS build integrates the window chrome (`.windowStyle(.hiddenTitleBar)`) and ships a two-column default size of 940×720. Sidebar controls respect the system's top safe area, while the sidebar background extends behind the title bar. The standard `NavigationSplitView` sidebar toggle remains available. Feed and notification content extend to the top of the detail pane; home and notifications omit empty custom headers so the upper area remains available for posts. Named filters retain their header (`apps/macos/Views/SidebarView.swift`, `FeedView.swift`, `NotificationsView.swift`). Apple-specific window wiring lives on the [[macos]] page.
 
 **Window size is remembered across launches.** macOS gets this from SwiftUI `WindowGroup` scene restoration automatically (the 940×720 is only the first-run default). Windows has no equivalent built in — WinUI 3 / `AppWindow` exposes no placement persistence, and a width-only `AppWindow.Resize` mixes DPI units and is overwritten by the default size the first `Activate` applies — so it captures the Win32 `WINDOWPLACEMENT` (normal position, size, and maximized state) on window close into `AppSettings` and reapplies it *after* `Activate` on the next launch. Capture and restore both go through `GetWindowPlacement` / `SetWindowPlacement`, so the round-trip is DPI-consistent. Details are on the [[windows]] page.
 

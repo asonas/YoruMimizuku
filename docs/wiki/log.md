@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-10-08 ingest (macOS title-bar safe area)
+
+- sources: `apps/macos/Views/SidebarView.swift`; `apps/macos/Views/FeedView.swift`; `apps/macos/Views/NotificationsView.swift`
+- updated: [[app-shell]] (sidebar controls follow the system's top safe area; feed and notification content use the upper detail area without empty headers)
+- note: Removes the fixed traffic-light inset while preserving the native sidebar toggle and existing row styling.
+
 ## 2026-07-26 ingest (macOS composer IME synchronization)
 
 - sources: `apps/macos/Views/ComposerTextView.swift`; `apps/macosTests/ComposerTextViewTests.swift`

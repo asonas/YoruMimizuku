@@ -1,17 +1,13 @@
 import SwiftUI
 
-/// The slim header bar atop each detail pane (home / notifications / conversation):
-/// an accent glyph, a title, and a trailing slot for contextual controls. Keeps the
-/// three panes visually consistent with one definition.
+/// A named detail-pane header with optional accent glyph and contextual controls.
 struct DetailHeader<Trailing: View>: View {
     @EnvironmentObject private var theme: ThemeStore
     private let title: String?
     private let systemImage: String?
     private let trailing: () -> Trailing
 
-    /// `title`/`systemImage` are optional: the home and notifications panes omit them
-    /// (the selected sidebar tab already names the pane), leaving a slim toolbar that
-    /// holds only its trailing controls. The conversation pane still passes a title.
+    /// Omit the title or glyph when only contextual controls are needed.
     init(_ title: String? = nil, systemImage: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
         self.title = title
         self.systemImage = systemImage

@@ -70,7 +70,7 @@ struct FeedView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if showsHeader {
+            if showsHeader, let title {
                 DetailHeader(title) { EmptyView() }
             }
             timeline
