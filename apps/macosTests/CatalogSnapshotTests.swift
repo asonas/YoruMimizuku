@@ -67,7 +67,16 @@ final class CatalogSnapshotTests: XCTestCase {
                     .frame(width: Self.contentWidth)
                     .fixedSize(horizontal: false, vertical: true))
             host.frame = NSRect(x: 0, y: 0, width: Self.contentWidth, height: host.fittingSize.height)
+            // macOS 27 needs a window and committed layers to capture images and backgrounds.
+            let window = NSWindow(
+                contentRect: host.frame,
+                styleMask: .borderless,
+                backing: .buffered,
+                defer: false)
+            window.contentView = host
             host.layoutSubtreeIfNeeded()
+            window.displayIfNeeded()
+            CATransaction.flush()
 
             guard let image = Self.pinnedScaleImage(of: host) else {
                 XCTFail("Could not render bitmap for variant \(variant.rawValue)")

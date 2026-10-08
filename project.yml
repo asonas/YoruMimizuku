@@ -13,7 +13,7 @@ packages:
     from: 2.7.0
   SnapshotTesting:
     url: https://github.com/pointfreeco/swift-snapshot-testing
-    from: 1.17.0
+    from: 1.19.6
 targets:
   YoruMimizuku:
     type: application

@@ -68,12 +68,14 @@ Both galleries inject a throwaway `UserDefaults(suiteName: "as.ason.YoruMimizuku
 
 ## Snapshot operations
 
-Each app has its own XCTest target that renders every catalog variant (filtered by `CatalogVariant.platforms`) at a fixed 560pt width and compares it against a recorded reference PNG with `swift-snapshot-testing` (pinned in `project.yml` as `from: 1.17.0`; test-target-only dependency, never linked into the shipped app).
+Each app has its own XCTest target that renders every catalog variant (filtered by `CatalogVariant.platforms`) at a fixed 560pt width and compares it against a recorded reference PNG with `swift-snapshot-testing` (`from: 1.19.6` in `project.yml`; test-target-only dependency, never linked into the shipped app). Version 1.19.6 fixes the perceptual comparison crash on macOS 27 ([upstream fix](https://github.com/pointfreeco/swift-snapshot-testing/pull/1120)).
 
 - **macOS**: `YoruMimizukuTests` (`apps/macosTests/CatalogSnapshotTests.swift`), 14 references under `apps/macosTests/__Snapshots__/CatalogSnapshotTests/`. The render scale is **pinned to 2x explicitly**: the view is drawn into an `NSBitmapImageRep` whose pixel size is twice the point size, instead of letting the snapshot library follow `NSScreen`. Without the pin the suite is screen-configuration-dependent — the original references were recorded on a 2x display and every PostRow snapshot failed once the main display ran at 1x (caught during the v1.0.0-dev.14 release gate on 2026-07-03).
 - **iPadOS**: `YoruMimizukuPadTests` (`apps/ipadosTests/CatalogSnapshotTests.swift`), 13 references (no `toast`) under `apps/ipadosTests/__Snapshots__/CatalogSnapshotTests/`. The record environment is **pinned to the iPad Pro 13-inch (M5) / iOS 26.5 simulator** — iOS renders at the device's display scale, so recording (or re-recording) on any other simulator produces different bitmaps and fails the comparison. This pin is documented in the test file's header comment.
 
 Both suites compare with `.image(perceptualPrecision: 0.98)` at width 560, which absorbs GPU/antialiasing noise while still catching real layout shifts (the motivating case was the 2026-07-03 two-image grid overlap).
+
+The macOS reference environment is macOS 27.0.1 / Xcode 27.0. The hosting view is attached to a temporary window and its drawing transaction is flushed before capture so images and backgrounds are present. Thirteen references were refreshed on 2026-10-08 after visual comparison with the previous references; comparison thresholds and the fixed 2x scale remain unchanged.
 
 **Density coverage gap:** both test files call `CatalogRegistry.view(for:width:)` without passing `density`, so every variant renders at the parameter's default, `.comfortable`
 (`apps/{macos,ipados}/Catalog/CatalogRegistry.swift`). `.compact`-density rendering (smaller avatar, tighter spacing) is exercised by the in-app gallery's density picker (manual) but **not** by `CatalogSnapshotTests` — a `.compact`-only regression (e.g. the PostRow avatar's 24pt vs. 42pt touch-target math, `2026-07-24-apple-hig-remediation.md` S2) has no automated coverage and must be checked by hand or reasoned about from the code.
