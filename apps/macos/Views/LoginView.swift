@@ -10,7 +10,6 @@ struct LoginView: View {
     var body: some View {
         VStack(spacing: 18) {
             VStack(spacing: 6) {
-                Text("✦").font(.system(size: 30)).foregroundStyle(theme.star)
                 Text("YoruMimizuku")
                     .font(.appSize(34, weight: .semibold))
                     .foregroundStyle(theme.primaryText)
