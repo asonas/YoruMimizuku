@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-10-08 ingest (signed macOS development builds)
+
+- sources: `mise.toml`
+- updated: [[macos]] (use `mise run build:macos` for certificate-signed interactive development)
+- note: The task requires Apple Development signing and verifies the resulting app signature.
+
 ## 2026-10-08 ingest (macOS title-bar safe area)
 
 - sources: `apps/macos/Views/SidebarView.swift`; `apps/macos/Views/FeedView.swift`; `apps/macos/Views/NotificationsView.swift`

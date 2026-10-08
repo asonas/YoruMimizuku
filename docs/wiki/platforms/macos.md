@@ -1,7 +1,7 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-07-25
+updated: 2026-10-08
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -16,6 +16,7 @@ sources:
   - apps/macos/Views/NewPostCommand.swift
   - apps/macos/Views/MainWindowView.swift
   - apps/macos/YoruMimizukuApp.swift
+  - mise.toml
   - core/Sources/YoruMimizukuKit/WindowTitle.swift
   - core/Sources/YoruMimizukuKit/WorkspaceModel.swift
 ---
@@ -26,13 +27,15 @@ macOS is the first target (SwiftUI / Swift 6). Windows is implemented as a C#/Wi
 
 ## Build
 
+For interactive development, `mise run build:macos` generates the project, builds with an Apple Development certificate, and verifies the app signature. The app is written to `build/development/Build/Products/Debug/YoruMimizuku.app`. A valid development certificate for the configured team is required. Do not disable signing for builds that access the real Keychain: ad-hoc builds can trigger authorization prompts after rebuilding. Changing between development and distribution signing may still require an initial authorization (`mise.toml`, [Apple code-signing requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)).
+
 The project uses **XcodeGen**; `YoruMimizuku.xcodeproj` and `apps/macos/Info.plist` are generated artifacts and are gitignored, so generate them first.
 
 ```bash
 brew install xcodegen          # once
 xcodegen generate              # regenerate after editing project.yml
 cd core && swift test          # fast core tests — run most of the time
-xcodebuild build -scheme YoruMimizuku -project YoruMimizuku.xcodeproj
+mise run build:macos           # Debug build signed with Apple Development
 ```
 
 The package lives at `core/` (an earlier note about an `BlueskyCore/` path in AGENTS.md is obsolete; AGENTS.md now uses `core/`) ([[overview]]).

@@ -22,6 +22,24 @@ APPCAST_DEV = "build/appcast-dev.xml"
 description = "Generate the Xcode project from project.yml"
 run = "xcodegen generate"
 
+[tasks."build:macos"]
+description = "Build the macOS app with an Apple Development signature"
+depends = ["generate"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
+run = """
+set -euo pipefail
+xcodebuild build \
+  -scheme "$SCHEME" \
+  -project "$PROJECT" \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  -derivedDataPath "$BUILD_DIR/development" \
+  CODE_SIGNING_ALLOWED=YES \
+  DEVELOPMENT_TEAM="$TEAM_ID" \
+  CODE_SIGN_IDENTITY='Apple Development'
+codesign --verify --deep --strict "$BUILD_DIR/development/Build/Products/Debug/$APP_NAME.app"
+"""
+
 [tasks.archive]
 description = "Archive the app for release"
 depends = ["generate"]
