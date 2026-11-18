@@ -12,20 +12,18 @@ private let notificationsLog = Logger(subsystem: "as.ason.YoruMimizuku", categor
 /// tokens along the way.
 struct LiveNotificationsLoader: NotificationsLoading {
     let accountManager: AccountManager
+    let accountDID: String
     let config: OAuthClientConfig
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku) {
+    init(accountManager: AccountManager, accountDID: String, config: OAuthClientConfig = .yoruMimizuku) {
         self.accountManager = accountManager
+        self.accountDID = accountDID
         self.config = config
     }
 
     func loadLatest() async throws -> [NotificationGroup] {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
-        let service = NotificationsService(
-            sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
-        )
-
-        let result = try await service.listNotifications(
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
+        let result = try await context.notifications.listNotifications(
             pds: context.account.pds,
             issuer: context.issuer,
             accessToken: context.account.accessToken,
@@ -61,7 +59,7 @@ struct LiveNotificationsLoader: NotificationsLoading {
         for uri in uris where seen.insert(uri).inserted { unique.append(uri) }
         guard !unique.isEmpty else { return [:] }
 
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = PostsService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
@@ -81,6 +79,36 @@ struct LiveNotificationsLoader: NotificationsLoading {
             for post in result.response.posts { posts[post.uri] = post }
         }
         return posts
+    }
+}
+
+struct LiveNotificationReadService: NotificationReadService {
+    let accountManager: AccountManager
+
+    func unreadCount(for did: String) async throws -> Int {
+        let context = try LiveServiceContext(accountManager: accountManager, config: .yoruMimizuku, accountDID: did)
+        let account = context.account
+        let result = try await context.notifications.getUnreadCount(
+            pds: account.pds, issuer: context.issuer, accessToken: account.accessToken, refreshToken: account.refreshToken
+        )
+        try context.persist(result.refreshed)
+        return result.count
+    }
+
+    func updateSeen(for did: String, through date: Date) async throws {
+        let context = try LiveServiceContext(accountManager: accountManager, config: .yoruMimizuku, accountDID: did)
+        let account = context.account
+        let refreshed = try await context.notifications.updateSeen(
+            pds: account.pds, issuer: context.issuer, accessToken: account.accessToken,
+            refreshToken: account.refreshToken, through: date
+        )
+        try context.persist(refreshed)
+    }
+}
+
+private extension LiveServiceContext {
+    var notifications: NotificationsService {
+        NotificationsService(sender: sender, metadataResolver: metadataResolver, config: config, refreshGate: refreshGate)
     }
 }
 

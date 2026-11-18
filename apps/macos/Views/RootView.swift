@@ -34,14 +34,13 @@ struct RootView: View {
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
+    @EnvironmentObject private var unread: NotificationUnreadStore
 
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
     private static let log = Logger(subsystem: PerfSignpost.subsystem, category: "Session")
 
-    init() {
-        let storage = KeychainStorage(service: "as.ason.YoruMimizuku")
-        let manager = AccountManager(store: AccountStore(storage: storage))
+    init(accountManager manager: AccountManager) {
         self.accountManager = manager
         self.profileLoader = LiveProfileLoader(accountManager: manager)
 
@@ -195,6 +194,7 @@ struct RootView: View {
         reauth = nil
         isReauthSheetShown = false
         currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
+        unread.forget(did)
     }
 
     /// The stored accounts for the switcher menu. Empty if the read fails.
@@ -203,7 +203,8 @@ struct RootView: View {
     }
 
     private var currentHandle: String {
-        let account = (try? accountManager.current()) ?? nil
+        guard let currentDID else { return "" }
+        let account = try? accountManager.account(did: currentDID)
         return account?.handle ?? account?.did ?? ""
     }
 
@@ -250,7 +251,7 @@ private struct AuthenticatedRootView: View {
             )
         )
         _notificationsModel = StateObject(
-            wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: accountManager))
+            wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: accountManager, accountDID: did))
         )
         let filterStore = SavedFilterStore(port: FilterFileStore(did: did))
         _workspace = StateObject(

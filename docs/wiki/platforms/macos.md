@@ -1,7 +1,7 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-10-08
+updated: 2026-11-18
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -49,7 +49,7 @@ OS touchpoints from the core's ports are implemented in `core/Sources/PlatformAp
 - **Crypto (DPoP)**: now `swift-crypto` (`import Crypto`), a single shared implementation across macOS and Windows (`2026-06-05-windows-multiplatform-structure.md`). The concrete `CryptoKitDPoPProvider` lives in `BlueskyCore/Adapters`, not in `PlatformApple`.
 - **HTTP**: `URLSession` with a `#if canImport(FoundationNetworking)` guard, shared with Windows (`URLSessionHTTPClient` in `BlueskyCore/Adapters`).
 - **Browser authorization**: `ASWebAuthenticationSession` (wired in `apps/macos/Auth`), opening the OAuth authorize endpoint and catching the `as.ason:/callback` redirect.
-- **OS notifications**: `UNUserNotificationCenter` for banners; the Dock badge shows the unread count. A background polling actor periodically calls `getUnreadCount` / `listNotifications`; permission is requested on first use. The cross-platform behavior is in [[notifications]].
+- **Dock badge**. The app polls Bluesky for each account with an open window and displays the combined unread count on its Dock tile. Users can toggle it in notification settings. Notification Center banners remain planned. See [[notifications]].
 
 ## Persistence
 

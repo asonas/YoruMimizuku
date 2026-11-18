@@ -402,6 +402,10 @@ private struct NotificationSettingsContentView: View {
                         .font(.app(.caption2))
                         .foregroundStyle(theme.secondaryText)
                 }
+
+                Toggle("Dock に通知の未読件数を表示", isOn: $notificationSettings.showsDockBadge)
+                    .font(.app(.callout))
+                    .foregroundStyle(theme.primaryText)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -9,6 +9,10 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-18 ingest (macOS Dock badge)
+
+- Updated [[notifications]] and [[macos]] with account-scoped server counts, visible-page read boundaries, and the independent Dock preference from `0001-notification-read-state.md`.
+
 ## 2026-10-08 ingest (signed macOS development builds)
 
 - sources: `mise.toml`

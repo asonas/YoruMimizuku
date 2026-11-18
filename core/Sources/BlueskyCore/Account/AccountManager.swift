@@ -55,6 +55,11 @@ public struct AccountManager: Sendable {
         return try store.account(did: did)
     }
 
+    /// Return the credentials for the account being displayed in a specific window.
+    public func account(did: String) throws -> PersistedAccount? {
+        try store.account(did: did)
+    }
+
     /// All known account DIDs, in insertion order.
     public func allDIDs() throws -> [String] {
         try store.index().dids

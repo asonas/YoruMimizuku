@@ -12,6 +12,9 @@ struct NotificationsView: View {
     let now: Date
     var onOpenAuthor: (NotificationGroup.Actor) -> Void = { _ in }
     var onOpenSubject: (NotificationGroup) -> Void = { _ in }
+    var onDisplayUnread: (Date) -> Void = { _ in }
+    @Environment(\.controlActiveState) private var windowState
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         content
@@ -40,6 +43,14 @@ struct NotificationsView: View {
                 Divider().overlay(theme.divider)
             }
         }
+        .onChange(of: displayedBoundary(items), initial: true) { _, date in
+            if let date { onDisplayUnread(date) }
+        }
+    }
+
+    private func displayedBoundary(_ items: [NotificationGroup]) -> Date? {
+        guard scenePhase == .active, windowState == .key, items.contains(where: { !$0.isRead }) else { return nil }
+        return items.map(\.latestCreatedAt).max()
     }
 
     private var loadingState: some View {

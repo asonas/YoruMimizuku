@@ -1,7 +1,14 @@
 import SwiftUI
+import Combine
+import BlueskyCore
+import PlatformApple
+import YoruMimizukuKit
 
 @main
 struct YoruMimizukuApp: App {
+    private let accountManager: AccountManager
+    private let unread: NotificationUnreadStore
+    private let dockBadgeSubscription: AnyCancellable
     /// Quit-event handling for Sparkle's "Install and Restart"; see AppDelegate.
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var updateController = UpdateController()
@@ -13,15 +20,26 @@ struct YoruMimizukuApp: App {
     @StateObject private var themeStore = ThemeStore()
     @StateObject private var displaySettings = DisplaySettingsStore()
     @StateObject private var fontSettings = FontSettingsStore()
-    @StateObject private var notificationSettings = NotificationSettingsStore()
+    @StateObject private var notificationSettings: NotificationSettingsStore
 
     init() {
+        let manager = AccountManager(store: AccountStore(storage: KeychainStorage(service: "as.ason.YoruMimizuku")))
+        let settings = NotificationSettingsStore()
+        let unread = NotificationUnreadStore(service: LiveNotificationReadService(accountManager: manager))
+        self.accountManager = manager
+        self.unread = unread
+        _notificationSettings = StateObject(wrappedValue: settings)
+        dockBadgeSubscription = unread.$counts.combineLatest(settings.$showsDockBadge)
+            .map { counts, enabled in enabled ? counts.values.reduce(0, +) : 0 }
+            .removeDuplicates()
+            .sink { count in NSApplication.shared.dockTile.badgeLabel = count > 0 ? String(count) : nil }
         MetricsSubscriber.shared.start()
     }
 
     var body: some Scene {
         WindowGroup(id: "main") {
-            RootView()
+            RootView(accountManager: accountManager)
+                .environmentObject(unread)
                 .environmentObject(updateController)
                 .environmentObject(themeStore)
                 .environmentObject(displaySettings)

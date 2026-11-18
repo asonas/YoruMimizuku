@@ -16,6 +16,8 @@ struct MainWindowView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
+    @EnvironmentObject private var unread: NotificationUnreadStore
+    @State private var windowID = UUID()
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
@@ -78,6 +80,14 @@ struct MainWindowView: View {
         .background { tabShortcuts }
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
         .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
+        .onAppear {
+            unread.setPollingInterval(pollInterval)
+            unread.open(accountDID, window: windowID)
+        }
+        .onDisappear {
+            unread.close(accountDID, window: windowID)
+            notifications.stopPolling()
+        }
         .onReceive(clock) { now = $0 }
         .task {
             model.startPolling(every: pollInterval)
@@ -95,7 +105,10 @@ struct MainWindowView: View {
         .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
         // Changing the polling interval restarts every poller so the new cadence
         // takes effect immediately rather than only on the next launch.
-        .onChange(of: notificationSettings.pollIntervalSeconds) { _, _ in restartPolling() }
+        .onChange(of: notificationSettings.pollIntervalSeconds) { _, _ in
+            unread.setPollingInterval(pollInterval)
+            restartPolling()
+        }
         .overlay {
             if let lightbox {
                 ImageLightboxView(gallery: lightbox) { self.lightbox = nil }
@@ -121,7 +134,7 @@ struct MainWindowView: View {
                 onLogout: onLogout,
                 showsBadges: notificationSettings.showsUnreadBadges,
                 homeUnread: model.unreadCount,
-                notificationsUnread: notifications.unreadCount
+                notificationsUnread: unread.counts[accountDID] ?? 0
             )
             .overlay(alignment: .trailing) {
                 Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
@@ -176,6 +189,9 @@ struct MainWindowView: View {
                 },
                 onOpenSubject: { group in
                     openNotificationSubject(group)
+                },
+                onDisplayUnread: { date in
+                    Task { await unread.markDisplayed(accountDID, through: date) }
                 }
             )
         case let .filter(id):
@@ -320,7 +336,6 @@ struct MainWindowView: View {
     /// the others inactive. Conversation/author tabs carry no badge and are ignored.
     private func syncActiveTab() {
         model.setActive(workspace.selection == .home)
-        notifications.setActive(workspace.selection == .notifications)
         for tab in workspace.filters {
             tab.model.setActive(workspace.selection == .filter(tab.id))
         }

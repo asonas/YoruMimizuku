@@ -5,8 +5,7 @@ import SwiftUI
 /// the sidebar shows unread badges at all. Shared via `environmentObject` so the
 /// settings screen and the window's polling/badge wiring read the same values.
 ///
-/// OS notification banners and the Dock badge are out of scope here (planned for
-/// a later release); this store only governs the app's own polling and badges.
+/// The Dock can show its unread count independently of the sidebar.
 @MainActor
 final class NotificationSettingsStore: ObservableObject {
     /// The polling interval in seconds. Restricted to `intervalChoices` so the
@@ -22,6 +21,10 @@ final class NotificationSettingsStore: ObservableObject {
         didSet { defaults.set(showsUnreadBadges, forKey: Self.badgesKey) }
     }
 
+    @Published var showsDockBadge: Bool {
+        didSet { defaults.set(showsDockBadge, forKey: Self.dockKey) }
+    }
+
     /// The selectable polling intervals, in seconds.
     static let intervalChoices = [15, 30, 60, 300]
     static let defaultIntervalSeconds = 30
@@ -29,6 +32,7 @@ final class NotificationSettingsStore: ObservableObject {
     private let defaults: UserDefaults
     private static let intervalKey = "notifications.pollIntervalSeconds"
     private static let badgesKey = "notifications.showsUnreadBadges"
+    private static let dockKey = "notifications.showsDockBadge"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -37,10 +41,11 @@ final class NotificationSettingsStore: ObservableObject {
         self.pollIntervalSeconds = storedInterval.map(Self.snapToChoice) ?? Self.defaultIntervalSeconds
 
         // Default to showing badges when nothing is stored.
-        if defaults.object(forKey: Self.badgesKey) == nil {
-            self.showsUnreadBadges = true
-        } else {
-            self.showsUnreadBadges = defaults.bool(forKey: Self.badgesKey)
+        let sidebarEnabled = defaults.object(forKey: Self.badgesKey) as? Bool ?? true
+        self.showsUnreadBadges = sidebarEnabled
+        self.showsDockBadge = defaults.object(forKey: Self.dockKey) as? Bool ?? sidebarEnabled
+        if defaults.object(forKey: Self.dockKey) == nil {
+            defaults.set(sidebarEnabled, forKey: Self.dockKey)
         }
     }
 

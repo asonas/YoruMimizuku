@@ -52,6 +52,24 @@ final class NotificationsServiceTests: XCTestCase {
         XCTAssertNotNil(sent.headers["DPoP"])
     }
 
+    func testServerUnreadCountAndReadThroughDisplayedTimestamp() async throws {
+        let http = SequencedHTTPClient([
+            HTTPResponse(statusCode: 200, body: Data(#"{"count":27}"#.utf8)),
+            HTTPResponse(statusCode: 204, body: Data())
+        ])
+        let service = makeService(http: http)
+        let result = try await service.getUnreadCount(pds: pds, issuer: issuer, accessToken: "atk", refreshToken: nil)
+        XCTAssertEqual(result.count, 27)
+        let boundary = Date(timeIntervalSince1970: 1.25)
+        _ = try await service.updateSeen(pds: pds, issuer: issuer, accessToken: "atk", refreshToken: nil, through: boundary)
+        let requests = http.sentRequests
+        XCTAssertEqual(requests.map(\.method), [.get, .post])
+        XCTAssertEqual(requests.map(\.url.lastPathComponent), ["app.bsky.notification.getUnreadCount", "app.bsky.notification.updateSeen"])
+        XCTAssertEqual(requests.last?.headers["Content-Type"], "application/json")
+        let body = try XCTUnwrap(requests.last?.body)
+        XCTAssertEqual(try JSONDecoder().decode([String: String].self, from: body), ["seenAt": "1970-01-01T00:00:01.250Z"])
+    }
+
     func testListNotificationsIncludesCursorWhenProvided() async throws {
         let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, body: Self.body))
         let service = makeService(http: http)

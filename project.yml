@@ -127,6 +127,7 @@ targets:
       - apps/macos/Views/SessionReauthBanner.swift
       - apps/macos/Theme.swift
       - apps/macos/DisplaySettings.swift
+      - apps/macos/NotificationSettings.swift
       - apps/macos/Typography.swift
     dependencies:
       - package: BlueskyCore

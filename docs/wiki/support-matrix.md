@@ -1,7 +1,7 @@
 ---
 title: Platform Support Matrix
 type: matrix
-updated: 2026-10-08
+updated: 2026-11-18
 sources: []
 ---
 
@@ -117,7 +117,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Video attachment (one, alt text, exclusive with images)** ([[compose-post]]): macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]]).
 - **Draft discard confirmation** ([[compose-post]]): A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail.
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
-- **OS banner + unread badge** ([[notifications]]): macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]]).
+- **OS banner + unread badge** ([[notifications]]): macOS supports the numeric Dock badge. Banners are pending. iPadOS has an in-app badge. Windows displays a toast and flashes the taskbar ([[macos]], [[ipados]], [[windows]]).
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]]).
 - **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS and iPadOS blur media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain (the shared MediaWarning + a Gaussian blur in PostRowView). Windows gates the same media but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look ([[windows]], [[ipados]]).

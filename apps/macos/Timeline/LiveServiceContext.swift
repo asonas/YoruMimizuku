@@ -19,8 +19,14 @@ struct LiveServiceContext {
 
     enum ContextError: Error { case noCurrentAccount, invalidIssuer }
 
-    init(accountManager: AccountManager, config: OAuthClientConfig) throws {
-        guard let account = try accountManager.current() else {
+    init(accountManager: AccountManager, config: OAuthClientConfig, accountDID: String? = nil) throws {
+        let selected: PersistedAccount?
+        if let accountDID {
+            selected = try accountManager.account(did: accountDID)
+        } else {
+            selected = try accountManager.current()
+        }
+        guard let account = selected else {
             throw ContextError.noCurrentAccount
         }
         guard let issuer = URL(string: account.issuer) else {

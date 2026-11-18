@@ -35,24 +35,54 @@ public struct NotificationsService: Sendable {
         cursor: String? = nil
     ) async throws -> (response: ListNotificationsResponse, refreshed: TokenResponse?) {
         let url = try Self.notificationsURL(pds: pds, limit: limit, cursor: cursor)
-        let response = try await fetch(url: url, accessToken: accessToken)
-
-        if response.statusCode == 401,
-           !DPoPRequestSender.isNonceChallenge(response),
-           let refreshToken {
-            let tokens = try await refresh(issuer: issuer, refreshToken: refreshToken)
-            let retried = try await fetch(url: url, accessToken: tokens.accessToken)
-            return (try Self.decode(retried), tokens)
-        }
-
-        return (try Self.decode(response), nil)
+        let (response, refreshed) = try await request(
+            url: url, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken
+        )
+        return (try Self.decode(response), refreshed)
     }
 
-    private func fetch(url: URL, accessToken: String) async throws -> HTTPResponse {
-        try await sender.send(
-            method: .get, url: url, accessToken: accessToken,
-            headers: ["Accept": "application/json"]
+    public func getUnreadCount(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?
+    ) async throws -> (count: Int, refreshed: TokenResponse?) {
+        struct Output: Decodable { let count: Int }
+        let (response, refreshed) = try await request(
+            url: pds.appendingPathComponent("xrpc/app.bsky.notification.getUnreadCount"),
+            issuer: issuer, accessToken: accessToken, refreshToken: refreshToken
         )
+        try Self.checkStatus(response)
+        let output = try JSONDecoder().decode(Output.self, from: response.body)
+        return (output.count, refreshed)
+    }
+
+    public func updateSeen(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?, through date: Date
+    ) async throws -> TokenResponse? {
+        let seenAt = date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+        let (response, refreshed) = try await request(
+            url: pds.appendingPathComponent("xrpc/app.bsky.notification.updateSeen"),
+            issuer: issuer, accessToken: accessToken, refreshToken: refreshToken,
+            method: .post, body: try JSONEncoder().encode(["seenAt": seenAt])
+        )
+        try Self.checkStatus(response)
+        return refreshed
+    }
+
+    private func request(
+        url: URL, issuer: URL, accessToken: String, refreshToken: String?,
+        method: HTTPMethod = .get, body: Data? = nil
+    ) async throws -> (HTTPResponse, TokenResponse?) {
+        func send(_ token: String) async throws -> HTTPResponse {
+            var headers = ["Accept": "application/json"]
+            if body != nil { headers["Content-Type"] = "application/json" }
+            return try await sender.send(method: method, url: url, accessToken: token, headers: headers, body: body)
+        }
+
+        let response = try await send(accessToken)
+        guard response.statusCode == 401, !DPoPRequestSender.isNonceChallenge(response), let refreshToken else {
+            return (response, nil)
+        }
+        let tokens = try await refresh(issuer: issuer, refreshToken: refreshToken)
+        return (try await send(tokens.accessToken), tokens)
     }
 
     private func refresh(issuer: URL, refreshToken: String) async throws -> TokenResponse {
@@ -87,11 +117,15 @@ public struct NotificationsService: Sendable {
         return url
     }
 
-    static func decode(_ response: HTTPResponse) throws -> ListNotificationsResponse {
-        guard response.statusCode == 200 else {
+    private static func checkStatus(_ response: HTTPResponse) throws {
+        guard (200..<300).contains(response.statusCode) else {
             let errorBody = try? JSONDecoder().decode(XRPCErrorResponse.self, from: response.body)
             throw XRPCError.requestFailed(status: response.statusCode, body: errorBody)
         }
+    }
+
+    static func decode(_ response: HTTPResponse) throws -> ListNotificationsResponse {
+        try checkStatus(response)
         do {
             return try JSONDecoder().decode(ListNotificationsResponse.self, from: response.body)
         } catch {

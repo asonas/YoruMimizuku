@@ -1,7 +1,7 @@
 ---
 title: Notifications
 type: behavior
-updated: 2026-07-25
+updated: 2026-11-18
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - core/Sources/BlueskyCore/XRPC/NotificationsService.swift
@@ -9,6 +9,8 @@ sources:
   - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
   - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
   - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
+  - docs/adr/0001-notification-read-state.md
+  - core/Sources/YoruMimizukuKit/NotificationUnreadStore.swift
   - apps/macos/NotificationSettings.swift
   - apps/macos/Views/SettingsView.swift
   - apps/macos/Views/MainWindowView.swift
@@ -28,7 +30,7 @@ features:
     windows: differs
     ios: limited
     android: planned
-    note: "macOS and iPadOS have in-app unread badges only — the designed UNUserNotificationCenter banner + Dock badge is not implemented on macOS and is deferred past v1.0.0. Windows is the exception: it now shows an OS toast (AppNotificationManager) plus a taskbar attention flash (FlashWindowEx) for new activity, though a persistent numeric taskbar badge still needs packaged (MSIX) identity ([[macos]], [[windows]], [[ipados]])."
+    note: "macOS supports the numeric Dock badge. Banners are pending. iPadOS has an in-app badge. Windows displays a toast and flashes the taskbar ([[macos]], [[ipados]], [[windows]])."
   - name: In-app notification settings (interval / badges)
     macos: full
     windows: full
@@ -47,20 +49,20 @@ The Notifications tab fetches `listNotifications` and groups items by kind (like
 
 The `listNotifications` request always carries an explicit `priority=false`. When the parameter is omitted, the AppView falls back to the account-level "priority notifications" preference, which silently drops notifications (such as replies) from accounts the viewer does not follow. The app has no priority-only mode of its own, so it always requests the full stream (`NotificationsService.swift` `notificationsURL`).
 
-## OS banner + Dock badge — designed, not yet implemented
+## Dock badge on macOS
 
-The v1 design (§9.2) calls for a background polling actor that periodically calls `getUnreadCount` / `listNotifications`, surfaces anything new since the last seen marker as an `UNUserNotificationCenter` banner, and sets the Dock badge to the unread count, with first-use permission request and a configurable interval (default 30–60s) with backoff. `UNUserNotificationCenter` is one of the six OS-touchpoint ports (see [[architecture]]).
+The Dock shows the sum of Bluesky's unread counts across accounts with open windows. Two windows for the same account share one count and poller. Closing the last window for an account removes its contribution. A positive total appears on the Dock icon when the Dock preference is enabled. Zero clears the badge.
 
-**None of this exists on macOS yet**: the app contains no `UNUserNotificationCenter` or Dock-badge code, and the OS-notification port itself is undefined in core. Today the only unread surfacing on every platform is the in-app sidebar badge described below. By the 2026-06-11 scope decision the OS path is deferred past v1.0.0 into a 1.x release; v1.0.0 ships in-app notification settings (polling interval, badges) only (design spec §14 addendum, `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`).
+The notifications sidebar uses the same server count for its account. When the key window displays the notification list in the active app, it sends `updateSeen` through the newest notification timestamp in that page. A failed write retains that boundary for retry. Each successful `getUnreadCount` reconciles the display with other clients. A failed fetch retains the last known count, and an account with no successful fetch contributes nothing. See `0001-notification-read-state.md`. Notification Center banners remain planned.
 
 ## Notification settings (macOS)
 
-macOS exposes the in-app notification behavior in a **「通知」** tab in Settings (the fifth tab alongside appearance / font / display / updates), reachable with ⌘, (see [[app-shell]]). It governs two things, persisted in `NotificationSettingsStore` (`@MainActor ObservableObject`, backed by `UserDefaults`):
+macOS exposes the in-app notification behavior in a **「通知」** tab in Settings (the fifth tab alongside appearance / font / display / updates), reachable with ⌘, (see [[app-shell]]). Its preferences are persisted in `NotificationSettingsStore` (`@MainActor ObservableObject`, backed by `UserDefaults`):
 
 - **Polling interval** — `pollIntervalSeconds`, chosen from a fixed set (`15 / 30 / 60 / 300`, default 30; a stored value off the set is snapped to the nearest choice on load). Exposed as a `Duration` (`pollInterval`). `MainWindowView` starts every poller — the home timeline, the notifications source, and each filter tab — at this interval, and re-applies it the moment it changes by restarting all pollers, so a setting change takes effect without a relaunch (key `notifications.pollIntervalSeconds`).
 - **Badge visibility** — `showsUnreadBadges` (default on). When off, the sidebar suppresses every unread/new badge while polling continues unchanged, so counts are still tracked but never shown (key `notifications.showsUnreadBadges`).
 
-OS notification banners and the Dock badge are deliberately out of this store's scope; they belong to the deferred OS path above (`NotificationSettings.swift`, `apps/macos/Views/SettingsView.swift`, `apps/macos/Views/MainWindowView.swift`, `2026-06-11-yorumimizuku-v1.0.0-roadmap.md` B-4).
+- **Dock visibility** — `showsDockBadge` inherits the sidebar badge preference once and is stored separately under `notifications.showsDockBadge`. Changes apply immediately.
 
 ## Sidebar / navigation unread badge
 
