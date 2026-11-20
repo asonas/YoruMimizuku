@@ -13,8 +13,12 @@ SIGN_IDENTITY = "Developer ID Application: Yuya Fujiwara (QYP65434UW)"
 # Keychain profile name used by notarytool. Create it once with `mise run setup-notary`.
 NOTARY_PROFILE = "YoruMimizukuNotary"
 GITHUB_REPO = "asonas/YoruMimizuku"
-GITHUB_REMOTE = "github"
-SPARKLE_BIN = "/opt/homebrew/Caskroom/sparkle/2.9.6/bin"
+GITHUB_REMOTE = "origin"
+# Sparkle's tools from the package the archive resolves, so generate_appcast
+# always matches the Sparkle linked into the app. Exists after `archive`.
+SPARKLE_BIN = "build/SourcePackages/artifacts/sparkle/Sparkle/bin"
+# xcodebuild and notarytool need full Xcode, not the Command Line Tools.
+DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
 APPCAST_STABLE = "build/appcast.xml"
 APPCAST_DEV = "build/appcast-dev.xml"
 
@@ -25,7 +29,6 @@ run = "xcodegen generate"
 [tasks."build:macos"]
 description = "Build the macOS app with an Apple Development signature"
 depends = ["generate"]
-env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 set -euo pipefail
 xcodebuild build \
@@ -49,6 +52,7 @@ xcodebuild archive \
   -project "$PROJECT" \
   -configuration "$CONFIGURATION" \
   -destination 'generic/platform=macOS' \
+  -clonedSourcePackagesDirPath "$BUILD_DIR/SourcePackages" \
   -archivePath "$BUILD_DIR/$APP_NAME.xcarchive"
 """
 
