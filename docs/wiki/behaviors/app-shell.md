@@ -3,6 +3,12 @@ title: App Shell (Window, Tabs, Sidebar)
 type: behavior
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md
+  - apps/macos/Views/WorkspaceCommands.swift
+  - apps/macos/Views/ListMembershipMenu.swift
+  - apps/macos/Views/DraggedAuthor.swift
+  - apps/macos/Timeline/LiveListMembershipEditor.swift
+  - core/Sources/YoruMimizukuKit/ListMembershipModel.swift
   - docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md
   - core/Sources/YoruMimizukuKit/SavedFeedsModel.swift
   - apps/macos/Timeline/LiveSavedFeedsLoaders.swift
@@ -46,6 +52,24 @@ features:
     ios: none
     android: planned
     note: "macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet."
+  - name: Menu bar commands (⌘1…⌘9, 投稿 menu)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]])."
+  - name: Toolbar search (transient results)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]])."
+  - name: Add a person to a curated list (menu / drag)
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account."
   - name: Multiple windows
     macos: full
     windows: full
@@ -106,6 +130,14 @@ On macOS a conversation or author page opens in the window's third column instea
 ## Post row action paths
 
 Every post row's right-click (macOS) or long-press (iPadOS) context menu offers the same three paths regardless of platform: 「リンクをコピー」(copy the public permalink), 「ブラウザで開く」(open that permalink in the default browser), and — only on the viewer's own posts — 「削除」(destructive), which still goes through the existing `confirmationDialog` unchanged (`apps/macos/Views/FeedView.swift`, `apps/ipados/Views/TimelineListView.swift`). On iPadOS the action bar already carries a visible `safari` button wired to the same `onOpenPermalink` closure, so the context-menu entry is a second, more discoverable route to an action that already existed; on macOS there is no visible action-bar Safari button, so the context menu is the only browser-open path for now — adding a visible macOS action-bar button was deliberately left open for later reconsideration (`apps/macos/Views/PostRowView.swift`, `apps/ipados/Views/PostRowView.swift`, `2026-07-24-apple-hig-remediation.md` S6).
+
+## Commands, search and lists (macOS)
+
+The View menu's ⌘1…⌘9 select the first nine sidebar rows of the key window, in the order ⌘⇧J/K cycles (`WorkspaceModel.shortcutTabs`). A 投稿 menu acts on the post focused in the timeline column: reply ⌘R, repost ⇧⌘R, quote ⌥⌘R, like ⌘L, copy link ⇧⌘C, open in browser ⇧⌘O; it is disabled until a post is focused, and the plain keys j/k/f/o/n stay with the timeline column (`apps/macos/Views/WorkspaceCommands.swift`).
+
+The toolbar has a search field; the compose button sits beside the sidebar toggle because the timeline column runs to the top edge. A submitted search shows its results in the timeline column as `WorkspaceTab.search` without saving anything; the header's "フィルターとして保存" keeps it as a filter, and choosing any sidebar row discards it ([[filters]]).
+
+A post's right-click menu offers "リストに追加": the window account's curated lists (`app.bsky.graph.getListsWithMembership`, `purposes=curatelist`), checked where the author is on them, ending with a note that lists are public. Because a menu is built synchronously, membership comes from a cache that is filled once focus rests on a post; every change re-reads the server before writing, since the PDS accepts duplicate list items. Dragging a post's avatar onto one of the window account's own pinned curated lists adds the author to it; dropping it on a filter adds a `from:` condition, except on an AND filter that already names a person (`docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md`, `core/Sources/YoruMimizukuKit/ListMembershipModel.swift`, `apps/macos/Views/DraggedAuthor.swift`).
 
 ## Sidebar / tab UI
 

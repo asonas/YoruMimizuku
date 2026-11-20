@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS commands, search and lists)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/ListMembershipModel.swift
+- updated: [[app-shell]], [[filters]]
+- note: macOS gains ⌘1…⌘9 and a 投稿 menu, a toolbar search with transient results, and adding people to curated lists from the post menu or by dragging an avatar onto a pinned list or a filter.
+
 ## 2026-11-20 ingest (macOS pinned feeds and lists)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md, core/Sources/YoruMimizukuKit/SavedFeedsModel.swift, apps/macos/Timeline/LiveSavedFeedsLoaders.swift

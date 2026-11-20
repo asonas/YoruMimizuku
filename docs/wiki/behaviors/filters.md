@@ -1,8 +1,9 @@
 ---
 title: Saved-Search Filters
 type: behavior
-updated: 2026-06-08
+updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md
   - docs/superpowers/specs/2026-06-05-yorumimizuku-filter-tabs-design.md
   - docs/superpowers/specs/2026-06-05-yorumimizuku-structured-filters-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
@@ -54,6 +55,10 @@ On [[ipados]], saved-search tabs use the same `SavedFilterStore`,
 single keyword term from the sidebar search field. The persisted shape is still
 the structured `SavedFilter`, so adding the full editor later does not require a
 data migration (`apps/ipados/Views/RootView.swift`).
+
+## Adding from the macOS window
+
+On macOS a filter can also start as a toolbar search ("フィルターとして保存" in the search results header) and gain people by drag and drop: dropping a post's avatar on a filter row adds a `from:` condition. An AND filter that already has a `from:` condition refuses a second person, because both could never match, and says so in a toast (`WorkspaceModel.addAuthor(handle:toFilter:)`, [[app-shell]]).
 
 ## Known limitations
 

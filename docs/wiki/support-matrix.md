@@ -25,6 +25,9 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
 | Pinned feeds and lists in the sidebar | ○ | × | × | − |
+| Menu bar commands (⌘1…⌘9, 投稿 menu) | ○ | × | × | − |
+| Toolbar search (transient results) | ○ | × | × | − |
+| Add a person to a curated list (menu / drag) | ○ | × | × | − |
 | Multiple windows | ○ | ○ | △ | − |
 | Window size persistence | ○ | ○ | × | − |
 | Display density A / B | ○ | ○ | × | − |
@@ -111,6 +114,9 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Pinned feeds and lists in the sidebar** ([[app-shell]]): macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet.
+- **Menu bar commands (⌘1…⌘9, 投稿 menu)** ([[app-shell]]): macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]).
+- **Toolbar search (transient results)** ([[app-shell]]): macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]]).
+- **Add a person to a curated list (menu / drag)** ([[app-shell]]): macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account.
 - **Multiple windows** ([[app-shell]]): macOS opens additional windows of the same `WindowGroup(id: \"main\")` via ⇧⌘N (`apps/macos/Views/NewPostCommand.swift`), matching Windows' Ctrl+Shift+N over the same session (only the primary owns bridge init / updater / notification polling); each macOS window shows a meaningful title (selected tab + `@handle`, via `WindowTitle.compose` / `WorkspaceModel.selectionTitle`) in Mission Control, the Window menu, and the Dock even under `.hiddenTitleBar`. Settings (theme/display-density/font/notification) now live-sync across every open window and the `Settings` scene: the four stores are app-level `@StateObject`s owned by `YoruMimizukuApp` and shared by reference rather than independent per-window instances reading `UserDefaults` at their own init, resolving the cross-window settings staleness previously noted here (`2026-07-24-apple-hig-remediation.md` S7, `apps/macos/YoruMimizukuApp.swift`). iPadOS now permits real OS-level multi-scening (Split View / Slide Over / Stage Manager / App Exposé) since `UIRequiresFullScreen` was dropped, mapping the per-window model to a per-scene `WorkspaceModel` — but two scenes signed into the same account still race on the shared `UserDefaults`-backed conversation-tab and filter persistence (last-writer-wins, no merge) ([[ipados]], [[windows]]).
 - **Window size persistence** ([[app-shell]]): macOS restores the window frame automatically via SwiftUI WindowGroup scene restoration; Windows persists the Win32 WINDOWPLACEMENT (position, size, maximized state) to AppSettings and reapplies it after Activate ([[windows]]). iPad scene sizing is OS-managed, so nothing is persisted.
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
