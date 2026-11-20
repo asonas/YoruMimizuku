@@ -50,6 +50,8 @@ struct WorkspaceCommands: Commands {
                 Divider()
                 Button("リンクをコピー") { post?.copyLink() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
+                Button("レコードを表示") { post?.openRecord() }
+                    .keyboardShortcut("i", modifiers: [.command, .option])
             }
             .disabled(post == nil)
             if let post, let lists = post.listMembership, let authorDID = post.authorDID {
@@ -78,6 +80,7 @@ struct PostActions {
     let like: @MainActor () -> Void
     let copyLink: @MainActor () -> Void
     let mute: @MainActor () -> Void
+    let openRecord: @MainActor () -> Void
     let openInBrowser: @MainActor () -> Void
 }
 

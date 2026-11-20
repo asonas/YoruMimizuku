@@ -46,6 +46,8 @@ struct MainWindowView: View {
     var makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
     /// Mutes an account (by DID) for the window's account.
     var muteAuthor: @MainActor (String) async throws -> Void
+    /// Reads a post's record as stored, for the detail pane's レコード tab.
+    var loadRecord: @MainActor (String) async throws -> RecordResponse
 
     @State private var lightbox: ImageGallery?
     /// The composer sheet's view model; non-nil while the sheet is open.
@@ -197,6 +199,9 @@ struct MainWindowView: View {
                 onReply: { post, feed in openReplyComposer(post, refreshing: feed) },
                 onQuote: { post, feed in openQuoteComposer(post, refreshing: feed) },
                 onMute: { mute($0) },
+                onComposeReply: { post, text, thread in composeReply(to: post, text: text, reloading: thread) },
+                sendReply: { post, text in await sendReply(to: post, text: text) },
+                loadRecord: { try await loadRecord($0) },
                 currentDID: accountDID
             )
             .navigationSplitViewColumnWidth(min: 320, ideal: 480)
@@ -254,7 +259,8 @@ struct MainWindowView: View {
                 onOpenAuthor: { openAuthor(for: $0) },
                 onOpenQuote: { openQuotedPost($0) },
                 currentDID: accountDID,
-                onMute: { mute($0) }
+                onMute: { mute($0) },
+                onOpenRecord: { detailPane.openRecord($0) }
             )
         case .notifications:
             NotificationsView(
@@ -281,7 +287,8 @@ struct MainWindowView: View {
                     onOpenAuthor: { openAuthor(for: $0) },
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
-                    onMute: { mute($0) }
+                    onMute: { mute($0) },
+                    onOpenRecord: { detailPane.openRecord($0) }
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -302,6 +309,7 @@ struct MainWindowView: View {
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
                     onMute: { mute($0) },
+                    onOpenRecord: { detailPane.openRecord($0) },
                     headerAccessory: AnyView(SavedFeedInfoButton(source: source))
                 )
                 .id(id)
@@ -321,6 +329,7 @@ struct MainWindowView: View {
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
                     onMute: { mute($0) },
+                    onOpenRecord: { detailPane.openRecord($0) },
                     headerAccessory: AnyView(
                         Button("フィルターとして保存") { workspace.saveSearchAsFilter() }
                             .buttonStyle(.borderless)
@@ -350,7 +359,7 @@ struct MainWindowView: View {
                 for tab in workspace.filters { tab.model.removePosts(byAuthor: did) }
                 for source in savedFeeds.sources { savedFeeds.timeline(for: source.id)?.removePosts(byAuthor: did) }
                 workspace.search?.model.removePosts(byAuthor: did)
-                for case let .author(tab) in detailPane.history { tab.model.removePosts(byAuthor: did) }
+                if case let .author(tab) = detailPane.current { tab.model.removePosts(byAuthor: did) }
                 toastCenter.show("@\(post.authorHandle) をミュートしました")
             } catch {
                 toastCenter.show("ミュートできませんでした")
@@ -400,6 +409,33 @@ struct MainWindowView: View {
 
     /// Open the composer replying to `post`; on success dismiss it and refresh the
     /// feed that was visible so the reply count and any surfaced reply update.
+    /// Open the composer replying to a conversation's anchor, seeded with what
+    /// was typed in the pane's reply field; reload the thread once posted.
+    private func composeReply(to post: PostDisplay, text: String, reloading thread: ThreadViewModel) {
+        guard composer == nil else { return }
+        let vm = makeComposer(post)
+        vm.text = text
+        vm.onPosted = { composer = nil; Task { await thread.load() } }
+        composer = vm
+    }
+
+    /// Send a short reply from the detail pane's reply field without opening the
+    /// composer, then reload the conversation so it appears.
+    private func sendReply(to post: PostDisplay, text: String) async -> Bool {
+        let vm = makeComposer(post)
+        vm.text = text
+        var posted = false
+        vm.onPosted = { posted = true }
+        await vm.submit()
+        if posted {
+            toastCenter.show("返信しました")
+            if case let .conversation(tab) = detailPane.current { await tab.model.load() }
+        } else {
+            toastCenter.show(vm.errorMessage ?? "返信できませんでした")
+        }
+        return posted
+    }
+
     private func openReplyComposer(_ post: PostDisplay, refreshing model: TimelineViewModel) {
         // ⌘↩ (reply) is also the composer's send key; never replace an open draft.
         guard composer == nil else { return }

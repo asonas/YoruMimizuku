@@ -82,4 +82,17 @@ final class DetailPaneModelTests: XCTestCase {
 
         XCTAssertNil(pane.current)
     }
+
+    /// 投稿 > レコードを表示 opens the post on its レコード tab; any other page
+    /// opens on its thread.
+    func testOpeningARecordShowsTheRecordTabUntilAnotherPageOpens() async {
+        let pane = makePane()
+
+        pane.openRecord(post("at://a/1"))
+        XCTAssertEqual(anchorID(of: pane.current), "at://a/1")
+        XCTAssertEqual(pane.tab, .record)
+
+        pane.openConversation(post("at://a/2"))
+        XCTAssertEqual(pane.tab, .thread)
+    }
 }

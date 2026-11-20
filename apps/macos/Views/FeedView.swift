@@ -36,6 +36,8 @@ struct FeedView: View {
     var currentDID: String? = nil
     /// Mutes the post's author ("この人をミュート").
     var onMute: (PostDisplay) -> Void = { _ in }
+    /// Shows the post's record in the detail pane ("レコードを表示").
+    var onOpenRecord: (PostDisplay) -> Void = { _ in }
     /// The j/k/l/o/n keys are plain window-wide shortcuts, so only the timeline
     /// column registers them; a feed embedded in the detail pane (an author page)
     /// turns them off to avoid a second binding for the same keys.
@@ -424,6 +426,11 @@ struct FeedView: View {
             like: { Task { await model.toggleLike(post) } },
             copyLink: { copyPermalink(post) },
             mute: { onMute(post) },
+            openRecord: {
+                keyboardOpenTask?.cancel()
+                focusedPostID = post.id
+                onOpenRecord(post)
+            },
             openInBrowser: {
                 if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
             }

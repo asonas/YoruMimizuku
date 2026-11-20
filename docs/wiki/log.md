@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS prototype detail pane)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md, apps/macos/Views/DetailPaneView.swift, apps/macos/Views/ConversationView.swift
+- updated: [[app-shell]]
+- note: The macOS detail pane shows one page at a time (no back/forward), with the prototype's thread (anchor at full size, folding reply tree), a レコード tab with the stored record, and a reply field.
+
 ## 2026-11-20 ingest (macOS prototype timeline rows)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md, apps/macos/Views/TimelineRowView.swift

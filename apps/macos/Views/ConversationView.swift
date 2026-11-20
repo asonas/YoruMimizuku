@@ -2,24 +2,30 @@ import SwiftUI
 import AppKit
 import YoruMimizukuKit
 
-/// One conversation tab's content: the focused post (left-marked as "current")
-/// preceded by its full ancestor chain (oldest first, each tappable to re-anchor)
-/// and followed by its descendant reply tree. The ancestor chain comes from the
-/// recursive `replyParent` links; the reply tree comes from `ConversationThread.replies`,
-/// rendered with shallow indentation, a left connector line, a depth cap, and a
-/// "さらに表示" re-anchor button for subtrees cut at the cap.
+/// The detail pane's スレッド tab, as in the desktop prototype: the ancestors as
+/// compact rows (each re-anchors the pane), the anchor post at full size with its
+/// media, link card, quote and counts, then the reply tree indented 20pt per
+/// level with a connector line and a fold control on replies that have replies.
 struct ConversationView: View {
     @ObservedObject var model: ThreadViewModel
     @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var toastCenter: ToastCenter
 
     let now: Date
     var onImageTap: ([URL], Int) -> Void
     var onOpenConversation: (PostDisplay) -> Void
     var onOpenAuthor: (PostDisplay) -> Void = { _ in }
-    /// Opens the conversation of a tapped quote card's quoted post.
+    /// Opens the conversation of a tapped quoted post.
     var onOpenQuote: (QuotedPost) -> Void = { _ in }
+    /// Opens the reply composer for the anchor.
+    var onReply: (PostDisplay) -> Void = { _ in }
+
+    /// Replies whose subtree the reader folded.
+    @State private var folded: Set<String> = []
+    /// Whether the reader revealed the anchor's labeled media.
+    @State private var revealMedia = false
+
+    private static let timeFormatter = RelativeTimeFormatter(style: .japanese)
 
     var body: some View {
         content
@@ -57,32 +63,21 @@ struct ConversationView: View {
                     .buttonStyle(.borderedProminent).tint(theme.accent).padding(.top, 4)
             }
         case let .loaded(thread):
-            loaded(thread)
-        }
-    }
-
-    private func loaded(_ thread: ConversationThread) -> some View {
-        let focus = thread.focus
-        let ancestors = self.ancestors(of: focus)
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if ancestors.isEmpty {
-                    rootNotice
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(ancestors(of: thread.focus)) { ancestor in
+                        compactRow(ancestor, depth: 0, hasReplies: true, help: "この投稿を中心に会話を開く")
+                    }
+                    anchor(thread.focus)
+                    Rectangle().fill(theme.divider).frame(height: 1)
+                    replies(thread.replies)
                 }
-                ForEach(ancestors) { ancestor in
-                    parentBlock(ancestor)
-                    Divider().overlay(theme.divider)
-                    connector
-                }
-                focusBlock(focus)
-                Divider().overlay(theme.divider)
-                replyTree(thread.replies)
+                .padding(.bottom, 12)
             }
         }
     }
 
-    /// The focused post's ancestors, ordered oldest (thread root) first so they
-    /// read top-to-bottom down to the focused post.
+    /// Oldest (thread root) first, so they read down to the anchor.
     private func ancestors(of focus: PostDisplay) -> [PostDisplay] {
         var chain: [PostDisplay] = []
         var current = focus.replyParent?.post
@@ -93,136 +88,286 @@ struct ConversationView: View {
         return chain.reversed()
     }
 
-    /// An ancestor post, wrapped as a button that re-anchors the tab on it. Image
-    /// taps are disabled here so the climb gesture stays unambiguous.
-    private func parentBlock(_ parent: PostDisplay) -> some View {
-        Button {
-            onOpenConversation(parent)
-        } label: {
-            PostRowView(
-                post: parent, density: displaySettings.density, now: now,
-                showReplyMarker: false, interactiveActions: false,
-                onAvatarTap: { onOpenAuthor(parent) }
-            )
+    // MARK: - Anchor
+
+    private func anchor(_ post: PostDisplay) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Button { onOpenAuthor(post) } label: { avatar(post.avatarURL, size: 38) }
+                    .buttonStyle(.plain)
+                    .help("@\(post.authorHandle) のページを開く")
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 4) {
+                        Text(post.authorDisplayName)
+                            .font(.appSize(14, weight: .bold))
+                            .foregroundStyle(theme.primaryText)
+                        verifiedMark(post)
+                    }
+                    Text("@\(post.authorHandle) ・ \(Self.timeFormatter.string(for: post.createdAt, now: now))")
+                        .font(.appSize(12))
+                        .foregroundStyle(theme.tertiaryText)
+                }
+            }
+            if !post.body.isEmpty {
+                Text(post.bodyAttributedString)
+                    .font(.appSize(15.5))
+                    .lineSpacing(15.5 * 0.55)
+                    .foregroundStyle(theme.primaryText)
+                    .tint(theme.accent)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let warning = post.mediaWarning, post.hasMedia {
+                contentWarning(warning)
+            }
+            if post.mediaWarning == nil || revealMedia {
+                media(post)
+            }
+            if let card = post.linkCard {
+                LinkCardView(card: card, density: .comfortable)
+            }
+            if let quote = post.quote {
+                quoteBox(quote)
+            }
+            stats(post)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 18)
+        .padding(.bottom, 14)
+    }
+
+    private func contentWarning(_ warning: MediaWarning) -> some View {
+        HStack(spacing: 8) {
+            Text(warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
+                .font(.appSize(12.5, weight: .bold))
+            Spacer(minLength: 0)
+            Button(revealMedia ? "隠す" : "表示する") { revealMedia.toggle() }
+        }
+        .foregroundStyle(theme.warn)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(theme.warnTint, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private func media(_ post: PostDisplay) -> some View {
+        let urls = post.images.compactMap(\.fullsizeURL)
+        ForEach(Array(post.images.enumerated()), id: \.offset) { index, image in
+            VStack(alignment: .leading, spacing: 6) {
+                Button {
+                    if image.fullsizeURL != nil {
+                        onImageTap(urls, post.images.prefix(index).filter { $0.fullsizeURL != nil }.count)
+                    }
+                } label: {
+                    RemoteImage(url: image.fullsizeURL ?? image.thumbURL, maxPointSize: 900) { phase in
+                        if case let .success(loaded) = phase {
+                            loaded.resizable().scaledToFit()
+                        } else {
+                            theme.avatarPlaceholder.aspectRatio(CGFloat(image.aspectRatio ?? 1.6), contentMode: .fit)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.hairline, lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(image.alt.isEmpty ? "画像 \(index + 1)" : image.alt)
+                if !image.alt.isEmpty {
+                    Text(image.alt)
+                        .font(.appSize(12.5))
+                        .foregroundStyle(theme.secondaryText)
+                        .textSelection(.enabled)
+                        .padding(.leading, 10)
+                        .overlay(alignment: .leading) { Rectangle().fill(theme.divider).frame(width: 2) }
+                }
+            }
+        }
+        if let video = post.video {
+            VideoPosterView(video: video, maxWidth: 600) {
+                if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
+            }
+        }
+    }
+
+    private func quoteBox(_ quote: QuotedPost) -> some View {
+        Button { onOpenQuote(quote) } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(quote.authorDisplayName).font(.appSize(13, weight: .semibold)).foregroundStyle(theme.primaryText)
+                    Text("@\(quote.authorHandle)").font(.appSize(12)).foregroundStyle(theme.tertiaryText)
+                }
+                Text(quote.body)
+                    .font(.appSize(13.5))
+                    .foregroundStyle(theme.primaryText)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .rowHoverHighlight()
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.divider, lineWidth: 1))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("@\(parent.authorHandle) の会話を開く")
+        .help("引用元を開く")
     }
 
-    private func focusBlock(_ focus: PostDisplay) -> some View {
-        HStack(alignment: .top, spacing: 0) {
-            Rectangle().fill(theme.accent).frame(width: 3)
-            PostRowView(
-                post: focus, density: displaySettings.density, now: now,
-                showReplyMarker: false, onImageTap: onImageTap,
-                onLike: { Task { await model.toggleLike(focus) } },
-                onRepost: { Task { await model.toggleRepost(focus) } },
-                onAvatarTap: { onOpenAuthor(focus) },
-                onCopyLink: { copyPermalink(focus) },
-                onOpenConversation: { onOpenConversation(focus) },
-                onQuoteTap: { onOpenQuote($0) }
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .rowHoverHighlight()
+    /// The prototype's counts row; the counts double as the actions.
+    private func stats(_ post: PostDisplay) -> some View {
+        HStack(spacing: 18) {
+            Button { onReply(post) } label: { stat("bubble.left", post.replyCount, color: nil) }
+                .help("返信")
+            Button { Task { await model.toggleRepost(post) } } label: {
+                stat("arrow.2.squarepath", post.repostCount, color: post.isReposted ? theme.repost : nil)
+            }
+            .help(post.isReposted ? "リポストを取り消す" : "リポスト")
+            Button { Task { await model.toggleLike(post) } } label: {
+                stat(post.isLiked ? "heart.fill" : "heart", post.likeCount, color: post.isLiked ? theme.like : nil)
+            }
+            .help(post.isLiked ? "いいねを取り消す" : "いいね")
+            Button { copyPermalink(post) } label: { Image(systemName: "link").font(.system(size: 12)) }
+                .foregroundStyle(theme.tertiaryText)
+                .help("リンクをコピー")
         }
+        .buttonStyle(.plain)
     }
 
-    /// Render the anchor's descendant reply nodes as a shallow indented tree. Each
-    /// node is interactive; deeper nodes recurse. A node whose subtree was truncated
-    /// at the depth cap (a rendered leaf that still reports replies) gets a
-    /// "さらに表示" button that re-anchors the tab on it.
-    ///
-    /// Returns `AnyView` to break the recursive opaque-type cycle Swift 6 cannot
-    /// infer through `some View` for a self-calling function.
-    private func replyTree(_ nodes: [ThreadNode]) -> AnyView {
+    private func stat(_ systemImage: String, _ count: Int, color: Color?) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage).font(.system(size: 12)).foregroundStyle(color ?? theme.tertiaryText)
+            Text("\(count)").font(.appSize(12, weight: .bold).monospacedDigit()).foregroundStyle(color ?? theme.primaryText)
+        }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Replies
+
+    /// Returns `AnyView` to break the recursive opaque-type cycle of a
+    /// self-calling view builder.
+    private func replies(_ nodes: [ThreadNode]) -> AnyView {
         AnyView(
             ForEach(nodes) { node in
-                replyRow(node)
-                Divider().overlay(theme.divider)
-                if node.replies.isEmpty {
-                    if node.post.replyCount > 0 {
-                        showMoreButton(node)
-                        Divider().overlay(theme.divider)
-                    }
-                } else {
-                    replyTree(node.replies)
+                compactRow(
+                    node.post, depth: node.depth, hasReplies: !node.replies.isEmpty && !folded.contains(node.id),
+                    help: "この返信を中心に会話を開く", fold: node.replies.isEmpty ? nil : foldControl(node)
+                )
+                if node.replies.isEmpty, node.post.replyCount > 0 {
+                    // Cut at the depth limit: re-anchoring loads the rest.
+                    Button("さらに表示") { onOpenConversation(node.post) }
+                        .buttonStyle(.plain)
+                        .font(.appSize(11.5))
+                        .foregroundStyle(theme.accent)
+                        .padding(.leading, 16 + CGFloat(node.depth + 1) * 20 + 34)
+                        .padding(.bottom, 6)
+                } else if !folded.contains(node.id) {
+                    replies(node.replies)
                 }
             }
         )
     }
 
-    /// One reply node: a left connector line + the post row, inset by its depth so
-    /// the thread reads as a shallow outline without running off-screen.
-    private func replyRow(_ node: ThreadNode) -> some View {
-        HStack(alignment: .top, spacing: 0) {
-            Rectangle()
-                .fill(theme.divider)
-                .frame(width: 2)
-            // Reply rows are re-anchor targets, not interactive posts: only the
-            // focused post can be liked/reposted (`ThreadViewModel.post(id:)`
-            // resolves the focused id only), so the action bar renders as static
-            // labels here (`interactiveActions: false`, matching parentBlock) and
-            // the whole row is wrapped in a button that re-anchors the tab on this
-            // reply, standing in for the timestamp tap that interactiveActions:
-            // false disables.
+    private func foldControl(_ node: ThreadNode) -> AnyView {
+        let isFolded = folded.contains(node.id)
+        return AnyView(
             Button {
-                onOpenConversation(node.post)
+                if isFolded { folded.remove(node.id) } else { folded.insert(node.id) }
             } label: {
-                PostRowView(
-                    post: node.post, density: displaySettings.density, now: now,
-                    showReplyMarker: false, interactiveActions: false, onImageTap: onImageTap,
-                    onAvatarTap: { onOpenAuthor(node.post) },
-                    onCopyLink: { copyPermalink(node.post) },
-                    onOpenConversation: { onOpenConversation(node.post) },
-                    onQuoteTap: { onOpenQuote($0) }
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .rowHoverHighlight()
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .rotationEffect(.degrees(isFolded ? 0 : 90))
+                    if isFolded { Text("\(count(node))") }
+                }
+                .font(.appSize(11.5))
+                .foregroundStyle(theme.accent)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("この返信を中心に会話を開く")
-        }
-        .padding(.leading, CGFloat(node.depth + 1) * indentStep)
+            .accessibilityLabel(isFolded ? "返信を表示" : "返信をたたむ")
+        )
     }
 
-    /// Re-anchor cue for a subtree that was cut at the depth cap. Tapping opens the
-    /// node as a fresh conversation anchor (reusing the existing re-anchor path),
-    /// which reloads it with its own descendants.
-    private func showMoreButton(_ node: ThreadNode) -> some View {
-        Button {
-            onOpenConversation(node.post)
-        } label: {
-            Label("さらに表示", systemImage: "ellipsis.bubble")
-                .font(.app(.caption))
-                .foregroundStyle(theme.accent)
+    private func count(_ node: ThreadNode) -> Int {
+        node.replies.reduce(0) { $0 + 1 + count($1) }
+    }
+
+    /// A reply (or ancestor) row: a 24pt avatar, name, handle and text, inset by
+    /// depth, with the connector line running down when it has visible replies.
+    private func compactRow(
+        _ post: PostDisplay, depth: Int, hasReplies: Bool, help: String, fold: AnyView? = nil
+    ) -> some View {
+        Button { onOpenConversation(post) } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Button { onOpenAuthor(post) } label: { avatar(post.avatarURL, size: 24) }
+                    .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text(post.authorDisplayName)
+                            .font(.appSize(13, weight: .semibold))
+                            .foregroundStyle(theme.primaryText)
+                            .lineLimit(1)
+                        verifiedMark(post)
+                        Text("@\(post.authorHandle)")
+                            .font(.appSize(12))
+                            .foregroundStyle(theme.tertiaryText)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(Self.timeFormatter.string(for: post.createdAt, now: now))
+                            .font(.appSize(12).monospacedDigit())
+                            .foregroundStyle(theme.tertiaryText)
+                    }
+                    if !post.body.isEmpty {
+                        Text(post.bodyAttributedString)
+                            .font(.appSize(13.5))
+                            .foregroundStyle(theme.primaryText)
+                            .tint(theme.accent)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let fold { fold }
+                }
+            }
+            .padding(.vertical, 10)
+            .padding(.trailing, 16)
+            .padding(.leading, 16 + CGFloat(depth) * 20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(alignment: .topLeading) {
+                if hasReplies {
+                    Rectangle()
+                        .fill(theme.divider)
+                        .frame(width: 1.5)
+                        .padding(.top, 38)
+                        .padding(.leading, 16 + CGFloat(depth) * 20 + 11)
+                }
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.leading, CGFloat(node.depth + 2) * indentStep)
-        .padding(.vertical, 8)
+        .help(help)
+        .rowHoverHighlight()
     }
 
-    /// One indentation step for the reply tree. Modest so deep trees stay readable.
-    private var indentStep: CGFloat { 18 }
+    // MARK: - Shared parts
 
-    private var connector: some View {
-        HStack {
-            Rectangle()
-                .fill(theme.divider)
-                .frame(width: 2, height: 14)
-                .padding(.leading, 16 + 21) // row inset + half avatar
-            Spacer()
+    private func avatar(_ url: URL?, size: CGFloat) -> some View {
+        RemoteImage(url: url, maxPointSize: size) { phase in
+            if case let .success(image) = phase {
+                image.resizable().scaledToFill()
+            } else {
+                theme.avatarPlaceholder
+            }
         }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
     }
 
-    private var rootNotice: some View {
-        Label("これがスレッドの起点です", systemImage: "flag")
-            .font(.app(.caption))
-            .foregroundStyle(theme.tertiaryText)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+    @ViewBuilder
+    private func verifiedMark(_ post: PostDisplay) -> some View {
+        if post.authorIsVerified {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 11))
+                .foregroundStyle(theme.proto)
+                .accessibilityLabel("認証済み")
+        }
     }
 
     private func copyPermalink(_ post: PostDisplay) {
@@ -238,4 +383,8 @@ struct ConversationView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.top, 60)
     }
+}
+
+private extension PostDisplay {
+    var hasMedia: Bool { !images.isEmpty || video != nil }
 }

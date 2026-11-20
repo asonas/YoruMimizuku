@@ -3,6 +3,8 @@ title: App Shell (Window, Tabs, Sidebar)
 type: behavior
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md
+  - core/Sources/BlueskyCore/Models/Record.swift
   - docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md
   - docs/superpowers/specs/2026-11-20-macos-prototype-chrome-design.md
   - docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md
@@ -127,7 +129,7 @@ Opening a post's conversation anchors the thread on that post: ancestors render 
 
 ## Detail pane (macOS)
 
-On macOS a conversation or author page opens in the window's third column instead of replacing the timeline, so the timeline keeps its scroll position. The pane shows one page at a time with browser-style history: reopening the shown page adds nothing, opening after going back drops the pages ahead, and the history keeps the latest 30 pages. Its top bar has back (⌘[), forward (⌘]) and close. `DetailPaneModel` owns this history and reuses `ConversationTab` / `AuthorTab`; an author feed polls only while its page is shown. Conversation tabs and author tabs are no longer listed in the macOS sidebar or persisted. The plain-key shortcuts (j/k/l/o/n since 2026-11-20; f was like before) belong to the timeline column only, so the feed inside an author page does not register them and the conversation view binds none of them. [[ipados]] keeps the tabbed model unchanged (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`, `apps/macos/Views/DetailPaneView.swift`, `core/Sources/YoruMimizukuKit/DetailPaneModel.swift`).
+On macOS a conversation or author page opens in the window's third column instead of replacing the timeline, so the timeline keeps its scroll position. The pane shows one page at a time, as in the desktop prototype (the back/forward history and ⌘[ / ⌘] of the first version were dropped on 2026-11-20): opening another page replaces it and close (×) empties it. Its 38pt bar has close, the title and, for a conversation, the スレッド / レコード switch. スレッド shows the ancestors as compact rows, the anchor at full size (media with alt text, a warn box for labeled media, link card, quote box, counts that also act) and the replies as a tree indented 20pt per level with fold controls; レコード shows Handle / DID / URI and the record as stored (`com.atproto.repo.getRecord`), also reachable with 投稿 > レコードを表示 (⌥⌘I). A reply field under a loaded conversation sends a short reply with return or opens the composer with what was typed (`docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md`). `DetailPaneModel` holds the shown page and reuses `ConversationTab` / `AuthorTab`; an author feed polls only while its page is shown. Conversation tabs and author tabs are no longer listed in the macOS sidebar or persisted. The plain-key shortcuts (j/k/l/o/n since 2026-11-20; f was like before) belong to the timeline column only, so the feed inside an author page does not register them and the conversation view binds none of them. [[ipados]] keeps the tabbed model unchanged (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`, `apps/macos/Views/DetailPaneView.swift`, `core/Sources/YoruMimizukuKit/DetailPaneModel.swift`).
 
 ## Post row action paths
 

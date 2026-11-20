@@ -12,7 +12,13 @@ public enum DetailEntry {
 /// column, so opening a page here never rebuilds it.
 @MainActor
 public final class DetailPaneModel: ObservableObject {
+    /// A conversation's two views in the pane (the prototype's スレッド / レコード).
+    public enum Tab: Sendable { case thread, record }
+
     @Published public private(set) var current: DetailEntry?
+    /// Which view of a conversation is shown; every newly opened page starts on
+    /// its thread.
+    @Published public var tab: Tab = .thread
 
     private let makeThreadModel: @MainActor (String) -> ThreadViewModel
     private let makeAuthorModel: @MainActor (String) -> TimelineViewModel
@@ -68,6 +74,12 @@ public final class DetailPaneModel: ObservableObject {
         )))
     }
 
+    /// Open `post` on its レコード tab (投稿 > レコードを表示).
+    public func openRecord(_ post: PostDisplay) {
+        openConversation(post)
+        tab = .record
+    }
+
     /// Empty the pane.
     public func close() {
         show(nil)
@@ -83,5 +95,6 @@ public final class DetailPaneModel: ObservableObject {
     private func show(_ entry: DetailEntry?) {
         if case let .author(tab) = current { tab.model.stopPolling() }
         current = entry
+        tab = .thread
     }
 }
