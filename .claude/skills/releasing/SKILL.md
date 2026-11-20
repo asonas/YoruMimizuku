@@ -5,51 +5,33 @@ description: Use when releasing a YoruMimizuku version (dev prerelease or stable
 
 # releasing
 
-A release has four moving parts that must stay in sync: the version in `project.yml`, a git tag on **both remotes** (`origin` = Tangled, `github`), a GitHub Release carrying the Sparkle ZIP, and the appcast served by GitHub Pages from `gh-pages`. The mise tasks build artifacts; the git/verify steps below are manual and are where past releases went wrong.
+A macOS release has four parts that must stay in sync: the version in `project.yml`, a signed tag `v<version>` on `origin` (GitHub, the only remote), a GitHub Release carrying the Sparkle ZIP, and the appcast served by GitHub Pages from the `gh-pages` branch. The mise tasks in `mise.toml` build and publish the artifacts; committing, tagging, the appcast push and the verification are done by hand.
 
 ## Dev-channel procedure
 
-1. On a clean, pushed `main`: `mise run bump 1.0.0-dev.N`, then commit `project.yml` with the `commit` skill (`git ai-commit`).
-2. Tag and push **before** publishing, to both remotes:
-   ```bash
-   git tag v1.0.0-dev.N
-   git push origin main v1.0.0-dev.N
-   git push github main v1.0.0-dev.N
-   ```
-   If the tag is not on `github` first, `gh release create` invents one from the remote default-branch HEAD, which may not be the commit you built.
-3. `mise run release:dev` — builds, notarizes, produces `build/YoruMimizuku-<v>.zip` and `build/appcast-dev.xml`.
-4. Write `build/release-notes-<v>.md` (see `git log v<prev>..HEAD --oneline`); `publish:dev` fails without it.
-5. `mise run publish:dev` — creates the GitHub prerelease with the ZIP.
-6. Publish the appcast from a temporary worktree (gh-pages exists only on `github`, not Tangled):
-   ```bash
-   git worktree add ../YoruMimizuku-gh-pages gh-pages
-   cp build/appcast-dev.xml ../YoruMimizuku-gh-pages/appcast-dev.xml
-   ```
-   Commit with the `commit` skill (`git ai-commit`, never raw `git commit`), message
-   `Update development appcast to v<v>`; then push to `github` and remove the worktree.
+1. On a clean `main` that matches `origin/main`, run `mise run bump <x.y.z-dev.N>`. It sets the macOS `MARKETING_VERSION`, increments the build number, and leaves the iPadOS version alone. Commit `project.yml` on `main` as `Release macOS <version>`, and create an annotated tag `v<version>` with the message `YoruMimizuku <version>`. Both are signed, following the user's commit rules.
+2. Push `main` and the tag before publishing. Without the tag on GitHub, the release step creates one from the remote default branch, which may not be the commit that was built.
+3. `mise run release:dev` archives, exports, notarizes (several minutes), and writes `build/YoruMimizuku-<version>.zip` and `build/appcast-dev.xml`.
+4. Write `build/release-notes-<version>.md`; `publish:dev` fails without it. Write it in Japanese for users of the app, in the style of the previous release's notes (readable from that GitHub Release), from `git log v<previous>..v<version>`.
+5. `mise run publish:dev` creates the GitHub prerelease with the ZIP.
+6. Put `build/appcast-dev.xml` at the root of `gh-pages` as `appcast-dev.xml`, using a temporary worktree of `gh-pages`. Commit it as `Update development appcast to v<version>` (signed), push `gh-pages` to `origin`, and remove the worktree.
 
-## Verify the release actually reached users
+## Verify the release reached users
 
-Curling the appcast and waiting is not verification: if the Pages build errored, the served file stays stale forever (this happened with v1.0.0-dev.13).
+Polling the served appcast is not verification: if the Pages build errored, the served file stays stale. Check the latest Pages build through the GitHub API (`repos/asonas/YoruMimizuku/pages/builds/latest`): its status must be `built` for the `gh-pages` commit just pushed. If it `errored`, request a rebuild (POST to `.../pages/builds`) and check again. Then confirm that `https://asonas.github.io/YoruMimizuku/appcast-dev.xml` (or `appcast.xml`) serves the new `shortVersionString`.
 
-```bash
-ghro api repos/asonas/YoruMimizuku/pages/builds/latest --jq '{status, error: .error.message}'
-# status must be "built". If "errored", request a rebuild and re-check:
-gh api -X POST repos/asonas/YoruMimizuku/pages/builds
-curl -fsSL https://asonas.github.io/YoruMimizuku/appcast-dev.xml | grep shortVersionString
-```
-
-Finally confirm in the app: 設定 → アップデート → channel 開発版 → 今すぐ確認 shows the new version.
+Finally the user confirms in the app: 設定 → アップデート → channel 開発版 → 今すぐ確認 shows the new version. Running that check on the user's machine installs over the app they use, so leave it to them.
 
 ## Stable channel
 
-Same shape: `mise run release` (stable artifacts + `appcast.xml`), `mise run publish:stable`, copy `appcast.xml` to gh-pages, same verification against `appcast.xml`.
+Same shape: `mise run release:stable` (writes `build/appcast.xml`), `mise run publish:stable`, put `appcast.xml` on `gh-pages`, and verify against `appcast.xml`.
 
-## Common mistakes
+## Gotchas
 
-| Mistake | Reality |
+| Situation | What to know |
 |---|---|
-| Checking tags with `git tag \| tail` | Lexical sort puts `dev.10` before `dev.4`. Use `git tag --list 'v*' --sort=version:refname`, and `ls-remote` needs `sort -V`. |
-| Skipping step 2 because "gh creates the tag" | It creates it on GitHub only, from remote HEAD; Tangled and your local clone end up without it. |
-| Polling the appcast URL to "wait for Pages" | Check the build status API instead; an errored build never propagates. |
-| Verifying with the wrong channel | The release feed is `appcast.xml`, dev is `appcast-dev.xml`; the app only sees the channel selected in settings. |
+| Finding the latest tag | Lexical sort puts `dev.10` before `dev.4`. Sort tags by version (`git tag --sort=version:refname`). |
+| `generate_appcast` not found | `SPARKLE_BIN` points at `build/SourcePackages`, which the `archive` task fills by cloning the app's Swift packages there, so the tool matches the Sparkle in the app. Homebrew's `sparkle` cask is disabled and must not be used. |
+| `xcodebuild requires Xcode` | `mise.toml` sets `DEVELOPER_DIR` for all tasks; if it still fails, check that Xcode is installed at that path. |
+| Redoing only the ZIP or the appcast | `sparkle-zip` and the `appcast:*` tasks depend on `notarize-app`, so running them reruns the archive and notarization. To redo only the last step, run that task's commands directly. |
+| Verifying with the wrong channel | The stable feed is `appcast.xml` and the dev feed is `appcast-dev.xml`; the app reads only the channel selected in settings. |
