@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lucide-icons/lucide/d79f7054831776702c2f0e6b795069750f0a4f28/icon.schema.json",
+  "contributors": [
+    "colebemis",
+    "ericfennis"
+  ],
+  "use-cases": [],
+  "tags": [
+    "$group:x",
+    "incorrect",
+    "wrong",
+    "mistake",
+    "failure",
+    "linter",
+    "multiply",
+    "multiplication"
+  ],
+  "categories": [
+    "math",
+    "notifications"
+  ],
+  "aliases": [
+    {
+      "name": "x-circle",
+      "deprecationReason": "alias.name",
+      "deprecated": true
+    }
+  ]
+}

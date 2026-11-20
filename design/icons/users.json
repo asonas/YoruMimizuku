@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lucide-icons/lucide/d79f7054831776702c2f0e6b795069750f0a4f28/icon.schema.json",
+  "contributors": [
+    "colebemis",
+    "csandman",
+    "ericfennis",
+    "karsa-mistmere",
+    "jguddas"
+  ],
+  "use-cases": [],
+  "tags": [
+    "$group:user",
+    "group"
+  ],
+  "categories": [
+    "account",
+    "people"
+  ]
+}

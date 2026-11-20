@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lucide-icons/lucide/d79f7054831776702c2f0e6b795069750f0a4f28/icon.schema.json",
+  "contributors": [
+    "colebemis"
+  ],
+  "use-cases": [],
+  "tags": [
+    "$group:direction-right",
+    "$group:navigation-next",
+    "next",
+    "more than",
+    "greater",
+    "menu",
+    "code",
+    "coding",
+    "command line",
+    "terminal",
+    "prompt",
+    "shell",
+    ">"
+  ],
+  "categories": [
+    "arrows",
+    "math",
+    "development"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lucide-icons/lucide/d79f7054831776702c2f0e6b795069750f0a4f28/icon.schema.json",
+  "contributors": [
+    "colebemis",
+    "csandman",
+    "ericfennis",
+    "karsa-mistmere"
+  ],
+  "use-cases": [],
+  "tags": [
+    "$group:minus",
+    "empty",
+    "deletion",
+    "cleanup",
+    "junk",
+    "garbage",
+    "bin",
+    "waste",
+    "recycle",
+    "discard",
+    "rubbish"
+  ],
+  "categories": [
+    "files",
+    "mail"
+  ],
+  "aliases": [
+    {
+      "name": "trash-2",
+      "deprecated": true,
+      "deprecationReason": "alias.duplicate"
+    }
+  ]
+}

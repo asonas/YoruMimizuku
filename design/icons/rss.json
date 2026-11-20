@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/lucide-icons/lucide/d79f7054831776702c2f0e6b795069750f0a4f28/icon.schema.json",
+  "contributors": [
+    "colebemis",
+    "csandman",
+    "ericfennis"
+  ],
+  "use-cases": [],
+  "tags": [
+    "feed",
+    "subscribe",
+    "news",
+    "updates",
+    "notifications",
+    "content",
+    "blog",
+    "articles",
+    "broadcast",
+    "syndication",
+    "reader",
+    "channels",
+    "posts",
+    "publishing",
+    "digest",
+    "alert",
+    "following",
+    "inbox",
+    "newsletter",
+    "weblog",
+    "podcast"
+  ],
+  "categories": [
+    "development",
+    "social"
+  ]
+}

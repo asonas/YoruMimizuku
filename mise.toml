@@ -251,6 +251,10 @@ description = "Set MARKETING_VERSION in project.yml, bump the build number, and 
 usage = 'arg "version" help="New marketing version, e.g. 0.2.0"'
 run = './scripts/bump-version.sh "$usage_version"'
 
+[tasks."icons:lint"]
+description = "Check design/icons against the Lucide-style drawing rules and metadata"
+run = "python3 tools/icons/lint.py design/icons"
+
 [tasks."wiki:lint"]
 description = "Validate docs/wiki frontmatter, [[links]], and source paths"
 run = "swift run --quiet --package-path tools/wiki wiki lint"
