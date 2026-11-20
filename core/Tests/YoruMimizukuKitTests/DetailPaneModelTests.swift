@@ -41,49 +41,32 @@ final class DetailPaneModelTests: XCTestCase {
         return nil
     }
 
-    func testOpeningTheShownConversationAgainDoesNotGrowHistory() async {
+    /// Reopening the shown conversation keeps its loaded page rather than
+    /// rebuilding it.
+    func testOpeningTheShownConversationAgainKeepsThePage() async {
         let pane = makePane()
         pane.openConversation(post("at://a/1"))
+        let shown = pane.currentID
         pane.openConversation(post("at://a/1"))
 
-        XCTAssertEqual(anchorID(of: pane.current), "at://a/1")
-        XCTAssertFalse(pane.canGoBack)
+        XCTAssertEqual(pane.currentID, shown)
     }
 
-    func testBackAndForwardMoveThroughOpenedPages() async {
+    /// One page at a time, as in the desktop prototype: opening another
+    /// replaces it, with no history to go back to.
+    func testOpeningAnotherPageReplacesTheShownOne() async {
         let pane = makePane()
         pane.openConversation(post("at://a/1"))
+
         pane.openConversation(post("at://a/2"))
 
-        pane.goBack()
-        XCTAssertEqual(anchorID(of: pane.current), "at://a/1")
-        XCTAssertTrue(pane.canGoForward)
-
-        pane.goForward()
         XCTAssertEqual(anchorID(of: pane.current), "at://a/2")
-        XCTAssertFalse(pane.canGoForward)
-    }
-
-    func testOpeningAfterGoingBackDropsTheForwardPages() async {
-        let pane = makePane()
-        pane.openConversation(post("at://a/1"))
-        pane.openConversation(post("at://a/2"))
-        pane.goBack()
-
-        pane.openConversation(post("at://a/3"))
-
-        XCTAssertEqual(anchorID(of: pane.current), "at://a/3")
-        XCTAssertFalse(pane.canGoForward)
-        pane.goBack()
-        XCTAssertEqual(anchorID(of: pane.current), "at://a/1")
     }
 
     func testLeavingAnAuthorPageStopsItsPolling() async {
         let pane = makePane()
         pane.openAuthor(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatarURL: nil)
-        pane.openAuthor(did: "did:plc:alice", handle: "alice.bsky.social", displayName: "Alice", avatarURL: nil)
         guard case let .author(tab) = pane.current else { return XCTFail("author page is not shown") }
-        XCTAssertFalse(pane.canGoBack)
         tab.model.startPolling(every: .seconds(60))
 
         pane.openConversation(post("at://a/1"))
@@ -94,21 +77,9 @@ final class DetailPaneModelTests: XCTestCase {
     func testCloseEmptiesThePane() async {
         let pane = makePane()
         pane.openConversation(post("at://a/1"))
-        pane.openConversation(post("at://a/2"))
 
         pane.close()
 
         XCTAssertNil(pane.current)
-        XCTAssertFalse(pane.canGoBack)
-        XCTAssertFalse(pane.canGoForward)
-    }
-
-    func testHistoryKeepsTheLatestThirtyPages() async {
-        let pane = makePane()
-        for n in 1...31 { pane.openConversation(post("at://a/\(n)")) }
-
-        while pane.canGoBack { pane.goBack() }
-
-        XCTAssertEqual(anchorID(of: pane.current), "at://a/2")
     }
 }
