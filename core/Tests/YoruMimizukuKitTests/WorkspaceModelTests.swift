@@ -387,6 +387,16 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.addAuthor(handle: "alice.example", toFilter: blank), .added)
     }
 
+    /// An OR filter searches each row on its own, so a keyword row that also
+    /// names the person does not stand in for a row of just that person.
+    func testAnOrFilterGainsAPersonOnlyNamedInsideAKeyword() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "or", terms: [FilterTerm(kind: .keyword, value: "from:alice.example swift")], combinator: .or)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "alice.example", toFilter: id), .added)
+    }
+
     func testDroppingASecondPersonOnAnOrFilterAddsThem() async {
         let model = makeModel(persistence: FakePersistence())
         model.addFilter(name: "people", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .or)

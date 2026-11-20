@@ -195,6 +195,7 @@ struct RootView: View {
         isReauthSheetShown = false
         currentDID = (try? accountManager.removeAndAdvance(did: did)) ?? nil
         unread.forget(did)
+        SharedListMembership.forget(did)
     }
 
     /// The stored accounts for the switcher menu. Empty if the read fails.
@@ -356,5 +357,10 @@ enum SharedListMembership {
         let model = ListMembershipModel(editor: LiveListMembershipEditor(accountManager: accountManager, accountDID: did))
         models[did] = model
         return model
+    }
+
+    /// Drop a logged-out account's model, so signing in again starts clean.
+    static func forget(_ did: String) {
+        models[did] = nil
     }
 }

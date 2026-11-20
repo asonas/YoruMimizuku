@@ -57,13 +57,23 @@ public final class ListMembershipModel: ObservableObject {
     private let editor: ListMembershipEditing
     private let now: () -> Date
     private let recentWriteWindow: TimeInterval = 30
-    /// actor DID → list URI → the item this model just wrote (nil = removed).
-    private var recentWrites: [String: [String: (itemURI: String?, at: Date)]] = [:]
-    /// Bumped per actor by every read and change, so a prefetch that answers
-    /// after a newer read or change does not overwrite it.
+    private enum RecentWrite {
+        case added(String)
+        /// Keeps the removed item's URI: a read still returning that item is the
+        /// removal not yet indexed, while a different item is a re-add elsewhere.
+        case removed(String)
+    }
+
+    /// actor DID → list URI → the change this model just made.
+    private var recentWrites: [String: [String: (write: RecentWrite, at: Date)]] = [:]
+    /// Bumped per actor by every read and change, so a read that answers after a
+    /// newer read or change does not overwrite it.
     private var generations: [String: Int] = [:]
-    /// Bumped by every read, so `lists` is never replaced by an older answer.
-    private var listsGeneration = 0
+    /// Reads are numbered when they start; `lists` takes a read's answer only if
+    /// no later-started read has already filled it, so a later failure never
+    /// discards an earlier success.
+    private var readsStarted = 0
+    private var listsFilledBy = 0
     private var fetchedAt: [String: Date] = [:]
     private var inFlight: Set<String> = []
     private var isWriting = false
@@ -84,7 +94,7 @@ public final class ListMembershipModel: ObservableObject {
     /// is already cached.
     public func refresh(actorDID: String) async {
         do {
-            try await fetch(actorDID, authoritative: false)
+            try await fetch(actorDID)
         } catch {
             if listsState != .loaded { listsState = .failed }
         }
@@ -98,8 +108,7 @@ public final class ListMembershipModel: ObservableObject {
         guard inFlight.insert(actorDID).inserted else { return }
         defer { inFlight.remove(actorDID) }
         do {
-            try await fetch(actorDID, authoritative: false)
-            fetchedAt[actorDID] = now
+            if try await fetch(actorDID).applied { fetchedAt[actorDID] = now }
         } catch {
             if listsState != .loaded { listsState = .failed }
         }
@@ -111,46 +120,45 @@ public final class ListMembershipModel: ObservableObject {
     public func setMembership(_ actorDID: String, of listURI: String, to member: Bool) async throws -> Bool {
         await beginWrite()
         defer { endWrite() }
-        let current = try await fetch(actorDID, authoritative: true)
+        let current = try await fetch(actorDID).memberships
         guard let target = current.first(where: { $0.listURI == listURI }) else {
             throw MembershipError.listNotFound
         }
         if member, target.itemURI == nil {
             let created = try await editor.add(actorDID: actorDID, toList: listURI)
-            record(actorDID, listURI, itemURI: created)
+            record(actorDID, listURI, .added(created))
             return true
         } else if !member, let itemURI = target.itemURI {
             try await editor.remove(itemURI: itemURI)
-            record(actorDID, listURI, itemURI: nil)
+            record(actorDID, listURI, .removed(itemURI))
             return true
         }
         return false
     }
 
-    /// Read the server and cache the answer. A prefetch (`authoritative: false`)
-    /// is dropped when a newer read or change for the actor came first; a
-    /// change's own read always lands. Returns the answer with recent changes
-    /// laid over it.
+    /// Read the server and cache the answer, unless a newer read or change for
+    /// the actor came first. Returns the answer with recent changes laid over it
+    /// (used by a change to decide) and whether it was cached.
     @discardableResult
-    private func fetch(_ actorDID: String, authoritative: Bool) async throws -> [CuratedListMembership] {
+    private func fetch(_ actorDID: String) async throws -> (memberships: [CuratedListMembership], applied: Bool) {
         let generation = bumpGeneration(actorDID)
-        listsGeneration += 1
-        let listsTurn = listsGeneration
+        readsStarted += 1
+        let readNumber = readsStarted
         let answer = try await editor.lists(withMembershipOf: actorDID)
         let memberships = overlayRecentWrites(actorDID, on: answer)
-        if listsTurn == listsGeneration {
+        if readNumber > listsFilledBy {
+            listsFilledBy = readNumber
             lists = memberships.map { CuratedList(id: $0.listURI, name: $0.name) }
             listsState = .loaded
         }
-        guard authoritative || generations[actorDID] == generation else { return memberships }
-        if authoritative { bumpGeneration(actorDID) }
+        guard generations[actorDID] == generation else { return (memberships, false) }
         var byList: [String: String] = [:]
         for membership in memberships {
             if let item = membership.itemURI { byList[membership.listURI] = item }
         }
         items[actorDID] = byList
         checked[actorDID] = Set(memberships.map(\.listURI))
-        return memberships
+        return (memberships, true)
     }
 
     private func overlayRecentWrites(_ actorDID: String, on answer: [CuratedListMembership]) -> [CuratedListMembership] {
@@ -159,15 +167,25 @@ public final class ListMembershipModel: ObservableObject {
         recentWrites[actorDID] = recent
         guard !recent.isEmpty else { return answer }
         return answer.map { membership in
-            guard let write = recent[membership.listURI] else { return membership }
-            return CuratedListMembership(listURI: membership.listURI, name: membership.name, itemURI: write.itemURI)
+            guard let change = recent[membership.listURI]?.write else { return membership }
+            let item: String?
+            switch change {
+            case let .added(created):
+                item = membership.itemURI ?? created
+            case let .removed(removed):
+                item = membership.itemURI == removed ? nil : membership.itemURI
+            }
+            return CuratedListMembership(listURI: membership.listURI, name: membership.name, itemURI: item)
         }
     }
 
-    private func record(_ actorDID: String, _ listURI: String, itemURI: String?) {
+    private func record(_ actorDID: String, _ listURI: String, _ change: RecentWrite) {
         bumpGeneration(actorDID)
-        recentWrites[actorDID, default: [:]][listURI] = (itemURI, now())
-        items[actorDID, default: [:]][listURI] = itemURI
+        recentWrites[actorDID, default: [:]][listURI] = (change, now())
+        switch change {
+        case let .added(created): items[actorDID, default: [:]][listURI] = created
+        case .removed: items[actorDID, default: [:]][listURI] = nil
+        }
         checked[actorDID, default: []].insert(listURI)
     }
 

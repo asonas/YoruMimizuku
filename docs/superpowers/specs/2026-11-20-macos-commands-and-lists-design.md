@@ -23,9 +23,13 @@ one of the viewer's curated lists (the right-click menu and drag and drop).
   so a list that appeared later stays unknown). Changes run one at a time per
   account (the windows of an account share one model) and re-read the server
   first, because the PDS accepts duplicate list items; a change made here is
-  trusted over a read for 30 s while the appview has not indexed it, a prefetch
-  that answers after a newer read or change is dropped, and a list the server did
-  not return is not written to.
+  trusted over a read for 30 s while the appview has not indexed it (a removal
+  remembers the removed item, so a different item added elsewhere still shows),
+  a read that answers after a newer read or change is dropped, and a list the
+  server did not return is not written to. Known limit: if another device
+  removes someone within 30 s of this Mac adding them, this Mac still shows them
+  on the list until the window passes, since an empty answer cannot be told apart
+  from indexing lag.
   Adding creates an `app.bsky.graph.listitem` record (subject = the author's
   DID) and removing deletes it, on the window account's repo.
 - **Drag and drop.** A post's avatar drags its author (DID and handle, in the
@@ -34,7 +38,8 @@ one of the viewer's curated lists (the right-click menu and drag and drop).
   person to it; dropping on a filter adds a `from:` condition. An AND filter
   that already names a person, as a `from:` condition or inside a keyword,
   refuses a second one (two `from:` conditions never both match) and the toast
-  says why.
+  says why. An OR filter searches each row on its own, so it gains a row for the
+  person unless one row is exactly that person.
 - **View menu.** ⌘1…⌘9 select the first nine sidebar rows, in the same order as
   ⌘⇧J/K (home, notifications, pinned feeds, pinned lists, filters).
 - **投稿 menu.** Reply ⌘R, repost ⇧⌘R, quote ⌥⌘R, like ⌘L, copy link ⇧⌘C,

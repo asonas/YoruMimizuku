@@ -320,15 +320,20 @@ public final class WorkspaceModel: ObservableObject {
         guard var edited = savedFilter(id: id) else { return nil }
         let clean = (handle.hasPrefix("@") ? String(handle.dropFirst()) : handle)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        // The people the filter's query already names, read from the same
-        // fragments the search sends (so `@`, blank rows and a `from:` typed into
-        // a keyword count exactly as the search counts them).
-        let named = Set(edited.terms.compactMap(\.fragment)
-            .flatMap { $0.split(separator: " ") }
-            .filter { $0.lowercased().hasPrefix("from:") }
-            .map { $0.dropFirst("from:".count).lowercased() })
-        if named.contains(clean.lowercased()) { return .alreadyIncluded }
-        if edited.combinator == .and, !named.isEmpty { return .wouldMatchNothing }
+        // Read people from the same fragments the search sends, so `@`, blank
+        // rows and a `from:` typed into a keyword count as the search counts them.
+        let fragments = edited.terms.compactMap(\.fragment).map { $0.lowercased() }
+        let wanted = "from:" + clean.lowercased()
+        switch edited.combinator {
+        case .and:
+            // One query: any person named anywhere already narrows it.
+            let named = Set(fragments.flatMap { $0.split(separator: " ") }.filter { $0.hasPrefix("from:") }.map(String.init))
+            if named.contains(wanted) { return .alreadyIncluded }
+            if !named.isEmpty { return .wouldMatchNothing }
+        case .or:
+            // One query per row: only a row of just this person covers them.
+            if fragments.contains(wanted) { return .alreadyIncluded }
+        }
         edited.terms.append(FilterTerm(kind: .user, value: clean))
         updateFilter(edited)
         return .added

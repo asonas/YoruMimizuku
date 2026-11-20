@@ -33,6 +33,8 @@ final class ListMembershipModelTests: XCTestCase {
         }
 
         func holdNextRead() { holdRead = true }
+        private var failingActors: Set<String> = []
+        func failReads(for actor: String) { failingActors.insert(actor) }
         func freezeReads() { frozenItems = items }
         func addList(_ list: (uri: String, name: String)) { lists.append(list) }
         func holdNextAdd() { holdAdd = true }
@@ -55,6 +57,7 @@ final class ListMembershipModelTests: XCTestCase {
 
         func lists(withMembershipOf actorDID: String) async throws -> [CuratedListMembership] {
             reads += 1
+            if failingActors.contains(actorDID) { throw FailingEditor.Failure() }
             let visible = frozenItems ?? items
             let snapshot = lists.map { list in
                 let item = visible.first { $0.value.actor == actorDID && $0.value.list == list.uri }?.key
@@ -295,5 +298,38 @@ final class ListMembershipModelTests: XCTestCase {
 
         let reads = await editor.reads
         XCTAssertEqual(reads, 2)
+    }
+
+    /// After this Mac removes someone, another device may add them back with a
+    /// new list item; that new item is not the removal still being indexed.
+    func testAReAddFromAnotherDeviceIsNotHiddenByARecentRemoval() async throws {
+        let server = FakeServer(lists: [close])
+        _ = await server.putOnList("did:plc:alice", close.uri)
+        let model = ListMembershipModel(editor: server)
+        try await model.setMembership("did:plc:alice", of: close.uri, to: false)
+        _ = await server.putOnList("did:plc:alice", close.uri)
+
+        let wrote = try await model.setMembership("did:plc:alice", of: close.uri, to: true)
+
+        XCTAssertFalse(wrote)
+        XCTAssertEqual(model.isMember("did:plc:alice", of: close.uri), true)
+    }
+
+    /// A later read failing must not throw away an earlier read that succeeded.
+    func testAnEarlierSuccessfulReadStillFillsTheListsWhenALaterOneFails() async throws {
+        let server = FakeServer(lists: [close])
+        let model = ListMembershipModel(editor: server)
+        await server.failReads(for: "did:plc:bob")
+        await server.holdNextRead()
+
+        let alice = Task { await model.refresh(actorDID: "did:plc:alice") }
+        await server.waitUntilParked()
+        await model.refresh(actorDID: "did:plc:bob")
+        await server.release()
+        await alice.value
+
+        XCTAssertEqual(model.listsState, .loaded)
+        XCTAssertEqual(model.lists.map(\.name), ["近しい人"])
+        XCTAssertEqual(model.isMember("did:plc:alice", of: close.uri), false)
     }
 }
