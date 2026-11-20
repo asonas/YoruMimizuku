@@ -88,12 +88,43 @@ public struct ListView: Decodable, Equatable, Sendable {
     public let description: String?
     public let avatar: String?
     public let creator: ProfileViewBasic
+    /// `app.bsky.graph.defs#curatelist`, `#modlist` or `#referencelist`.
+    public let purpose: String?
 
-    public init(uri: String, name: String, description: String?, avatar: String?, creator: ProfileViewBasic) {
+    public init(
+        uri: String, name: String, description: String?, avatar: String?, creator: ProfileViewBasic,
+        purpose: String? = nil
+    ) {
         self.uri = uri
         self.name = name
         self.description = description
         self.avatar = avatar
         self.creator = creator
+        self.purpose = purpose
     }
+}
+
+/// `app.bsky.graph.getListsWithMembership`: the session user's own lists, each
+/// with the list item that puts the asked-about actor on it (nil when absent).
+public struct ListsWithMembershipResponse: Decodable, Equatable, Sendable {
+    public let listsWithMembership: [ListWithMembership]
+    public let cursor: String?
+}
+
+public struct ListWithMembership: Decodable, Equatable, Sendable {
+    public let list: ListView
+    public let listItem: ListItemRef?
+
+    public init(list: ListView, listItem: ListItemRef?) {
+        self.list = list
+        self.listItem = listItem
+    }
+}
+
+/// `app.bsky.graph.defs#listItemView`, read only for the record's AT-URI (its
+/// rkey is what removing the actor from the list deletes).
+public struct ListItemRef: Decodable, Equatable, Sendable {
+    public let uri: String
+
+    public init(uri: String) { self.uri = uri }
 }

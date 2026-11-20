@@ -12,6 +12,7 @@ struct FeedView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var toastCenter: ToastCenter
+    @Environment(\.listMembership) private var listMembership
 
     /// Shown in the header. Home passes nil (the sidebar already names the pane);
     /// filter tabs pass the filter name.
@@ -79,6 +80,14 @@ struct FeedView: View {
         .onChange(of: model.state) { _, _ in
             guard registersKeyboardShortcuts, focusedPostID == nil else { return }
             focusedPostID = FeedThreading.arrange(model.posts).first?.id
+        }
+        // Prefetch the focused author's list membership for the right-click
+        // "リストに追加" checks, once focus has rested on the post for a moment.
+        .task(id: focusedPostID) {
+            guard let listMembership, let id = focusedPostID, let authorDID = ATURI.repo(id) else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            await listMembership.model.refresh(actorDID: authorDID)
         }
         .confirmationDialog(
             "この投稿を削除しますか？",

@@ -16,6 +16,7 @@ struct MainWindowView: View {
     @ObservedObject var workspace: WorkspaceModel
     @ObservedObject var detailPane: DetailPaneModel
     @ObservedObject var savedFeeds: SavedFeedsModel
+    let listMembership: ListMembershipModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
@@ -72,6 +73,7 @@ struct MainWindowView: View {
             splitView
                 .id("\(fontSettings.family)|\(fontSettings.baseSize)")
                 .environmentObject(toastCenter)
+                .environment(\.listMembership, ListMembershipContext(model: listMembership, notify: { toastCenter.show($0) }))
         }
         .overlay(alignment: .bottom) {
             if let toast = toastCenter.current {
@@ -109,6 +111,8 @@ struct MainWindowView: View {
             await savedFeeds.load()
             workspace.savedFeeds = savedFeeds.sources
         }
+        // Loads the window account's curated lists for "リストに追加".
+        .task { await listMembership.refresh(actorDID: accountDID) }
         .onChange(of: savedFeeds.sources) { _, sources in workspace.savedFeeds = sources }
         // Pins change on other devices; re-read them when the app comes back to
         // the front, which also recovers from a launch while offline.

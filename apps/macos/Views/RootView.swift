@@ -222,6 +222,7 @@ private struct AuthenticatedRootView: View {
     @StateObject private var workspace: WorkspaceModel
     @StateObject private var detailPane: DetailPaneModel
     @StateObject private var savedFeeds: SavedFeedsModel
+    @StateObject private var listMembership: ListMembershipModel
 
     private let accountDID: String
     private let accountHandle: String
@@ -288,6 +289,9 @@ private struct AuthenticatedRootView: View {
                 makeAuthorHeader: makeAuthorHeader
             )
         )
+        _listMembership = StateObject(
+            wrappedValue: ListMembershipModel(editor: LiveListMembershipEditor(accountManager: accountManager, accountDID: did))
+        )
         _savedFeeds = StateObject(
             wrappedValue: SavedFeedsModel(
                 loader: LiveSavedFeedsLoader(accountManager: accountManager, accountDID: did),
@@ -324,6 +328,7 @@ private struct AuthenticatedRootView: View {
             workspace: workspace,
             detailPane: detailPane,
             savedFeeds: savedFeeds,
+            listMembership: listMembership,
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
             accountDID: accountDID,

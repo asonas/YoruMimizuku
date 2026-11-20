@@ -325,3 +325,26 @@ public struct GetRecordResponse: Decodable, Equatable, Sendable {
         self.replyRoot = try? reply?.decode(StrongRef.self, forKey: .root)
     }
 }
+
+/// `app.bsky.graph.listitem`: puts `subject` (a DID) on the list at `list`.
+public struct ListItemRecordWrite: Encodable, Equatable, Sendable {
+    public let subject: String
+    public let list: String
+    public let createdAt: String
+
+    public init(subject: String, list: String, createdAt: String) {
+        self.subject = subject
+        self.list = list
+        self.createdAt = createdAt
+    }
+
+    enum CodingKeys: String, CodingKey { case type = "$type", subject, list, createdAt }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode("app.bsky.graph.listitem", forKey: .type)
+        try c.encode(subject, forKey: .subject)
+        try c.encode(list, forKey: .list)
+        try c.encode(createdAt, forKey: .createdAt)
+    }
+}

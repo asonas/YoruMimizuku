@@ -1,4 +1,5 @@
 import SwiftUI
+import BlueskyCore
 import YoruMimizukuKit
 #if canImport(AppKit)
 import AppKit
@@ -48,6 +49,7 @@ struct PostRowView: View, @MainActor Equatable {
     /// Whether this row is one of the viewer's own posts, so the context menu can
     /// offer a delete action. The host decides ownership (post DID == account DID).
     var canDelete: Bool = false
+    @Environment(\.listMembership) private var listMembership
     /// Called when "削除" is chosen from the row's context menu, so the host can
     /// confirm and remove the post.
     var onDelete: () -> Void = {}
@@ -149,6 +151,10 @@ struct PostRowView: View, @MainActor Equatable {
             openInBrowser()
         } label: {
             Label("ブラウザで開く", systemImage: "safari")
+        }
+        if !canDelete, let listMembership, let authorDID = ATURI.repo(post.id) {
+            Divider()
+            ListMembershipMenu(context: listMembership, actorDID: authorDID, handle: post.authorHandle)
         }
         if canDelete {
             Divider()
