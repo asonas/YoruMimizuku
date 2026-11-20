@@ -318,16 +318,17 @@ public final class WorkspaceModel: ObservableObject {
     @discardableResult
     public func addAuthor(handle: String, toFilter id: UUID) -> AuthorDropResult? {
         guard var edited = savedFilter(id: id) else { return nil }
-        let clean = handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
-        let users = edited.terms.filter { $0.kind == .user }
-        if users.contains(where: { $0.value.caseInsensitiveCompare(clean) == .orderedSame }) {
-            return .alreadyIncluded
-        }
-        // A keyword term can carry `from:` too (a saved toolbar search).
-        let keywordNamesPerson = edited.terms.contains { term in
-            term.kind == .keyword && term.value.split(separator: " ").contains { $0.lowercased().hasPrefix("from:") }
-        }
-        if edited.combinator == .and, !users.isEmpty || keywordNamesPerson { return .wouldMatchNothing }
+        let clean = (handle.hasPrefix("@") ? String(handle.dropFirst()) : handle)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        // The people the filter's query already names, read from the same
+        // fragments the search sends (so `@`, blank rows and a `from:` typed into
+        // a keyword count exactly as the search counts them).
+        let named = Set(edited.terms.compactMap(\.fragment)
+            .flatMap { $0.split(separator: " ") }
+            .filter { $0.lowercased().hasPrefix("from:") }
+            .map { $0.dropFirst("from:".count).lowercased() })
+        if named.contains(clean.lowercased()) { return .alreadyIncluded }
+        if edited.combinator == .and, !named.isEmpty { return .wouldMatchNothing }
         edited.terms.append(FilterTerm(kind: .user, value: clean))
         updateFilter(edited)
         return .added

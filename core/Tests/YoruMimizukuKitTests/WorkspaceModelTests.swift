@@ -369,6 +369,24 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.addAuthor(handle: "bob.example", toFilter: id), .wouldMatchNothing)
     }
 
+    /// The drop compares people the way the search query names them: a leading
+    /// `@`, a `from:` inside a keyword and blank rows follow `FilterTerm.fragment`.
+    func testTheDropComparesPeopleAsTheSearchQueryNamesThem() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "or", terms: [FilterTerm(kind: .user, value: "@alice.example")], combinator: .or)
+        model.addFilter(name: "saved", terms: [FilterTerm(kind: .keyword, value: "from:alice.example swift")], combinator: .and)
+        model.addFilter(
+            name: "blank",
+            terms: [FilterTerm(kind: .keyword, value: "swift"), FilterTerm(kind: .user, value: "  ")],
+            combinator: .and
+        )
+        let (or, saved, blank) = (model.filters[0].id, model.filters[1].id, model.filters[2].id)
+
+        XCTAssertEqual(model.addAuthor(handle: "alice.example", toFilter: or), .alreadyIncluded)
+        XCTAssertEqual(model.addAuthor(handle: "Alice.example", toFilter: saved), .alreadyIncluded)
+        XCTAssertEqual(model.addAuthor(handle: "alice.example", toFilter: blank), .added)
+    }
+
     func testDroppingASecondPersonOnAnOrFilterAddsThem() async {
         let model = makeModel(persistence: FakePersistence())
         model.addFilter(name: "people", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .or)

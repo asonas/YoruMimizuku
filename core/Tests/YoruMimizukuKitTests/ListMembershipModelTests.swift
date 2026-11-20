@@ -10,12 +10,15 @@ final class ListMembershipModelTests: XCTestCase {
     /// `holdNextRead()` / `holdNextAdd()` park the next such call (after it has
     /// taken its snapshot) until `release()`, so a test controls the order.
     private actor FakeServer: ListMembershipEditing {
-        let lists: [(uri: String, name: String)]
+        private(set) var lists: [(uri: String, name: String)]
         private var items: [String: (actor: String, list: String)] = [:]
         private var nextID = 0
         private(set) var writes: [String] = []
         private(set) var reads = 0
         private var holdRead = false
+        /// Reads stop seeing new list items, like an appview that has not
+        /// indexed a fresh record yet.
+        private var frozenItems: [String: (actor: String, list: String)]?
         private var holdAdd = false
         private var gate: CheckedContinuation<Void, Never>?
         private var parked: CheckedContinuation<Void, Never>?
@@ -30,6 +33,8 @@ final class ListMembershipModelTests: XCTestCase {
         }
 
         func holdNextRead() { holdRead = true }
+        func freezeReads() { frozenItems = items }
+        func addList(_ list: (uri: String, name: String)) { lists.append(list) }
         func holdNextAdd() { holdAdd = true }
 
         /// Returns once a held call is waiting.
@@ -50,8 +55,9 @@ final class ListMembershipModelTests: XCTestCase {
 
         func lists(withMembershipOf actorDID: String) async throws -> [CuratedListMembership] {
             reads += 1
+            let visible = frozenItems ?? items
             let snapshot = lists.map { list in
-                let item = items.first { $0.value.actor == actorDID && $0.value.list == list.uri }?.key
+                let item = visible.first { $0.value.actor == actorDID && $0.value.list == list.uri }?.key
                 return CuratedListMembership(listURI: list.uri, name: list.name, itemURI: item)
             }
             if holdRead {
@@ -215,6 +221,79 @@ final class ListMembershipModelTests: XCTestCase {
 
         XCTAssertEqual(readsWhileFresh, 1)
         let reads = await server.reads
+        XCTAssertEqual(reads, 2)
+    }
+
+    /// The appview indexes a new list item after a delay; a second drop right
+    /// after the first must not create another item.
+    func testASecondAddRightAfterTheFirstWritesNothingWhileTheServerLags() async throws {
+        let server = FakeServer(lists: [close])
+        let model = ListMembershipModel(editor: server)
+        await server.freezeReads()
+
+        try await model.setMembership("did:plc:alice", of: close.uri, to: true)
+        let second = try await model.setMembership("did:plc:alice", of: close.uri, to: true)
+
+        XCTAssertFalse(second)
+        let writes = await server.writes
+        XCTAssertEqual(writes, ["add did:plc:alice \(close.uri)"])
+        XCTAssertEqual(model.isMember("did:plc:alice", of: close.uri), true)
+    }
+
+    /// A change's own read must land even when a prefetch overlaps it, so lists
+    /// other than the changed one keep their checks.
+    func testAChangeKeepsOtherListsCheckedWhenAPrefetchOverlaps() async throws {
+        let server = FakeServer(lists: [close, swift])
+        _ = await server.putOnList("did:plc:alice", swift.uri)
+        let model = ListMembershipModel(editor: server)
+        await server.holdNextRead()
+
+        let change = Task { try await model.setMembership("did:plc:alice", of: close.uri, to: true) }
+        await server.waitUntilParked()
+        let prefetch = Task { await model.refresh(actorDID: "did:plc:alice") }
+        await prefetch.value
+        await server.release()
+        _ = try await change.value
+
+        XCTAssertEqual(model.isMember("did:plc:alice", of: close.uri), true)
+        XCTAssertEqual(model.isMember("did:plc:alice", of: swift.uri), true)
+    }
+
+    /// A list that first appears while reading someone else was never checked
+    /// for this author, so it is unknown rather than "not on it".
+    func testAListThatAppearedLaterIsUnknownForAnAuthorReadBefore() async throws {
+        let server = FakeServer(lists: [close])
+        let model = ListMembershipModel(editor: server)
+        await model.refresh(actorDID: "did:plc:alice")
+        await server.addList(swift)
+
+        await model.refresh(actorDID: "did:plc:bob")
+
+        XCTAssertEqual(model.lists.map(\.name), ["近しい人", "Swift"])
+        XCTAssertEqual(model.isMember("did:plc:alice", of: close.uri), false)
+        XCTAssertNil(model.isMember("did:plc:alice", of: swift.uri))
+    }
+
+    private actor FailOnceEditor: ListMembershipEditing {
+        private(set) var reads = 0
+        func lists(withMembershipOf actorDID: String) async throws -> [CuratedListMembership] {
+            reads += 1
+            if reads == 1 { throw FailingEditor.Failure() }
+            return []
+        }
+        func add(actorDID: String, toList listURI: String) async throws -> String { "" }
+        func remove(itemURI: String) async throws {}
+    }
+
+    func testAFailedPrefetchIsRetriedAtTheNextChance() async throws {
+        let editor = FailOnceEditor()
+        let model = ListMembershipModel(editor: editor)
+        let start = Date(timeIntervalSince1970: 0)
+
+        await model.refreshIfStale(actorDID: "did:plc:alice", now: start)
+        await model.refreshIfStale(actorDID: "did:plc:alice", now: start.addingTimeInterval(1))
+
+        let reads = await editor.reads
         XCTAssertEqual(reads, 2)
     }
 }

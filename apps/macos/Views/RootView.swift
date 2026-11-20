@@ -294,9 +294,7 @@ private struct AuthenticatedRootView: View {
                 makeAuthorHeader: makeAuthorHeader
             )
         )
-        _listMembership = StateObject(
-            wrappedValue: ListMembershipModel(editor: LiveListMembershipEditor(accountManager: accountManager, accountDID: did))
-        )
+        _listMembership = StateObject(wrappedValue: SharedListMembership.model(for: did, accountManager: accountManager))
         _savedFeeds = StateObject(
             wrappedValue: SavedFeedsModel(
                 loader: LiveSavedFeedsLoader(accountManager: accountManager, accountDID: did),
@@ -344,5 +342,19 @@ private struct AuthenticatedRootView: View {
             makeComposer: makeComposer,
             makeQuoteComposer: makeQuoteComposer
         )
+    }
+}
+
+/// One `ListMembershipModel` per account, shared by that account's windows so
+/// their list changes take turns and share one membership cache.
+@MainActor
+enum SharedListMembership {
+    private static var models: [String: ListMembershipModel] = [:]
+
+    static func model(for did: String, accountManager: AccountManager) -> ListMembershipModel {
+        if let existing = models[did] { return existing }
+        let model = ListMembershipModel(editor: LiveListMembershipEditor(accountManager: accountManager, accountDID: did))
+        models[did] = model
+        return model
     }
 }

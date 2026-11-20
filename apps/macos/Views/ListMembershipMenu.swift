@@ -47,8 +47,7 @@ struct ListMembershipMenu: View {
                 case .loaded: Text("リストがありません")
                 }
             }
-            let known = !model.lists.isEmpty && model.isMember(actorDID, of: model.lists[0].id) != nil
-            if !model.lists.isEmpty, !known {
+            if model.lists.contains(where: { model.isMember(actorDID, of: $0.id) == nil }) {
                 Text("所属を確認中…")
             }
             ForEach(model.lists) { list in
@@ -56,7 +55,7 @@ struct ListMembershipMenu: View {
                     get: { model.isMember(actorDID, of: list.id) == true },
                     set: { member in set(member, list: list) }
                 ))
-                .disabled(!known)
+                .disabled(model.isMember(actorDID, of: list.id) == nil)
             }
             Divider()
             Text("リストは公開され、誰でも見られます")

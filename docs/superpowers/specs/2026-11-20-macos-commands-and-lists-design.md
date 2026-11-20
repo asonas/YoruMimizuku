@@ -19,10 +19,13 @@ one of the viewer's curated lists (the right-click menu and drag and drop).
   Moderation lists are excluded. A menu is built synchronously, so membership
   comes from a cache filled once the pointer rests on a post (0.3 s) or focus
   does (0.5 s), at most once a minute per author; until it is filled the lists
-  are shown disabled under "所属を確認中…" rather than as unchecked. Changes run
-  one at a time and re-read the server first, because the PDS accepts duplicate
-  list items; a read that answers after a newer read or change is dropped, and a
-  list the server did not return is not written to.
+  are shown disabled under "所属を確認中…" rather than as unchecked (per list,
+  so a list that appeared later stays unknown). Changes run one at a time per
+  account (the windows of an account share one model) and re-read the server
+  first, because the PDS accepts duplicate list items; a change made here is
+  trusted over a read for 30 s while the appview has not indexed it, a prefetch
+  that answers after a newer read or change is dropped, and a list the server did
+  not return is not written to.
   Adding creates an `app.bsky.graph.listitem` record (subject = the author's
   DID) and removing deletes it, on the window account's repo.
 - **Drag and drop.** A post's avatar drags its author (DID and handle, in the
