@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS SVG icons)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md, design/icons/README.md, apps/macos/Views/AppIcon.swift
+- updated: [[design-system]]
+- note: macOS replaces every SF Symbol with 53 SVG icons in design/icons (51 Lucide originals and 1 modified Lucide icon under ISC with the license kept, 1 drawn here; `mise run icons:lint`); catalog snapshots are re-recorded in light and dark.
+
 ## 2026-11-20 ingest (macOS prototype detail pane)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md, apps/macos/Views/DetailPaneView.swift, apps/macos/Views/ConversationView.swift

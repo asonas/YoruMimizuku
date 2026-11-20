@@ -3,6 +3,8 @@ title: Design System (Vocabulary, Catalog, Snapshots)
 type: concept
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md
+  - design/icons/README.md
   - docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md
   - core/Sources/YoruMimizukuKit/DesignTokens.swift
   - docs/superpowers/specs/2026-07-03-design-catalog-design.md
@@ -72,11 +74,15 @@ Both galleries inject a throwaway `UserDefaults(suiteName: "as.ason.YoruMimizuku
 | 幅 (width) slider, 320–900pt | ✓ | ✓ | Sets the column width (macOS: the frame `MediaReflowLayout` is offered; iPadOS: `PostRowView.contentWidth`), crossing the 680pt reflow boundary (`TimelineLayout`) so the vertical ↔ body-left/media-right reflow is visible live |
 | 余白注記 (caption) toggle | ✓ | ✓ | Shows/hides the `metricsUsed` caption under each variant's `id` |
 
+## Icons (macOS)
+
+Since 2026-11-20 the macOS app uses no SF Symbols. Its 53 icons are SVGs in `design/icons`: 51 are Lucide's originals copied unchanged from a pinned revision (ISC, with the Feather MIT notice kept in `design/icons/LICENSE-lucide.txt`), `video-plus` is Lucide's `video` with a plus added, and `message-quote`, which Lucide lacks, is drawn to Lucide's conventions. `mise run icons:lint` checks the root attributes, elements, safe zone, names and metadata, and `AppIconTests` checks that every `AppIcon` case loads from the bundle. The app and test bundles copy the folder as `icons`; `AppIcon` names them, `Icon(.x, size:)` draws one (1.25× the former symbol point size; hidden from VoiceOver unless given a `label`, so icon-only buttons name themselves) and `Image.icon(.x)` gives a 16pt image for menus and labels. Liked and reposted states use color, not filled variants (`design/icons/README.md`, `docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md`).
+
 ## Snapshot operations
 
 Each app has its own XCTest target that renders every catalog variant (filtered by `CatalogVariant.platforms`) at a fixed 560pt width and compares it against a recorded reference PNG with `swift-snapshot-testing` (`from: 1.19.6` in `project.yml`; test-target-only dependency, never linked into the shipped app). Version 1.19.6 fixes the perceptual comparison crash on macOS 27 ([upstream fix](https://github.com/pointfreeco/swift-snapshot-testing/pull/1120)).
 
-- **macOS**: `YoruMimizukuTests` (`apps/macosTests/CatalogSnapshotTests.swift`), 14 references under `apps/macosTests/__Snapshots__/CatalogSnapshotTests/`. The render scale is **pinned to 2x explicitly**: the view is drawn into an `NSBitmapImageRep` whose pixel size is twice the point size, instead of letting the snapshot library follow `NSScreen`. Without the pin the suite is screen-configuration-dependent — the original references were recorded on a 2x display and every PostRow snapshot failed once the main display ran at 1x (caught during the v1.0.0-dev.14 release gate on 2026-07-03).
+- **macOS**: `YoruMimizukuTests` (`apps/macosTests/CatalogSnapshotTests.swift`), 28 references since 2026-11-20 (14 light, 14 dark with a `-dark` suffix; the appearance is pinned per pass and the window background drawn) under `apps/macosTests/__Snapshots__/CatalogSnapshotTests/`. The render scale is **pinned to 2x explicitly**: the view is drawn into an `NSBitmapImageRep` whose pixel size is twice the point size, instead of letting the snapshot library follow `NSScreen`. Without the pin the suite is screen-configuration-dependent — the original references were recorded on a 2x display and every PostRow snapshot failed once the main display ran at 1x (caught during the v1.0.0-dev.14 release gate on 2026-07-03).
 - **iPadOS**: `YoruMimizukuPadTests` (`apps/ipadosTests/CatalogSnapshotTests.swift`), 13 references (no `toast`) under `apps/ipadosTests/__Snapshots__/CatalogSnapshotTests/`. The record environment is **pinned to the iPad Pro 13-inch (M5) / iOS 26.5 simulator** — iOS renders at the device's display scale, so recording (or re-recording) on any other simulator produces different bitmaps and fails the comparison. This pin is documented in the test file's header comment.
 
 Both suites compare with `.image(perceptualPrecision: 0.98)` at width 560, which absorbs GPU/antialiasing noise while still catching real layout shifts (the motivating case was the 2026-07-03 two-image grid overlap).

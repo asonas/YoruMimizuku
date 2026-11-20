@@ -49,7 +49,8 @@ yorumimizuku/
 │   ├── client-metadata.json    #   OAuth client metadata (public)
 │   ├── superpowers/            #   Design specs and implementation plans (ground truth)
 │   └── wiki/                   #   LLM-wiki: derived, git-versioned knowledge layer
-└── design/app-icon/            # App icon sources (SVG / generation script)
+├── design/app-icon/            # App icon sources (SVG / generation script)
+└── design/icons/               # UI icons (Lucide SVGs with Lucide's license; `mise run icons:lint`)
 ```
 
 > Windows support has landed. The Windows targets (`PlatformWindows`, `YoruMimizukuBridge`, `apps/windows`) are implemented and the WinUI 3 app runs. For the architecture (Swift core + C ABI bridge DLL + WinUI 3 frontend) and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
