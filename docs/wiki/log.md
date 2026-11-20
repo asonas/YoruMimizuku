@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (release tooling)
+
+- sources: docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md, mise.toml, .claude/skills/releasing/SKILL.md
+- updated: [[auto-updates]]
+- note: generate_appcast now comes from the Sparkle package the archive clones into build/SourcePackages (the Homebrew cask is disabled); stable releases also refresh appcast-dev.xml when newer.
+
 ## 2026-11-20 ingest (macOS SVG icons)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md, design/icons/README.md, apps/macos/Views/AppIcon.swift

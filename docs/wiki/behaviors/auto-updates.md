@@ -1,7 +1,7 @@
 ---
 title: Auto Updates (Sparkle / WinSparkle)
 type: behavior
-updated: 2026-06-15
+updated: 2026-11-20
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/plans/2026-06-09-yorumimizuku-sparkle-auto-update.md
@@ -151,7 +151,11 @@ The appcasts are hosted on GitHub Pages from the `gh-pages` branch. Stable uses
 signed/notarized/stapled DMG for first-time manual downloads. Development tags
 (`v0.7.0-dev.1`, `v0.7.0-dev.2`) upload the Sparkle ZIP to GitHub prereleases and
 update `appcast-dev.xml` (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
-§Hosting & appcast).
+§Hosting & appcast). A stable release also replaces `appcast-dev.xml` when its
+build number is higher, so development-channel users receive it, as 1.1.0 and
+1.1.1 did. The appcasts are generated with the `generate_appcast` of the Sparkle
+package the archive resolves (`build/SourcePackages`), and the step-by-step
+procedure is the `releasing` skill (`.claude/skills/releasing/SKILL.md`).
 
 The EdDSA public key is committed in the macOS app's generated Info.plist via
 `SUPublicEDKey`; the private key stays in the macOS Keychain and is never

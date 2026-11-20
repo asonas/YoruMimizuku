@@ -154,10 +154,10 @@ for SPM-embedded frameworks; the plan verifies it post-archive.
 The current chain is `generate → archive → export → dmg(notarize DMG) → release`.
 Notarization moves to the `.app`, and two new artifacts + the appcast are produced.
 New env: a `SPARKLE_BIN` pointing at the directory holding Sparkle's CLI tools
-(`generate_keys`, `sign_update`, `generate_appcast`), obtained via
-`brew install --cask sparkle` or the Sparkle release archive (documented in README).
-(Since 2026-11-20 the cask is disabled; `SPARKLE_BIN` points at the tools of the
-Sparkle package the `archive` task clones into `build/SourcePackages`.)
+(`generate_keys`, `sign_update`, `generate_appcast`). Since 2026-11-20 it points
+at the tools of the Sparkle package the `archive` task clones into
+`build/SourcePackages`, so they match the Sparkle linked into the app (Homebrew
+disabled its `sparkle` cask on 2026-09-01).
 
 Reworked tasks (exact scripts in the implementation plan):
 

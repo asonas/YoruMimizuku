@@ -224,7 +224,7 @@ gh release create "v$version" \
   --repo "$GITHUB_REPO" \
   --title "YoruMimizuku $version" \
   --notes-file "build/release-notes-$version.md"
-echo "Push $APPCAST_STABLE to gh-pages root as appcast.xml using remote $GITHUB_REMOTE."
+echo "Update the gh-pages feeds on $GITHUB_REMOTE as the releasing skill describes (appcast.xml, and appcast-dev.xml when it is older)."
 """
 
 [tasks."publish:dev"]
