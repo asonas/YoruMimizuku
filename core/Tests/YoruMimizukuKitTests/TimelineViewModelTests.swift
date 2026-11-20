@@ -241,6 +241,102 @@ final class TimelineViewModelTests: XCTestCase {
         XCTAssertEqual(vm.posts.map(\.id), ["p1", "p2", "p3"])
     }
 
+    /// A loader whose responses the test releases one by one, in any order, so a
+    /// test can finish requests out of the order they started.
+    private final class GatedLoader: TimelineLoading, @unchecked Sendable {
+        private let lock = NSLock()
+        private var waiting: [(cursor: String?, resume: CheckedContinuation<TimelinePage, Error>)] = []
+        private var cursors: [String?] = []
+
+        var requestedCursors: [String?] { lock.withLock { cursors } }
+        var pendingCount: Int { lock.withLock { waiting.count } }
+
+        func loadPage(cursor: String?) async throws -> TimelinePage {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.withLock {
+                    cursors.append(cursor)
+                    waiting.append((cursor, continuation))
+                }
+            }
+        }
+
+        /// Finish the oldest (or, with `newest`, the latest) pending request made
+        /// with `cursor`.
+        func release(cursor: String?, newest: Bool = false, with result: Result<TimelinePage, Error>) {
+            let continuation: CheckedContinuation<TimelinePage, Error>? = lock.withLock {
+                let matches = waiting.indices.filter { waiting[$0].cursor == cursor }
+                guard let index = newest ? matches.last : matches.first else { return nil }
+                return waiting.remove(at: index).resume
+            }
+            continuation?.resume(with: result)
+        }
+    }
+
+    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<200 where !condition() { try await Task.sleep(for: .milliseconds(5)) }
+    }
+
+    // Returning to an author page in the detail pane restarts its polling; the
+    // pages already read further down must survive that restart.
+    func testRestartingPollingKeepsPagesAlreadyLoaded() async throws {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "p1"), sample(id: "p2")], cursor: "c1")),
+            .success(TimelinePage(posts: [sample(id: "p3"), sample(id: "p4")], cursor: "c2")),
+            .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1")], cursor: "c0"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+        await vm.loadMore()
+
+        vm.startPolling(every: .seconds(3600))
+        try await waitUntil { vm.posts.count == 5 }
+        vm.stopPolling()
+        await vm.loadMore()
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p0", "p1", "p2", "p3", "p4"])
+        XCTAssertEqual(loader.requestedCursors.last, "c2")
+    }
+
+    // Scrolling to the bottom of an author page right after returning to it can
+    // finish an older-page fetch while the head refresh is still in flight.
+    func testRefreshAndLoadMoreFinishingOutOfOrderKeepBothResults() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let initial = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "p1"), sample(id: "p2")], cursor: "c1")))
+        await initial.value
+
+        let head = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let tail = Task { await vm.loadMore() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: "c1", with: .success(TimelinePage(posts: [sample(id: "p3")], cursor: "c2")))
+        await tail.value
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "p0"), sample(id: "p1")], cursor: "c0")))
+        await head.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p0", "p1", "p2", "p3"])
+    }
+
+    // Restarting polling while the first load is still in flight starts a second
+    // load; the first one's late failure must not replace the newer result.
+    func testLateResultOfAnEarlierLoadIsIgnored() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let first = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let second = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 2 }
+
+        loader.release(cursor: nil, newest: true, with: .success(TimelinePage(posts: [sample(id: "p1")], cursor: "c1")))
+        await second.value
+        loader.release(cursor: nil, with: .failure(StubError()))
+        await first.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p1"])
+    }
+
     func testRefreshMergesFreshPostsOnTop() async {
         let loader = StubLoader(pages: [
             .success(TimelinePage(posts: [sample(id: "p2"), sample(id: "p3")], cursor: "c1")),

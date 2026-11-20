@@ -67,6 +67,9 @@ public final class TimelineViewModel: ObservableObject {
     private var isActive = false
     /// The running refresh loop, or nil when not polling.
     private var pollingTask: Task<Void, Never>?
+    /// Bumped by every `load()`. A response belonging to an older load (one that a
+    /// polling restart superseded) is dropped instead of replacing newer state.
+    private var loadGeneration = 0
     private let loader: TimelineLoading
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
@@ -150,9 +153,12 @@ public final class TimelineViewModel: ObservableObject {
     @discardableResult
     public func load() async -> Bool {
         let endInterval = tracer.beginInterval("Timeline load")
+        loadGeneration += 1
+        let generation = loadGeneration
         state = .loading
         do {
             let page = try await loader.loadPage(cursor: nil)
+            guard generation == loadGeneration else { endInterval("superseded"); return false }
             cursor = page.cursor
             state = .loaded(page.posts)
             onItemsChanged()
@@ -160,6 +166,7 @@ public final class TimelineViewModel: ObservableObject {
             return true
         } catch {
             SessionExpiry.reportIfExpired(error)
+            guard generation == loadGeneration else { endInterval("superseded"); return false }
             state = .failed(LoadFailure(error))
             endInterval("failed")
             return false
@@ -169,17 +176,20 @@ public final class TimelineViewModel: ObservableObject {
     /// Append the next older page (infinite scroll). No-op unless we are in the
     /// loaded state, have a cursor, and no append is already in flight. Newly
     /// fetched posts already present (by id) are dropped so a shifting feed never
-    /// duplicates a row.
+    /// duplicates a row. The page is merged into the rows as they are when it
+    /// arrives, so a head refresh that finished meanwhile is kept.
     public func loadMore() async {
-        guard case let .loaded(current) = state, !isLoadingMore, let cursor else { return }
+        guard case .loaded = state, !isLoadingMore, let cursor else { return }
+        let generation = loadGeneration
         isLoadingMore = true
         defer { isLoadingMore = false }
         do {
             let page = try await loader.loadPage(cursor: cursor)
+            guard generation == loadGeneration, case let .loaded(latest) = state else { return }
             self.cursor = page.cursor
             // Appending older posts to the tail never moves the head, so the unread
             // boundary is unaffected; no onItemsChanged() needed here.
-            state = .loaded(Self.merging(current, appending: page.posts))
+            state = .loaded(Self.merging(latest, appending: page.posts))
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep the existing rows; a later scroll or refresh can retry.
@@ -193,12 +203,16 @@ public final class TimelineViewModel: ObservableObject {
     /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
     @discardableResult
     public func refresh() async -> Bool {
-        guard case let .loaded(current) = state else {
+        guard case .loaded = state else {
             return await load()
         }
+        let generation = loadGeneration
         do {
             let page = try await loader.loadPage(cursor: nil)
-            state = .loaded(Self.merging(page.posts, appending: current))
+            // Merge into the rows as they are now, so an older page appended while
+            // this request was in flight is kept.
+            guard generation == loadGeneration, case let .loaded(latest) = state else { return false }
+            state = .loaded(Self.merging(page.posts, appending: latest))
             onItemsChanged()
             return true
         } catch {
@@ -211,11 +225,13 @@ public final class TimelineViewModel: ObservableObject {
     /// Start the periodic refresh loop if it is not already running (idempotent).
     /// The loop is owned by the view model, so it keeps running—and keeps
     /// accumulating the unread count—after the view that started it disappears.
+    /// Restarting on a feed that is already loaded merges fresh posts on top
+    /// instead of reloading, so older pages the reader scrolled into stay.
     public func startPolling(every interval: Duration) {
         guard pollingTask == nil else { return }
         pollingTask = Task { [weak self] in
             var backoff = PollingBackoff(base: interval)
-            let firstOK = await self?.load() ?? false
+            let firstOK = await self?.refresh() ?? false
             if firstOK { backoff.recordSuccess() } else { backoff.recordFailure() }
             while !Task.isCancelled {
                 try? await Task.sleep(for: backoff.currentInterval)

@@ -23,6 +23,60 @@ final class ThreadViewModelTests: XCTestCase {
         func deletePost(uri: String) async throws {}
     }
 
+    // Leaving a page in the detail pane cancels its view's load task; coming back
+    // must load again instead of showing an error screen.
+    func testCancelledLoadReturnsToIdleSoItLoadsAgain() async {
+        let vm = ThreadViewModel(loader: StubLoader(result: .failure(CancellationError())), uri: "at://a/1")
+
+        await vm.load()
+
+        guard case .idle = vm.state else { return XCTFail("expected idle, got \(vm.state)") }
+    }
+
+    /// Holds the first request open until the test releases it; later requests
+    /// succeed at once.
+    private final class FirstCallGatedLoader: ThreadLoading, @unchecked Sendable {
+        private let lock = NSLock()
+        private var calls = 0
+        private var held: CheckedContinuation<ConversationThread, Error>?
+        let thread: ConversationThread
+        init(thread: ConversationThread) { self.thread = thread }
+
+        var isHolding: Bool { lock.withLock { held != nil } }
+
+        func loadThread(uri: String) async throws -> ConversationThread {
+            let isFirst = lock.withLock { calls += 1; return calls == 1 }
+            guard isFirst else { return thread }
+            return try await withCheckedThrowingContinuation { continuation in
+                lock.withLock { held = continuation }
+            }
+        }
+
+        func releaseFirst(with error: Error) {
+            let continuation = lock.withLock { () -> CheckedContinuation<ConversationThread, Error>? in
+                defer { held = nil }
+                return held
+            }
+            continuation?.resume(throwing: error)
+        }
+    }
+
+    // Going back to a conversation whose first load is still being cancelled
+    // starts a new load; the old load's late cancellation must not reset it.
+    func testLateCancellationOfAnEarlierLoadDoesNotResetANewerOne() async throws {
+        let thread = ConversationThread(focus: sample(id: "at://a/1"), replies: [])
+        let loader = FirstCallGatedLoader(thread: thread)
+        let vm = ThreadViewModel(loader: loader, uri: "at://a/1")
+        let first = Task { await vm.load() }
+        for _ in 0..<200 where !loader.isHolding { try await Task.sleep(for: .milliseconds(5)) }
+
+        await vm.load()
+        loader.releaseFirst(with: CancellationError())
+        await first.value
+
+        guard case .loaded = vm.state else { return XCTFail("expected loaded, got \(vm.state)") }
+    }
+
     func testToggleLikeUpdatesFocusedPost() async {
         let focus = sample(id: "reply")
         let thread = ConversationThread(focus: focus, replies: [])

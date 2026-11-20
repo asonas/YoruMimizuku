@@ -84,15 +84,28 @@ public final class ThreadViewModel: ObservableObject {
         state = .loaded(ConversationThread(focus: post, replies: thread.replies))
     }
 
-    /// Load the thread for `uri`, moving through loading -> loaded/failed.
+    /// Load the thread for `uri`, moving through loading -> loaded/failed. A load
+    /// cancelled because its view went away (leaving the page in the detail pane)
+    /// returns to idle, so showing the page again loads it instead of an error. A
+    /// newer load supersedes an older one: the older one's late result is dropped.
     public func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         state = .loading
         do {
             let thread = try await loader.loadThread(uri: uri)
+            guard generation == loadGeneration else { return }
             state = .loaded(thread)
         } catch {
             SessionExpiry.reportIfExpired(error)
-            state = .failed(LoadFailure(error).message)
+            guard generation == loadGeneration else { return }
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                state = .idle
+            } else {
+                state = .failed(LoadFailure(error).message)
+            }
         }
     }
+
+    private var loadGeneration = 0
 }
