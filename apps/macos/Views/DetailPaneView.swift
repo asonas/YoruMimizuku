@@ -14,6 +14,7 @@ struct DetailPaneView: View {
     var onOpenQuote: (QuotedPost) -> Void
     var onReply: (PostDisplay, TimelineViewModel) -> Void
     var onQuote: (PostDisplay, TimelineViewModel) -> Void
+    var onMute: (PostDisplay) -> Void
     var currentDID: String?
 
     var body: some View {
@@ -80,6 +81,7 @@ struct DetailPaneView: View {
                 onReply: { onReply($0, tab.model) },
                 onQuote: { onQuote($0, tab.model) },
                 onOpenQuote: onOpenQuote,
+                onMute: onMute,
                 currentDID: currentDID
             )
             .id(tab.id)

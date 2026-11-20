@@ -137,11 +137,30 @@ public final class TimelineViewModel: ObservableObject {
         }
     }
 
-    /// Drop every loaded post by `did`, after the viewer muted that account.
+    /// Authors the viewer muted while this timeline was open. Fetches already
+    /// under way when they were muted are filtered too.
+    private var hiddenAuthors: Set<String> = []
+
+    private func visible(_ posts: [PostDisplay]) -> [PostDisplay] {
+        hiddenAuthors.isEmpty ? posts : posts.filter { !hiddenAuthors.contains(ATURI.repo($0.id) ?? "") }
+    }
+
+    /// Drop every post by `did`, now and in later fetches, after the viewer muted
+    /// that account. If the unread boundary sat on one of their posts it moves
+    /// to the next remaining post, so the rest do not all turn unread.
     public func removePosts(byAuthor did: String) {
+        hiddenAuthors.insert(did)
         guard case let .loaded(current) = state else { return }
-        state = .loaded(current.filter { ATURI.repo($0.id) != did })
+        let kept = visible(current)
+        if let boundary = lastSeenTopID, !kept.contains(where: { $0.id == boundary }),
+           let index = current.firstIndex(where: { $0.id == boundary }) {
+            lastSeenTopID = current[index...].first { kept.contains($0) }?.id
+        }
+        state = .loaded(kept)
         recountNewArrivals()
+        if !isActive {
+            unreadCount = UnreadCounter.unread(ids: kept.map(\.id), since: lastSeenTopID)
+        }
     }
 
     /// A controller bound to this view model's post storage, or nil without an
@@ -192,7 +211,7 @@ public final class TimelineViewModel: ObservableObject {
             appliedHeadRequest = request
             startNewPages()
             cursor = page.cursor
-            state = .loaded(page.posts)
+            state = .loaded(visible(page.posts))
             onItemsChanged()
             endInterval("loaded \(page.posts.count) posts")
             return true
@@ -222,7 +241,7 @@ public final class TimelineViewModel: ObservableObject {
             // Appending older posts to the tail never moves the head, so the unread
             // boundary is unaffected; no onItemsChanged() needed here. Older posts
             // are behind what was seen, so they never count as new arrivals.
-            state = .loaded(Self.merging(latest, appending: page.posts))
+            state = .loaded(Self.merging(latest, appending: visible(page.posts)))
             seenIDs.formUnion(page.posts.map(\.id))
         } catch {
             SessionExpiry.reportIfExpired(error)
@@ -261,9 +280,9 @@ public final class TimelineViewModel: ObservableObject {
                 // drop any older-page fetch still running for the old rows.
                 startNewPages()
                 cursor = page.cursor
-                state = .loaded(Self.merging(page.posts, appending: []))
+                state = .loaded(Self.merging(visible(page.posts), appending: []))
             } else {
-                state = .loaded(Self.merging(page.posts, appending: latest))
+                state = .loaded(Self.merging(visible(page.posts), appending: latest))
             }
             onItemsChanged()
             return true

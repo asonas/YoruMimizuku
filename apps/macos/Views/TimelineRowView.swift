@@ -42,6 +42,9 @@ struct TimelineRowView: View, @MainActor Equatable {
             && lhs.post.likeCount == rhs.post.likeCount
             && lhs.post.viewerLikeURI == rhs.post.viewerLikeURI
             && lhs.post.viewerRepostURI == rhs.post.viewerRepostURI
+            && lhs.post.mediaWarning == rhs.post.mediaWarning
+            && lhs.post.authorIsVerified == rhs.post.authorIsVerified
+            && lhs.post.contextLabel == rhs.post.contextLabel
             && lhs.now == rhs.now
             && lhs.showsCounts == rhs.showsCounts
             && lhs.canDelete == rhs.canDelete
@@ -148,12 +151,18 @@ struct TimelineRowView: View, @MainActor Equatable {
                 ForEach(Array(post.images.prefix(4).enumerated()), id: \.offset) { index, image in
                     Button {
                         onSelect()
-                        onImageTap(post.images.compactMap(\.fullsizeURL), index)
+                        // Index into the URLs actually handed over, so an image
+                        // without a full-size URL does not shift the others.
+                        let urls = post.images.compactMap(\.fullsizeURL)
+                        if let url = image.fullsizeURL, let start = urls.firstIndex(of: url) {
+                            onImageTap(urls, start)
+                        }
                     } label: {
                         thumbnail(image.thumbURL, alt: image.alt.isEmpty ? nil : "ALT")
                     }
                     .buttonStyle(.plain)
                     .help(image.alt.isEmpty ? "画像" : image.alt)
+                    .accessibilityLabel(image.alt.isEmpty ? "画像 \(index + 1)" : image.alt)
                 }
                 if let video = post.video {
                     thumbnail(video.thumbURL, alt: nil)
@@ -238,23 +247,28 @@ struct TimelineRowView: View, @MainActor Equatable {
                 reaction("bubble.left", count: post.replyCount, color: nil)
             }
             .help("返信")
-            .accessibilityLabel("返信 \(post.replyCount)件")
+            .accessibilityLabel(spoken("返信", post.replyCount))
 
             Button { onSelect(); showRepostOptions = true } label: {
                 reaction("arrow.2.squarepath", count: post.repostCount, color: post.isReposted ? theme.repost : nil)
             }
             .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
-            .accessibilityLabel("リポスト \(post.repostCount)件")
+            .accessibilityLabel(spoken(post.isReposted ? "リポスト済み" : "リポスト", post.repostCount))
             .popover(isPresented: $showRepostOptions, arrowEdge: .bottom) { repostOptions }
 
             Button { onSelect(); onLike() } label: {
                 reaction(post.isLiked ? "heart.fill" : "heart", count: post.likeCount, color: post.isLiked ? theme.like : nil)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
-            .accessibilityLabel("いいね \(post.likeCount)件")
+            .accessibilityLabel(spoken(post.isLiked ? "いいね済み" : "いいね", post.likeCount))
         }
         .buttonStyle(.plain)
         .padding(.top, 4)
+    }
+
+    /// VoiceOver names the count only where the row shows it.
+    private func spoken(_ name: String, _ count: Int) -> String {
+        showsCounts && count > 0 ? "\(name) \(count)件" : name
     }
 
     private func reaction(_ systemImage: String, count: Int, color: Color?) -> some View {

@@ -686,4 +686,38 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.posts.map(\.id), ["at://did:plc:alice/app.bsky.feed.post/2"])
     }
+
+    /// A fetch that was already out when the author was muted must not bring
+    /// their posts back.
+    func testAMutedAuthorStaysOutOfLaterFetches() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [
+            page(["at://did:plc:alice/app.bsky.feed.post/1"]),
+            page(["at://did:plc:bob/app.bsky.feed.post/9", "at://did:plc:alice/app.bsky.feed.post/1"])
+        ]))
+        await vm.load()
+        vm.removePosts(byAuthor: "did:plc:bob")
+
+        _ = await vm.refresh()
+
+        XCTAssertEqual(vm.posts.map(\.id), ["at://did:plc:alice/app.bsky.feed.post/1"])
+    }
+
+    /// Muting the author of the post the unread boundary sits on moves the
+    /// boundary to the next post instead of making everything unread.
+    func testMutingTheSeenHeadsAuthorKeepsTheUnreadBoundary() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [
+            page(["at://did:plc:bob/app.bsky.feed.post/1", "at://did:plc:alice/app.bsky.feed.post/2"]),
+            page([
+                "at://did:plc:carol/app.bsky.feed.post/3",
+                "at://did:plc:bob/app.bsky.feed.post/1",
+                "at://did:plc:alice/app.bsky.feed.post/2"
+            ])
+        ]))
+        await vm.load()
+        vm.removePosts(byAuthor: "did:plc:bob")
+
+        _ = await vm.refresh()
+
+        XCTAssertEqual(vm.unreadCount, 1)
+    }
 }

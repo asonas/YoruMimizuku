@@ -196,6 +196,7 @@ struct MainWindowView: View {
                 onOpenQuote: { openQuotedPost($0) },
                 onReply: { post, feed in openReplyComposer(post, refreshing: feed) },
                 onQuote: { post, feed in openQuoteComposer(post, refreshing: feed) },
+                onMute: { mute($0) },
                 currentDID: accountDID
             )
             .navigationSplitViewColumnWidth(min: 320, ideal: 480)
@@ -349,6 +350,7 @@ struct MainWindowView: View {
                 for tab in workspace.filters { tab.model.removePosts(byAuthor: did) }
                 for source in savedFeeds.sources { savedFeeds.timeline(for: source.id)?.removePosts(byAuthor: did) }
                 workspace.search?.model.removePosts(byAuthor: did)
+                if case let .author(tab) = detailPane.current { tab.model.removePosts(byAuthor: did) }
                 toastCenter.show("@\(post.authorHandle) をミュートしました")
             } catch {
                 toastCenter.show("ミュートできませんでした")

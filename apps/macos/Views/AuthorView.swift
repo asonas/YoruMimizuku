@@ -18,6 +18,7 @@ struct AuthorView: View {
     var onReply: (PostDisplay) -> Void = { _ in }
     var onQuote: (PostDisplay) -> Void = { _ in }
     var onOpenQuote: (QuotedPost) -> Void = { _ in }
+    var onMute: (PostDisplay) -> Void
     /// The signed-in account's DID, forwarded to the feed so the viewer's own posts
     /// (visible when this is the viewer's own author tab) offer a delete action.
     var currentDID: String? = nil
@@ -31,6 +32,7 @@ struct AuthorView: View {
         onReply: @escaping (PostDisplay) -> Void = { _ in },
         onQuote: @escaping (PostDisplay) -> Void = { _ in },
         onOpenQuote: @escaping (QuotedPost) -> Void = { _ in },
+        onMute: @escaping (PostDisplay) -> Void,
         currentDID: String? = nil
     ) {
         self.tab = tab
@@ -42,6 +44,7 @@ struct AuthorView: View {
         self.onReply = onReply
         self.onQuote = onQuote
         self.onOpenQuote = onOpenQuote
+        self.onMute = onMute
         self.currentDID = currentDID
     }
 
@@ -57,6 +60,7 @@ struct AuthorView: View {
                 onOpenAuthor: onOpenAuthor,
                 onOpenQuote: onOpenQuote,
                 currentDID: currentDID,
+                onMute: onMute,
                 registersKeyboardShortcuts: false
             )
         }

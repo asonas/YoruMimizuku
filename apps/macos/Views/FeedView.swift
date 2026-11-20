@@ -50,6 +50,10 @@ struct FeedView: View {
     /// yanking the feed. A counter (not the id) guarantees the scroll fires even
     /// when navigation lands back on a post a click had already focused.
     @State private var scrollTick = 0
+    /// Opens the post j/k rested on in the detail pane, as in the prototype.
+    /// Cancelled by the next move or by any click on a row, so an explicit
+    /// navigation (a quote, an author) is never overridden.
+    @State private var keyboardOpenTask: Task<Void, Never>?
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
@@ -87,14 +91,6 @@ struct FeedView: View {
         // so check the head again whenever the count grows.
         .onChange(of: model.newArrivals) { _, count in
             if count > 0 { recordScrollAnchor() }
-        }
-        // As in the prototype, the detail pane follows the selection: once j/k
-        // (or the first load) rests on a post, open it there.
-        .task(id: focusedPostID) {
-            guard registersKeyboardShortcuts, let post = focusedPost else { return }
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            onOpenConversation(post)
         }
         // Prefetch the focused author's list membership for the right-click
         // "リストに追加" checks, once focus has rested on the post for a moment.
@@ -242,7 +238,10 @@ struct FeedView: View {
                     showsCounts: displaySettings.showsReactionCounts,
                     canDelete: isOwnPost(post),
                     onImageTap: { urls, index in onImageTap(urls, index) },
-                    onSelect: { focusedPostID = post.id },
+                    onSelect: {
+                        keyboardOpenTask?.cancel()
+                        focusedPostID = post.id
+                    },
                     onReply: { onReply(post) },
                     onRepost: { Task { await model.toggleRepost(post) } },
                     onQuote: { onQuote(post) },
@@ -378,6 +377,14 @@ struct FeedView: View {
         }
         // Keyboard movement scrolls the focused post into view; a click does not.
         scrollTick += 1
+        keyboardOpenTask?.cancel()
+        if let post = focusedPost {
+            keyboardOpenTask = Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                guard !Task.isCancelled else { return }
+                onOpenConversation(post)
+            }
+        }
         if focusedPostID == ids.last {
             Task { await model.loadMore() }
         }
@@ -385,6 +392,7 @@ struct FeedView: View {
 
     /// Select a row and show it in the detail pane (the prototype's single click).
     private func select(_ post: PostDisplay) {
+        keyboardOpenTask?.cancel()
         focusedPostID = post.id
         onOpenConversation(post)
     }

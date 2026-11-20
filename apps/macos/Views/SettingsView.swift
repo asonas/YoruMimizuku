@@ -344,7 +344,7 @@ private struct DisplaySettingsContentView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    Text("コンパクトは Yorufukurou 風の密なレイアウト、ゆとりはアバターやサムネイル、アクション数を表示します。")
+                    Text("右の欄（会話と作者のページ）の投稿に適用されます。タイムラインの一覧は試作のレイアウトで固定です。")
                         .font(.app(.caption2))
                         .foregroundStyle(theme.secondaryText)
                 }

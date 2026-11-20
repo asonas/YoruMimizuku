@@ -26,10 +26,20 @@ detail pane, which follows the selected row as in the prototype.
   hides the counts (`DisplaySettingsStore.showsReactionCounts`). Copy-link
   leaves the row and stays in the menus.
 - **Selection opens the detail pane.** A click selects the row and shows it in
-  the detail pane; j/k selection opens it after resting 0.3 s.
+  the detail pane; j/k selection opens it after resting 0.3 s. Any click on a
+  row (a quote tag, an avatar, a reaction) cancels a pending j/k open, so an
+  explicit navigation is never overridden.
 - **Muting.** 投稿 > この人をミュート and the row's right-click menu mute the
   author for the window's account (`app.bsky.graph.muteActor`, private to the
-  viewer) and drop their posts from every timeline in the window.
+  viewer) and drop their posts from every timeline in the window, including the
+  author page in the detail pane; fetches already under way are filtered too,
+  and an unread boundary on one of their posts moves to the next post. The
+  notifications list and an open conversation keep them until reloaded.
+- **Density.** The list rows have the prototype's fixed sizes; the density
+  setting now applies to the detail pane only (its description says so).
+- Search results carry no reply parent, so their replies show no
+  "@x への返信" line. The Japanese repost label also reaches the Windows app
+  through the bridge.
 - **Names.** A blank display name falls back to the handle; the repost label is
   Japanese ("X がリポスト"), also on iPadOS.
 - Verification is read from `verification.verifiedStatus == "valid"`.
