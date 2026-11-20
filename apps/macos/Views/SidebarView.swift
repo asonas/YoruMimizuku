@@ -3,8 +3,8 @@ import BlueskyCore
 import YoruMimizukuKit
 
 /// The cmux-style vertical tab rail: a compact brand header, the pinned
-/// home/notifications tabs, the saved filter tabs, the stack of closable
-/// conversation tabs, and an account footer with the settings entry point.
+/// home/notifications tabs, the saved filter tabs, and an account footer with the
+/// settings entry point. Conversations and authors open in the detail pane.
 struct SidebarView: View {
     @ObservedObject var workspace: WorkspaceModel
     @EnvironmentObject private var theme: ThemeStore
@@ -96,31 +96,6 @@ struct SidebarView: View {
                 ) { workspace.selection = .notifications }
 
                 filterSection
-
-                if !workspace.conversations.isEmpty {
-                    sectionLabel("会話")
-                    ForEach(workspace.conversations) { tab in
-                        SidebarRow(
-                            title: tab.title,
-                            subtitle: tab.subtitle,
-                            meta: tab.handle,
-                            isSelected: workspace.selection == .conversation(tab.id),
-                            onClose: { workspace.closeConversation(tab.id) }
-                        ) { workspace.selection = .conversation(tab.id) }
-                    }
-                }
-
-                if !workspace.authors.isEmpty {
-                    sectionLabel("ユーザー")
-                    ForEach(workspace.authors) { tab in
-                        SidebarRow(
-                            title: tab.title,
-                            meta: "@\(tab.handle)",
-                            isSelected: workspace.selection == .author(tab.id),
-                            onClose: { workspace.closeAuthor(tab.id) }
-                        ) { workspace.selection = .author(tab.id) }
-                    }
-                }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)

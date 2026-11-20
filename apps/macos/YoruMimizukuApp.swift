@@ -48,7 +48,7 @@ struct YoruMimizukuApp: App {
                 .modifier(DebugPerfOverlay())
                 .task { updateController.checkForUpdatesOnLaunch() }
         }
-        .defaultSize(width: 940, height: 720)
+        .defaultSize(width: 1240, height: 800)
         .windowStyle(.hiddenTitleBar)
         .commands {
             NewPostCommands()

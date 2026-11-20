@@ -24,8 +24,15 @@ struct ConversationView: View {
     var body: some View {
         content
             .background(theme.canvas)
-            .background { conversationShortcuts }
-            .task { if case .idle = model.state { await model.load() } }
+            // A page shown again while its previous load is still winding down
+            // (the pane was left mid-load) starts a fresh load; the model drops
+            // the older one's late result.
+            .task {
+                switch model.state {
+                case .idle, .loading: await model.load()
+                case .loaded, .failed: break
+                }
+            }
     }
 
     @ViewBuilder
@@ -218,37 +225,12 @@ struct ConversationView: View {
             .padding(.vertical, 14)
     }
 
-    /// The conversation's anchor (focused) post, available only once loaded.
-    private var focusedPost: PostDisplay? {
-        if case let .loaded(thread) = model.state { return thread.focus }
-        return nil
-    }
-
     private func copyPermalink(_ post: PostDisplay) {
         guard let url = PostPermalink.url(for: post) else { return }
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(url.absoluteString, forType: .string)
         toastCenter.show("リンクをコピーしました")
-    }
-
-    /// Hidden f/o shortcuts that act on the anchor post, mirroring FeedView.
-    private var conversationShortcuts: some View {
-        ZStack {
-            Button("") {
-                if let post = focusedPost { Task { await model.toggleLike(post) } }
-            }
-            .keyboardShortcut("f", modifiers: [])
-            Button("") {
-                if let post = focusedPost, let url = PostPermalink.url(for: post) {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-            .keyboardShortcut("o", modifiers: [])
-        }
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .accessibilityHidden(true)
     }
 
     private func stateMessage<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

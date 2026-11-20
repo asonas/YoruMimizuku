@@ -3,16 +3,17 @@ import SwiftUI
 import BlueskyCore
 import YoruMimizukuKit
 
-/// The main window: a cmux-style vertical tab rail (home, notifications, filter,
-/// and closable conversation tabs) on the left, with the selected tab's content
-/// on the right. Home and filter tabs render a `FeedView`; Cmd-Shift-J/K cycle the
-/// tabs. The lightbox and composer sheet float above everything; settings now
-/// open in their own native `Settings { }` scene window (⌘,) rather than a
-/// per-window sheet (`YoruMimizukuApp.swift`, `2026-07-24-apple-hig-remediation.md` S7).
+/// The main window, in three columns: the sidebar (home, notifications, filters),
+/// the selected timeline, and the detail pane where a conversation or author page
+/// opens without replacing the timeline. Cmd-Shift-J/K cycle the sidebar. The
+/// lightbox and composer sheet float above everything; settings open in their own
+/// native `Settings { }` scene window (⌘,) rather than a per-window sheet
+/// (`YoruMimizukuApp.swift`, `2026-07-24-apple-hig-remediation.md` S7).
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
     @ObservedObject var notifications: NotificationsViewModel
     @ObservedObject var workspace: WorkspaceModel
+    @ObservedObject var detailPane: DetailPaneModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
@@ -87,6 +88,7 @@ struct MainWindowView: View {
         .onDisappear {
             unread.close(accountDID, window: windowID)
             notifications.stopPolling()
+            if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
         }
         .onReceive(clock) { now = $0 }
         .task {
@@ -94,6 +96,7 @@ struct MainWindowView: View {
             notifications.startPolling(every: pollInterval)
             for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
             syncActiveTab()
+            pollShownAuthor()
         }
         .onChange(of: workspace.filters.map(\.id)) { _, _ in
             for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
@@ -103,6 +106,7 @@ struct MainWindowView: View {
             syncActiveTab()
         }
         .onChange(of: workspace.selection) { _, _ in syncActiveTab() }
+        .onChange(of: detailPane.currentID) { _, _ in pollShownAuthor() }
         // Changing the polling interval restarts every poller so the new cadence
         // takes effect immediately rather than only on the next launch.
         .onChange(of: notificationSettings.pollIntervalSeconds) { _, _ in
@@ -140,16 +144,33 @@ struct MainWindowView: View {
                 Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 232, max: 320)
+        } content: {
+            timelineColumn
+                // The max leaves room for the media rail, which needs a 680pt text
+                // region (TimelineLayout.reflowThreshold) plus the avatar column.
+                .navigationSplitViewColumnWidth(min: 360, ideal: 460, max: 960)
         } detail: {
-            detail
+            DetailPaneView(
+                pane: detailPane,
+                now: now,
+                onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
+                onOpenConversation: { detailPane.openConversation($0) },
+                onOpenAuthor: { openAuthor(for: $0) },
+                onOpenQuote: { openQuotedPost($0) },
+                onReply: { post, feed in openReplyComposer(post, refreshing: feed) },
+                onQuote: { post, feed in openQuoteComposer(post, refreshing: feed) },
+                currentDID: accountDID
+            )
+            .navigationSplitViewColumnWidth(min: 320, ideal: 480)
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 600, minHeight: 540)
+        .frame(minWidth: 900, minHeight: 540)
         // Meaningful title for Mission Control / the Window menu / the Dock, even
         // under `.hiddenTitleBar`; tracks the selected tab and account.
         .navigationTitle(WindowTitle.compose(tabTitle: workspace.selectionTitle, accountHandle: accountHandle))
         // Tapping a hashtag opens a filter tab; tapping a mention opens the
-        // author's tab in-app; every other link falls through to the browser.
+        // author's page in the detail pane; every other link falls through to the
+        // browser.
         .environment(\.openURL, OpenURLAction { url in
             if let tag = RichText.hashtag(from: url) {
                 workspace.openHashtagFilter(tag: tag)
@@ -159,21 +180,24 @@ struct MainWindowView: View {
                 // Only the identifier is available at tap time (the openURL action
                 // sees a URL, not the "@handle" span text), so open by DID and let
                 // the author model resolve handle / display name / avatar.
-                workspace.openAuthor(did: did, handle: "", displayName: "", avatarURL: nil)
+                detailPane.openAuthor(did: did, handle: "", displayName: "", avatarURL: nil)
                 return .handled
             }
             return .systemAction
         })
     }
 
+    /// The middle column: the timeline picked in the sidebar. Conversations and
+    /// authors open in the detail pane, so on macOS the selection never points at
+    /// a conversation or author tab (those remain for iPadOS).
     @ViewBuilder
-    private var detail: some View {
+    private var timelineColumn: some View {
         switch workspace.selection {
         case .home:
             FeedView(
                 model: model, title: nil, now: now,
                 onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                onOpenConversation: { workspace.openConversation($0) },
+                onOpenConversation: { detailPane.openConversation($0) },
                 onCompose: { compose(refreshing: model) },
                 onReply: { openReplyComposer($0, refreshing: model) },
                 onQuote: { openQuoteComposer($0, refreshing: model) },
@@ -185,7 +209,7 @@ struct MainWindowView: View {
             NotificationsView(
                 model: notifications, now: now,
                 onOpenAuthor: { actor in
-                    workspace.openAuthor(did: actor.handle, handle: actor.handle, displayName: actor.displayName, avatarURL: actor.avatarURL)
+                    detailPane.openAuthor(did: actor.handle, handle: actor.handle, displayName: actor.displayName, avatarURL: actor.avatarURL)
                 },
                 onOpenSubject: { group in
                     openNotificationSubject(group)
@@ -199,7 +223,7 @@ struct MainWindowView: View {
                 FeedView(
                     model: tab.model, title: tab.title, now: now,
                     onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onOpenConversation: { workspace.openConversation($0) },
+                    onOpenConversation: { detailPane.openConversation($0) },
                     onCompose: { compose(refreshing: tab.model) },
                     onReply: { openReplyComposer($0, refreshing: tab.model) },
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) },
@@ -213,45 +237,16 @@ struct MainWindowView: View {
             } else {
                 Color.clear.background(theme.canvas)
             }
-        case let .conversation(id):
-            if let tab = workspace.conversation(id: id) {
-                ConversationView(
-                    model: tab.model,
-                    now: now,
-                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onOpenConversation: { workspace.openConversation($0) },
-                    onOpenAuthor: { openAuthor(for: $0) },
-                    onOpenQuote: { openQuotedPost($0) }
-                )
-                .id(id)
-            } else {
-                Color.clear.background(theme.canvas)
-            }
-        case let .author(id):
-            if let tab = workspace.author(id: id) {
-                AuthorView(
-                    tab: tab,
-                    now: now,
-                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
-                    onOpenConversation: { workspace.openConversation($0) },
-                    onOpenAuthor: { openAuthor(for: $0) },
-                    onReply: { openReplyComposer($0, refreshing: tab.model) },
-                    onQuote: { openQuoteComposer($0, refreshing: tab.model) },
-                    onOpenQuote: { openQuotedPost($0) },
-                    currentDID: accountDID
-                )
-                .id(id)
-            } else {
-                Color.clear.background(theme.canvas)
-            }
+        case .conversation, .author:
+            Color.clear.background(theme.canvas)
         }
     }
 
-    /// Open the author tab for `post`, deriving the author DID from the post URI.
+    /// Open the author page for `post`, deriving the author DID from the post URI.
     /// No-op when the URI is not a well-formed AT-URI.
     private func openAuthor(for post: PostDisplay) {
         guard let did = ATURI.repo(post.id), !did.isEmpty else { return }
-        workspace.openAuthor(did: did, handle: post.authorHandle, displayName: post.authorDisplayName, avatarURL: post.avatarURL)
+        detailPane.openAuthor(did: did, handle: post.authorHandle, displayName: post.authorDisplayName, avatarURL: post.avatarURL)
     }
 
     /// The timeline backing the currently selected tab, so a post composed from
@@ -303,7 +298,7 @@ struct MainWindowView: View {
     /// a `QuotedPost` (not a full `PostDisplay`), so this uses the URI-based
     /// conversation entry point with the card's snippet as the tab label.
     private func openQuotedPost(_ quote: QuotedPost) {
-        workspace.openConversation(
+        detailPane.openConversation(
             anchorID: quote.id,
             title: quote.authorDisplayName,
             handle: "@\(quote.authorHandle)",
@@ -317,11 +312,11 @@ struct MainWindowView: View {
         let displayName = actor.map { $0.displayName.isEmpty ? $0.handle : $0.displayName } ?? "通知"
         let handle = actor.map { "@\($0.handle)" } ?? ""
         let subtitle = group.subjectText ?? group.text ?? (group.subjectImageURL == nil ? "" : "画像")
-        workspace.openConversation(anchorID: uri, title: displayName, handle: handle, subtitle: subtitle)
+        detailPane.openConversation(anchorID: uri, title: displayName, handle: handle, subtitle: subtitle)
     }
 
     /// Stop and restart every poller so a changed polling interval takes effect at
-    /// once. Authors are handled by `syncActiveTab`, which only polls the active one.
+    /// once, including the author page shown in the detail pane.
     private func restartPolling() {
         let interval = pollInterval
         model.stopPolling(); model.startPolling(every: interval)
@@ -329,25 +324,26 @@ struct MainWindowView: View {
         for tab in workspace.filters {
             tab.model.stopPolling(); tab.model.startPolling(every: interval)
         }
+        if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
         syncActiveTab()
+        pollShownAuthor()
     }
 
     /// Mark the selected badge-bearing tab active (badge stays 0 while viewed) and
-    /// the others inactive. Conversation/author tabs carry no badge and are ignored.
+    /// the others inactive.
     private func syncActiveTab() {
         model.setActive(workspace.selection == .home)
         for tab in workspace.filters {
             tab.model.setActive(workspace.selection == .filter(tab.id))
         }
-        for tab in workspace.authors {
-            let isActive = workspace.selection == .author(tab.id)
-            tab.model.setActive(isActive)
-            if isActive {
-                tab.model.startPolling(every: pollInterval)
-            } else {
-                tab.model.stopPolling()
-            }
-        }
+    }
+
+    /// Poll the author page shown in the detail pane. `DetailPaneModel` stops the
+    /// feed of any author page it leaves.
+    private func pollShownAuthor() {
+        guard case let .author(tab) = detailPane.current else { return }
+        tab.model.setActive(true)
+        tab.model.startPolling(every: pollInterval)
     }
 
     // MARK: - Keyboard shortcuts

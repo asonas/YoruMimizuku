@@ -1,7 +1,7 @@
 ---
 title: Notifications
 type: behavior
-updated: 2026-11-18
+updated: 2026-11-20
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - core/Sources/BlueskyCore/XRPC/NotificationsService.swift
@@ -86,9 +86,9 @@ recorded reference PNG.
 
 ## Opening notification subjects
 
-On macOS, a notification with a target post (`subjectURI`) opens that post in a
-conversation tab when the target-post snippet is clicked. This covers likes and
-reposts and any other subject-backed notification group. `WorkspaceModel` has a
+On macOS, a notification with a target post (`subjectURI`) opens that post in the
+window's detail pane when the target-post snippet is clicked (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`). This covers likes and
+reposts and any other subject-backed notification group. `DetailPaneModel` (and `WorkspaceModel`, for iPadOS) has a
 URI-based `openConversation(anchorID:title:handle:subtitle:)` entry point for this
 case because notification groups carry a subject URI and snippet, not a full
 `PostDisplay`. Notifications without a `subjectURI`, such as follows, remain

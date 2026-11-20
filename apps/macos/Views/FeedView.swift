@@ -33,6 +33,10 @@ struct FeedView: View {
     /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
     /// context-menu action. Nil disables delete everywhere (e.g. previews).
     var currentDID: String? = nil
+    /// The j/k/f/o/n keys are plain window-wide shortcuts, so only the timeline
+    /// column registers them; a feed embedded in the detail pane (an author page)
+    /// turns them off to avoid a second binding for the same keys.
+    var registersKeyboardShortcuts: Bool = true
 
     @State private var focusedPostID: String?
     /// Bumped on every j/k move to scroll the focused post into view. Only keyboard
@@ -69,9 +73,10 @@ struct FeedView: View {
         }
         .background(theme.canvas)
         .ignoresSafeArea(.container, edges: .top)
-        .background { postNavShortcuts }
+        .background { if registersKeyboardShortcuts { postNavShortcuts } }
         .onChange(of: model.state) { _, _ in
-            if focusedPostID == nil { focusedPostID = FeedThreading.arrange(model.posts).first?.id }
+            guard registersKeyboardShortcuts, focusedPostID == nil else { return }
+            focusedPostID = FeedThreading.arrange(model.posts).first?.id
         }
         .confirmationDialog(
             "この投稿を削除しますか？",

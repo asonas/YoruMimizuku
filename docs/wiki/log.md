@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS three-pane window)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-three-pane-design.md, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, apps/macos/Views/DetailPaneView.swift
+- updated: [[app-shell]], [[author-tab]], [[notifications]], [[manual-verification]]
+- note: macOS opens conversations and author pages in a detail pane with back/forward history; the sidebar no longer lists or persists conversation and author tabs on macOS. iPadOS keeps tabs.
+
 ## 2026-11-20 ingest (macOS timeline gap and readability)
 
 - sources: apps/macos/Views/PostRowView.swift, apps/macos/Views/FeedView.swift, apps/macos/Typography.swift, apps/macos/Theme.swift, core/Sources/YoruMimizukuKit/DesignMetrics.swift

@@ -1,8 +1,9 @@
 ---
 title: Timeline Fetching and Streaming
 type: behavior
-updated: 2026-07-03
+updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-three-pane-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
   - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
@@ -118,7 +119,7 @@ features:
     windows: none
     ios: planned
     android: planned
-    note: "macOS's relative-time label in the author line is tappable and re-anchors the conversation view on that post, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]])."
+    note: "macOS's relative-time label in the author line is tappable and opens that post's conversation in the window's detail pane, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]])."
   - name: Copy-link toast confirmation
     macos: full
     windows: none
@@ -130,7 +131,7 @@ features:
     windows: none
     ios: planned
     android: planned
-    note: "macOS routes @mention taps in a post body to the in-app author tab via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]])."
+    note: "macOS routes @mention taps in a post body to the in-app author page (opened in the window's detail pane) via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]])."
 ---
 
 # Timeline Fetching and Streaming
@@ -155,7 +156,7 @@ Custom feed / search / author / notifications are server-computed or target non-
 
 ## Keyboard actions and permalinks
 
-The feed acts on the *focused* post — the row that `j` / `k` navigation currently sits on. Pressing **f** toggles the like on the focused post (through the same optimistic `TimelineViewModel.toggleLike` used by the action bar), and **o** opens it in the default browser; both are no-ops when no post is focused. The conversation view binds the same `f` / `o` shortcuts to its anchor (focused) post (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.3).
+The feed acts on the *focused* post — the row that `j` / `k` navigation currently sits on. Pressing **f** toggles the like on the focused post (through the same optimistic `TimelineViewModel.toggleLike` used by the action bar), and **o** opens it in the default browser; both are no-ops when no post is focused. The conversation view used to bind the same `f` / `o` shortcuts to its anchor post (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.3). On macOS the conversation now sits in the detail pane next to the timeline, so those keys belong to the timeline column only and act on its focused row; the conversation's anchor is liked or opened through its action bar and context menu (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`).
 
 Every interactive post row also carries a copy-link action: a `link` icon in the action bar copies the post's public permalink to the clipboard. The permalink is `https://bsky.app/profile/{handle-or-did}/post/{rkey}`, assembled by the pure, unit-tested `PostPermalink.url(for:)` helper in `YoruMimizukuKit` (backed by `ATURI.repo` / `ATURI.rkey` in `BlueskyCore`); it prefers the author handle and falls back to the author DID when the handle is empty or the sentinel `handle.invalid`. The icon appears only on interactive rows, so the non-interactive ancestor rows in the conversation view do not show it (`2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.4).
 
@@ -171,7 +172,7 @@ uses SwiftUI `openURL`, and hashtag links are intercepted into saved-search tabs
 
 ## Post-row interaction affordances (macOS, 2026-07-02)
 
-Three further affordances close gaps in how a post row connects to secondary views and feedback (`2026-07-02-post-interaction-affordances-design.md`, `2026-07-02-post-interaction-affordances.md`). First, the relative-time label in `PostRowView.authorLine` is tappable: clicking it calls `WorkspaceModel.openConversation(_:)` and re-anchors the conversation view on that post, independent of the existing reply-count button and "@X への返信" marker (their own behavior is unchanged); hovering shows a pointing-hand cursor and underlines the timestamp so the affordance is discoverable without an always-on link color. The same closure is wired into the conversation view's focus row and reply rows, so a timestamp tap there re-anchors the tab (`apps/macos/Views/PostRowView.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/ConversationView.swift`).
+Three further affordances close gaps in how a post row connects to secondary views and feedback (`2026-07-02-post-interaction-affordances-design.md`, `2026-07-02-post-interaction-affordances.md`). First, the relative-time label in `PostRowView.authorLine` is tappable: clicking it opens that post's conversation (on macOS through `DetailPaneModel.openConversation(_:)` into the detail pane, on iPadOS through `WorkspaceModel.openConversation(_:)`), independent of the existing reply-count button and "@X への返信" marker (their own behavior is unchanged); hovering shows a pointing-hand cursor and underlines the timestamp so the affordance is discoverable without an always-on link color. The same closure is wired into the conversation view's focus row and reply rows, so a timestamp tap there opens that post's conversation in place (`apps/macos/Views/PostRowView.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/ConversationView.swift`).
 
 Second, `FeedView.copyPermalink` and `ConversationView.copyPermalink` now call the new `YoruMimizukuKit.ToastCenter` right after writing the pasteboard: a `@MainActor` observable class holding one `ToastMessage`, replaced (not queued) by each `show(_:)` call and auto-dismissed after a configurable duration (1.8s in the app) via a monotonic-token check that ignores a stale expiry from a toast a newer `show` already superseded. `MainWindowView` renders the current toast as a bottom-aligned fading pill (`ToastView`) reading 「リンクをコピーしました」; tapping it calls `dismiss()` immediately. This is the first use of a reusable transient-message mechanism intended for future feedback such as delete confirmation or failure (`core/Sources/YoruMimizukuKit/ToastCenter.swift`, `apps/macos/Views/ToastView.swift`, `apps/macos/Views/MainWindowView.swift`).
 
@@ -195,7 +196,7 @@ The fallback is intentionally skipped for posts that already attach images, keep
 
 ## Quote post cards and video posters
 
-A post whose embed is `app.bsky.embed.record#view` (or `recordWithMedia#view`) renders the quoted post inside the row as a bordered, rounded card: a compact author line (small avatar, display name, handle, relative time), the quoted body capped at six lines, and the quoted post's own media — up to two small image thumbnails, or a video poster. Clicking the card opens the quoted post's conversation tab through the same URI-based `WorkspaceModel.openConversation(anchorID:)` entry point notifications use. Decoding is tolerant by shape, not `$type`: `PostEmbed` probes the `record` key both as the bare `viewRecord` (record#view) and as the one-level-deeper wrapper (recordWithMedia#view), and a `viewNotFound` / `viewBlocked` / `viewDetached` variant or a non-post record (a quoted list or feed generator) simply yields no card. A recordWithMedia post's `media` is decoded as a nested `PostEmbed` and merged, so its images / external / video render through the existing paths alongside the quote card (`Timeline.swift`, `PostDisplay+Mapping.swift`, `apps/macos/Views/QuoteCardView.swift`).
+A post whose embed is `app.bsky.embed.record#view` (or `recordWithMedia#view`) renders the quoted post inside the row as a bordered, rounded card: a compact author line (small avatar, display name, handle, relative time), the quoted body capped at six lines, and the quoted post's own media — up to two small image thumbnails, or a video poster. Clicking the card opens the quoted post's conversation through the same URI-based `openConversation(anchorID:)` entry point notifications use (`DetailPaneModel` on macOS, `WorkspaceModel` on iPadOS). Decoding is tolerant by shape, not `$type`: `PostEmbed` probes the `record` key both as the bare `viewRecord` (record#view) and as the one-level-deeper wrapper (recordWithMedia#view), and a `viewNotFound` / `viewBlocked` / `viewDetached` variant or a non-post record (a quoted list or feed generator) simply yields no card. A recordWithMedia post's `media` is decoded as a nested `PostEmbed` and merged, so its images / external / video render through the existing paths alongside the quote card (`Timeline.swift`, `PostDisplay+Mapping.swift`, `apps/macos/Views/QuoteCardView.swift`).
 
 A post with `app.bsky.embed.video#view` renders the video's poster frame at its reported aspect ratio (16:9 when omitted) with a centered play badge. On [[macos]] and [[windows]] playback is not inline — clicking the poster opens the post's public permalink in the default browser (`apps/macos/Views/VideoPosterView.swift`, `2026-06-11-quote-and-video-embeds.md`). **On [[ipados]] this changed on 2026-06-25**: tapping the poster now plays the embed's HLS playlist inline in a full-screen AVKit `VideoPlayerScreen` (autoplays, routes audio through the `.playback` session category so it is audible even with the hardware mute switch on, pauses on dismiss) instead of leaving the app; the fallback to opening the post's permalink is kept only for the rare embed with no usable `playlist` URL. The playlist URL is carried end-to-end as `EmbedVideo.playlist` → the new `PostVideo.playlistURL` field populated in `PostDisplay+Mapping.swift` (unit-tested in `PostDisplayMappingTests`), so macOS and Windows already have the data available whenever they add inline playback. This change is scoped to a top-level post's own video only: `QuoteCardView` (on every platform) still calls `VideoPosterView` without an `onTap` handler for a quoted post's video, so the poster inside a quote card stays non-interactive and the card's own tap keeps opening the quoted post's conversation rather than playing that video, even on iPadOS. The OGP fallback card for bare links is skipped for posts that already carry images, video, or a quote, keeping rows tight. Quote cards render on [[macos]], [[windows]], and [[ipados]] alike; top-level video posters render everywhere too, with iPadOS the only platform that plays inline so far.
 

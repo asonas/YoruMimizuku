@@ -220,6 +220,7 @@ private struct AuthenticatedRootView: View {
     @StateObject private var timelineModel: TimelineViewModel
     @StateObject private var notificationsModel: NotificationsViewModel
     @StateObject private var workspace: WorkspaceModel
+    @StateObject private var detailPane: DetailPaneModel
 
     private let accountDID: String
     private let accountHandle: String
@@ -254,32 +255,43 @@ private struct AuthenticatedRootView: View {
             wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: accountManager, accountDID: did))
         )
         let filterStore = SavedFilterStore(port: FilterFileStore(did: did))
+        let makeThreadModel: @MainActor (String) -> ThreadViewModel = { uri in
+            ThreadViewModel(
+                loader: LiveThreadLoader(accountManager: accountManager), uri: uri,
+                interactor: LivePostInteractor(accountManager: accountManager)
+            )
+        }
+        let makeAuthorModel: @MainActor (String) -> TimelineViewModel = { authorDID in
+            TimelineViewModel(
+                loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID),
+                interactor: LivePostInteractor(accountManager: accountManager)
+            )
+        }
+        let makeAuthorHeader: @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel = { authorDID, initial in
+            ProfileHeaderViewModel(
+                loader: LiveAuthorProfileLoader(accountManager: accountManager),
+                actor: authorDID,
+                initial: initial
+            )
+        }
+        // Conversations and authors open in the detail pane on macOS, so the
+        // workspace no longer persists conversation tabs here.
         _workspace = StateObject(
             wrappedValue: WorkspaceModel(
                 filterStore: filterStore,
-                persistence: UserDefaultsConversationStore(key: "workspace.conversations.v1.\(did)"),
-                makeThreadModel: { uri in
-                    ThreadViewModel(
-                        loader: LiveThreadLoader(accountManager: accountManager), uri: uri,
-                        interactor: LivePostInteractor(accountManager: accountManager)
-                    )
-                },
+                makeThreadModel: makeThreadModel,
                 makeFilterModel: { filter in
                     TimelineViewModel(loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries))
                 },
-                makeAuthorModel: { authorDID in
-                    TimelineViewModel(
-                        loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID),
-                        interactor: LivePostInteractor(accountManager: accountManager)
-                    )
-                },
-                makeAuthorHeader: { authorDID, initial in
-                    ProfileHeaderViewModel(
-                        loader: LiveAuthorProfileLoader(accountManager: accountManager),
-                        actor: authorDID,
-                        initial: initial
-                    )
-                }
+                makeAuthorModel: makeAuthorModel,
+                makeAuthorHeader: makeAuthorHeader
+            )
+        )
+        _detailPane = StateObject(
+            wrappedValue: DetailPaneModel(
+                makeThreadModel: makeThreadModel,
+                makeAuthorModel: makeAuthorModel,
+                makeAuthorHeader: makeAuthorHeader
             )
         )
         self.accountDID = did
@@ -298,6 +310,7 @@ private struct AuthenticatedRootView: View {
             model: timelineModel,
             notifications: notificationsModel,
             workspace: workspace,
+            detailPane: detailPane,
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
             accountDID: accountDID,

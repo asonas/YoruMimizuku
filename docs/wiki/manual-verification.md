@@ -1,7 +1,7 @@
 ---
 title: Manual Verification Checklist (Apple HIG Remediation)
 type: reference
-updated: 2026-07-25
+updated: 2026-11-20
 sources:
   - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
 ---
@@ -25,7 +25,7 @@ See [[app-shell]] "Conversation tab (thread view)".
 
 See [[app-shell]] "Sidebar / tab UI" and [[macos]] "Accessibility".
 
-- [ ] Control-click / right-click on a filter or conversation-tab row shows a context menu, and its actions work
+- [ ] Control-click / right-click on a filter row shows a context menu, and its actions work (conversation tabs left the macOS sidebar on 2026-11-20)
 - [ ] VoiceOver's Actions menu (VO+Command+Space) on a sidebar row surfaces "タブを閉じる" / "フィルターを編集" and executes them
 - [ ] Accessibility Inspector shows the row's custom actions and combined label correctly
 - [ ] The hover-reveal pencil/xmark icons still appear and work as before (unregressed)

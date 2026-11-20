@@ -1,11 +1,11 @@
 import SwiftUI
 import YoruMimizukuKit
 
-/// One author tab's content: a profile header (avatar / display name / @handle /
-/// bio) above the user's posts. The feed reuses `FeedView`, so j/k focus, infinite
-/// scroll, and the post action affordances come along unchanged. View-only: there
-/// is no follow or edit control. The header loads on appear; the feed is polled by
-/// the window only while this tab is active.
+/// An author page in the detail pane: a profile header (avatar / display name /
+/// @handle / bio) above the user's posts. The feed reuses `FeedView`, so infinite
+/// scroll and the post action affordances come along unchanged; its j/k keys stay
+/// with the timeline column. View-only: there is no follow or edit control. The
+/// header loads on appear; the feed is polled only while this page is shown.
 struct AuthorView: View {
     let tab: AuthorTab
     @ObservedObject var header: ProfileHeaderViewModel
@@ -56,7 +56,8 @@ struct AuthorView: View {
                 onQuote: onQuote,
                 onOpenAuthor: onOpenAuthor,
                 onOpenQuote: onOpenQuote,
-                currentDID: currentDID
+                currentDID: currentDID,
+                registersKeyboardShortcuts: false
             )
         }
         .background(theme.canvas)
