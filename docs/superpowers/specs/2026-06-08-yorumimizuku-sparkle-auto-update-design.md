@@ -156,6 +156,8 @@ Notarization moves to the `.app`, and two new artifacts + the appcast are produc
 New env: a `SPARKLE_BIN` pointing at the directory holding Sparkle's CLI tools
 (`generate_keys`, `sign_update`, `generate_appcast`), obtained via
 `brew install --cask sparkle` or the Sparkle release archive (documented in README).
+(Since 2026-11-20 the cask is disabled; `SPARKLE_BIN` points at the tools of the
+Sparkle package the `archive` task clones into `build/SourcePackages`.)
 
 Reworked tasks (exact scripts in the implementation plan):
 

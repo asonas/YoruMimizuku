@@ -32,4 +32,4 @@ mv project.yml.bump.tmp project.yml
 xcodegen generate >/dev/null
 
 echo "Bumped to ${version} (build ${next_build})."
-echo "Next: commit project.yml, then 'git tag v${version} && git push origin v${version}'."
+echo "Next: commit project.yml, then follow the releasing skill to tag and publish v${version}."

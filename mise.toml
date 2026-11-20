@@ -16,9 +16,7 @@ GITHUB_REPO = "asonas/YoruMimizuku"
 GITHUB_REMOTE = "origin"
 # Sparkle's tools from the package the archive resolves, so generate_appcast
 # always matches the Sparkle linked into the app. Exists after `archive`.
-SPARKLE_BIN = "build/SourcePackages/artifacts/sparkle/Sparkle/bin"
-# xcodebuild and notarytool need full Xcode, not the Command Line Tools.
-DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
+SPARKLE_BIN = "{{env.BUILD_DIR}}/SourcePackages/artifacts/sparkle/Sparkle/bin"
 APPCAST_STABLE = "build/appcast.xml"
 APPCAST_DEV = "build/appcast-dev.xml"
 
@@ -29,6 +27,7 @@ run = "xcodegen generate"
 [tasks."build:macos"]
 description = "Build the macOS app with an Apple Development signature"
 depends = ["generate"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 set -euo pipefail
 xcodebuild build \
@@ -46,6 +45,7 @@ codesign --verify --deep --strict "$BUILD_DIR/development/Build/Products/Debug/$
 [tasks.archive]
 description = "Archive the app for release"
 depends = ["generate"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 xcodebuild archive \
   -scheme "$SCHEME" \
@@ -59,6 +59,7 @@ xcodebuild archive \
 [tasks.export]
 description = "Export a Developer ID signed .app from the archive"
 depends = ["archive"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 rm -rf "$BUILD_DIR/export"
 xcodebuild -exportArchive \
@@ -70,6 +71,7 @@ xcodebuild -exportArchive \
 [tasks."notarize-app"]
 description = "Notarize and staple the exported .app for Sparkle and DMG packaging"
 depends = ["export"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 set -euo pipefail
 app="$BUILD_DIR/export/$APP_NAME.app"
@@ -121,6 +123,7 @@ codesign --force --timestamp --sign "$SIGN_IDENTITY" "$final_dmg"
 [tasks.notarize]
 description = "Notarize and staple the DMG, then verify with Gatekeeper"
 depends = ["dmg"]
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 xcrun notarytool submit "$BUILD_DIR/$APP_NAME.dmg" \
   --keychain-profile "$NOTARY_PROFILE" \
@@ -245,6 +248,7 @@ echo "Push $APPCAST_DEV to gh-pages root as appcast-dev.xml using remote $GITHUB
 
 [tasks.setup-notary]
 description = "Store notarytool credentials in the keychain (run once, interactive)"
+env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
 run = """
 echo "Apple ID and an app-specific password (from appleid.apple.com) are required."
 xcrun notarytool store-credentials "$NOTARY_PROFILE" --team-id "$TEAM_ID"
