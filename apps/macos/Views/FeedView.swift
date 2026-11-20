@@ -81,6 +81,7 @@ struct FeedView: View {
             guard registersKeyboardShortcuts, focusedPostID == nil else { return }
             focusedPostID = FeedThreading.arrange(model.posts).first?.id
         }
+        .focusedSceneValue(\.postActions, registersKeyboardShortcuts ? focusedPost.map(actions(for:)) : nil)
         // Prefetch the focused author's list membership for the right-click
         // "リストに追加" checks, once focus has rested on the post for a moment.
         .task(id: focusedPostID) {
@@ -355,6 +356,21 @@ struct FeedView: View {
         pb.clearContents()
         pb.setString(url.absoluteString, forType: .string)
         toastCenter.show("リンクをコピーしました")
+    }
+
+    private func actions(for post: PostDisplay) -> PostActions {
+        PostActions(
+            isLiked: post.viewerLikeURI != nil,
+            isReposted: post.viewerRepostURI != nil,
+            reply: { onReply(post) },
+            repost: { Task { await model.toggleRepost(post) } },
+            quote: { onQuote(post) },
+            like: { Task { await model.toggleLike(post) } },
+            copyLink: { copyPermalink(post) },
+            openInBrowser: {
+                if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
+            }
+        )
     }
 
     /// The post j/k focus currently sits on, if any.

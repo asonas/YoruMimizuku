@@ -88,6 +88,7 @@ struct MainWindowView: View {
         .background { tabShortcuts }
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
         .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
+        .focusedSceneObject(workspace)
         .onAppear {
             unread.setPollingInterval(pollInterval)
             unread.open(accountDID, window: windowID)

@@ -367,4 +367,24 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(model.addAuthor(handle: "bob.example", toFilter: id), .added)
         XCTAssertEqual(userTerms(model, id), ["alice.example", "bob.example"])
     }
+
+    // MARK: - ⌘1…⌘9
+
+    func testShortcutTabsFollowTheSidebarOrderUpToNine() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.savedFeeds = (1...6).map { savedSource("at://f/\($0)", "F\($0)") } + [savedSource("at://l/1", "L1", .list)]
+        model.addFilter(name: "Swift", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+
+        let tabs = model.shortcutTabs
+
+        XCTAssertEqual(tabs.count, 9)
+        XCTAssertEqual(tabs.map { model.title(for: $0) }, ["ホーム", "通知", "F1", "F2", "F3", "F4", "F5", "F6", "L1"])
+    }
+
+    func testTitleForAFilterIsItsName() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "Swift", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+
+        XCTAssertEqual(model.title(for: .filter(model.filters[0].id)), "Swift")
+    }
 }

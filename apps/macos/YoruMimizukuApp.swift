@@ -52,6 +52,7 @@ struct YoruMimizukuApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             NewPostCommands()
+            WorkspaceCommands()
             #if DEBUG
             CommandGroup(after: .help) {
                 OpenCatalogButton()

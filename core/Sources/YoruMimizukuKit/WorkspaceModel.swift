@@ -410,8 +410,12 @@ public final class WorkspaceModel: ObservableObject {
 
     /// The selected tab's human-readable title, e.g. for the macOS window title.
     /// Pinned tabs use their fixed labels; a closed tab id falls back to ホーム.
-    public var selectionTitle: String {
-        switch selection {
+    public var selectionTitle: String { title(for: selection) }
+
+    /// A tab's human-readable title (sidebar label, menu item). A closed tab id
+    /// falls back to ホーム.
+    public func title(for tab: WorkspaceTab) -> String {
+        switch tab {
         case .home: return "ホーム"
         case .notifications: return "通知"
         case let .filter(id): return filter(id: id)?.title ?? "ホーム"
@@ -437,6 +441,9 @@ public final class WorkspaceModel: ObservableObject {
             + conversations.map { .conversation($0.id) }
             + authors.map { .author($0.id) }
     }
+
+    /// The tabs ⌘1…⌘9 select: the first nine in sidebar order.
+    public var shortcutTabs: [WorkspaceTab] { Array(orderedTabs.prefix(9)) }
 
     /// Select the next tab in display order, wrapping past the last back to home.
     public func selectNextTab() { cycleSelection(by: 1) }
