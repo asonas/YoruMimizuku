@@ -216,7 +216,7 @@ struct MainWindowView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { composeFromMenu() } label: {
-                    Label("新規投稿", systemImage: "square.and.pencil")
+                    Label { Text("新規投稿") } icon: { Image.icon(.squarePen) }
                 }
                 .help("新規投稿 (⌘N)")
             }

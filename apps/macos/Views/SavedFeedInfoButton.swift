@@ -10,13 +10,13 @@ struct SavedFeedInfoButton: View {
 
     var body: some View {
         Button { isShown.toggle() } label: {
-            Image(systemName: "info.circle")
-                .font(.system(size: 13))
+            Icon(.info, size: 16.25)
                 .foregroundStyle(theme.tertiaryText)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(source.kind == .feed ? "このフィードについて" : "このリストについて")
+        .accessibilityLabel(source.kind == .feed ? "このフィードについて" : "このリストについて")
         .popover(isPresented: $isShown, arrowEdge: .bottom) { details }
     }
 

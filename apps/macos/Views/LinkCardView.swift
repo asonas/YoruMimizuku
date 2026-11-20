@@ -46,7 +46,7 @@ struct LinkCardView: View {
                 image.resizable().scaledToFill()
             } else {
                 theme.surface.overlay(
-                    Image(systemName: "globe").foregroundStyle(theme.tertiaryText)
+                    Image.icon(.globe).foregroundStyle(theme.tertiaryText)
                 )
             }
         }
@@ -72,7 +72,7 @@ struct LinkCardView: View {
                     .multilineTextAlignment(.leading)
             }
             if let host = card.host {
-                Label(host, systemImage: "link")
+                Label { Text(host) } icon: { Image.icon(.link) }
                     .font(.app(.caption2))
                     .foregroundStyle(theme.tertiaryText)
                     .labelStyle(.titleAndIcon)

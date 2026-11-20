@@ -87,23 +87,23 @@ struct SidebarView: View {
                 VStack(alignment: .leading, spacing: 1) {
                     sectionLabel("フィード")
                     SidebarRow(
-                        icon: "person.2",
+                        icon: .users,
                         title: WorkspaceModel.homeTitle,
                         isSelected: workspace.selection == .home,
                         badge: showsBadges ? homeUnread : 0
                     ) { workspace.selection = .home }
                     SidebarRow(
-                        icon: "bell",
+                        icon: .bell,
                         title: "通知",
                         isSelected: workspace.selection == .notifications,
                         badge: showsBadges ? notificationsUnread : 0
                     ) { workspace.selection = .notifications }
-                    savedRows(kind: .feed, icon: "dot.radiowaves.up.forward")
+                    savedRows(kind: .feed, icon: .rss)
                 }
                 if workspace.savedFeeds.contains(where: { $0.kind == .list }) {
                     VStack(alignment: .leading, spacing: 1) {
                         sectionLabel("リスト")
-                        savedRows(kind: .list, icon: "list.bullet")
+                        savedRows(kind: .list, icon: .list)
                     }
                 }
                 filterSection
@@ -116,7 +116,7 @@ struct SidebarView: View {
     /// The account's pinned feeds or lists, in pin order. Pins are managed on
     /// the server, so there is no add button here.
     @ViewBuilder
-    private func savedRows(kind: SavedFeedSource.Kind, icon: String) -> some View {
+    private func savedRows(kind: SavedFeedSource.Kind, icon: AppIcon) -> some View {
         let sources = workspace.savedFeeds.filter { $0.kind == kind }
         if !sources.isEmpty {
             ForEach(sources) { source in
@@ -141,14 +141,14 @@ struct SidebarView: View {
                 sectionLabel("フィルター")
                 Spacer(minLength: 0)
                 Button { editorRequest = .new } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .semibold))
+                    Icon(.plus, size: 13.75)
                         .foregroundStyle(theme.secondaryText)
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("フィルターを作る")
+                .accessibilityLabel("フィルターを作る")
                 .padding(.trailing, 4)
             }
 
@@ -210,7 +210,7 @@ struct SidebarView: View {
         HStack(spacing: 8) {
             accountMenu
             Spacer(minLength: 4)
-            ChromeIconButton(systemImage: "gearshape", help: "設定", action: { openSettings() })
+            ChromeIconButton(icon: .cog, help: "設定", action: { openSettings() })
                 .overlay(alignment: .topTrailing) {
                     if updateController.updateAvailable {
                         Circle()
@@ -238,7 +238,7 @@ struct SidebarView: View {
                         onSwitchAccount(account.did)
                     } label: {
                         if account.did == accountDID {
-                            Label(accountLabel(account), systemImage: "checkmark")
+                            Label { Text(accountLabel(account)) } icon: { Image.icon(.check) }
                         } else {
                             Text(accountLabel(account))
                         }
@@ -249,12 +249,12 @@ struct SidebarView: View {
             Button {
                 onAddAccount()
             } label: {
-                Label("アカウントを追加…", systemImage: "person.badge.plus")
+                Label { Text("アカウントを追加…") } icon: { Image.icon(.userPlus) }
             }
             Button(role: .destructive) {
                 onLogout()
             } label: {
-                Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
+                Label { Text("ログアウト") } icon: { Image.icon(.logOut) }
             }
         } label: {
             HStack(spacing: 8) {
@@ -301,7 +301,7 @@ private struct SidebarRow: View {
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
 
-    var icon: String? = nil
+    var icon: AppIcon? = nil
     let title: String
     /// Shown as the row's tooltip (a filter's query).
     var meta: String? = nil
@@ -318,9 +318,7 @@ private struct SidebarRow: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 13))
-                        .frame(width: 16)
+                    Icon(icon, size: 16)
                         .foregroundStyle(theme.accent)
                 }
 
@@ -379,19 +377,18 @@ private struct SidebarRow: View {
         if isHovered, onEdit != nil || onClose != nil {
             HStack(spacing: 2) {
                 if let onEdit {
-                    iconButton("pencil", help: "編集", action: onEdit)
+                    iconButton(.pencil, help: "編集", action: onEdit)
                 }
                 if let onClose {
-                    iconButton("xmark", help: "削除", action: onClose)
+                    iconButton(.x, help: "削除", action: onClose)
                 }
             }
         }
     }
 
-    private func iconButton(_ systemImage: String, help: String, action: @escaping () -> Void) -> some View {
+    private func iconButton(_ icon: AppIcon, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 9, weight: .bold))
+            Icon(icon, size: 11)
                 .foregroundStyle(theme.secondaryText)
                 .padding(4)
         }
@@ -420,7 +417,7 @@ private struct FilterSidebarRow: View {
 
     var body: some View {
         SidebarRow(
-            icon: "line.3.horizontal.decrease",
+            icon: .listFilter,
             title: title,
             meta: meta,
             isSelected: isSelected,

@@ -48,7 +48,7 @@ struct ImageLightboxView: View {
                 case .success(let image):
                     image.resizable().scaledToFit()
                 case .failure:
-                    Label("画像を読み込めませんでした", systemImage: "exclamationmark.triangle")
+                    Label { Text("画像を読み込めませんでした") } icon: { Image.icon(.triangleExclamationPoint) }
                         .foregroundStyle(.white)
                 case .empty:
                     ProgressView().controlSize(.large).tint(.white)
@@ -62,23 +62,23 @@ struct ImageLightboxView: View {
 
     private var navigationChevrons: some View {
         HStack {
-            chevron(systemImage: "chevron.left", enabled: gallery.canGoPrevious) { gallery.goPrevious() }
+            chevron(icon: .chevronLeft, name: "前の画像", enabled: gallery.canGoPrevious) { gallery.goPrevious() }
             Spacer()
-            chevron(systemImage: "chevron.right", enabled: gallery.canGoNext) { gallery.goNext() }
+            chevron(icon: .chevronRight, name: "次の画像", enabled: gallery.canGoNext) { gallery.goNext() }
         }
         .padding(.horizontal, 20)
     }
 
-    private func chevron(systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func chevron(icon: AppIcon, name: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 28, weight: .semibold))
+            Icon(icon, size: 35)
                 .foregroundStyle(.white.opacity(enabled ? 0.85 : 0.2))
                 .padding(16)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+        .accessibilityLabel(name)
     }
 
     private var counter: some View {
@@ -99,13 +99,13 @@ struct ImageLightboxView: View {
             HStack {
                 Spacer()
                 Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title)
+                    Icon(.circleX, size: 28)
                         .foregroundStyle(.white.opacity(0.85))
                         .padding(12)
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("閉じる")
             }
             Spacer()
         }

@@ -10,7 +10,7 @@ struct SessionReauthBanner: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image.icon(.triangleExclamationPoint)
                 .foregroundStyle(theme.accent)
             Text("セッションが期限切れです")
                 .font(.app(.caption))

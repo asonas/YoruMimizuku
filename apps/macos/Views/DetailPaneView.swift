@@ -57,8 +57,7 @@ struct DetailPaneView: View {
     private func bar(for entry: DetailEntry) -> some View {
         HStack(spacing: 8) {
             Button { pane.close() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
+                Icon(.x, size: 15)
                     .frame(width: 28, height: 26)
                     .contentShape(Rectangle())
             }
@@ -234,8 +233,7 @@ private struct ReplyField: View {
                 .onSubmit { submit(anchor) }
                 .accessibilityLabel("@\(anchor.authorHandle) に返信")
             Button { expand(anchor, text); text = "" } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 12))
+                Icon(.expand, size: 15)
                     .frame(width: 26, height: 24)
                     .contentShape(Rectangle())
             }
@@ -243,6 +241,7 @@ private struct ReplyField: View {
             .foregroundStyle(theme.secondaryText)
             .disabled(isSending)
             .help("ウインドウで書く")
+            .accessibilityLabel("ウインドウで書く")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

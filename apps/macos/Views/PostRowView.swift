@@ -145,13 +145,13 @@ struct PostRowView: View, @MainActor Equatable {
             onSelect()
             onCopyLink()
         } label: {
-            Label("リンクをコピー", systemImage: "link")
+            Label { Text("リンクをコピー") } icon: { Image.icon(.link) }
         }
         Button {
             onSelect()
             openInBrowser()
         } label: {
-            Label("ブラウザで開く", systemImage: "safari")
+            Label { Text("ブラウザで開く") } icon: { Image.icon(.compass) }
         }
         if let listMembership, let authorDID = ATURI.repo(post.id) {
             Divider()
@@ -163,7 +163,7 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 onDelete()
             } label: {
-                Label("削除", systemImage: "trash")
+                Label { Text("削除") } icon: { Image.icon(.trash) }
             }
         }
     }
@@ -200,7 +200,7 @@ struct PostRowView: View, @MainActor Equatable {
     }
 
     private func contextHeader(_ text: String) -> some View {
-        Label(text, systemImage: "arrow.2.squarepath")
+        Label { Text(text) } icon: { Image.icon(.`repeat`) }
             .font(.app(density == .compact ? .caption2 : .caption))
             .foregroundStyle(theme.tertiaryText)
             .labelStyle(.titleAndIcon)
@@ -211,7 +211,7 @@ struct PostRowView: View, @MainActor Equatable {
         Button {
             onReplyTap(parent)
         } label: {
-            Label("@\(parent.authorHandle) への返信", systemImage: "arrowshape.turn.up.left")
+            Label { Text("@\(parent.authorHandle) への返信") } icon: { Image.icon(.reply) }
                 .font(.app(density == .compact ? .caption2 : .caption, weight: .medium))
                 .foregroundStyle(theme.accent)
                 .lineLimit(1)
@@ -389,8 +389,7 @@ struct PostRowView: View, @MainActor Equatable {
     /// The "閲覧注意" curtain shown over blurred sensitive media.
     private func sensitiveMediaOverlay(_ warning: MediaWarning) -> some View {
         VStack(spacing: 6) {
-            Image(systemName: "eye.slash.fill")
-                .font(.system(size: 18))
+            Icon(.eyeOff, size: 22.5)
             Text(warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
                 .font(.app(.caption)).fontWeight(.medium)
             Text("タップで表示")
@@ -452,7 +451,7 @@ struct PostRowView: View, @MainActor Equatable {
     private var tallCropHint: some View {
         HStack(spacing: 4) {
             Spacer()
-            Image(systemName: "arrow.up.left.and.arrow.down.right")
+            Image.icon(.expand)
             Text("全体表示")
         }
         .font(.app(.caption2))
@@ -493,7 +492,7 @@ struct PostRowView: View, @MainActor Equatable {
             loaded.resizable().scaledToFill()
         case .failure:
             theme.surface.overlay(
-                Image(systemName: "photo").foregroundStyle(theme.secondaryText)
+                Image.icon(.image).foregroundStyle(theme.secondaryText)
             )
         case .empty:
             theme.surface.overlay(ProgressView().controlSize(.small))
@@ -558,7 +557,7 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 onReplyTap(post)
             } label: {
-                actionLabel("\(post.replyCount)", systemImage: "bubble.left",
+                actionLabel("\(post.replyCount)", icon: .messageCircle,
                             accessibilityDescription: "返信 \(post.replyCount)件")
             }
             .help("会話を開く")
@@ -571,7 +570,7 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 showRepostOptions = true
             } label: {
-                actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
+                actionLabel("\(post.repostCount)", icon: .`repeat`,
                             active: post.isReposted, activeColor: theme.repost,
                             accessibilityDescription: "リポスト \(post.repostCount)件")
             }
@@ -584,7 +583,7 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 onLike()
             } label: {
-                actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart",
+                actionLabel("\(post.likeCount)", icon: .heart,
                             active: post.isLiked, activeColor: theme.like,
                             accessibilityDescription: "いいね \(post.likeCount)件")
             }
@@ -594,10 +593,11 @@ struct PostRowView: View, @MainActor Equatable {
                 onSelect()
                 onCopyLink()
             } label: {
-                Image(systemName: "link")
+                Image.icon(.link)
                     .foregroundStyle(theme.tertiaryText)
             }
             .help("リンクをコピー")
+            .accessibilityLabel("リンクをコピー")
         }
         .font(.app(.caption))
         .labelStyle(.titleAndIcon)
@@ -613,7 +613,7 @@ struct PostRowView: View, @MainActor Equatable {
                 showRepostOptions = false
                 onRepost()
             } label: {
-                Label(post.isReposted ? "リポストを取り消す" : "リポスト", systemImage: "arrow.2.squarepath")
+                Label { Text(post.isReposted ? "リポストを取り消す" : "リポスト") } icon: { Image.icon(.`repeat`) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
             }
@@ -621,7 +621,7 @@ struct PostRowView: View, @MainActor Equatable {
                 showRepostOptions = false
                 onQuote()
             } label: {
-                Label("引用", systemImage: "quote.bubble")
+                Label { Text("引用") } icon: { Image.icon(.messageQuote) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
             }
@@ -637,11 +637,11 @@ struct PostRowView: View, @MainActor Equatable {
     /// that are themselves wrapped in a re-anchor button.
     private var staticActionBar: some View {
         HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
-            actionLabel("\(post.replyCount)", systemImage: "bubble.left",
+            actionLabel("\(post.replyCount)", icon: .messageCircle,
                         accessibilityDescription: "返信 \(post.replyCount)件")
-            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.repost,
+            actionLabel("\(post.repostCount)", icon: .`repeat`, active: post.isReposted, activeColor: theme.repost,
                         accessibilityDescription: "リポスト \(post.repostCount)件")
-            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.like,
+            actionLabel("\(post.likeCount)", icon: .heart, active: post.isLiked, activeColor: theme.like,
                         accessibilityDescription: "いいね \(post.likeCount)件")
         }
         .font(.app(.caption))
@@ -656,10 +656,10 @@ struct PostRowView: View, @MainActor Equatable {
     /// instead of reading the bare digit `text`, since `Label`'s icon carries no
     /// accessible name of its own.
     private func actionLabel(
-        _ text: String, systemImage: String, active: Bool = false, activeColor: Color? = nil,
+        _ text: String, icon: AppIcon, active: Bool = false, activeColor: Color? = nil,
         accessibilityDescription: String
     ) -> some View {
-        Label(text, systemImage: systemImage)
+        Label { Text(text) } icon: { Image.icon(icon) }
             .foregroundStyle(active ? (activeColor ?? theme.accent) : theme.tertiaryText)
             .accessibilityLabel(accessibilityDescription)
     }

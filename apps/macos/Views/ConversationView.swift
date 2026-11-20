@@ -52,8 +52,7 @@ struct ConversationView: View {
             }
         case let .failed(message):
             stateMessage {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 26)).foregroundStyle(theme.star)
+                Icon(.triangleExclamationPoint, size: 32.5).foregroundStyle(theme.star)
                 Text("会話を読み込めませんでした")
                     .font(.app(.callout)).foregroundStyle(theme.secondaryText)
                 Text(message)
@@ -208,7 +207,7 @@ struct ConversationView: View {
                         .multilineTextAlignment(.leading)
                 }
                 if !quote.images.isEmpty || quote.video != nil {
-                    Label(quote.video != nil ? "動画あり" : "画像 \(quote.images.count) 枚", systemImage: "photo")
+                    Label { Text(quote.video != nil ? "動画あり" : "画像 \(quote.images.count) 枚") } icon: { Image.icon(.image) }
                         .font(.appSize(11.5))
                         .foregroundStyle(theme.tertiaryText)
                 }
@@ -226,26 +225,30 @@ struct ConversationView: View {
     /// The prototype's counts row; the counts double as the actions.
     private func stats(_ post: PostDisplay) -> some View {
         HStack(spacing: 18) {
-            Button { onReply(post) } label: { stat("bubble.left", post.replyCount, color: nil) }
+            Button { onReply(post) } label: { stat(.messageCircle, post.replyCount, color: nil) }
                 .help("返信")
+                .accessibilityLabel("返信 \(post.replyCount)件")
             Button { Task { await model.toggleRepost(post) } } label: {
-                stat("arrow.2.squarepath", post.repostCount, color: post.isReposted ? theme.repost : nil)
+                stat(.`repeat`, post.repostCount, color: post.isReposted ? theme.repost : nil)
             }
             .help(post.isReposted ? "リポストを取り消す" : "リポスト")
+            .accessibilityLabel("\(post.isReposted ? "リポスト済み" : "リポスト") \(post.repostCount)件")
             Button { Task { await model.toggleLike(post) } } label: {
-                stat(post.isLiked ? "heart.fill" : "heart", post.likeCount, color: post.isLiked ? theme.like : nil)
+                stat(.heart, post.likeCount, color: post.isLiked ? theme.like : nil)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
-            Button { copyPermalink(post) } label: { Image(systemName: "link").font(.system(size: 12)) }
+            .accessibilityLabel("\(post.isLiked ? "いいね済み" : "いいね") \(post.likeCount)件")
+            Button { copyPermalink(post) } label: { Icon(.link, size: 15) }
                 .foregroundStyle(theme.tertiaryText)
                 .help("リンクをコピー")
+                .accessibilityLabel("リンクをコピー")
         }
         .buttonStyle(.plain)
     }
 
-    private func stat(_ systemImage: String, _ count: Int, color: Color?) -> some View {
+    private func stat(_ icon: AppIcon, _ count: Int, color: Color?) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: systemImage).font(.system(size: 12)).foregroundStyle(color ?? theme.tertiaryText)
+            Icon(icon, size: 15).foregroundStyle(color ?? theme.tertiaryText)
             Text("\(count)").font(.appSize(12, weight: .bold).monospacedDigit()).foregroundStyle(color ?? theme.primaryText)
         }
         .contentShape(Rectangle())
@@ -284,8 +287,7 @@ struct ConversationView: View {
                 if isFolded { folded.remove(node.id) } else { folded.insert(node.id) }
             } label: {
                 HStack(spacing: 3) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
+                    Icon(.chevronRight, size: 11.25)
                         .rotationEffect(.degrees(isFolded ? 0 : 90))
                     if isFolded { Text("\(count(node))") }
                 }
@@ -375,10 +377,8 @@ struct ConversationView: View {
     @ViewBuilder
     private func verifiedMark(_ post: PostDisplay) -> some View {
         if post.authorIsVerified {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 11))
+            Icon(.badgeCheck, size: 13.75, label: "認証済み")
                 .foregroundStyle(theme.proto)
-                .accessibilityLabel("認証済み")
         }
     }
 

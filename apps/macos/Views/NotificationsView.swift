@@ -66,8 +66,7 @@ struct NotificationsView: View {
 
     private func failedState(_ message: String) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 26)).foregroundStyle(theme.star)
+            Icon(.triangleExclamationPoint, size: 32.5).foregroundStyle(theme.star)
             Text("通知の読み込みに失敗しました")
                 .font(.app(.callout)).foregroundStyle(theme.secondaryText)
             Text(message)
@@ -81,8 +80,7 @@ struct NotificationsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "bell.slash")
-                .font(.system(size: 28)).foregroundStyle(theme.tertiaryText)
+            Icon(.bellOff, size: 35).foregroundStyle(theme.tertiaryText)
             Text("通知はまだありません")
                 .font(.app(.callout)).foregroundStyle(theme.tertiaryText)
         }
@@ -118,8 +116,7 @@ private struct NotificationRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+            Icon(icon, size: 19)
                 .foregroundStyle(iconColor)
                 .frame(width: 20)
                 .padding(.top, 1)
@@ -184,14 +181,14 @@ private struct NotificationRowView: View {
 
     private var expandToggle: some View {
         Button { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } } label: {
-            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                .font(.system(size: 12, weight: .semibold))
+            Icon(isExpanded ? .chevronUp : .chevronDown, size: 15)
                 .foregroundStyle(theme.tertiaryText)
                 .frame(width: 16, height: 16)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(isExpanded ? "非表示" : "すべて表示")
+        .accessibilityLabel(isExpanded ? "通知した人を折りたたむ" : "通知した人をすべて表示")
     }
 
     /// The post this notification is about: a plain grey snippet of the target post for
@@ -270,15 +267,15 @@ private struct NotificationRowView: View {
         .help("@\(actor.handle) のページを開く")
     }
 
-    private var icon: String {
+    private var icon: AppIcon {
         switch item.reason {
-        case .like: return "heart.fill"
-        case .repost: return "arrow.2.squarepath"
-        case .follow: return "person.fill.badge.plus"
-        case .mention: return "at"
-        case .reply: return "arrowshape.turn.up.left.fill"
-        case .quote: return "quote.bubble.fill"
-        case .other: return "bell.fill"
+        case .like: return .heart
+        case .repost: return .`repeat`
+        case .follow: return .userPlus
+        case .mention: return .atSign
+        case .reply: return .reply
+        case .quote: return .messageQuote
+        case .other: return .bell
         }
     }
 

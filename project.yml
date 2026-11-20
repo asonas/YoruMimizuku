@@ -20,6 +20,10 @@ targets:
     platform: macOS
     sources:
       - apps/macos
+      # The icon SVGs (design/icons), copied as an "icons" folder.
+      - path: design/icons
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: BlueskyCore
         product: BlueskyCore
@@ -113,6 +117,10 @@ targets:
     platform: macOS
     sources:
       - apps/macosTests
+      - path: design/icons
+        type: folder
+        buildPhase: resources
+      - apps/macos/Views/AppIcon.swift
       - apps/macos/Update/UpdateBadgeState.swift
       - apps/macos/Update/UpdateChannel.swift
       - apps/macos/Update/UpdateChannelStore.swift

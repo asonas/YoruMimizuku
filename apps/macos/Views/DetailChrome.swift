@@ -4,21 +4,20 @@ import SwiftUI
 struct DetailHeader<Trailing: View>: View {
     @EnvironmentObject private var theme: ThemeStore
     private let title: String?
-    private let systemImage: String?
+    private let icon: AppIcon?
     private let trailing: () -> Trailing
 
     /// Omit the title or glyph when only contextual controls are needed.
-    init(_ title: String? = nil, systemImage: String? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
+    init(_ title: String? = nil, icon: AppIcon? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
         self.title = title
-        self.systemImage = systemImage
+        self.icon = icon
         self.trailing = trailing
     }
 
     var body: some View {
         HStack(spacing: 10) {
-            if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.system(size: 14, weight: .semibold))
+            if let icon {
+                Icon(icon, size: 17.5)
                     .foregroundStyle(theme.accent)
             }
             if let title {
@@ -44,15 +43,14 @@ struct DetailHeader<Trailing: View>: View {
 /// Used for refresh / settings / close affordances in headers and the sidebar.
 struct ChromeIconButton: View {
     @EnvironmentObject private var theme: ThemeStore
-    let systemImage: String
+    let icon: AppIcon
     var help: String = ""
     var disabled: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 13, weight: .semibold))
+            Icon(icon, size: 16)
                 .foregroundStyle(theme.secondaryText)
                 .frame(width: 30, height: 26)
                 .background(theme.surfaceElevated.opacity(0.6))
@@ -61,5 +59,6 @@ struct ChromeIconButton: View {
         .buttonStyle(.plain)
         .disabled(disabled)
         .help(help)
+        .accessibilityLabel(help)
     }
 }

@@ -73,18 +73,19 @@ struct FilterEditorView: View {
                         Button {
                             terms.removeAll { $0.id == term.id }
                         } label: {
-                            Image(systemName: "minus.circle")
+                            Image.icon(.circleMinus)
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(theme.tertiaryText)
                         .disabled(terms.count <= 1)
+                        .accessibilityLabel("条件を削除")
                     }
                 }
 
                 Button {
                     terms.append(FilterTerm(kind: .keyword, value: ""))
                 } label: {
-                    Label("条件を追加", systemImage: "plus")
+                    Label { Text("条件を追加") } icon: { Image.icon(.plus) }
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.accent)

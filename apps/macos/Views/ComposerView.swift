@@ -101,10 +101,12 @@ struct ComposerView: View {
 
     private var composerFooter: some View {
         HStack {
-            Button { importing = true } label: { Image(systemName: "photo.badge.plus") }
+            Button { importing = true } label: { Image.icon(.imagePlus) }
+                .accessibilityLabel("画像を添付")
                 .disabled(!model.canAddImage)
                 .help("クリック、または画像をドラッグ&ドロップで添付")
-            Button { importingVideo = true } label: { Image(systemName: "video.badge.plus") }
+            Button { importingVideo = true } label: { Image.icon(.videoPlus) }
+                .accessibilityLabel("動画を添付")
                 .disabled(!model.canAddVideo)
                 .help("動画を1本添付（画像とは併用できません）")
             Spacer()
@@ -199,8 +201,9 @@ struct ComposerView: View {
                     }
                     TextField("代替テキスト", text: $image.alt)
                     Button { model.images.removeAll { $0.id == image.id } } label: {
-                        Image(systemName: "xmark.circle.fill")
+                        Image.icon(.circleX)
                     }
+                    .accessibilityLabel("画像を外す")
                 }
             }
         }
@@ -216,15 +219,16 @@ struct ComposerView: View {
                 } else {
                     RoundedRectangle(cornerRadius: 6).fill(theme.surface)
                 }
-                Image(systemName: "play.circle.fill")
+                Image.icon(.circlePlay)
                     .foregroundStyle(.white)
                     .shadow(radius: 2)
             }
             .frame(width: 72, height: 56).clipped().cornerRadius(6)
             TextField("代替テキスト", text: videoAltBinding)
             Button { model.video = nil; videoPoster = nil } label: {
-                Image(systemName: "xmark.circle.fill")
+                Image.icon(.circleX)
             }
+            .accessibilityLabel("動画を外す")
         }
     }
 

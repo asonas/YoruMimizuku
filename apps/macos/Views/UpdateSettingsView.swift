@@ -55,13 +55,13 @@ struct UpdateSettingsView: View {
                 Button {
                     updateController.checkForUpdates()
                 } label: {
-                    Label("今すぐ確認", systemImage: "arrow.clockwise")
+                    Label { Text("今すぐ確認") } icon: { Image.icon(.rotateCw) }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!updateController.canCheckForUpdates)
 
                 if updateController.updateAvailable {
-                    Label("利用可能なアップデートがあります。今すぐ確認からインストールできます。", systemImage: "arrow.down.circle.fill")
+                    Label { Text("利用可能なアップデートがあります。今すぐ確認からインストールできます。") } icon: { Image.icon(.circleArrowDown) }
                         .font(.app(.callout))
                         .foregroundStyle(theme.accent)
                 }

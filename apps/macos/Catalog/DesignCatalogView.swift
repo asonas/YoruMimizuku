@@ -97,7 +97,7 @@ struct DesignCatalogView: View {
                 Button(preset.name) { applyThemePreset(preset.url) }
             }
         } label: {
-            Label("テーマ", systemImage: "paintpalette")
+            Label { Text("テーマ") } icon: { Image.icon(.palette) }
         }
     }
 

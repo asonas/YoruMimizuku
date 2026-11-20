@@ -43,8 +43,7 @@ struct VideoPosterView: View {
     }
 
     private var playBadge: some View {
-        Image(systemName: "play.fill")
-            .font(.system(size: 18, weight: .bold))
+        Icon(.play, size: 22.5)
             .foregroundStyle(.white)
             .padding(14)
             .background(Circle().fill(.black.opacity(0.55)))

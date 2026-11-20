@@ -60,7 +60,7 @@ struct ListMembershipMenu: View {
             Divider()
             Text("リストは公開され、誰でも見られます")
         } label: {
-            Label("リストに追加", systemImage: "list.bullet")
+            Label { Text("リストに追加") } icon: { Image.icon(.list) }
         }
     }
 

@@ -186,7 +186,7 @@ struct FeedView: View {
                 model.markHeadSeen()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
+                    Icon(.arrowUp, size: 13.75)
                     Text("新着 \(count) 件").font(.appSize(12, weight: .semibold))
                     Spacer(minLength: 0)
                 }
@@ -333,8 +333,7 @@ struct FeedView: View {
 
     private func failedState(_ failure: LoadFailure) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: Self.icon(for: failure.kind))
-                .font(.system(size: 26))
+            Icon(Self.icon(for: failure.kind), size: 32)
                 .foregroundStyle(theme.star)
             Text(failure.title)
                 .font(.app(.callout)).foregroundStyle(theme.secondaryText)
@@ -351,20 +350,19 @@ struct FeedView: View {
         .padding(.top, 80)
     }
 
-    /// The SF Symbol that best signals each failure kind.
-    private static func icon(for kind: LoadFailure.Kind) -> String {
+    /// The icon that best signals each failure kind.
+    private static func icon(for kind: LoadFailure.Kind) -> AppIcon {
         switch kind {
-        case .offline: return "wifi.slash"
-        case .rateLimited: return "hourglass"
-        case .server: return "exclamationmark.icloud"
-        case .unknown: return "exclamationmark.triangle"
+        case .offline: return .wifiOff
+        case .rateLimited: return .hourglass
+        case .server: return .cloudExclamationPoint
+        case .unknown: return .triangleExclamationPoint
         }
     }
 
     private var emptyState: some View {
         VStack(spacing: 10) {
-            Image(systemName: "moon.stars")
-                .font(.system(size: 28))
+            Icon(.moonStar, size: 35)
                 .foregroundStyle(theme.tertiaryText)
             Text("まだ投稿がありません")
                 .font(.app(.callout)).foregroundStyle(theme.tertiaryText)

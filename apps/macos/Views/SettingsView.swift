@@ -41,7 +41,7 @@ struct SettingsView: View {
         return Button {
             selection = tab
         } label: {
-            Label(tab.title, systemImage: tab.icon)
+            Label { Text(tab.title) } icon: { Image.icon(tab.icon) }
                 .font(.app(.callout, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? theme.primaryText : theme.secondaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -93,13 +93,13 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
         }
     }
 
-    var icon: String {
+    var icon: AppIcon {
         switch self {
-        case .appearance: return "paintpalette"
-        case .font: return "textformat"
-        case .display: return "rectangle.grid.1x2"
-        case .notifications: return "bell"
-        case .update: return "arrow.down.circle"
+        case .appearance: return .palette
+        case .font: return .type
+        case .display: return .rows2
+        case .notifications: return .bell
+        case .update: return .circleArrowDown
         }
     }
 }

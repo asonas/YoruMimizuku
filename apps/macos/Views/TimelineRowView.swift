@@ -130,14 +130,14 @@ struct TimelineRowView: View, @MainActor Equatable {
     @ViewBuilder
     private var whyLine: some View {
         if let context = post.contextLabel {
-            whyLabel(context, systemImage: "arrow.2.squarepath")
+            whyLabel(context, icon: .`repeat`)
         } else if let parent = post.replyParent?.post {
-            whyLabel("@\(parent.authorHandle) への返信", systemImage: "arrowshape.turn.up.left")
+            whyLabel("@\(parent.authorHandle) への返信", icon: .reply)
         }
     }
 
-    private func whyLabel(_ text: String, systemImage: String) -> some View {
-        Label(text, systemImage: systemImage)
+    private func whyLabel(_ text: String, icon: AppIcon) -> some View {
+        Label { Text(text) } icon: { Icon(icon, size: 13) }
             .font(.appSize(11))
             .foregroundStyle(theme.tertiaryText)
             .lineLimit(1)
@@ -151,10 +151,8 @@ struct TimelineRowView: View, @MainActor Equatable {
                 .foregroundStyle(theme.primaryText)
                 .lineLimit(1)
             if post.authorIsVerified {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 11))
+                Icon(.badgeCheck, size: 13.75, label: "認証済み")
                     .foregroundStyle(theme.proto)
-                    .accessibilityLabel("認証済み")
             }
             Text("@\(post.authorHandle)")
                 .font(.appSize(12))
@@ -196,8 +194,7 @@ struct TimelineRowView: View, @MainActor Equatable {
                 if let video = post.video {
                     thumbnail(video.thumbURL, alt: nil)
                         .overlay {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 12))
+                            Icon(.play, size: 15)
                                 .foregroundStyle(.white)
                                 .shadow(radius: 2)
                         }
@@ -246,7 +243,7 @@ struct TimelineRowView: View, @MainActor Equatable {
                         onQuoteTap(quote)
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: "quote.opening").font(.system(size: 9))
+                            Icon(.quote, size: 11.25)
                             Text(quote.authorDisplayName).lineLimit(1)
                         }
                         .font(.appSize(11.5))
@@ -273,20 +270,20 @@ struct TimelineRowView: View, @MainActor Equatable {
     private var reactions: some View {
         HStack(spacing: 16) {
             Button { onSelect(); onReply() } label: {
-                reaction("bubble.left", count: post.replyCount, color: nil)
+                reaction(.messageCircle, count: post.replyCount, color: nil)
             }
             .help("返信")
             .accessibilityLabel(spoken("返信", post.replyCount))
 
             Button { onSelect(); showRepostOptions = true } label: {
-                reaction("arrow.2.squarepath", count: post.repostCount, color: post.isReposted ? theme.repost : nil)
+                reaction(.`repeat`, count: post.repostCount, color: post.isReposted ? theme.repost : nil)
             }
             .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
             .accessibilityLabel(spoken(post.isReposted ? "リポスト済み" : "リポスト", post.repostCount))
             .popover(isPresented: $showRepostOptions, arrowEdge: .bottom) { repostOptions }
 
             Button { onSelect(); onLike() } label: {
-                reaction(post.isLiked ? "heart.fill" : "heart", count: post.likeCount, color: post.isLiked ? theme.like : nil)
+                reaction(.heart, count: post.likeCount, color: post.isLiked ? theme.like : nil)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
             .accessibilityLabel(spoken(post.isLiked ? "いいね済み" : "いいね", post.likeCount))
@@ -300,9 +297,9 @@ struct TimelineRowView: View, @MainActor Equatable {
         showsCounts && count > 0 ? "\(name) \(count)件" : name
     }
 
-    private func reaction(_ systemImage: String, count: Int, color: Color?) -> some View {
+    private func reaction(_ icon: AppIcon, count: Int, color: Color?) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: systemImage).font(.system(size: 11))
+            Icon(icon, size: 14)
             if showsCounts, count > 0 {
                 Text("\(count)").font(.appSize(11.5).monospacedDigit())
             }
@@ -317,7 +314,7 @@ struct TimelineRowView: View, @MainActor Equatable {
                 showRepostOptions = false
                 onRepost()
             } label: {
-                Label(post.isReposted ? "リポストを取り消す" : "リポスト", systemImage: "arrow.2.squarepath")
+                Label { Text(post.isReposted ? "リポストを取り消す" : "リポスト") } icon: { Image.icon(.`repeat`) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
             }
@@ -325,7 +322,7 @@ struct TimelineRowView: View, @MainActor Equatable {
                 showRepostOptions = false
                 onQuote()
             } label: {
-                Label("引用して投稿", systemImage: "quote.bubble")
+                Label { Text("引用して投稿") } icon: { Image.icon(.messageQuote) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
             }
