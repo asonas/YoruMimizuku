@@ -429,7 +429,8 @@ struct MainWindowView: View {
         await vm.submit()
         if posted {
             toastCenter.show("返信しました")
-            if case let .conversation(tab) = detailPane.current { await tab.model.load() }
+            // Only if the pane still shows that conversation.
+            if case let .conversation(tab) = detailPane.current, tab.anchorID == post.id { await tab.model.load() }
         } else {
             toastCenter.show(vm.errorMessage ?? "返信できませんでした")
         }

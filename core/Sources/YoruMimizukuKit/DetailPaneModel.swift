@@ -44,7 +44,8 @@ public final class DetailPaneModel: ObservableObject {
     }
 
     public func openConversation(_ post: PostDisplay) {
-        if isShowingConversation(post.id) { return }
+        // The shown post again means "show its thread".
+        if isShowingConversation(post.id) { tab = .thread; return }
         show(.conversation(ConversationTab(anchor: post, model: makeThreadModel(post.id))))
     }
 
@@ -76,7 +77,7 @@ public final class DetailPaneModel: ObservableObject {
 
     /// Open `post` on its レコード tab (投稿 > レコードを表示).
     public func openRecord(_ post: PostDisplay) {
-        openConversation(post)
+        if !isShowingConversation(post.id) { openConversation(post) }
         tab = .record
     }
 

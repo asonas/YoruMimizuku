@@ -114,7 +114,8 @@ struct ConversationView: View {
                     .lineSpacing(15.5 * 0.55)
                     .foregroundStyle(theme.primaryText)
                     .tint(theme.accent)
-                    .textSelection(.enabled)
+                    // No .textSelection here: with link attributes it blanks
+                    // links after a relayout (see PostRowView).
                     .fixedSize(horizontal: false, vertical: true)
             }
             if let warning = post.mediaWarning, post.hasMedia {
@@ -125,9 +126,11 @@ struct ConversationView: View {
             }
             if let card = post.linkCard {
                 LinkCardView(card: card, density: .comfortable)
+            } else if !post.hasMedia, post.quote == nil, let url = post.firstLinkURL {
+                LazyLinkCardView(url: url, density: .comfortable)
             }
             if let quote = post.quote {
-                quoteBox(quote)
+                QuoteCardView(quote: quote, density: .comfortable, now: now) { onOpenQuote(quote) }
             }
             stats(post)
         }
@@ -187,28 +190,6 @@ struct ConversationView: View {
                 if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
             }
         }
-    }
-
-    private func quoteBox(_ quote: QuotedPost) -> some View {
-        Button { onOpenQuote(quote) } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(quote.authorDisplayName).font(.appSize(13, weight: .semibold)).foregroundStyle(theme.primaryText)
-                    Text("@\(quote.authorHandle)").font(.appSize(12)).foregroundStyle(theme.tertiaryText)
-                }
-                Text(quote.body)
-                    .font(.appSize(13.5))
-                    .foregroundStyle(theme.primaryText)
-                    .multilineTextAlignment(.leading)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.divider, lineWidth: 1))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help("引用元を開く")
     }
 
     /// The prototype's counts row; the counts double as the actions.

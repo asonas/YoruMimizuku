@@ -89,7 +89,7 @@ struct DetailPaneView: View {
 
     private func title(for entry: DetailEntry) -> String {
         switch entry {
-        case .conversation: return ""
+        case let .conversation(tab): return tab.title
         case let .author(tab): return tab.displayName.isEmpty ? "@\(tab.handle)" : tab.displayName
         }
     }
@@ -111,7 +111,10 @@ struct DetailPaneView: View {
                 )
                 .id(conversation.id)
             case .record:
-                RecordView(uri: conversation.anchorID, post: anchorPost(conversation), load: loadRecord)
+                RecordView(
+                    uri: conversation.anchorID, handle: conversation.handle,
+                    warning: anchorPost(conversation)?.mediaWarning, load: loadRecord
+                )
                     .id(conversation.id)
             }
         case let .author(tab):
@@ -136,7 +139,8 @@ struct DetailPaneView: View {
 /// record exactly as stored in the author's repo.
 private struct RecordView: View {
     let uri: String
-    let post: PostDisplay?
+    let handle: String
+    let warning: MediaWarning?
     let load: (String) async throws -> RecordResponse
     @EnvironmentObject private var theme: ThemeStore
 
@@ -147,15 +151,15 @@ private struct RecordView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
-                    if let post {
-                        row("Handle", post.authorHandle)
+                    if !handle.isEmpty {
+                        row("Handle", handle)
                     }
                     if let did = ATURI.repo(uri) {
                         row("DID", did)
                     }
                     row("URI", uri)
-                    if let warning = post?.mediaWarning {
-                        row("Label", warning == .graphic ? "graphic-media" : "sexual / nudity / porn")
+                    if let warning {
+                        row("Label", warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
                     }
                 }
                 switch state {
@@ -236,6 +240,7 @@ private struct ReplyField: View {
             }
             .buttonStyle(.borderless)
             .foregroundStyle(theme.secondaryText)
+            .disabled(isSending)
             .help("ウインドウで書く")
         }
         .padding(.horizontal, 12)
@@ -245,8 +250,9 @@ private struct ReplyField: View {
     }
 
     private func submit(_ anchor: PostDisplay) {
-        let draft = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !draft.isEmpty, !isSending else { return }
+        // Sent as typed, like the composer; trimming only decides emptiness.
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !isSending else { return }
+        let draft = text
         isSending = true
         Task {
             if await send(anchor, draft) { text = "" }

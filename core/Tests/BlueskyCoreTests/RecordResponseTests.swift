@@ -51,4 +51,13 @@ final class RecordResponseTests: XCTestCase {
         }
         """##)
     }
+
+    /// Integers beyond a Double's 53-bit precision come back exactly as stored.
+    func testLargeIntegersKeepTheirExactValue() throws {
+        let body = Data(#"{"uri":"at://a/b/c","value":{"n":9007199254740993}}"#.utf8)
+
+        let response = try JSONDecoder().decode(RecordResponse.self, from: body)
+
+        XCTAssertTrue(response.prettyValue.contains("9007199254740993"), response.prettyValue)
+    }
 }

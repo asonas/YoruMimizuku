@@ -94,5 +94,10 @@ final class DetailPaneModelTests: XCTestCase {
 
         pane.openConversation(post("at://a/2"))
         XCTAssertEqual(pane.tab, .thread)
+
+        // Opening the shown post again from the timeline means "show its thread".
+        pane.openRecord(post("at://a/2"))
+        pane.openConversation(post("at://a/2"))
+        XCTAssertEqual(pane.tab, .thread)
     }
 }

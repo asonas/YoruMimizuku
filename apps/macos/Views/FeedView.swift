@@ -246,6 +246,7 @@ struct FeedView: View {
                         keyboardOpenTask?.cancel()
                         focusedPostID = post.id
                     },
+                    onActivate: { select(post) },
                     onReply: { onReply(post) },
                     onRepost: { Task { await model.toggleRepost(post) } },
                     onQuote: { onQuote(post) },

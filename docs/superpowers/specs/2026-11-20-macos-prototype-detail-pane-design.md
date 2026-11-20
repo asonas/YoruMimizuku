@@ -32,7 +32,16 @@ field at the bottom.
 - **Reply field.** Under a loaded conversation; return sends a short reply to
   the anchor as the window's composer would and reloads the thread, and the
   button opens the full composer with what was typed.
-- Author pages keep their content, with the bar's title showing the name.
+- Author pages keep their content, with the bar's title showing the name; a
+  conversation's title is its anchor's author.
+- Replies and quotes from the composer and the reply field are posted as the
+  window's account (`LiveComposer` gets the window's DID); a reply only reloads
+  the conversation it was sent from.
+- The anchor keeps the lazily resolved link card for a bare link and the full
+  quote card with its media; its body is not selectable, because selection on
+  linked text blanks the links after a relayout.
+- In timeline rows a click on the name, why-line or body text also selects the
+  row and opens it here (text otherwise takes the click before the row).
 
 ## 3. Not in this PR
 

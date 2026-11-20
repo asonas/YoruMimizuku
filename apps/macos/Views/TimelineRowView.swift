@@ -14,6 +14,8 @@ struct TimelineRowView: View, @MainActor Equatable {
     var canDelete: Bool = false
     var onImageTap: ([URL], Int) -> Void = { _, _ in }
     var onSelect: () -> Void = {}
+    /// Selects the row and opens it in the detail pane (a click on its text).
+    var onActivate: () -> Void = {}
     var onReply: () -> Void = {}
     var onRepost: () -> Void = {}
     var onQuote: () -> Void = {}
@@ -54,8 +56,11 @@ struct TimelineRowView: View, @MainActor Equatable {
         HStack(alignment: .top, spacing: 10) {
             avatar
             VStack(alignment: .leading, spacing: 3) {
-                whyLine
-                header
+                Group {
+                    whyLine
+                    header
+                }
+                .simultaneousGesture(TapGesture().onEnded { onActivate() })
                 Text(post.bodyAttributedString)
                     .font(.app(.body))
                     .lineSpacing(AppTypography.pointSize(.body) * CGFloat(DesignMetrics.bodyLineSpacingRatio(.comfortable)))
@@ -66,6 +71,9 @@ struct TimelineRowView: View, @MainActor Equatable {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .opacity(post.body.isEmpty ? 0 : 1)
                     .frame(height: post.body.isEmpty ? 0 : nil)
+                    // Text takes the click before the row's background does; a
+                    // simultaneous tap keeps link clicks working and still selects.
+                    .simultaneousGesture(TapGesture().onEnded { onActivate() })
                 thumbnails
                 tags
                 reactions

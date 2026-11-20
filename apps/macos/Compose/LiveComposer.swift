@@ -10,16 +10,19 @@ import YoruMimizukuKit
 struct LiveComposer: PostSubmitting {
     let accountManager: AccountManager
     let config: OAuthClientConfig
+    /// The account to post as. Nil uses the current account.
+    let accountDID: String?
 
     enum ComposeError: Error { case cannotDeriveVideoAudience }
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, accountDID: String? = nil) {
         self.accountManager = accountManager
         self.config = config
+        self.accountDID = accountDID
     }
 
     func submit(_ draft: PostDraft) async throws -> PostResult {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = PostService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )

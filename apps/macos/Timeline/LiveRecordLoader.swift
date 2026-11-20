@@ -13,8 +13,9 @@ struct LiveRecordLoader {
 
     func load(_ uri: String) async throws -> RecordResponse {
         // at://<repo>/<collection>/<rkey>
-        let parts = uri.replacingOccurrences(of: "at://", with: "").split(separator: "/").map(String.init)
-        guard parts.count == 3 else { throw LoadError.malformedURI(uri) }
+        guard uri.hasPrefix("at://") else { throw LoadError.malformedURI(uri) }
+        let parts = uri.dropFirst("at://".count).split(separator: "/", omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 3, !parts.contains(where: \.isEmpty) else { throw LoadError.malformedURI(uri) }
         let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = XRPCQueryService(
             sender: context.sender, metadataResolver: context.metadataResolver,

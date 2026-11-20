@@ -72,10 +72,10 @@ struct RootView: View {
                         onAddAccount: { startAddAccount() },
                         onLogout: { logout() },
                         makeComposer: { parent in
-                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), replyParent: parent)
+                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager, accountDID: did), replyParent: parent)
                         },
                         makeQuoteComposer: { post in
-                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager), quotedPost: post)
+                            ComposerViewModel(submitter: LiveComposer(accountManager: accountManager, accountDID: did), quotedPost: post)
                         }
                     )
                     .id("\(did)#\(reauthGeneration)")
