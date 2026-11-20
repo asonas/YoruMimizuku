@@ -66,9 +66,6 @@ struct FeedView: View {
     /// Mutable set of on-screen row ids. A class (not a `@State Set`) so inserting
     /// or removing an id does not trigger a view update.
     private final class VisibleRows { var ids: Set<String> = [] }
-    /// The head post when the top of the list was last on screen. Posts above it
-    /// arrived while the viewer was scrolled down: the "新着 n 件" bar counts them.
-    @State private var seenHeadID: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -160,16 +157,18 @@ struct FeedView: View {
         visibleRows.ids.removeAll()
     }
 
-    /// The prototype's "新着 n 件" bar: shown while posts sit above the head the
-    /// viewer last saw at the top; clicking scrolls up to them.
+    /// The prototype's "新着 n 件" bar: shown while posts arrived above what the
+    /// viewer last saw at the top (`TimelineViewModel.newArrivals`); clicking
+    /// scrolls up to them.
     @ViewBuilder
     private func newPostsBar(_ proxy: ScrollViewProxy) -> some View {
-        let order = FeedThreading.arrange(model.posts).map(\.id)
-        let count = UnreadCounter.unread(ids: order, since: seenHeadID)
-        if count > 0, let first = order.first {
+        let count = model.newArrivals
+        if count > 0 {
             Button {
-                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(first, anchor: .top) }
-                seenHeadID = first
+                if let first = FeedThreading.arrange(model.posts).first?.id {
+                    withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(first, anchor: .top) }
+                }
+                model.markHeadSeen()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
@@ -200,8 +199,8 @@ struct FeedView: View {
         if let top = FeedScrollAnchor.topVisibleID(order: order, visible: visibleRows.ids) {
             model.scrollAnchorID = top
         }
-        if let head = order.first, visibleRows.ids.contains(head), seenHeadID != head {
-            seenHeadID = head
+        if model.newArrivals > 0, let head = order.first, visibleRows.ids.contains(head) {
+            model.markHeadSeen()
         }
     }
 

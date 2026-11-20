@@ -118,4 +118,50 @@ final class NotificationsViewModelTests: XCTestCase {
         await vm.refresh()
         XCTAssertEqual(vm.unreadCount, 0)
     }
+
+    /// Holds the second call (the first refresh) until `release()`, so a later
+    /// refresh can finish first.
+    private actor HeldSecondCallLoader: NotificationsLoading {
+        private var calls = 0
+        private var gate: CheckedContinuation<Void, Never>?
+        private var parked: CheckedContinuation<Void, Never>?
+        let pages: [[NotificationGroup]]
+        init(pages: [[NotificationGroup]]) { self.pages = pages }
+
+        func loadLatest() async throws -> [NotificationGroup] {
+            calls += 1
+            let page = pages[min(calls, pages.count) - 1]
+            if calls == 2 {
+                await withCheckedContinuation { continuation in
+                    gate = continuation
+                    parked?.resume()
+                    parked = nil
+                }
+            }
+            return page
+        }
+
+        func waitUntilParked() async {
+            if gate != nil { return }
+            await withCheckedContinuation { parked = $0 }
+        }
+
+        func release() { gate?.resume(); gate = nil }
+    }
+
+    /// ⌘R during a poll can overlap two refreshes; the older answer must not
+    /// replace the newer one.
+    func testAnOlderRefreshFinishingLastDoesNotOverwriteANewerOne() async {
+        let loader = HeldSecondCallLoader(pages: [[sample(id: "n1")], [sample(id: "old")], [sample(id: "new")]])
+        let vm = NotificationsViewModel(loader: loader)
+        await vm.load()
+
+        let older = Task { await vm.refresh() }
+        await loader.waitUntilParked()
+        await vm.refresh()
+        await loader.release()
+        _ = await older.value
+
+        XCTAssertEqual(vm.items.map(\.id), ["new"])
+    }
 }

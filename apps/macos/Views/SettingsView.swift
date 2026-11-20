@@ -382,7 +382,7 @@ private struct NotificationSettingsContentView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    Text("ホーム・通知・フィルターの各タブが新着を確認する間隔です。短くするほど早く反映されますが、通信と電力を多く使います。")
+                    Text("フォロー中・通知・フィルターなどの各タブが新着を確認する間隔です。短くするほど早く反映されますが、通信と電力を多く使います。")
                         .font(.app(.caption2))
                         .foregroundStyle(theme.secondaryText)
                 }

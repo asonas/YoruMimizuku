@@ -62,6 +62,9 @@ public final class NotificationsViewModel: ObservableObject {
         }
     }
 
+    /// Bumped by each refresh so an older one finishing last is dropped.
+    private var refreshGeneration = 0
+
     /// Reload the notifications without flashing the loading state, so a periodic
     /// or manual refresh never replaces good content with a spinner. Failures keep
     /// the current list.
@@ -71,8 +74,13 @@ public final class NotificationsViewModel: ObservableObject {
         guard case .loaded = state else {
             return await load()
         }
+        refreshGeneration += 1
+        let generation = refreshGeneration
         do {
-            state = .loaded(try await loader.loadLatest())
+            let latest = try await loader.loadLatest()
+            // A newer refresh (a poll overlapping ⌘R) already applied its answer.
+            guard generation == refreshGeneration else { return true }
+            state = .loaded(latest)
             onItemsChanged()
             return true
         } catch {

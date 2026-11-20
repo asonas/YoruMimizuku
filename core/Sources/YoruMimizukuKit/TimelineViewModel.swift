@@ -48,6 +48,14 @@ public final class TimelineViewModel: ObservableObject {
     /// Count of posts newer than the last item the viewer saw on this tab. Drives
     /// the sidebar badge. Always 0 while the tab is active.
     @Published public private(set) var unreadCount = 0
+    /// Posts at the head that arrived after the viewer last saw the top of the
+    /// list (the "新着 n 件" bar). Unlike `unreadCount` it does not reset when the
+    /// tab is selected, only when the top is actually on screen.
+    @Published public private(set) var newArrivals = 0
+    /// The posts loaded when the top was last seen. The head posts not in it are
+    /// new arrivals; a set rather than one marker, so deleting the post that was
+    /// on top does not turn every older post into a new arrival.
+    private var seenIDs: Set<String> = []
 
     /// The id of the row that was at the top of the feed the last time it was
     /// scrolled. Survives the tab switch that tears the `FeedView` down (the view
@@ -116,6 +124,7 @@ public final class TimelineViewModel: ObservableObject {
         var pruned = current
         let removed = pruned.remove(at: index)
         state = .loaded(pruned)
+        recountNewArrivals()
         do {
             try await interactor.deletePost(uri: post.id)
         } catch {
@@ -295,6 +304,18 @@ public final class TimelineViewModel: ObservableObject {
         unreadCount = 0
     }
 
+    /// The viewer has the top of the list on screen: everything loaded is seen.
+    public func markHeadSeen() {
+        seenIDs = Set(posts.map(\.id))
+        newArrivals = 0
+    }
+
+    /// Count the head posts not seen at the top. The first load counts as seen.
+    private func recountNewArrivals() {
+        if seenIDs.isEmpty { seenIDs = Set(posts.map(\.id)) }
+        newArrivals = posts.prefix { !seenIDs.contains($0.id) }.count
+    }
+
     /// Set whether this tab is the selected one. Activating marks it seen so the
     /// active tab never shows a badge for posts the viewer is looking at.
     public func setActive(_ active: Bool) {
@@ -305,6 +326,7 @@ public final class TimelineViewModel: ObservableObject {
     /// Recompute the unread count after the post list changed. On the very first
     /// load (no boundary yet) the existing posts are treated as seen.
     private func onItemsChanged() {
+        recountNewArrivals()
         if lastSeenTopID == nil { lastSeenTopID = posts.first?.id }
         if isActive {
             markSeen()

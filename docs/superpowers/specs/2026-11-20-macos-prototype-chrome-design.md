@@ -26,14 +26,20 @@ a header with a "新着 n 件" bar on every timeline, and the prototype's menus.
   prototype and ⌘1…⌘9 still follow the sidebar from the top.
 - **Home is named フォロー中** (`WorkspaceModel.homeTitle`), as in the prototype.
 - **Header and new-posts bar.** Every timeline, including フォロー中 and 通知,
-  shows its name (14pt bold) under the toolbar. When posts arrive above the head
-  the viewer last saw at the top, an accent-tinted "↑ 新着 n 件" bar appears;
-  clicking it scrolls to the top.
+  shows its name (14pt bold) under the toolbar. In post lists, when posts arrive
+  above what the viewer last saw at the top, an accent-tinted "↑ 新着 n 件" bar
+  appears; clicking it scrolls to the top. `TimelineViewModel.newArrivals`
+  counts head posts in arrival order that were not loaded when the top was last
+  on screen, so it survives tab switches, ignores the thread grouping of the
+  display, and a deleted post does not turn older posts into new ones. 通知
+  (not in the prototype) gets the header only.
 - **Menus.** 表示: ⌘1…⌘9, 新着を読み込む ⌘R, the standard sidebar toggle ⌃⌘S.
   編集: 検索 ⌘F focuses the toolbar search. 投稿: 返信 ⌘↩, リポスト ⇧⌘R,
   引用して投稿, いいね (L), リンクをコピー ⇧⌘C and リストに追加. Like moves from
   the f key to l; "ブラウザで開く" leaves the menu bar (the o key and the
-  right-click menu keep it).
+  right-click menu keep it). Reply and quote do nothing while a composer is
+  open, since ⌘↩ is also its send key. Overlapping notification refreshes (a
+  poll and ⌘R) keep the newer answer.
 
 ## 3. Not in this PR
 

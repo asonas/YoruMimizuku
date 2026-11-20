@@ -600,4 +600,46 @@ final class TimelineViewModelTests: XCTestCase {
         await vm.refresh()    // p0, p1 land above the seen head p2
         XCTAssertEqual(vm.unreadCount, 2)
     }
+
+    // MARK: - New arrivals ("新着 n 件")
+
+    private func page(_ ids: [String]) -> Result<TimelinePage, Error> {
+        .success(TimelinePage(posts: ids.map { sample(id: $0) }, cursor: nil))
+    }
+
+    func testTheFirstLoadIsSeenAndLaterHeadPostsAreNewArrivals() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [page(["a", "b"]), page(["y", "x", "a", "b"])]))
+        await vm.load()
+        XCTAssertEqual(vm.newArrivals, 0)
+
+        _ = await vm.refresh()
+
+        XCTAssertEqual(vm.newArrivals, 2)
+    }
+
+    func testMarkingTheHeadSeenClearsNewArrivals() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [page(["a"]), page(["x", "a"])]))
+        await vm.load()
+        _ = await vm.refresh()
+
+        vm.markHeadSeen()
+
+        XCTAssertEqual(vm.newArrivals, 0)
+    }
+
+    /// Removing the post that was at the top when last seen must not turn every
+    /// older post into a new arrival.
+    func testDeletingTheSeenHeadDoesNotCountOlderPostsAsNew() async {
+        let interactor = FakeInteractor()
+        let vm = TimelineViewModel(
+            loader: StubLoader(pages: [page(["a", "b"]), page(["x", "a", "b"])]),
+            interactor: interactor
+        )
+        await vm.load()
+        _ = await vm.refresh()
+
+        await vm.deletePost(sample(id: "a"))
+
+        XCTAssertEqual(vm.newArrivals, 1)
+    }
 }

@@ -375,6 +375,8 @@ struct MainWindowView: View {
     /// Open the composer replying to `post`; on success dismiss it and refresh the
     /// feed that was visible so the reply count and any surfaced reply update.
     private func openReplyComposer(_ post: PostDisplay, refreshing model: TimelineViewModel) {
+        // ⌘↩ (reply) is also the composer's send key; never replace an open draft.
+        guard composer == nil else { return }
         let vm = makeComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
@@ -383,6 +385,7 @@ struct MainWindowView: View {
     /// Open the composer quoting `post`; on success dismiss it and refresh the feed
     /// that was visible so the quote can surface.
     private func openQuoteComposer(_ post: PostDisplay, refreshing model: TimelineViewModel) {
+        guard composer == nil else { return }
         let vm = makeQuoteComposer(post)
         vm.onPosted = { composer = nil; Task { await model.refresh() } }
         composer = vm
