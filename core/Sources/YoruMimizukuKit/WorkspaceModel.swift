@@ -402,12 +402,13 @@ public final class WorkspaceModel: ObservableObject {
 
     // MARK: - Cycling
 
-    /// All tabs in display order: the two pinned tabs, the saved feeds and lists,
-    /// the filters, then the open conversations. Drives the Cmd-Shift-J/K cycling
+    /// All tabs in display order: the two pinned tabs, the pinned feeds, the
+    /// pinned lists, the filters, then the open conversations. Drives the Cmd-Shift-J/K cycling
     /// shortcuts.
     public var orderedTabs: [WorkspaceTab] {
         [.home, .notifications]
-            + savedFeeds.map { .savedFeed($0.id) }
+            + savedFeeds.filter { $0.kind == .feed }.map { .savedFeed($0.id) }
+            + savedFeeds.filter { $0.kind == .list }.map { .savedFeed($0.id) }
             + filters.map { .filter($0.id) }
             + conversations.map { .conversation($0.id) }
             + authors.map { .author($0.id) }

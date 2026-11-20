@@ -4,7 +4,7 @@ import Foundation
 /// channel and decodes the JSON body. It has the same auth handling as the
 /// per-endpoint services: the `use_dpop_nonce` retry lives in the sender, and an
 /// expired access token (401 that is not a nonce challenge) is refreshed once and
-/// retried, returning the new tokens so the caller can persist them. New read
+/// retried. New read
 /// endpoints use this instead of copying that handling into another service.
 public struct XRPCQueryService: Sendable {
     private let sender: DPoPRequestSender
@@ -25,16 +25,18 @@ public struct XRPCQueryService: Sendable {
     }
 
     /// Query `nsid` with `parameters` (repeat a name for an array parameter) and
-    /// decode the response as `Response`. `refreshed` is nil when the original
-    /// access token was still valid.
+    /// decode the response as `Response`. `onRefresh` receives new tokens as soon
+    /// as a refresh succeeds, before the retry: the old refresh token is spent by
+    /// then, so the new one must be saved even if the retry fails.
     public func query<Response: Decodable>(
         _ nsid: String,
         parameters: [(String, String)],
         pds: URL,
         issuer: URL,
         accessToken: String,
-        refreshToken: String?
-    ) async throws -> (response: Response, refreshed: TokenResponse?) {
+        refreshToken: String?,
+        onRefresh: @Sendable (TokenResponse) async throws -> Void
+    ) async throws -> Response {
         let url = try Self.url(pds: pds, nsid: nsid, parameters: parameters)
         let response = try await fetch(url: url, accessToken: accessToken)
 
@@ -42,10 +44,11 @@ public struct XRPCQueryService: Sendable {
            !DPoPRequestSender.isNonceChallenge(response),
            let refreshToken {
             let tokens = try await refresh(issuer: issuer, refreshToken: refreshToken)
+            try await onRefresh(tokens)
             let retried = try await fetch(url: url, accessToken: tokens.accessToken)
-            return (try Self.decode(retried), tokens)
+            return try Self.decode(retried)
         }
-        return (try Self.decode(response), nil)
+        return try Self.decode(response)
     }
 
     private func fetch(url: URL, accessToken: String) async throws -> HTTPResponse {
@@ -74,6 +77,9 @@ public struct XRPCQueryService: Sendable {
         }
         if !parameters.isEmpty {
             components.queryItems = parameters.map { URLQueryItem(name: $0.0, value: $0.1) }
+            // URLComponents leaves `+` as is, but servers read it as a space.
+            components.percentEncodedQuery = components.percentEncodedQuery?
+                .replacingOccurrences(of: "+", with: "%2B")
         }
         guard let url = components.url else { throw XRPCError.invalidURL(nsid) }
         return url

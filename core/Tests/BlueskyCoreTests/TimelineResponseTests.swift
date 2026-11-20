@@ -74,6 +74,32 @@ final class TimelineResponseTests: XCTestCase {
     }
     """##.utf8)
 
+    /// Custom feeds (`getFeed`) mark a feed's pinned post with `reasonPin`,
+    /// which carries no reposter. The page must still decode.
+    func testPinnedPostReasonDecodesWithoutARepost() throws {
+        let body = Data(##"""
+        {
+          "feed": [
+            {
+              "post": {
+                "uri": "at://did:plc:alice/app.bsky.feed.post/pin",
+                "cid": "bafy",
+                "author": { "did": "did:plc:alice", "handle": "alice.bsky.social" },
+                "record": { "$type": "app.bsky.feed.post", "text": "pinned", "createdAt": "2026-06-04T12:00:00.000Z" },
+                "indexedAt": "2026-06-04T12:00:01.000Z"
+              },
+              "reason": { "$type": "app.bsky.feed.defs#reasonPin" }
+            }
+          ]
+        }
+        """##.utf8)
+
+        let response = try JSONDecoder().decode(TimelineResponse.self, from: body)
+
+        XCTAssertEqual(response.feed.map(\.post.uri), ["at://did:plc:alice/app.bsky.feed.post/pin"])
+        XCTAssertNil(response.feed.first?.reason)
+    }
+
     func testDecodesTimelineWithCursorAndTwoItems() throws {
         let response = try JSONDecoder().decode(TimelineResponse.self, from: fixture)
 

@@ -16,6 +16,8 @@ public final class SavedFeedsModel: ObservableObject {
     private let loader: SavedFeedsLoading
     private let makeTimeline: @MainActor (SavedFeedSource) -> TimelineViewModel
     private var timelines: [String: TimelineViewModel] = [:]
+    /// Bumped by every load so an older load that finishes last is dropped.
+    private var loadGeneration = 0
 
     public init(loader: SavedFeedsLoading, makeTimeline: @escaping @MainActor (SavedFeedSource) -> TimelineViewModel) {
         self.loader = loader
@@ -31,7 +33,9 @@ public final class SavedFeedsModel: ObservableObject {
 
     /// Fetch the pins. A failure keeps the sources already shown.
     public func load() async {
-        guard let loaded = try? await loader.loadPinned() else { return }
+        loadGeneration += 1
+        let generation = loadGeneration
+        guard let loaded = try? await loader.loadPinned(), generation == loadGeneration else { return }
         let kept = Set(loaded.map(\.id))
         for (id, timeline) in timelines where !kept.contains(id) {
             timeline.stopPolling()
@@ -74,12 +78,16 @@ public struct SavedFeedSource: Identifiable, Equatable, Sendable {
 
     /// The pinned feeds and lists in the order the account keeps them. The
     /// following timeline is the app's home tab, so it is skipped here, as are
-    /// unpinned items, unknown kinds, and items the server no longer resolves
-    /// (a deleted feed or list).
+    /// unpinned items, unknown kinds, items the server no longer resolves (a
+    /// deleted feed or list), and repeats of a URI already listed.
     public static func pinned(from items: [SavedFeedItem], feeds: [FeedGeneratorView], lists: [ListView]) -> [SavedFeedSource] {
         let feedsByURI = Dictionary(feeds.map { ($0.uri, $0) }, uniquingKeysWith: { first, _ in first })
         let listsByURI = Dictionary(lists.map { ($0.uri, $0) }, uniquingKeysWith: { first, _ in first })
-        return items.filter(\.pinned).compactMap { item in
+        var seen = Set<String>()
+        let unique = items.filter { item in
+            item.pinned && ["feed", "list"].contains(item.type) && seen.insert(item.value).inserted
+        }
+        return unique.compactMap { item in
             switch item.type {
             case "feed":
                 guard let feed = feedsByURI[item.value] else { return nil }

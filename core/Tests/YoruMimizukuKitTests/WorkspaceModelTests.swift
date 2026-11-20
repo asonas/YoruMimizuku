@@ -288,17 +288,22 @@ final class WorkspaceModelTests: XCTestCase {
 
     // MARK: - Saved feeds (macOS sidebar)
 
-    private func savedSource(_ id: String, _ title: String) -> SavedFeedSource {
-        SavedFeedSource(id: id, kind: .feed, title: title, description: nil, creatorHandle: nil, avatarURL: nil)
+    private func savedSource(_ id: String, _ title: String, _ kind: SavedFeedSource.Kind = .feed) -> SavedFeedSource {
+        SavedFeedSource(id: id, kind: kind, title: title, description: nil, creatorHandle: nil, avatarURL: nil)
     }
 
-    func testOrderedTabsPutSavedFeedsBetweenNotificationsAndFilters() async {
+    /// The sidebar groups pinned feeds before pinned lists, so cycling follows
+    /// that grouping rather than the raw pin order.
+    func testOrderedTabsPutSavedFeedsThenListsBetweenNotificationsAndFilters() async {
         let model = makeModel(persistence: FakePersistence())
         model.addFilter(name: "f", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
-        model.savedFeeds = [savedSource("at://f/a", "A"), savedSource("at://l/b", "B")]
+        model.savedFeeds = [savedSource("at://f/a", "A"), savedSource("at://l/l", "L", .list), savedSource("at://f/b", "B")]
 
-        XCTAssertEqual(Array(model.orderedTabs.prefix(4)), [.home, .notifications, .savedFeed("at://f/a"), .savedFeed("at://l/b")])
-        guard case .filter = model.orderedTabs[4] else { return XCTFail("filters follow the saved feeds") }
+        XCTAssertEqual(
+            Array(model.orderedTabs.prefix(5)),
+            [.home, .notifications, .savedFeed("at://f/a"), .savedFeed("at://f/b"), .savedFeed("at://l/l")]
+        )
+        guard case .filter = model.orderedTabs[5] else { return XCTFail("filters follow the saved feeds") }
     }
 
     func testSelectionTitleForSavedFeedIsItsTitle() async {

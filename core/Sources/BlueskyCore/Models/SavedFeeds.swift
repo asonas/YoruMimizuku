@@ -13,21 +13,28 @@ public struct PreferencesResponse: Decodable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey { case preferences }
 
-    /// One element of `preferences`: only `$type` and, for saved feeds, `items`
-    /// are read, so unknown preference shapes never fail the decode.
+    /// One element of `preferences`. `items` is read only for saved feeds:
+    /// other kinds (muted words, hidden posts) use `items` with other shapes.
     private struct Preference: Decodable {
-        let type: String
         let items: [SavedFeedItem]?
         private enum CodingKeys: String, CodingKey {
             case type = "$type"
             case items
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let type = try container.decodeIfPresent(String.self, forKey: .type)
+            items = type == "app.bsky.actor.defs#savedFeedsPrefV2"
+                ? try container.decode([SavedFeedItem].self, forKey: .items)
+                : nil
         }
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let preferences = try container.decode([Preference].self, forKey: .preferences)
-        savedFeeds = preferences.first { $0.type == "app.bsky.actor.defs#savedFeedsPrefV2" }?.items ?? []
+        savedFeeds = preferences.lazy.compactMap(\.items).first ?? []
     }
 }
 

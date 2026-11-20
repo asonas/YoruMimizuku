@@ -7,6 +7,8 @@ final class SavedFeedsModelsTests: XCTestCase {
         {
           "preferences": [
             { "$type": "app.bsky.actor.defs#adultContentPref", "enabled": false },
+            { "$type": "app.bsky.actor.defs#mutedWordsPref", "items": [{ "value": "spoiler", "targets": ["content"] }] },
+            { "$type": "app.bsky.actor.defs#hiddenPostsPref", "items": ["at://did:plc:z/app.bsky.feed.post/1"] },
             {
               "$type": "app.bsky.actor.defs#savedFeedsPrefV2",
               "items": [

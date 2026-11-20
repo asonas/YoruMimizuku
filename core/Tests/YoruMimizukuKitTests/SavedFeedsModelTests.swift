@@ -28,7 +28,8 @@ final class SavedFeedsModelTests: XCTestCase {
             SavedFeedItem(id: "4", type: "feed", value: "at://f/a", pinned: true),
             SavedFeedItem(id: "5", type: "feed", value: "at://f/unpinned", pinned: false),
             SavedFeedItem(id: "6", type: "feed", value: "at://f/deleted", pinned: true),
-            SavedFeedItem(id: "7", type: "somethingNew", value: "x", pinned: true)
+            SavedFeedItem(id: "7", type: "somethingNew", value: "x", pinned: true),
+            SavedFeedItem(id: "8", type: "feed", value: "at://f/b", pinned: true)
         ]
 
         let sources = SavedFeedSource.pinned(
@@ -71,6 +72,48 @@ final class SavedFeedsModelTests: XCTestCase {
         await model.load()
 
         XCTAssertEqual(model.sources.map(\.id), ["at://f/a"])
+    }
+
+    /// Holds the first call until `release()`; `firstCallEntered()` returns once
+    /// that call is waiting, so the test controls the completion order exactly.
+    private actor FirstCallGatedLoader: SavedFeedsLoading {
+        private var calls = 0
+        private var gate: CheckedContinuation<Void, Never>?
+        private var entered: CheckedContinuation<Void, Never>?
+        let first: [SavedFeedSource]
+        let later: [SavedFeedSource]
+        init(first: [SavedFeedSource], later: [SavedFeedSource]) { self.first = first; self.later = later }
+
+        func loadPinned() async throws -> [SavedFeedSource] {
+            calls += 1
+            guard calls == 1 else { return later }
+            await withCheckedContinuation { continuation in
+                gate = continuation
+                entered?.resume()
+                entered = nil
+            }
+            return first
+        }
+
+        func firstCallEntered() async {
+            if gate != nil { return }
+            await withCheckedContinuation { entered = $0 }
+        }
+
+        func release() { gate?.resume(); gate = nil }
+    }
+
+    func testAnOlderLoadFinishingLastDoesNotOverwriteANewerOne() async throws {
+        let loader = FirstCallGatedLoader(first: [source("at://f/old")], later: [source("at://f/new")])
+        let model = SavedFeedsModel(loader: loader, makeTimeline: { _ in TimelineViewModel(loader: StubTimelineLoader()) })
+
+        let older = Task { await model.load() }
+        await loader.firstCallEntered()
+        await model.load()
+        await loader.release()
+        await older.value
+
+        XCTAssertEqual(model.sources.map(\.id), ["at://f/new"])
     }
 
     func testTheSameSourceAlwaysGetsTheSameTimeline() async throws {

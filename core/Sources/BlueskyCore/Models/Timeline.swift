@@ -25,6 +25,31 @@ public struct FeedViewPost: Decodable, Equatable, Sendable {
         self.reason = reason
         self.reply = reply
     }
+
+    enum CodingKeys: String, CodingKey { case post, reason, reply }
+
+    private struct ReasonType: Decodable {
+        let type: String?
+        enum CodingKeys: String, CodingKey { case type = "$type" }
+    }
+
+    /// `reason` is a union: custom feeds also send `reasonPin`, which has no
+    /// reposter. Only a repost is read; other kinds decode to nil. A reason
+    /// without `$type` is still read as a repost when it has one's fields.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        post = try container.decode(PostView.self, forKey: .post)
+        let reasonType = try container.decodeIfPresent(ReasonType.self, forKey: .reason)?.type
+        switch reasonType {
+        case "app.bsky.feed.defs#reasonRepost":
+            reason = try container.decode(ReasonRepost.self, forKey: .reason)
+        case nil:
+            reason = try? container.decodeIfPresent(ReasonRepost.self, forKey: .reason)
+        default:
+            reason = nil
+        }
+        reply = try container.decodeIfPresent(ReplyRef.self, forKey: .reply)
+    }
 }
 
 /// The reply context (`app.bsky.feed.defs#replyRef`). Only the hydrated immediate
