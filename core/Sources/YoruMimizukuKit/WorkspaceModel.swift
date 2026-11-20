@@ -11,6 +11,21 @@ public enum WorkspaceTab: Hashable, Sendable {
     case author(UUID)
     /// A pinned feed or list (macOS), keyed by its AT-URI.
     case savedFeed(String)
+    /// The transient toolbar search (macOS); see `WorkspaceModel.search`.
+    case search
+}
+
+/// A toolbar search shown in the timeline column until the viewer moves on. It
+/// is not saved; `saveSearchAsFilter()` turns it into a filter.
+@MainActor
+public final class SearchTab {
+    public let query: String
+    public let model: TimelineViewModel
+
+    init(query: String, model: TimelineViewModel) {
+        self.query = query
+        self.model = model
+    }
 }
 
 /// One conversation tab: anchored on a post URI, it owns the `ThreadViewModel`
@@ -157,8 +172,16 @@ public final class WorkspaceModel: ObservableObject {
     }
     @Published public private(set) var authors: [AuthorTab] = []
     @Published public var selection: WorkspaceTab = .home {
-        didSet { if !isRestoring { persist() } }
+        didSet {
+            if selection != .search, let search {
+                search.model.stopPolling()
+                self.search = nil
+            }
+            if !isRestoring { persist() }
+        }
     }
+    /// The open toolbar search, if any. Present only while `selection == .search`.
+    @Published public private(set) var search: SearchTab?
     /// The pinned feeds and lists the macOS sidebar shows, in pin order. Set by the
     /// app whenever the pins load; unpinning the selected one falls back to home.
     @Published public var savedFeeds: [SavedFeedSource] = [] {
@@ -306,6 +329,23 @@ public final class WorkspaceModel: ObservableObject {
         return .added
     }
 
+    /// Show posts matching `query` in the timeline column without adding a
+    /// filter. A blank query is a no-op.
+    public func openSearch(query: String) {
+        let clean = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        search?.model.stopPolling()
+        let filter = SavedFilter(name: clean, terms: [FilterTerm(kind: .keyword, value: clean)])
+        search = SearchTab(query: clean, model: makeFilterModel(filter))
+        selection = .search
+    }
+
+    /// Keep the open search as a filter in the sidebar and select it.
+    public func saveSearchAsFilter() {
+        guard let query = search?.query else { return }
+        addFilter(name: query, terms: [FilterTerm(kind: .keyword, value: query)], combinator: .and)
+    }
+
     public func filter(id: UUID) -> FilterTab? { filters.first { $0.id == id } }
 
     /// The backing `SavedFilter` for an id (for the editor); nil if absent.
@@ -425,6 +465,8 @@ public final class WorkspaceModel: ObservableObject {
             return tab.displayName.isEmpty ? tab.handle : tab.displayName
         case let .savedFeed(id):
             return savedFeeds.first { $0.id == id }?.title ?? "ホーム"
+        case .search:
+            return search.map { "検索: \($0.query)" } ?? "ホーム"
         }
     }
 

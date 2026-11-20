@@ -613,9 +613,9 @@ private struct MainShellView: View {
             } else {
                 ContentUnavailableView("投稿者が見つかりません", systemImage: "person")
             }
-        case .savedFeed:
-            // Pinned feeds are listed only in the macOS sidebar so far; iPadOS
-            // never selects one.
+        case .savedFeed, .search:
+            // Pinned feeds and the toolbar search exist only on macOS so far;
+            // iPadOS never selects them.
             EmptyView()
         }
     }

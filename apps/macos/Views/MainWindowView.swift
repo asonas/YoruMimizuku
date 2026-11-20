@@ -25,6 +25,7 @@ struct MainWindowView: View {
     /// The pinned feed currently polling. Only the selected one polls, so pinning
     /// many feeds does not multiply requests.
     @State private var polledSavedFeed: String?
+    @State private var searchText = ""
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
@@ -99,6 +100,7 @@ struct MainWindowView: View {
             if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
             if let id = polledSavedFeed { savedFeeds.timeline(for: id)?.stopPolling() }
             polledSavedFeed = nil
+            workspace.search?.model.stopPolling()
         }
         .onReceive(clock) { now = $0 }
         .task {
@@ -166,6 +168,16 @@ struct MainWindowView: View {
                 Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 232, max: 320)
+            // In the sidebar's title bar beside its toggle; the timeline column
+            // runs to the top edge, so an item there would sit over posts.
+            .toolbar {
+                ToolbarItem {
+                    Button { composeFromMenu() } label: {
+                        Label("新規投稿", systemImage: "square.and.pencil")
+                    }
+                    .help("新規投稿 (⌘N)")
+                }
+            }
         } content: {
             timelineColumn
                 // The max leaves room for the media rail, which needs a 680pt text
@@ -187,6 +199,8 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 900, minHeight: 540)
+        .searchable(text: $searchText, placement: .toolbar, prompt: "投稿を検索")
+        .onSubmit(of: .search) { workspace.openSearch(query: searchText) }
         // Meaningful title for Mission Control / the Window menu / the Dock, even
         // under `.hiddenTitleBar`; tracks the selected tab and account.
         .navigationTitle(WindowTitle.compose(tabTitle: workspace.selectionTitle, accountHandle: accountHandle))
@@ -277,6 +291,29 @@ struct MainWindowView: View {
             } else {
                 Color.clear.background(theme.canvas)
             }
+        case .search:
+            if let search = workspace.search {
+                FeedView(
+                    model: search.model, title: "検索: \(search.query)", now: now,
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
+                    onOpenConversation: { detailPane.openConversation($0) },
+                    onCompose: { compose(refreshing: search.model) },
+                    onReply: { openReplyComposer($0, refreshing: search.model) },
+                    onQuote: { openQuoteComposer($0, refreshing: search.model) },
+                    onOpenAuthor: { openAuthor(for: $0) },
+                    onOpenQuote: { openQuotedPost($0) },
+                    currentDID: accountDID,
+                    headerAccessory: AnyView(
+                        Button("フィルターとして保存") { workspace.saveSearchAsFilter() }
+                            .buttonStyle(.borderless)
+                            .help("この検索をサイドバーのフィルターに残す")
+                    )
+                )
+                .id(search.query)
+                .task(id: search.query) { search.model.startPolling(every: pollInterval) }
+            } else {
+                Color.clear.background(theme.canvas)
+            }
         case .conversation, .author:
             Color.clear.background(theme.canvas)
         }
@@ -298,6 +335,8 @@ struct MainWindowView: View {
             return workspace.filter(id: id)?.model ?? model
         case let .savedFeed(id):
             return savedFeeds.timeline(for: id) ?? model
+        case .search:
+            return workspace.search?.model ?? model
         default:
             return model
         }
@@ -369,6 +408,9 @@ struct MainWindowView: View {
         if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
         if let id = polledSavedFeed { savedFeeds.timeline(for: id)?.stopPolling() }
         polledSavedFeed = nil
+        if let search = workspace.search {
+            search.model.stopPolling(); search.model.startPolling(every: interval)
+        }
         syncActiveTab()
         pollShownAuthor()
     }

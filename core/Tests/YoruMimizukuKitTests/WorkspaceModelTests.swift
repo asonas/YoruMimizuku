@@ -387,4 +387,51 @@ final class WorkspaceModelTests: XCTestCase {
 
         XCTAssertEqual(model.title(for: .filter(model.filters[0].id)), "Swift")
     }
+
+    // MARK: - Transient search (macOS toolbar)
+
+    func testOpeningASearchShowsItWithoutAddingAFilter() async {
+        let model = makeModel(persistence: FakePersistence())
+
+        model.openSearch(query: "  swift concurrency ")
+
+        XCTAssertEqual(model.selection, .search)
+        XCTAssertEqual(model.search?.query, "swift concurrency")
+        XCTAssertEqual(model.selectionTitle, "検索: swift concurrency")
+        XCTAssertTrue(model.filters.isEmpty)
+        XCTAssertFalse(model.orderedTabs.contains(.search))
+    }
+
+    func testABlankSearchDoesNothing() async {
+        let model = makeModel(persistence: FakePersistence())
+
+        model.openSearch(query: "   ")
+
+        XCTAssertEqual(model.selection, .home)
+        XCTAssertNil(model.search)
+    }
+
+    func testLeavingASearchDiscardsItAndStopsItsPolling() async throws {
+        let model = makeModel(persistence: FakePersistence())
+        model.openSearch(query: "swift")
+        let timeline = try XCTUnwrap(model.search?.model)
+        timeline.startPolling(every: .seconds(3600))
+
+        model.selection = .notifications
+
+        XCTAssertNil(model.search)
+        XCTAssertFalse(timeline.isPolling)
+    }
+
+    func testSavingASearchTurnsItIntoASelectedFilter() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.openSearch(query: "swift")
+
+        model.saveSearchAsFilter()
+
+        XCTAssertNil(model.search)
+        XCTAssertEqual(model.filters.map(\.title), ["swift"])
+        XCTAssertEqual(model.selection, .filter(model.filters[0].id))
+        XCTAssertEqual(model.savedFilter(id: model.filters[0].id)?.terms.map(\.value), ["swift"])
+    }
 }
