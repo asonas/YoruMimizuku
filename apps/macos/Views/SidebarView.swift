@@ -79,39 +79,46 @@ struct SidebarView: View {
         }
     }
 
+    /// The prototype's groups: フィード (the following timeline, notifications
+    /// and pinned feeds), リスト (pinned lists) and フィルター.
     private var tabList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 2) {
-                SidebarRow(
-                    icon: "house",
-                    title: "ホーム",
-                    isSelected: workspace.selection == .home,
-                    badge: showsBadges ? homeUnread : 0
-                ) { workspace.selection = .home }
-
-                SidebarRow(
-                    icon: "bell",
-                    title: "通知",
-                    isSelected: workspace.selection == .notifications,
-                    badge: showsBadges ? notificationsUnread : 0
-                ) { workspace.selection = .notifications }
-
-                savedSection("フィード", kind: .feed, icon: "dot.radiowaves.up.forward")
-                savedSection("リスト", kind: .list, icon: "list.bullet")
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 1) {
+                    sectionLabel("フィード")
+                    SidebarRow(
+                        icon: "person.2",
+                        title: WorkspaceModel.homeTitle,
+                        isSelected: workspace.selection == .home,
+                        badge: showsBadges ? homeUnread : 0
+                    ) { workspace.selection = .home }
+                    SidebarRow(
+                        icon: "bell",
+                        title: "通知",
+                        isSelected: workspace.selection == .notifications,
+                        badge: showsBadges ? notificationsUnread : 0
+                    ) { workspace.selection = .notifications }
+                    savedRows(kind: .feed, icon: "dot.radiowaves.up.forward")
+                }
+                if workspace.savedFeeds.contains(where: { $0.kind == .list }) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        sectionLabel("リスト")
+                        savedRows(kind: .list, icon: "list.bullet")
+                    }
+                }
                 filterSection
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
     }
 
-    /// The account's pinned feeds or lists, in pin order. Hidden when none are
-    /// pinned; pins are managed on the server, so there is no add button here.
+    /// The account's pinned feeds or lists, in pin order. Pins are managed on
+    /// the server, so there is no add button here.
     @ViewBuilder
-    private func savedSection(_ label: String, kind: SavedFeedSource.Kind, icon: String) -> some View {
+    private func savedRows(kind: SavedFeedSource.Kind, icon: String) -> some View {
         let sources = workspace.savedFeeds.filter { $0.kind == kind }
         if !sources.isEmpty {
-            sectionLabel(label)
             ForEach(sources) { source in
                 SidebarRow(
                     icon: icon,
@@ -129,19 +136,20 @@ struct SidebarView: View {
     /// The "フィルター" section: a header with an add button, then one row per
     /// saved filter. Always shown so the user can add the first filter.
     private var filterSection: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 0) {
                 sectionLabel("フィルター")
                 Spacer(minLength: 0)
                 Button { editorRequest = .new } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(theme.tertiaryText)
-                        .padding(.horizontal, 10)
+                        .foregroundStyle(theme.secondaryText)
+                        .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("フィルターを追加")
+                .help("フィルターを作る")
+                .padding(.trailing, 4)
             }
 
             ForEach(workspace.filters) { tab in
@@ -191,13 +199,11 @@ struct SidebarView: View {
 
     private func sectionLabel(_ text: String) -> some View {
         Text(text)
-            .font(.appSize(10, weight: .semibold))
-            .tracking(1)
+            .font(.appSize(11, weight: .semibold))
             // fg2, not fg3: on the translucent sidebar fg3 drops below 4.5:1.
             .foregroundStyle(theme.secondaryText)
-            .padding(.horizontal, 12)
-            .padding(.top, 14)
-            .padding(.bottom, 4)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 2)
     }
 
     private var accountFooter: some View {
@@ -288,22 +294,21 @@ struct SidebarView: View {
     }
 }
 
-/// A single sidebar tab row in the cmux idiom. Navigation rows pass `icon`+`title`;
-/// filter rows add `meta` (the query) plus `onClose`/`onEdit`; conversation rows
-/// add `subtitle`+`meta`+`onClose`. Selection paints a solid accent fill and
-/// switches the foreground to white; hover reveals the edit/close affordances.
+/// A sidebar row as in the desktop prototype: an accent icon and one line of
+/// title, a dim fill when selected, and a plain unread count. Filter rows add
+/// `meta` (the query, as a tooltip) and the edit/delete controls shown on hover.
 private struct SidebarRow: View {
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
 
     var icon: String? = nil
     let title: String
-    var subtitle: String? = nil
+    /// Shown as the row's tooltip (a filter's query).
     var meta: String? = nil
     let isSelected: Bool
     var onClose: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
-    /// Unread/new count shown as a pill. Hidden when 0 or when the row is selected.
+    /// Unread/new count, hidden when 0 and while hover shows the edit controls.
     var badge: Int = 0
     let action: () -> Void
 
@@ -311,99 +316,62 @@ private struct SidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .top, spacing: 8) {
+            HStack(spacing: 8) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 13))
                         .frame(width: 16)
-                        .foregroundStyle(iconColor)
-                        .padding(.top, 1)
+                        .foregroundStyle(theme.accent)
                 }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.appSize(12.5, weight: .semibold))
-                        .foregroundStyle(titleColor)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.appSize(11))
-                            .foregroundStyle(subtitleColor)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                            .multilineTextAlignment(.leading)
-                    }
-
-                    if let meta, !meta.isEmpty {
-                        Text(meta)
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(metaColor)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                }
+                Text(title)
+                    .font(.appSize(13, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(theme.primaryText)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
                 Spacer(minLength: 0)
 
-                if badge > 0, !isSelected {
+                if badge > 0, !isHovered || (onEdit == nil && onClose == nil) {
                     Text(badge > 99 ? "99+" : "\(badge)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(theme.accentForeground)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(theme.accent))
+                        .font(.appSize(11).monospacedDigit())
+                        .foregroundStyle(theme.secondaryText)
                 }
+                trailingControls
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: Self.cornerRadius).fill(rowBackground)
             )
-            .overlay(alignment: .topTrailing) { trailingControls }
             .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius))
         }
+        .help(meta ?? "")
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.1), value: isHovered)
         .contextMenu {
             if let onEdit {
-                Button {
-                    onEdit()
-                } label: {
-                    Label("フィルターを編集", systemImage: "pencil")
-                }
+                Button("編集…") { onEdit() }
             }
             if let onClose {
-                Button(role: .destructive) {
-                    onClose()
-                } label: {
-                    Label("タブを閉じる", systemImage: "xmark")
-                }
+                Button("削除", role: .destructive) { onClose() }
             }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityRowLabel)
         .accessibilityActions {
             if let onEdit {
-                Button("フィルターを編集") { onEdit() }
+                Button("編集") { onEdit() }
             }
             if let onClose {
-                Button("タブを閉じる") { onClose() }
+                Button("削除") { onClose() }
             }
         }
     }
 
-    /// Combines title + subtitle into one string for VoiceOver, since
-    /// `.accessibilityElement(children: .combine)` merges the row's Text
-    /// views but drops structure (e.g. reading order/pauses between them).
     private var accessibilityRowLabel: String {
-        if let subtitle, !subtitle.isEmpty {
-            return "\(title)、\(subtitle)"
-        }
-        return title
+        badge > 0 ? "\(title)、未読 \(badge) 件" : title
     }
 
     @ViewBuilder
@@ -411,13 +379,12 @@ private struct SidebarRow: View {
         if isHovered, onEdit != nil || onClose != nil {
             HStack(spacing: 2) {
                 if let onEdit {
-                    iconButton("pencil", help: "フィルターを編集", action: onEdit)
+                    iconButton("pencil", help: "編集", action: onEdit)
                 }
                 if let onClose {
-                    iconButton("xmark", help: "タブを閉じる", action: onClose)
+                    iconButton("xmark", help: "削除", action: onClose)
                 }
             }
-            .padding(2)
         }
     }
 
@@ -425,7 +392,7 @@ private struct SidebarRow: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(isSelected ? theme.accentForeground.opacity(0.85) : theme.tertiaryText)
+                .foregroundStyle(theme.secondaryText)
                 .padding(4)
         }
         .buttonStyle(.plain)
@@ -434,15 +401,9 @@ private struct SidebarRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return theme.accent }
+        if isSelected { return theme.selection }
         return isHovered ? theme.rowHover : .clear
     }
-
-    private var titleColor: Color { isSelected ? theme.accentForeground : theme.primaryText }
-    // Small text on the accent fill stays opaque: dimmed, it falls below 4.5:1.
-    private var subtitleColor: Color { isSelected ? theme.accentForeground : theme.secondaryText }
-    private var metaColor: Color { isSelected ? theme.accentForeground : theme.secondaryText }
-    private var iconColor: Color { isSelected ? theme.accentForeground : theme.tertiaryText }
 }
 
 /// One filter row that observes its own `TimelineViewModel` so the unread badge

@@ -246,7 +246,7 @@ final class WorkspaceModelTests: XCTestCase {
 
     func testSelectionTitleForHome() async {
         let model = makeModel(persistence: FakePersistence())
-        XCTAssertEqual(model.selectionTitle, "ホーム")
+        XCTAssertEqual(model.selectionTitle, "フォロー中")
     }
 
     func testSelectionTitleForNotifications() async {
@@ -283,7 +283,7 @@ final class WorkspaceModelTests: XCTestCase {
         model.closeConversation(id)
         // closeConversation already re-selects, so force the stale-id case directly.
         model.selection = .conversation(id)
-        XCTAssertEqual(model.selectionTitle, "ホーム")
+        XCTAssertEqual(model.selectionTitle, "フォロー中")
     }
 
     // MARK: - Saved feeds (macOS sidebar)
@@ -416,7 +416,7 @@ final class WorkspaceModelTests: XCTestCase {
         let tabs = model.shortcutTabs
 
         XCTAssertEqual(tabs.count, 9)
-        XCTAssertEqual(tabs.map { model.title(for: $0) }, ["ホーム", "通知", "F1", "F2", "F3", "F4", "F5", "F6", "L1"])
+        XCTAssertEqual(tabs.map { model.title(for: $0) }, ["フォロー中", "通知", "F1", "F2", "F3", "F4", "F5", "F6", "L1"])
     }
 
     func testTitleForAFilterIsItsName() async {

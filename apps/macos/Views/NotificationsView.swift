@@ -17,9 +17,11 @@ struct NotificationsView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        content
-            .background(theme.canvas)
-            .ignoresSafeArea(.container, edges: .top)
+        VStack(spacing: 0) {
+            DetailHeader("通知") { EmptyView() }
+            content
+        }
+        .background(theme.canvas)
     }
 
     @ViewBuilder

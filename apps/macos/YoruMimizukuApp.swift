@@ -49,9 +49,10 @@ struct YoruMimizukuApp: App {
                 .task { updateController.checkForUpdatesOnLaunch() }
         }
         .defaultSize(width: 1240, height: 800)
-        .windowStyle(.hiddenTitleBar)
+        .windowToolbarStyle(.unified)
         .commands {
             NewPostCommands()
+            SidebarCommands()
             WorkspaceCommands()
             #if DEBUG
             CommandGroup(after: .help) {

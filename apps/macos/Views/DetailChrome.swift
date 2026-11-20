@@ -23,7 +23,7 @@ struct DetailHeader<Trailing: View>: View {
             }
             if let title {
                 Text(title)
-                    .font(.app(.headline))
+                    .font(.appSize(14, weight: .bold))
                     .foregroundStyle(theme.primaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -31,9 +31,9 @@ struct DetailHeader<Trailing: View>: View {
             Spacer(minLength: 8)
             trailing()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(theme.surface.opacity(0.55))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(theme.background)
         .overlay(alignment: .bottom) {
             Rectangle().fill(theme.hairline).frame(height: 1)
         }

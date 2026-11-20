@@ -459,24 +459,27 @@ public final class WorkspaceModel: ObservableObject {
     // MARK: - Window title
 
     /// The selected tab's human-readable title, e.g. for the macOS window title.
-    /// Pinned tabs use their fixed labels; a closed tab id falls back to ホーム.
+    /// Pinned tabs use their fixed labels; a closed tab id falls back to the following timeline.
     public var selectionTitle: String { title(for: selection) }
 
     /// A tab's human-readable title (sidebar label, menu item). A closed tab id
-    /// falls back to ホーム.
+    /// falls back to the following timeline.
+    /// The following timeline's name, as in the desktop prototype.
+    public static let homeTitle = "フォロー中"
+
     public func title(for tab: WorkspaceTab) -> String {
         switch tab {
-        case .home: return "ホーム"
+        case .home: return Self.homeTitle
         case .notifications: return "通知"
-        case let .filter(id): return filter(id: id)?.title ?? "ホーム"
-        case let .conversation(id): return conversation(id: id)?.title ?? "ホーム"
+        case let .filter(id): return filter(id: id)?.title ?? Self.homeTitle
+        case let .conversation(id): return conversation(id: id)?.title ?? Self.homeTitle
         case let .author(id):
-            guard let tab = author(id: id) else { return "ホーム" }
+            guard let tab = author(id: id) else { return Self.homeTitle }
             return tab.displayName.isEmpty ? tab.handle : tab.displayName
         case let .savedFeed(id):
-            return savedFeeds.first { $0.id == id }?.title ?? "ホーム"
+            return savedFeeds.first { $0.id == id }?.title ?? Self.homeTitle
         case .search:
-            return search.map { "検索: \($0.query)" } ?? "ホーム"
+            return search.map { "検索: \($0.query)" } ?? Self.homeTitle
         }
     }
 

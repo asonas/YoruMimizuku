@@ -26,6 +26,7 @@ struct MainWindowView: View {
     /// many feeds does not multiply requests.
     @State private var polledSavedFeed: String?
     @State private var searchText = ""
+    @FocusState private var isSearchFocused: Bool
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
@@ -90,6 +91,16 @@ struct MainWindowView: View {
         // Lets the File > 新規投稿 menu command (⌘N) open this window's composer.
         .focusedSceneValue(\.newPost, NewPostAction { composeFromMenu() })
         .focusedSceneObject(workspace)
+        .focusedSceneValue(\.windowActions, WindowActions(
+            reload: {
+                if workspace.selection == .notifications {
+                    Task { _ = await notifications.refresh() }
+                } else {
+                    Task { _ = await activeTimelineModel.refresh() }
+                }
+            },
+            focusSearch: { isSearchFocused = true }
+        ))
         .onAppear {
             unread.setPollingInterval(pollInterval)
             unread.open(accountDID, window: windowID)
@@ -168,16 +179,6 @@ struct MainWindowView: View {
                 Rectangle().fill(theme.divider).frame(width: 1).ignoresSafeArea()
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 232, max: 320)
-            // In the sidebar's title bar beside its toggle; the timeline column
-            // runs to the top edge, so an item there would sit over posts.
-            .toolbar {
-                ToolbarItem {
-                    Button { composeFromMenu() } label: {
-                        Label("新規投稿", systemImage: "square.and.pencil")
-                    }
-                    .help("新規投稿 (⌘N)")
-                }
-            }
         } content: {
             timelineColumn
                 // The max leaves room for the media rail, which needs a 680pt text
@@ -199,11 +200,21 @@ struct MainWindowView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 900, minHeight: 540)
-        .searchable(text: $searchText, placement: .toolbar, prompt: "投稿を検索")
+        // The prototype's unified toolbar: the selected source and account on the
+        // left, search and compose on the right.
+        .searchable(text: $searchText, placement: .toolbar, prompt: "検索")
+        .searchFocused($isSearchFocused)
         .onSubmit(of: .search) { workspace.openSearch(query: searchText) }
-        // Meaningful title for Mission Control / the Window menu / the Dock, even
-        // under `.hiddenTitleBar`; tracks the selected tab and account.
-        .navigationTitle(WindowTitle.compose(tabTitle: workspace.selectionTitle, accountHandle: accountHandle))
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { composeFromMenu() } label: {
+                    Label("新規投稿", systemImage: "square.and.pencil")
+                }
+                .help("新規投稿 (⌘N)")
+            }
+        }
+        .navigationTitle(workspace.selectionTitle)
+        .navigationSubtitle(accountHandle.isEmpty ? "" : "@\(accountHandle)")
         // Tapping a hashtag opens a filter tab; tapping a mention opens the
         // author's page in the detail pane; every other link falls through to the
         // browser.
@@ -231,7 +242,7 @@ struct MainWindowView: View {
         switch workspace.selection {
         case .home:
             FeedView(
-                model: model, title: nil, now: now,
+                model: model, title: WorkspaceModel.homeTitle, now: now,
                 onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
                 onOpenConversation: { detailPane.openConversation($0) },
                 onCompose: { compose(refreshing: model) },

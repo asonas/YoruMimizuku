@@ -34,7 +34,7 @@ struct FeedView: View {
     /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
     /// context-menu action. Nil disables delete everywhere (e.g. previews).
     var currentDID: String? = nil
-    /// The j/k/f/o/n keys are plain window-wide shortcuts, so only the timeline
+    /// The j/k/l/o/n keys are plain window-wide shortcuts, so only the timeline
     /// column registers them; a feed embedded in the detail pane (an author page)
     /// turns them off to avoid a second binding for the same keys.
     var registersKeyboardShortcuts: Bool = true
@@ -66,6 +66,9 @@ struct FeedView: View {
     /// Mutable set of on-screen row ids. A class (not a `@State Set`) so inserting
     /// or removing an id does not trigger a view update.
     private final class VisibleRows { var ids: Set<String> = [] }
+    /// The head post when the top of the list was last on screen. Posts above it
+    /// arrived while the viewer was scrolled down: the "新着 n 件" bar counts them.
+    @State private var seenHeadID: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -75,7 +78,6 @@ struct FeedView: View {
             timeline
         }
         .background(theme.canvas)
-        .ignoresSafeArea(.container, edges: .top)
         .background { if registersKeyboardShortcuts { postNavShortcuts } }
         .onChange(of: model.state) { _, _ in
             guard registersKeyboardShortcuts, focusedPostID == nil else { return }
@@ -115,17 +117,20 @@ struct FeedView: View {
 
     private var timeline: some View {
         ScrollViewReader { proxy in
-            Group {
-                switch model.state {
-                case .idle, .loading:
-                    ScrollView { loadingState }
-                case let .failed(failure):
-                    ScrollView { failedState(failure) }
-                case let .loaded(posts):
-                    if posts.isEmpty {
-                        ScrollView { emptyState }
-                    } else {
-                        postList(posts, proxy: proxy)
+            VStack(spacing: 0) {
+                newPostsBar(proxy)
+                Group {
+                    switch model.state {
+                    case .idle, .loading:
+                        ScrollView { loadingState }
+                    case let .failed(failure):
+                        ScrollView { failedState(failure) }
+                    case let .loaded(posts):
+                        if posts.isEmpty {
+                            ScrollView { emptyState }
+                        } else {
+                            postList(posts, proxy: proxy)
+                        }
                     }
                 }
             }
@@ -155,6 +160,34 @@ struct FeedView: View {
         visibleRows.ids.removeAll()
     }
 
+    /// The prototype's "新着 n 件" bar: shown while posts sit above the head the
+    /// viewer last saw at the top; clicking scrolls up to them.
+    @ViewBuilder
+    private func newPostsBar(_ proxy: ScrollViewProxy) -> some View {
+        let order = FeedThreading.arrange(model.posts).map(\.id)
+        let count = UnreadCounter.unread(ids: order, since: seenHeadID)
+        if count > 0, let first = order.first {
+            Button {
+                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(first, anchor: .top) }
+                seenHeadID = first
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up").font(.system(size: 11, weight: .bold))
+                    Text("新着 \(count) 件").font(.appSize(12, weight: .semibold))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(theme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(theme.accentTint)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .overlay(alignment: .bottom) { Rectangle().fill(theme.divider).frame(height: 1) }
+        }
+    }
+
     /// Record the top-most visible row as the scroll anchor. Called only from row
     /// `onAppear` (never `onDisappear`): a tab switch tears the list down with a
     /// burst of `onDisappear`s, and recomputing there would rewrite the anchor from
@@ -166,6 +199,9 @@ struct FeedView: View {
         let order = FeedThreading.arrange(model.posts).map(\.id)
         if let top = FeedScrollAnchor.topVisibleID(order: order, visible: visibleRows.ids) {
             model.scrollAnchorID = top
+        }
+        if let head = order.first, visibleRows.ids.contains(head), seenHeadID != head {
+            seenHeadID = head
         }
     }
 
@@ -362,6 +398,9 @@ struct FeedView: View {
         PostActions(
             isLiked: post.viewerLikeURI != nil,
             isReposted: post.viewerRepostURI != nil,
+            authorDID: ATURI.repo(post.id),
+            authorHandle: post.authorHandle,
+            listMembership: listMembership,
             reply: { onReply(post) },
             repost: { Task { await model.toggleRepost(post) } },
             quote: { onQuote(post) },
@@ -387,7 +426,7 @@ struct FeedView: View {
             Button("") {
                 if let post = focusedPost { Task { await model.toggleLike(post) } }
             }
-            .keyboardShortcut("f", modifiers: [])
+            .keyboardShortcut("l", modifiers: [])
             Button("") {
                 if let post = focusedPost, let url = PostPermalink.url(for: post) {
                     NSWorkspace.shared.open(url)
