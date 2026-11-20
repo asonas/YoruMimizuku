@@ -9,7 +9,8 @@
 
 The window's frame now follows the desktop prototype (the visual source of
 truth since PR 4): a unified toolbar, the prototype's sidebar groups and rows,
-a header with a "新着 n 件" bar on every timeline, and the prototype's menus.
+a header on every timeline (with a "新着 n 件" bar on post lists), and the
+prototype's menus.
 
 ## 2. Decisions
 

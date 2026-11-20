@@ -642,4 +642,33 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.newArrivals, 1)
     }
+
+    /// Older pages loaded by scrolling are behind what was seen, never new.
+    func testOlderPagesLoadedLaterAreNotNewArrivals() async {
+        let interactor = FakeInteractor()
+        let vm = TimelineViewModel(
+            loader: StubLoader(pages: [
+                .success(TimelinePage(posts: [sample(id: "a")], cursor: "c1")),
+                page(["b", "c"])
+            ]),
+            interactor: interactor
+        )
+        await vm.load()
+        await vm.loadMore()
+
+        await vm.deletePost(sample(id: "a"))
+
+        XCTAssertEqual(vm.newArrivals, 0)
+    }
+
+    /// An empty first load is still the seen state: the first post to arrive
+    /// afterwards is new.
+    func testAPostArrivingAfterAnEmptyFirstLoadIsNew() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [page([]), page(["x"])]))
+        await vm.load()
+
+        _ = await vm.refresh()
+
+        XCTAssertEqual(vm.newArrivals, 1)
+    }
 }

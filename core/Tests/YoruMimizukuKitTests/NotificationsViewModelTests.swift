@@ -164,4 +164,76 @@ final class NotificationsViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.items.map(\.id), ["new"])
     }
+
+    /// Holds the first call (the initial load) until `release()`.
+    private actor HeldFirstCallLoader: NotificationsLoading {
+        private var calls = 0
+        private var gate: CheckedContinuation<Void, Never>?
+        private var parked: CheckedContinuation<Void, Never>?
+        let pages: [Result<[NotificationGroup], Error>]
+        init(pages: [Result<[NotificationGroup], Error>]) { self.pages = pages }
+
+        func loadLatest() async throws -> [NotificationGroup] {
+            calls += 1
+            let page = pages[min(calls, pages.count) - 1]
+            if calls == 1 {
+                await withCheckedContinuation { continuation in
+                    gate = continuation
+                    parked?.resume()
+                    parked = nil
+                }
+            }
+            return try page.get()
+        }
+
+        func waitUntilParked() async {
+            if gate != nil { return }
+            await withCheckedContinuation { parked = $0 }
+        }
+
+        func release() { gate?.resume(); gate = nil }
+    }
+
+    /// ⌘R while the first load is still out: the first load answering last must
+    /// not replace (or fail over) the newer list.
+    func testAFirstLoadFinishingAfterANewerRefreshIsDropped() async {
+        let loader = HeldFirstCallLoader(pages: [.failure(StubError()), .success([sample(id: "new")])])
+        let vm = NotificationsViewModel(loader: loader)
+
+        let first = Task { await vm.load() }
+        await loader.waitUntilParked()
+        await vm.refresh()
+        await loader.release()
+        _ = await first.value
+
+        XCTAssertEqual(vm.items.map(\.id), ["new"])
+    }
+
+    /// A later refresh that fails must not discard an earlier one that succeeded.
+    func testAFailedLaterRefreshKeepsAnEarlierSuccess() async {
+        let loader = HeldSecondCallLoader(pages: [[sample(id: "n1")], [sample(id: "polled")]])
+        let failing = FailAfterLoader(inner: loader)
+        let vm = NotificationsViewModel(loader: failing)
+        await vm.load()
+
+        let poll = Task { await vm.refresh() }
+        await loader.waitUntilParked()
+        await vm.refresh()
+        await loader.release()
+        _ = await poll.value
+
+        XCTAssertEqual(vm.items.map(\.id), ["polled"])
+    }
+
+    /// Passes the first two calls to `inner`, then fails.
+    private actor FailAfterLoader: NotificationsLoading {
+        let inner: HeldSecondCallLoader
+        private var calls = 0
+        init(inner: HeldSecondCallLoader) { self.inner = inner }
+        func loadLatest() async throws -> [NotificationGroup] {
+            calls += 1
+            if calls > 2 { throw StubError() }
+            return try await inner.loadLatest()
+        }
+    }
 }

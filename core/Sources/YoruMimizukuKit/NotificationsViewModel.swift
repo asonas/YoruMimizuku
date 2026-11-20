@@ -45,25 +45,43 @@ public final class NotificationsViewModel: ObservableObject {
         return []
     }
 
+    /// Every fetch (load or refresh) is numbered when it starts. An answer is
+    /// applied only if no later-started fetch has applied one yet, so a poll and
+    /// ⌘R overlapping, or ⌘R during the first load, never let an older answer
+    /// overwrite a newer one, and a later failure never discards an earlier success.
+    private var fetchesStarted = 0
+    private var appliedFetch = 0
+
+    private func startFetch() -> Int {
+        fetchesStarted += 1
+        return fetchesStarted
+    }
+
+    /// Apply `items` from fetch `number` unless a later fetch already applied.
+    private func apply(_ items: [NotificationGroup], from number: Int) {
+        guard number > appliedFetch else { return }
+        appliedFetch = number
+        state = .loaded(items)
+        onItemsChanged()
+    }
+
     /// Load the latest notifications, moving through loading -> loaded/failed.
     /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
     @discardableResult
     public func load() async -> Bool {
+        let number = startFetch()
         state = .loading
         do {
-            let items = try await loader.loadLatest()
-            state = .loaded(items)
-            onItemsChanged()
+            apply(try await loader.loadLatest(), from: number)
             return true
         } catch {
             SessionExpiry.reportIfExpired(error)
-            state = .failed(LoadFailure(error).message)
+            if number > appliedFetch, case .loading = state {
+                state = .failed(LoadFailure(error).message)
+            }
             return false
         }
     }
-
-    /// Bumped by each refresh so an older one finishing last is dropped.
-    private var refreshGeneration = 0
 
     /// Reload the notifications without flashing the loading state, so a periodic
     /// or manual refresh never replaces good content with a spinner. Failures keep
@@ -74,14 +92,9 @@ public final class NotificationsViewModel: ObservableObject {
         guard case .loaded = state else {
             return await load()
         }
-        refreshGeneration += 1
-        let generation = refreshGeneration
+        let number = startFetch()
         do {
-            let latest = try await loader.loadLatest()
-            // A newer refresh (a poll overlapping ⌘R) already applied its answer.
-            guard generation == refreshGeneration else { return true }
-            state = .loaded(latest)
-            onItemsChanged()
+            apply(try await loader.loadLatest(), from: number)
             return true
         } catch {
             SessionExpiry.reportIfExpired(error)

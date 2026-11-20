@@ -81,6 +81,11 @@ struct FeedView: View {
             focusedPostID = FeedThreading.arrange(model.posts).first?.id
         }
         .focusedSceneValue(\.postActions, registersKeyboardShortcuts ? focusedPost.map(actions(for:)) : nil)
+        // A post arriving while the top is still on screen fires no new onAppear,
+        // so check the head again whenever the count grows.
+        .onChange(of: model.newArrivals) { _, count in
+            if count > 0 { recordScrollAnchor() }
+        }
         // Prefetch the focused author's list membership for the right-click
         // "リストに追加" checks, once focus has rested on the post for a moment.
         .task(id: focusedPostID) {

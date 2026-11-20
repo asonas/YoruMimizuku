@@ -56,6 +56,8 @@ public final class TimelineViewModel: ObservableObject {
     /// new arrivals; a set rather than one marker, so deleting the post that was
     /// on top does not turn every older post into a new arrival.
     private var seenIDs: Set<String> = []
+    /// Whether the first load has set `seenIDs` (which may legitimately be empty).
+    private var hasSeenFirstLoad = false
 
     /// The id of the row that was at the top of the feed the last time it was
     /// scrolled. Survives the tab switch that tears the `FeedView` down (the view
@@ -131,6 +133,7 @@ public final class TimelineViewModel: ObservableObject {
             guard case var .loaded(latest) = state else { return }
             latest.insert(removed, at: min(index, latest.count))
             state = .loaded(latest)
+            recountNewArrivals()
         }
     }
 
@@ -210,8 +213,10 @@ public final class TimelineViewModel: ObservableObject {
             guard generation == pageGeneration, case let .loaded(latest) = state else { return }
             self.cursor = page.cursor
             // Appending older posts to the tail never moves the head, so the unread
-            // boundary is unaffected; no onItemsChanged() needed here.
+            // boundary is unaffected; no onItemsChanged() needed here. Older posts
+            // are behind what was seen, so they never count as new arrivals.
             state = .loaded(Self.merging(latest, appending: page.posts))
+            seenIDs.formUnion(page.posts.map(\.id))
         } catch {
             SessionExpiry.reportIfExpired(error)
             // Keep the existing rows; a later scroll or refresh can retry.
@@ -312,7 +317,10 @@ public final class TimelineViewModel: ObservableObject {
 
     /// Count the head posts not seen at the top. The first load counts as seen.
     private func recountNewArrivals() {
-        if seenIDs.isEmpty { seenIDs = Set(posts.map(\.id)) }
+        if !hasSeenFirstLoad {
+            seenIDs = Set(posts.map(\.id))
+            hasSeenFirstLoad = true
+        }
         newArrivals = posts.prefix { !seenIDs.contains($0.id) }.count
     }
 
