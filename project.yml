@@ -125,6 +125,8 @@ targets:
       - apps/macos/Catalog/CatalogRegistry.swift
       - apps/macos/Views/ComposerTextView.swift
       - apps/macos/Views/PostRowView.swift
+      - apps/macos/Views/ListMembershipMenu.swift
+      - apps/macos/Views/DraggedAuthor.swift
       - apps/macos/Views/QuoteCardView.swift
       - apps/macos/Views/LinkCardView.swift
       - apps/macos/Views/VideoPosterView.swift
