@@ -130,7 +130,7 @@ struct ConversationView: View {
                 LazyLinkCardView(url: url, density: .comfortable)
             }
             if let quote = post.quote {
-                QuoteCardView(quote: quote, density: .comfortable, now: now) { onOpenQuote(quote) }
+                quoteBox(quote)
             }
             stats(post)
         }
@@ -190,6 +190,37 @@ struct ConversationView: View {
                 if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
             }
         }
+    }
+
+    /// The prototype's quote box. The quoted post's labels are not carried here,
+    /// so its media stays behind the quote's own page; the box says it has some.
+    private func quoteBox(_ quote: QuotedPost) -> some View {
+        Button { onOpenQuote(quote) } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(quote.authorDisplayName).font(.appSize(13, weight: .semibold)).foregroundStyle(theme.primaryText)
+                    Text("@\(quote.authorHandle)").font(.appSize(12)).foregroundStyle(theme.tertiaryText)
+                }
+                if !quote.body.isEmpty {
+                    Text(quote.body)
+                        .font(.appSize(13.5))
+                        .foregroundStyle(theme.primaryText)
+                        .multilineTextAlignment(.leading)
+                }
+                if !quote.images.isEmpty || quote.video != nil {
+                    Label(quote.video != nil ? "動画あり" : "画像 \(quote.images.count) 枚", systemImage: "photo")
+                        .font(.appSize(11.5))
+                        .foregroundStyle(theme.tertiaryText)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme.divider, lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("引用元を開く")
     }
 
     /// The prototype's counts row; the counts double as the actions.

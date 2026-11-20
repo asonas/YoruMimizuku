@@ -100,4 +100,15 @@ final class DetailPaneModelTests: XCTestCase {
         pane.openConversation(post("at://a/2"))
         XCTAssertEqual(pane.tab, .thread)
     }
+
+    /// The same holds when the post is opened by URI (a quote or notification).
+    func testOpeningTheShownPostByURIReturnsToItsThread() async {
+        let pane = makePane()
+        pane.openConversation(anchorID: "at://a/1", title: "A", handle: "a", subtitle: "")
+        pane.tab = .record
+
+        pane.openConversation(anchorID: "at://a/1", title: "A", handle: "a", subtitle: "")
+
+        XCTAssertEqual(pane.tab, .thread)
+    }
 }

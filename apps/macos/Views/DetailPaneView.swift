@@ -67,11 +67,18 @@ struct DetailPaneView: View {
             .help("閉じる")
             .accessibilityLabel("閉じる")
 
-            Text(title(for: entry))
-                .font(.appSize(13, weight: .semibold))
-                .foregroundStyle(theme.primaryText)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                switch entry {
+                case let .conversation(tab):
+                    ConversationTitle(model: tab.model, fallback: tab.title)
+                case let .author(tab):
+                    Text(tab.displayName.isEmpty ? "@\(tab.handle)" : tab.displayName)
+                }
+            }
+            .font(.appSize(13, weight: .semibold))
+            .foregroundStyle(theme.primaryText)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if case .conversation = entry {
                 Picker("表示", selection: $pane.tab) {
@@ -85,13 +92,6 @@ struct DetailPaneView: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 38)
-    }
-
-    private func title(for entry: DetailEntry) -> String {
-        switch entry {
-        case let .conversation(tab): return tab.title
-        case let .author(tab): return tab.displayName.isEmpty ? "@\(tab.handle)" : tab.displayName
-        }
     }
 
     @ViewBuilder
@@ -111,10 +111,7 @@ struct DetailPaneView: View {
                 )
                 .id(conversation.id)
             case .record:
-                RecordView(
-                    uri: conversation.anchorID, handle: conversation.handle,
-                    warning: anchorPost(conversation)?.mediaWarning, load: loadRecord
-                )
+                RecordView(model: conversation.model, uri: conversation.anchorID, load: loadRecord)
                     .id(conversation.id)
             }
         case let .author(tab):
@@ -138,10 +135,14 @@ struct DetailPaneView: View {
 /// The prototype's レコード tab: who wrote the post and where it lives, then the
 /// record exactly as stored in the author's repo.
 private struct RecordView: View {
+    @ObservedObject var model: ThreadViewModel
     let uri: String
-    let handle: String
-    let warning: MediaWarning?
     let load: (String) async throws -> RecordResponse
+
+    private var anchor: PostDisplay? {
+        if case let .loaded(thread) = model.state { return thread.focus }
+        return nil
+    }
     @EnvironmentObject private var theme: ThemeStore
 
     private enum State { case loading, loaded(String), failed }
@@ -151,14 +152,14 @@ private struct RecordView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
-                    if !handle.isEmpty {
+                    if let handle = anchor?.authorHandle {
                         row("Handle", handle)
                     }
                     if let did = ATURI.repo(uri) {
                         row("DID", did)
                     }
                     row("URI", uri)
-                    if let warning {
+                    if let warning = anchor?.mediaWarning {
                         row("Label", warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
                     }
                 }
@@ -257,6 +258,21 @@ private struct ReplyField: View {
         Task {
             if await send(anchor, draft) { text = "" }
             isSending = false
+        }
+    }
+}
+
+/// A conversation's title: its anchor's author once loaded. Before that, the
+/// name it was opened with (for a notification, the actor's).
+private struct ConversationTitle: View {
+    @ObservedObject var model: ThreadViewModel
+    let fallback: String
+
+    var body: some View {
+        if case let .loaded(thread) = model.state {
+            Text(thread.focus.authorDisplayName)
+        } else {
+            Text(fallback)
         }
     }
 }

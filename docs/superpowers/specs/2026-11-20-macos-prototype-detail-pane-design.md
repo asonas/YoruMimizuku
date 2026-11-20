@@ -19,7 +19,7 @@ field at the bottom.
   opening another replaces it, and close (×) empties it.
 - **スレッド.** Ancestors as compact rows (each re-anchors the pane), then the
   anchor: 38pt avatar, name with the verified check, "@handle ・ time", the body
-  at 15.5pt (selectable), a warn box with 表示する / 隠す for labeled media,
+  at 15.5pt, a warn box with 表示する / 隠す for labeled media,
   full-width images with their alt text under them, video, link card, a quote
   box, and the counts (reply, repost, like, which also act, and copy link).
   Replies are indented 20pt per level with a 24pt avatar, a connector line and
@@ -37,11 +37,18 @@ field at the bottom.
 - Replies and quotes from the composer and the reply field are posted as the
   window's account (`LiveComposer` gets the window's DID); a reply only reloads
   the conversation it was sent from.
-- The anchor keeps the lazily resolved link card for a bare link and the full
-  quote card with its media; its body is not selectable, because selection on
-  linked text blanks the links after a relayout.
+- The anchor keeps the lazily resolved link card for a bare link. The quote is
+  the prototype's text box with a note when it has media: the quoted post's
+  labels are not carried, so its media is seen on its own page, behind its
+  warning. The body is not selectable, because selection on linked text
+  blanks the links after a relayout.
+- The bar title and the record's Handle come from the loaded anchor, so a post
+  opened from a like notification names its author, not the liker.
+- The reply field normalizes text like the composer (trailing whitespace is
+  dropped).
 - In timeline rows a click on the name, why-line or body text also selects the
-  row and opens it here (text otherwise takes the click before the row).
+  row and opens it here (text otherwise takes the click before the row); a
+  click on a link in the text follows the link and only selects the row.
 
 ## 3. Not in this PR
 

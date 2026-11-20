@@ -52,7 +52,7 @@ public final class DetailPaneModel: ObservableObject {
     /// Open a conversation when only the post URI and a display snippet are known
     /// (a notification subject or a quoted post).
     public func openConversation(anchorID: String, title: String, handle: String, subtitle: String) {
-        if isShowingConversation(anchorID) { return }
+        if isShowingConversation(anchorID) { tab = .thread; return }
         show(.conversation(ConversationTab(
             anchorID: anchorID, title: title, handle: handle, subtitle: subtitle,
             model: makeThreadModel(anchorID)

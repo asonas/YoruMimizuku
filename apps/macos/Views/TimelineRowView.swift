@@ -28,8 +28,11 @@ struct TimelineRowView: View, @MainActor Equatable {
 
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
+    /// When a link in the row's text was last followed: the text's tap then
+    /// only selects the row, so it does not also open the post over the link.
     @Environment(\.listMembership) private var listMembership
     @State private var showRepostOptions = false
+    @State private var linkFollowedAt: Date?
 
     private static let avatarSize: CGFloat = 32
     private static let timeFormatter = RelativeTimeFormatter(style: .japanese)
@@ -73,7 +76,12 @@ struct TimelineRowView: View, @MainActor Equatable {
                     .frame(height: post.body.isEmpty ? 0 : nil)
                     // Text takes the click before the row's background does; a
                     // simultaneous tap keeps link clicks working and still selects.
-                    .simultaneousGesture(TapGesture().onEnded { onActivate() })
+                    .simultaneousGesture(TapGesture().onEnded { activateUnlessLink() })
+                    .environment(\.openURL, OpenURLAction { url in
+                        linkFollowedAt = Date()
+                        openURL(url)
+                        return .handled
+                    })
                 thumbnails
                 tags
                 reactions
@@ -84,6 +92,17 @@ struct TimelineRowView: View, @MainActor Equatable {
         .padding(.bottom, 9)
         .contextMenu { contextMenu }
         .modifier(ListMembershipPrefetch(context: listMembership, authorDID: ATURI.repo(post.id)))
+    }
+
+    /// Wait a turn so a link followed by the same click is recorded first.
+    private func activateUnlessLink() {
+        DispatchQueue.main.async {
+            if let followed = linkFollowedAt, Date().timeIntervalSince(followed) < 0.5 {
+                onSelect()
+            } else {
+                onActivate()
+            }
+        }
     }
 
     // MARK: - Parts
