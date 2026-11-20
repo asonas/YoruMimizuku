@@ -3,7 +3,8 @@ import SwiftUI
 import BlueskyCore
 import YoruMimizukuKit
 
-/// The main window, in three columns: the sidebar (home, notifications, filters),
+/// The main window, in three columns: the sidebar (home, notifications, pinned
+/// feeds and lists, filters),
 /// the selected timeline, and the detail pane where a conversation or author page
 /// opens without replacing the timeline. Cmd-Shift-J/K cycle the sidebar. The
 /// lightbox and composer sheet float above everything; settings open in their own
@@ -14,11 +15,15 @@ struct MainWindowView: View {
     @ObservedObject var notifications: NotificationsViewModel
     @ObservedObject var workspace: WorkspaceModel
     @ObservedObject var detailPane: DetailPaneModel
+    @ObservedObject var savedFeeds: SavedFeedsModel
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var fontSettings: FontSettingsStore
     @EnvironmentObject private var notificationSettings: NotificationSettingsStore
     @EnvironmentObject private var unread: NotificationUnreadStore
     @State private var windowID = UUID()
+    /// The pinned feed currently polling. Only the selected one polls, so pinning
+    /// many feeds does not multiply requests.
+    @State private var polledSavedFeed: String?
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The signed-in account's DID, threaded to each feed so the viewer's own posts
@@ -89,6 +94,8 @@ struct MainWindowView: View {
             unread.close(accountDID, window: windowID)
             notifications.stopPolling()
             if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
+            if let id = polledSavedFeed { savedFeeds.timeline(for: id)?.stopPolling() }
+            polledSavedFeed = nil
         }
         .onReceive(clock) { now = $0 }
         .task {
@@ -97,6 +104,16 @@ struct MainWindowView: View {
             for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
             syncActiveTab()
             pollShownAuthor()
+        }
+        .task {
+            await savedFeeds.load()
+            workspace.savedFeeds = savedFeeds.sources
+        }
+        .onChange(of: savedFeeds.sources) { _, sources in workspace.savedFeeds = sources }
+        // Pins change on other devices; re-read them when the app comes back to
+        // the front, which also recovers from a launch while offline.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { await savedFeeds.load() }
         }
         .onChange(of: workspace.filters.map(\.id)) { _, _ in
             for tab in workspace.filters { tab.model.startPolling(every: pollInterval) }
@@ -237,6 +254,24 @@ struct MainWindowView: View {
             } else {
                 Color.clear.background(theme.canvas)
             }
+        case let .savedFeed(id):
+            if let source = savedFeeds.source(id: id), let timeline = savedFeeds.timeline(for: id) {
+                FeedView(
+                    model: timeline, title: source.title, now: now,
+                    onImageTap: { urls, index in lightbox = ImageGallery(urls: urls, index: index) },
+                    onOpenConversation: { detailPane.openConversation($0) },
+                    onCompose: { compose(refreshing: timeline) },
+                    onReply: { openReplyComposer($0, refreshing: timeline) },
+                    onQuote: { openQuoteComposer($0, refreshing: timeline) },
+                    onOpenAuthor: { openAuthor(for: $0) },
+                    onOpenQuote: { openQuotedPost($0) },
+                    currentDID: accountDID,
+                    headerAccessory: AnyView(SavedFeedInfoButton(source: source))
+                )
+                .id(id)
+            } else {
+                Color.clear.background(theme.canvas)
+            }
         case .conversation, .author:
             Color.clear.background(theme.canvas)
         }
@@ -256,6 +291,8 @@ struct MainWindowView: View {
         switch workspace.selection {
         case let .filter(id):
             return workspace.filter(id: id)?.model ?? model
+        case let .savedFeed(id):
+            return savedFeeds.timeline(for: id) ?? model
         default:
             return model
         }
@@ -325,6 +362,8 @@ struct MainWindowView: View {
             tab.model.stopPolling(); tab.model.startPolling(every: interval)
         }
         if case let .author(tab) = detailPane.current { tab.model.stopPolling() }
+        if let id = polledSavedFeed { savedFeeds.timeline(for: id)?.stopPolling() }
+        polledSavedFeed = nil
         syncActiveTab()
         pollShownAuthor()
     }
@@ -335,6 +374,19 @@ struct MainWindowView: View {
         model.setActive(workspace.selection == .home)
         for tab in workspace.filters {
             tab.model.setActive(workspace.selection == .filter(tab.id))
+        }
+        pollSelectedSavedFeed()
+    }
+
+    /// Poll only the selected pinned feed; stop the one left behind.
+    private func pollSelectedSavedFeed() {
+        let selected: String? = if case let .savedFeed(id) = workspace.selection { id } else { nil }
+        guard selected != polledSavedFeed else { return }
+        if let previous = polledSavedFeed { savedFeeds.timeline(for: previous)?.stopPolling() }
+        polledSavedFeed = selected
+        if let selected, let timeline = savedFeeds.timeline(for: selected) {
+            timeline.setActive(true)
+            timeline.startPolling(every: pollInterval)
         }
     }
 

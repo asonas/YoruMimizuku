@@ -37,6 +37,8 @@ struct FeedView: View {
     /// column registers them; a feed embedded in the detail pane (an author page)
     /// turns them off to avoid a second binding for the same keys.
     var registersKeyboardShortcuts: Bool = true
+    /// Extra controls at the right end of the header (e.g. a pinned feed's info).
+    var headerAccessory: AnyView? = nil
 
     @State private var focusedPostID: String?
     /// Bumped on every j/k move to scroll the focused post into view. Only keyboard
@@ -67,7 +69,7 @@ struct FeedView: View {
     var body: some View {
         VStack(spacing: 0) {
             if showsHeader, let title {
-                DetailHeader(title) { EmptyView() }
+                DetailHeader(title) { headerAccessory }
             }
             timeline
         }

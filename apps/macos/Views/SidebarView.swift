@@ -95,10 +95,29 @@ struct SidebarView: View {
                     badge: showsBadges ? notificationsUnread : 0
                 ) { workspace.selection = .notifications }
 
+                savedSection("フィード", kind: .feed, icon: "dot.radiowaves.up.forward")
+                savedSection("リスト", kind: .list, icon: "list.bullet")
                 filterSection
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
+        }
+    }
+
+    /// The account's pinned feeds or lists, in pin order. Hidden when none are
+    /// pinned; pins are managed on the server, so there is no add button here.
+    @ViewBuilder
+    private func savedSection(_ label: String, kind: SavedFeedSource.Kind, icon: String) -> some View {
+        let sources = workspace.savedFeeds.filter { $0.kind == kind }
+        if !sources.isEmpty {
+            sectionLabel(label)
+            ForEach(sources) { source in
+                SidebarRow(
+                    icon: icon,
+                    title: source.title,
+                    isSelected: workspace.selection == .savedFeed(source.id)
+                ) { workspace.selection = .savedFeed(source.id) }
+            }
         }
     }
 

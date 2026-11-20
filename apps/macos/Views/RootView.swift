@@ -221,6 +221,7 @@ private struct AuthenticatedRootView: View {
     @StateObject private var notificationsModel: NotificationsViewModel
     @StateObject private var workspace: WorkspaceModel
     @StateObject private var detailPane: DetailPaneModel
+    @StateObject private var savedFeeds: SavedFeedsModel
 
     private let accountDID: String
     private let accountHandle: String
@@ -287,6 +288,17 @@ private struct AuthenticatedRootView: View {
                 makeAuthorHeader: makeAuthorHeader
             )
         )
+        _savedFeeds = StateObject(
+            wrappedValue: SavedFeedsModel(
+                loader: LiveSavedFeedsLoader(accountManager: accountManager, accountDID: did),
+                makeTimeline: { source in
+                    TimelineViewModel(
+                        loader: LiveSavedFeedLoader(accountManager: accountManager, accountDID: did, source: source),
+                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
+                    )
+                }
+            )
+        )
         _detailPane = StateObject(
             wrappedValue: DetailPaneModel(
                 makeThreadModel: makeThreadModel,
@@ -311,6 +323,7 @@ private struct AuthenticatedRootView: View {
             notifications: notificationsModel,
             workspace: workspace,
             detailPane: detailPane,
+            savedFeeds: savedFeeds,
             accountHandle: accountHandle,
             accountAvatarURL: accountAvatarURL,
             accountDID: accountDID,

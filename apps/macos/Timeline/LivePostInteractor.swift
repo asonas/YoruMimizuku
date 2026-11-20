@@ -8,16 +8,19 @@ import YoruMimizukuKit
 struct LivePostInteractor: PostInteracting {
     let accountManager: AccountManager
     let config: OAuthClientConfig
+    /// The account to write as. Nil uses the current account.
+    let accountDID: String?
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, accountDID: String? = nil) {
         self.accountManager = accountManager
         self.config = config
+        self.accountDID = accountDID
     }
 
     private enum InteractionError: Error { case malformedRecordURI(String) }
 
     func like(uri: String, cid: String) async throws -> String {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let result = try await service(context).like(
             pds: context.account.pds, issuer: context.issuer,
             accessToken: context.account.accessToken, refreshToken: context.account.refreshToken,
@@ -28,7 +31,7 @@ struct LivePostInteractor: PostInteracting {
     }
 
     func repost(uri: String, cid: String) async throws -> String {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let result = try await service(context).repost(
             pds: context.account.pds, issuer: context.issuer,
             accessToken: context.account.accessToken, refreshToken: context.account.refreshToken,
@@ -54,7 +57,7 @@ struct LivePostInteractor: PostInteracting {
         guard let rkey = ATURI.rkey(recordURI) else {
             throw InteractionError.malformedRecordURI(recordURI)
         }
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let refreshed = try await service(context).deleteRecord(
             pds: context.account.pds, issuer: context.issuer,
             accessToken: context.account.accessToken, refreshToken: context.account.refreshToken,
