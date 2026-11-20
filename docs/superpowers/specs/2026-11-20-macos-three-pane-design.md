@@ -55,8 +55,14 @@ factories.
   - Head-page requests are ordered: a refresh started before the newest applied
     head response is dropped, so it cannot push newer posts down.
   - A refreshed head page that shares no post with the rows held (more than a
-    page of new posts arrived while the page was hidden) replaces the rows and
-    the cursor, so scrolling continues without a gap.
+    page of new posts arrived while the page was hidden, or the feed was empty)
+    replaces the rows and the cursor, so scrolling continues without a gap; an
+    older-page fetch still running for the replaced rows is dropped.
+  - A fetch whose result is dropped because a newer one already applied still
+    counts as a success for the polling backoff.
+  - Known limit: an OR saved search keeps one combined cursor, so a subquery
+    with more than a page of new posts can still leave a gap when another
+    subquery overlaps.
   - Only `CancellationError` and `URLError.cancelled` count as cancellation; any
     other error is still reported for session expiry.
   - Closing the window stops the shown author's polling.

@@ -270,6 +270,16 @@ final class TimelineViewModelTests: XCTestCase {
             }
             continuation?.resume(with: result)
         }
+
+        /// Finish whatever request is pending, so a failing assertion never leaves
+        /// the test awaiting a request it did not expect.
+        func releaseAll(with result: Result<TimelinePage, Error>) {
+            let pending = lock.withLock { () -> [CheckedContinuation<TimelinePage, Error>] in
+                defer { waiting.removeAll() }
+                return waiting.map(\.resume)
+            }
+            pending.forEach { $0.resume(with: result) }
+        }
     }
 
     private struct TimedOut: Error {}
@@ -322,6 +332,49 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.posts.map(\.id), ["new1", "new2"])
         XCTAssertEqual(loader.requestedCursors.last, "c-new")
+    }
+
+    // An older-page fetch started before such a replacement belongs to the rows
+    // that were dropped, so its late page must not be appended.
+    func testOlderPageStartedBeforeAReplacementIsDropped() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let initial = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "old1")], cursor: "c-old")))
+        await initial.value
+
+        let tail = Task { await vm.loadMore() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let head = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "new1")], cursor: "c-new")))
+        await head.value
+        loader.release(cursor: "c-old", with: .success(TimelinePage(posts: [sample(id: "old2")], cursor: "c-older")))
+        await tail.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["new1"])
+        let next = Task { await vm.loadMore() }
+        try await waitUntil { loader.pendingCount == 1 }
+        XCTAssertEqual(loader.requestedCursors.last, "c-new")
+        loader.releaseAll(with: .success(TimelinePage(posts: [], cursor: nil)))
+        await next.value
+    }
+
+    // A feed that was empty adopts the first non-empty page's cursor, so its
+    // second page can be reached.
+    func testRefreshOfAnEmptyFeedAdoptsTheCursor() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [], cursor: nil)),
+            .success(TimelinePage(posts: [sample(id: "p1"), sample(id: "p1")], cursor: "c1"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+
+        await vm.refresh()
+
+        XCTAssertEqual(vm.posts.map(\.id), ["p1"])
+        XCTAssertTrue(vm.canLoadMore)
     }
 
     // Returning to an author page in the detail pane restarts its polling; the

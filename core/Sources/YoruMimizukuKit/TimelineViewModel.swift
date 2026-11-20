@@ -165,7 +165,7 @@ public final class TimelineViewModel: ObservableObject {
         state = .loading
         do {
             let page = try await loader.loadPage(cursor: nil)
-            guard generation == loadGeneration else { endInterval("superseded"); return false }
+            guard generation == loadGeneration else { endInterval("superseded"); return true }
             appliedHeadRequest = request
             cursor = page.cursor
             state = .loaded(page.posts)
@@ -222,16 +222,20 @@ public final class TimelineViewModel: ObservableObject {
             let page = try await loader.loadPage(cursor: nil)
             // Merge into the rows as they are now, so an older page appended while
             // this request was in flight is kept.
+            // A response superseded by a newer one still means the network is
+            // fine, so it counts as a success for the polling backoff.
             guard generation == loadGeneration, request > appliedHeadRequest,
-                  case let .loaded(latest) = state else { return false }
+                  case let .loaded(latest) = state else { return true }
             appliedHeadRequest = request
             let held = Set(latest.map(\.id))
-            if !latest.isEmpty, !page.posts.contains(where: { held.contains($0.id) }) {
-                // More new posts than one page: the rows held no longer continue
-                // from this page, so start over from it rather than leave a gap
-                // that scrolling could never fill.
+            if !page.posts.contains(where: { held.contains($0.id) }) {
+                // The rows held (if any) no longer continue from this page, for
+                // example after more than a page of new posts: start over from it
+                // rather than leave a gap that scrolling could never fill, and
+                // drop any older-page fetch still running for the old rows.
+                loadGeneration += 1
                 cursor = page.cursor
-                state = .loaded(page.posts)
+                state = .loaded(Self.merging(page.posts, appending: []))
             } else {
                 state = .loaded(Self.merging(page.posts, appending: latest))
             }
