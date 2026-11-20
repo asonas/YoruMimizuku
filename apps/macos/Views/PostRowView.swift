@@ -323,11 +323,12 @@ struct PostRowView: View, @MainActor Equatable {
     // blank, so URLs vanish on focus and become unclickable. Links win over
     // body selection here; the copy-link action covers sharing a post.
     private var bodyText: some View {
-        Text(bodyAttributed)
-            .font(.app(density == .compact ? .callout : .body))
+        let style: Font.TextStyle = density == .compact ? .callout : .body
+        return Text(bodyAttributed)
+            .font(.app(style))
             .foregroundStyle(theme.primaryText)
             .tint(theme.accent)
-            .lineSpacing(density == .compact ? 1 : 2)
+            .lineSpacing(AppTypography.pointSize(style) * CGFloat(DesignMetrics.bodyLineSpacingRatio(density)))
             .fixedSize(horizontal: false, vertical: true)
     }
 

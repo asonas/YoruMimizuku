@@ -93,7 +93,9 @@ final class ThemeStore: ObservableObject {
 
     var primaryText: Color { Color(palette.text) }
     var secondaryText: Color { Color(palette.secondaryText) }
-    var tertiaryText: Color { Color(palette.text.blended(toward: palette.background, fraction: 0.45)) }
+    /// Handles, timestamps, and counts. 0.38 keeps the default palette at about
+    /// 4.9:1 against the background, above WCAG AA's 4.5:1 for small text.
+    var tertiaryText: Color { Color(palette.text.blended(toward: palette.background, fraction: 0.38)) }
     var avatarPlaceholder: Color { Color(palette.avatarPlaceholder) }
 
     var divider: Color { Color(palette.divider) }

@@ -21,13 +21,20 @@ enum AppTypography {
     /// so sizes are effectively fixed and an absolute point value is natural.)
     static let referenceBodySize = NSFont.preferredFont(forTextStyle: .body).pointSize
 
-    /// The user-chosen body point size that drives every text size. Defaults to the
-    /// system standard. Same main-thread-only rationale as `family` for
-    /// `nonisolated(unsafe)`.
+    /// The user-chosen body point size that drives every text size. Same
+    /// main-thread-only rationale as `family` for `nonisolated(unsafe)`.
     static let minBaseSize: CGFloat = 11
     static let maxBaseSize: CGFloat = 24
-    static var defaultBaseSize: CGFloat { referenceBodySize }
-    nonisolated(unsafe) static var baseSize: CGFloat = NSFont.preferredFont(forTextStyle: .body).pointSize
+    /// One point above the system body size: Japanese posts at the 13pt system
+    /// size were hard to read in the timeline.
+    static var defaultBaseSize: CGFloat { referenceBodySize + 1 }
+    nonisolated(unsafe) static var baseSize: CGFloat = defaultBaseSize
+
+    /// The point size `Font.app(style)` renders at, for spacing that must scale
+    /// with the text.
+    static func pointSize(_ style: Font.TextStyle) -> CGFloat {
+        Font.standardSize(style) * sizeRatio
+    }
 
     /// How much to scale standard sizes by, given the chosen body size.
     static var sizeRatio: CGFloat { baseSize / referenceBodySize }
@@ -40,8 +47,7 @@ extension Font {
     /// A font sized to a Dynamic Type text style, scaling with it, in the app's
     /// current family. `.headline` keeps its semibold emphasis unless overridden.
     static func app(_ style: Font.TextStyle, weight: Font.Weight? = nil) -> Font {
-        let size = standardSize(style) * AppTypography.sizeRatio
-        return Font.custom(AppTypography.family, size: size, relativeTo: style)
+        Font.custom(AppTypography.family, size: AppTypography.pointSize(style), relativeTo: style)
             .weight(weight ?? defaultWeight(style))
     }
 
@@ -57,7 +63,7 @@ extension Font {
 
     /// The macOS standard point size for a text style, read from `NSFont` so the
     /// custom font matches the system metrics exactly.
-    private static func standardSize(_ style: Font.TextStyle) -> CGFloat {
+    fileprivate static func standardSize(_ style: Font.TextStyle) -> CGFloat {
         NSFont.preferredFont(forTextStyle: nsTextStyle(style)).pointSize
     }
 

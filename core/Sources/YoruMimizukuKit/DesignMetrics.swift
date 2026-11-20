@@ -27,6 +27,13 @@ public enum DesignMetrics {
         density == .compact ? 2 : 4
     }
 
+    /// Extra space between lines of post body text, as a fraction of the body
+    /// font size, by density. A ratio rather than points so the spacing grows
+    /// with the user's chosen text size; Japanese text needs about half an em.
+    public static func bodyLineSpacingRatio(_ density: DisplayDensity) -> Double {
+        density == .compact ? 0.25 : 0.5
+    }
+
     /// Maximum media width in the vertical (non-reflow) layout, by density.
     public static func mediaMaxWidth(_ density: DisplayDensity) -> Double {
         density == .compact ? 320 : 440
