@@ -303,7 +303,7 @@ private struct FontSettingsContentView: View {
                 .font(.app(.caption))
                 .foregroundStyle(theme.secondaryText)
             VStack(alignment: .leading, spacing: 6) {
-                Text(fontSettings.family)
+                Text(fontSettings.family == AppTypography.systemFamily ? "システム" : fontSettings.family)
                     .font(.app(.headline))
                     .foregroundStyle(theme.primaryText)
                 Text("吾輩は猫である。名前はまだ無い。The quick brown fox 0123456789")

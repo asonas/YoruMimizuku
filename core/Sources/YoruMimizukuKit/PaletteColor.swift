@@ -39,11 +39,15 @@ public struct PaletteColor: Equatable, Sendable, Codable {
         )
     }
 
-    /// WCAG relative luminance (0 for black, 1 for white). Display-p3 components
-    /// are treated as sRGB, which is close enough for ordering and contrast checks.
+    /// WCAG relative luminance (0 for black, 1 for white). Both spaces share the
+    /// sRGB transfer curve; the weights are each space's primaries' share of Y.
     public var relativeLuminance: Double {
-        func linear(_ c: Double) -> Double { c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
-        return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+        func linear(_ c: Double) -> Double { c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        let (r, g, b): (Double, Double, Double) = switch colorSpace {
+        case .sRGB: (0.2126, 0.7152, 0.0722)
+        case .displayP3: (0.2290, 0.6917, 0.0793)
+        }
+        return r * linear(red) + g * linear(green) + b * linear(blue)
     }
 
     /// WCAG contrast ratio against `other`, from 1 to 21.

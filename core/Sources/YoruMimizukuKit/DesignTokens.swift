@@ -61,7 +61,9 @@ public struct DesignTokens: Equatable, Sendable {
     }
 
     // fg3 is darker (light) / lighter (dark) than the prototype's #85858b /
-    // #7f7f85, which fall short of WCAG AA's 4.5:1 for small text.
+    // #7f7f85, and the dark accentForeground is dark rather than the
+    // prototype's white (3.3:1 on #2f8cff): both fall short of WCAG AA's 4.5:1
+    // for small text.
     public static let light = DesignTokens(
         content: hex(0xFFFFFF), chrome: hex(0xF3F3F5), side: hex(0xE8E9EE, 0.78),
         fg: hex(0x1D1D1F), fg2: hex(0x5C5C62), fg3: hex(0x6E6E73),
@@ -75,7 +77,7 @@ public struct DesignTokens: Equatable, Sendable {
         content: hex(0x1E1E20), chrome: hex(0x2B2B2E), side: hex(0x2C2C30, 0.78),
         fg: hex(0xF2F2F5), fg2: hex(0xABABB0), fg3: hex(0x8E8E93),
         separator: hex(0xFFFFFF, 0.1), hover: hex(0xFFFFFF, 0.05), selection: hex(0xFFFFFF, 0.1),
-        accent: hex(0x2F8CFF), accentForeground: hex(0xFFFFFF), accentTint: hex(0x2F8CFF, 0.18),
+        accent: hex(0x2F8CFF), accentForeground: hex(0x0A1A33), accentTint: hex(0x2F8CFF, 0.18),
         like: hex(0xFF6B8E), repost: hex(0x4CC690), warn: hex(0xF2B65E), warnTint: hex(0x3A2B14),
         proto: hex(0x5FD3C4), protoTint: hex(0x133230), field: hex(0x2A2A2D)
     )

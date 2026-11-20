@@ -55,7 +55,7 @@ struct SidebarView: View {
             accountFooter
         }
         .background {
-            theme.background.ignoresSafeArea(.container, edges: .top)
+            theme.sidebar.ignoresSafeArea(.container, edges: .top)
         }
         .sheet(item: $editorRequest) { request in
             editor(for: request).environmentObject(theme)

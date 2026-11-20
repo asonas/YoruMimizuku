@@ -20,7 +20,11 @@ source of truth for the macOS window. Its color tokens replace the monochrome
   (dynamic `NSColor`), so switching appearance needs no state.
 - fg3 is `#6e6e73` (light) / `#8e8e93` (dark) instead of the prototype's
   `#85858b` / `#7f7f85`, which fall below WCAG AA's 4.5:1 for small text; a test
-  checks every text token on the content background in both appearances.
+  checks every text token on the content background in both appearances. For
+  the same reason the dark accentForeground is `#0a1a33` rather than white, which
+  reads at only 3.3:1 on `#2f8cff`.
+- The sidebar uses the prototype's side token; luminance uses each color
+  space's primaries, so display-p3 pairs orient correctly.
 - A randoma11y URL replaces only the background and text (and the neutrals
   derived from them). The pair is oriented to the appearance: the lighter color
   is the background in light and the darker one in dark, which randoma11y pairs

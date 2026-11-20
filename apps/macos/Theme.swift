@@ -88,7 +88,9 @@ final class ThemeStore: ObservableObject {
     /// A color that picks its token for the appearance it is drawn in.
     private func token(_ pick: @escaping @Sendable (DesignTokens) -> PaletteColor) -> Color {
         let override = self.override
-        return Color(nsColor: NSColor(name: nil) { appearance in
+        // `@Sendable` keeps the provider off the main actor: AppKit may resolve a
+        // dynamic color on any thread, and a main-actor closure would trap there.
+        return Color(nsColor: NSColor(name: nil) { @Sendable appearance in
             let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             return NSColor(pick(DesignTokens.resolve(dark: dark, override: override)))
         })
