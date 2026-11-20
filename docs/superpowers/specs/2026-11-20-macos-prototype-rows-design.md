@@ -35,8 +35,13 @@ detail pane, which follows the selected row as in the prototype.
   author page in the detail pane; fetches already under way are filtered too,
   and an unread boundary on one of their posts moves to the next post. The
   notifications list and an open conversation keep them until reloaded.
-- **Density.** The list rows have the prototype's fixed sizes; the density
-  setting now applies to the detail pane only (its description says so).
+- **Density.** The list rows (timelines and author pages) have the
+  prototype's fixed sizes; the density setting now applies to conversations in
+  the detail pane only (its description says so).
+- A list whose first page is only muted posts fetches the next page, and muted
+  posts are dropped from author pages anywhere in the detail pane's history.
+- Known gap: a j/k open still pending in the timeline (0.3 s) can replace what
+  a click inside the detail pane's author page just opened.
 - Search results carry no reply parent, so their replies show no
   "@x への返信" line. The Japanese repost label also reaches the Windows app
   through the bridge.

@@ -82,6 +82,8 @@ struct FeedView: View {
         }
         .background(theme.canvas)
         .background { if registersKeyboardShortcuts { postNavShortcuts } }
+        // A j/k open still pending when the list goes away must not land.
+        .onDisappear { keyboardOpenTask?.cancel() }
         .onChange(of: model.state) { _, _ in
             guard registersKeyboardShortcuts, focusedPostID == nil else { return }
             focusedPostID = FeedThreading.arrange(model.posts).first?.id
@@ -246,7 +248,10 @@ struct FeedView: View {
                     onRepost: { Task { await model.toggleRepost(post) } },
                     onQuote: { onQuote(post) },
                     onLike: { Task { await model.toggleLike(post) } },
-                    onAvatarTap: { onOpenAuthor(post) },
+                    onAvatarTap: {
+                        keyboardOpenTask?.cancel()
+                        onOpenAuthor(post)
+                    },
                     onQuoteTap: { onOpenQuote($0) },
                     onCopyLink: { copyPermalink(post) },
                     onMute: { onMute(post) },

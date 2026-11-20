@@ -151,10 +151,12 @@ struct TimelineRowView: View, @MainActor Equatable {
                 ForEach(Array(post.images.prefix(4).enumerated()), id: \.offset) { index, image in
                     Button {
                         onSelect()
-                        // Index into the URLs actually handed over, so an image
-                        // without a full-size URL does not shift the others.
+                        // Position among the images actually handed over (those with
+                        // a full-size URL), so a missing or repeated URL does not
+                        // shift the start.
                         let urls = post.images.compactMap(\.fullsizeURL)
-                        if let url = image.fullsizeURL, let start = urls.firstIndex(of: url) {
+                        if image.fullsizeURL != nil {
+                            let start = post.images.prefix(index).filter { $0.fullsizeURL != nil }.count
                             onImageTap(urls, start)
                         }
                     } label: {

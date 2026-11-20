@@ -720,4 +720,36 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.unreadCount, 1)
     }
+
+    /// Muting the author of the last seen post, with nothing seen after it,
+    /// keeps the newer posts above it unread.
+    func testMutingTheLastSeenPostKeepsNewerPostsUnread() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [
+            page(["at://did:plc:bob/app.bsky.feed.post/1"]),
+            page(["at://did:plc:carol/app.bsky.feed.post/2", "at://did:plc:bob/app.bsky.feed.post/1"])
+        ]))
+        await vm.load()
+        _ = await vm.refresh()
+        XCTAssertEqual(vm.unreadCount, 1)
+
+        vm.removePosts(byAuthor: "did:plc:bob")
+
+        XCTAssertEqual(vm.unreadCount, 1)
+    }
+
+    /// A first page made only of muted posts must not strand the reader: the
+    /// next page is fetched.
+    func testAFirstPageOfOnlyMutedPostsFetchesTheNextPage() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [
+            page(["at://did:plc:alice/app.bsky.feed.post/0"]),
+            .success(TimelinePage(posts: [sample(id: "at://did:plc:bob/app.bsky.feed.post/1")], cursor: "c1")),
+            page(["at://did:plc:alice/app.bsky.feed.post/2"])
+        ]))
+        await vm.load()
+        vm.removePosts(byAuthor: "did:plc:bob")
+
+        await vm.load()
+
+        XCTAssertEqual(vm.posts.map(\.id), ["at://did:plc:alice/app.bsky.feed.post/2"])
+    }
 }

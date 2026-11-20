@@ -110,7 +110,7 @@ The standard **⌘, (設定…)** command now opens a native SwiftUI `Settings {
 
 ## Display density (A / B)
 
-Post rows render at one of two densities, selectable in settings, defaulting to **B** (`2026-06-04-yorumimizuku-design.md` §7.2):
+Post rows render at one of two densities, selectable in settings, defaulting to **B** (`2026-06-04-yorumimizuku-design.md` §7.2). On macOS since 2026-11-20 this applies only to conversations in the detail pane; timeline and author-page lists use the desktop prototype's fixed row (see "Timeline rows (macOS)"):
 
 - **A (ultra-compact)**: small avatar, 1–2 lines, minimal padding; repost/reply context is a small single line. Optimizes scan-ability — the plain Yorufukurou look.
 - **B (comfortable)**: large avatar, thumbnails, and per-post reply/repost/like actions with counts.

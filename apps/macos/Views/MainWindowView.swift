@@ -350,7 +350,7 @@ struct MainWindowView: View {
                 for tab in workspace.filters { tab.model.removePosts(byAuthor: did) }
                 for source in savedFeeds.sources { savedFeeds.timeline(for: source.id)?.removePosts(byAuthor: did) }
                 workspace.search?.model.removePosts(byAuthor: did)
-                if case let .author(tab) = detailPane.current { tab.model.removePosts(byAuthor: did) }
+                for case let .author(tab) in detailPane.history { tab.model.removePosts(byAuthor: did) }
                 toastCenter.show("@\(post.authorHandle) をミュートしました")
             } catch {
                 toastCenter.show("ミュートできませんでした")

@@ -152,9 +152,12 @@ public final class TimelineViewModel: ObservableObject {
         hiddenAuthors.insert(did)
         guard case let .loaded(current) = state else { return }
         let kept = visible(current)
+        // With no later post kept, the removed id stays the boundary: every
+        // kept post is above it, which is what is unread.
         if let boundary = lastSeenTopID, !kept.contains(where: { $0.id == boundary }),
-           let index = current.firstIndex(where: { $0.id == boundary }) {
-            lastSeenTopID = current[index...].first { kept.contains($0) }?.id
+           let index = current.firstIndex(where: { $0.id == boundary }),
+           let next = current[index...].first(where: { kept.contains($0) }) {
+            lastSeenTopID = next.id
         }
         state = .loaded(kept)
         recountNewArrivals()
@@ -214,6 +217,11 @@ public final class TimelineViewModel: ObservableObject {
             state = .loaded(visible(page.posts))
             onItemsChanged()
             endInterval("loaded \(page.posts.count) posts")
+            // A page made only of muted posts leaves no row to scroll to, so the
+            // next page would never be requested; fetch it now.
+            if posts.isEmpty, !page.posts.isEmpty, cursor != nil {
+                await loadMore()
+            }
             return true
         } catch {
             SessionExpiry.reportIfExpired(error)

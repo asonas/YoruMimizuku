@@ -344,7 +344,7 @@ private struct DisplaySettingsContentView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                    Text("右の欄（会話と作者のページ）の投稿に適用されます。タイムラインの一覧は試作のレイアウトで固定です。")
+                    Text("右の欄の会話に適用されます。タイムラインと作者のページの一覧は、試作のレイアウトで固定です。")
                         .font(.app(.caption2))
                         .foregroundStyle(theme.secondaryText)
                 }
