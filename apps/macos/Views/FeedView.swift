@@ -88,7 +88,7 @@ struct FeedView: View {
             guard let listMembership, let id = focusedPostID, let authorDID = ATURI.repo(id) else { return }
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            await listMembership.model.refresh(actorDID: authorDID)
+            await listMembership.model.refreshIfStale(actorDID: authorDID)
         }
         .confirmationDialog(
             "この投稿を削除しますか？",

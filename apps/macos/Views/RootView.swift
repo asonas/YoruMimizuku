@@ -282,8 +282,13 @@ private struct AuthenticatedRootView: View {
             wrappedValue: WorkspaceModel(
                 filterStore: filterStore,
                 makeThreadModel: makeThreadModel,
+                // Filters and toolbar searches read and write as the window's
+                // account, so likes and reposts in them work too.
                 makeFilterModel: { filter in
-                    TimelineViewModel(loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries))
+                    TimelineViewModel(
+                        loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries, accountDID: did),
+                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
+                    )
                 },
                 makeAuthorModel: makeAuthorModel,
                 makeAuthorHeader: makeAuthorHeader

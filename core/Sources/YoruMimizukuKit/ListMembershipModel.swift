@@ -36,6 +36,12 @@ public final class ListMembershipModel: ObservableObject {
 
     public enum ListsState: Equatable, Sendable { case notLoaded, loaded, failed }
 
+    public enum MembershipError: Error, Equatable {
+        /// The server did not return the list (deleted, or past the first page),
+        /// so membership cannot be checked before writing.
+        case listNotFound
+    }
+
     @Published public private(set) var lists: [CuratedList] = []
     /// Whether `lists` reflects the server. A failed reload after a successful
     /// one stays `loaded`, since the lists shown are still the viewer's.
@@ -44,6 +50,14 @@ public final class ListMembershipModel: ObservableObject {
     @Published private var items: [String: [String: String]] = [:]
 
     private let editor: ListMembershipEditing
+    /// Bumped per actor by every read and write, so a read that answers after a
+    /// newer read or write does not overwrite what that one cached.
+    private var generations: [String: Int] = [:]
+    private var fetchedAt: [String: Date] = [:]
+    /// Changes run one at a time: a read-then-write is not atomic across its
+    /// awaits, and two overlapping adds would both see "not on the list".
+    private var isWriting = false
+    private var writeWaiters: [CheckedContinuation<Void, Never>] = []
 
     public init(editor: ListMembershipEditing) {
         self.editor = editor
@@ -64,18 +78,32 @@ public final class ListMembershipModel: ObservableObject {
         }
     }
 
+    /// `refresh`, unless `actorDID` was read within `maxAge` seconds. Used for
+    /// prefetching, which can fire for every post a pointer rests on.
+    public func refreshIfStale(actorDID: String, maxAge: TimeInterval = 60, now: Date = Date()) async {
+        if let last = fetchedAt[actorDID], now.timeIntervalSince(last) < maxAge { return }
+        fetchedAt[actorDID] = now
+        await refresh(actorDID: actorDID)
+    }
+
     /// Put `actorDID` on the list or take them off it, writing only when the
     /// server is not already in that state. Returns whether anything was written.
     @discardableResult
     public func setMembership(_ actorDID: String, of listURI: String, to member: Bool) async throws -> Bool {
+        await beginWrite()
+        defer { endWrite() }
         let current = try await fetch(actorDID)
-        let itemURI = current.first { $0.listURI == listURI }?.itemURI
-        if member, itemURI == nil {
+        guard let target = current.first(where: { $0.listURI == listURI }) else {
+            throw MembershipError.listNotFound
+        }
+        if member, target.itemURI == nil {
             let created = try await editor.add(actorDID: actorDID, toList: listURI)
+            bumpGeneration(actorDID)
             items[actorDID, default: [:]][listURI] = created
             return true
-        } else if !member, let itemURI {
+        } else if !member, let itemURI = target.itemURI {
             try await editor.remove(itemURI: itemURI)
+            bumpGeneration(actorDID)
             items[actorDID]?[listURI] = nil
             return true
         }
@@ -84,7 +112,9 @@ public final class ListMembershipModel: ObservableObject {
 
     @discardableResult
     private func fetch(_ actorDID: String) async throws -> [CuratedListMembership] {
+        let generation = bumpGeneration(actorDID)
         let memberships = try await editor.lists(withMembershipOf: actorDID)
+        guard generations[actorDID] == generation else { return memberships }
         lists = memberships.map { CuratedList(id: $0.listURI, name: $0.name) }
         listsState = .loaded
         var byList: [String: String] = [:]
@@ -93,5 +123,28 @@ public final class ListMembershipModel: ObservableObject {
         }
         items[actorDID] = byList
         return memberships
+    }
+
+    @discardableResult
+    private func bumpGeneration(_ actorDID: String) -> Int {
+        let next = (generations[actorDID] ?? 0) + 1
+        generations[actorDID] = next
+        return next
+    }
+
+    private func beginWrite() async {
+        if isWriting {
+            await withCheckedContinuation { writeWaiters.append($0) }
+        } else {
+            isWriting = true
+        }
+    }
+
+    private func endWrite() {
+        if writeWaiters.isEmpty {
+            isWriting = false
+        } else {
+            writeWaiters.removeFirst().resume()
+        }
     }
 }

@@ -133,6 +133,7 @@ struct PostRowView: View, @MainActor Equatable {
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, horizontalRowPadding)
         .contextMenu { rowContextMenu }
+        .modifier(ListMembershipPrefetch(context: listMembership, authorDID: ATURI.repo(post.id)))
     }
 
     /// The row's right-click menu. Always offers "リンクをコピー" and "ブラウザで開く";
@@ -152,7 +153,7 @@ struct PostRowView: View, @MainActor Equatable {
         } label: {
             Label("ブラウザで開く", systemImage: "safari")
         }
-        if !canDelete, let listMembership, let authorDID = ATURI.repo(post.id) {
+        if let listMembership, let authorDID = ATURI.repo(post.id) {
             Divider()
             ListMembershipMenu(context: listMembership, actorDID: authorDID, handle: post.authorHandle)
         }

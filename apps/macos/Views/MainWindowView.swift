@@ -309,8 +309,10 @@ struct MainWindowView: View {
                             .help("この検索をサイドバーのフィルターに残す")
                     )
                 )
-                .id(search.query)
-                .task(id: search.query) { search.model.startPolling(every: pollInterval) }
+                // Keyed on the model, not the query: submitting the same query
+                // again replaces the model and must load it.
+                .id(ObjectIdentifier(search.model))
+                .task(id: ObjectIdentifier(search.model)) { search.model.startPolling(every: pollInterval) }
             } else {
                 Color.clear.background(theme.canvas)
             }

@@ -20,10 +20,18 @@ struct LiveListMembershipEditor: ListMembershipEditing {
         do {
             return try await fetchLists(withMembershipOf: actorDID)
         } catch {
-            // XRPC errors carry only the status and the server's error name.
-            Self.log.error("getListsWithMembership failed: \(String(describing: error), privacy: .public)")
+            Self.log.error("getListsWithMembership failed: \(Self.summary(of: error), privacy: .public)")
             throw error
         }
+    }
+
+    /// The parts of an error safe to log publicly: the HTTP status and the
+    /// server's error name, never its message or a token response body.
+    private static func summary(of error: Error) -> String {
+        if case let XRPCError.requestFailed(status, body) = error {
+            return "HTTP \(status) \(body?.error ?? "")"
+        }
+        return String(describing: type(of: error))
     }
 
     private func fetchLists(withMembershipOf actorDID: String) async throws -> [CuratedListMembership] {

@@ -359,6 +359,16 @@ final class WorkspaceModelTests: XCTestCase {
         XCTAssertEqual(userTerms(model, id), ["alice.example"])
     }
 
+    /// A filter saved from a toolbar search keeps `from:` inside a keyword term;
+    /// it names a person just the same.
+    func testAFromInsideAKeywordCountsAsAPersonInAnAndFilter() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "alice", terms: [FilterTerm(kind: .keyword, value: "swift from:alice.example")], combinator: .and)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "bob.example", toFilter: id), .wouldMatchNothing)
+    }
+
     func testDroppingASecondPersonOnAnOrFilterAddsThem() async {
         let model = makeModel(persistence: FakePersistence())
         model.addFilter(name: "people", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .or)

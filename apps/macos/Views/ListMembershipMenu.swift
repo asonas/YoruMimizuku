@@ -22,8 +22,9 @@ extension EnvironmentValues {
 
 /// The "リストに追加" submenu of a post row: the viewer's curated lists with a
 /// check on those the author is on. A menu cannot wait for the network, so the
-/// checks come from the cache (filled when a post is focused); choosing a list
-/// re-reads the server before writing.
+/// checks come from the cache (filled when the pointer or focus rests on a post);
+/// until it is filled the lists are shown disabled rather than as unchecked.
+/// Choosing a list re-reads the server before writing.
 struct ListMembershipMenu: View {
     let context: ListMembershipContext
     @ObservedObject private var model: ListMembershipModel
@@ -46,11 +47,16 @@ struct ListMembershipMenu: View {
                 case .loaded: Text("リストがありません")
                 }
             }
+            let known = !model.lists.isEmpty && model.isMember(actorDID, of: model.lists[0].id) != nil
+            if !model.lists.isEmpty, !known {
+                Text("所属を確認中…")
+            }
             ForEach(model.lists) { list in
                 Toggle(list.name, isOn: Binding(
                     get: { model.isMember(actorDID, of: list.id) == true },
                     set: { member in set(member, list: list) }
                 ))
+                .disabled(!known)
             }
             Divider()
             Text("リストは公開され、誰でも見られます")
@@ -70,9 +76,34 @@ struct ListMembershipMenu: View {
                 case (false, true): notify("@\(handle) を「\(list.name)」から外しました")
                 case (false, false): notify("@\(handle) は「\(list.name)」にいません")
                 }
+            } catch ListMembershipModel.MembershipError.listNotFound {
+                notify("「\(list.name)」が見つかりませんでした")
             } catch {
                 notify("リストを更新できませんでした")
             }
+        }
+    }
+}
+
+/// Prefetches a row author's list membership once the pointer rests on the row,
+/// so the right-click menu that usually follows can show checks.
+struct ListMembershipPrefetch: ViewModifier {
+    let context: ListMembershipContext?
+    let authorDID: String?
+    @State private var isHovered = false
+
+    func body(content: Content) -> some View {
+        if let context, let authorDID {
+            content
+                .onHover { isHovered = $0 }
+                .task(id: isHovered) {
+                    guard isHovered else { return }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    guard !Task.isCancelled else { return }
+                    await context.model.refreshIfStale(actorDID: authorDID)
+                }
+        } else {
+            content
         }
     }
 }

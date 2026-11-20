@@ -323,7 +323,11 @@ public final class WorkspaceModel: ObservableObject {
         if users.contains(where: { $0.value.caseInsensitiveCompare(clean) == .orderedSame }) {
             return .alreadyIncluded
         }
-        if edited.combinator == .and, !users.isEmpty { return .wouldMatchNothing }
+        // A keyword term can carry `from:` too (a saved toolbar search).
+        let keywordNamesPerson = edited.terms.contains { term in
+            term.kind == .keyword && term.value.split(separator: " ").contains { $0.lowercased().hasPrefix("from:") }
+        }
+        if edited.combinator == .and, !users.isEmpty || keywordNamesPerson { return .wouldMatchNothing }
         edited.terms.append(FilterTerm(kind: .user, value: clean))
         updateFilter(edited)
         return .added

@@ -12,11 +12,17 @@ struct LiveSearchLoader: TimelineLoading {
     let accountManager: AccountManager
     let subqueries: [String]
     let config: OAuthClientConfig
+    /// The account to search as. Nil uses the current account.
+    let accountDID: String?
 
-    init(accountManager: AccountManager, subqueries: [String], config: OAuthClientConfig = .yoruMimizuku) {
+    init(
+        accountManager: AccountManager, subqueries: [String], config: OAuthClientConfig = .yoruMimizuku,
+        accountDID: String? = nil
+    ) {
         self.accountManager = accountManager
         self.subqueries = subqueries
         self.config = config
+        self.accountDID = accountDID
     }
 
     func loadPage(cursor: String?) async throws -> TimelinePage {
@@ -33,7 +39,7 @@ struct LiveSearchLoader: TimelineLoading {
 
     /// Run one subquery and map to display rows, persisting any refreshed tokens.
     private func runQuery(_ query: String, cursor: String?) async throws -> (posts: [PostDisplay], cursor: String?) {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = SearchService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )
