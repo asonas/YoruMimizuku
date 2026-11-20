@@ -10,6 +10,13 @@ public struct ThemePalette: Equatable, Sendable, Codable {
         self.text = text
     }
 
+    /// The pair with the lighter color as background in light appearance and the
+    /// darker one in dark. randoma11y pairs read at the same contrast either way.
+    public func oriented(dark: Bool) -> ThemePalette {
+        let backgroundIsLighter = background.relativeLuminance >= text.relativeLuminance
+        return backgroundIsLighter == !dark ? self : swapped()
+    }
+
     /// Swaps which color paints the background and which paints the text.
     public func swapped() -> ThemePalette {
         ThemePalette(background: text, text: background)

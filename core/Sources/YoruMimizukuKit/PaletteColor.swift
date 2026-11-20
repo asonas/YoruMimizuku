@@ -1,3 +1,5 @@
+import Foundation
+
 /// The color space a `PaletteColor` is expressed in. randoma11y emits either hex
 /// (sRGB) or `color(display-p3 ...)` values, so both must round-trip faithfully.
 public enum ColorSpaceModel: String, Sendable, Codable, Equatable {
@@ -35,6 +37,19 @@ public struct PaletteColor: Equatable, Sendable, Codable {
             blue: blue + (other.blue - blue) * f,
             opacity: opacity + (other.opacity - opacity) * f
         )
+    }
+
+    /// WCAG relative luminance (0 for black, 1 for white). Display-p3 components
+    /// are treated as sRGB, which is close enough for ordering and contrast checks.
+    public var relativeLuminance: Double {
+        func linear(_ c: Double) -> Double { c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        return 0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue)
+    }
+
+    /// WCAG contrast ratio against `other`, from 1 to 21.
+    public func contrastRatio(with other: PaletteColor) -> Double {
+        let (a, b) = (relativeLuminance, other.relativeLuminance)
+        return (max(a, b) + 0.05) / (min(a, b) + 0.05)
     }
 
     public func withOpacity(_ opacity: Double) -> PaletteColor {
