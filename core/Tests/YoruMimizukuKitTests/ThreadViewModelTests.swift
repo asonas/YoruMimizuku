@@ -69,6 +69,7 @@ final class ThreadViewModelTests: XCTestCase {
         let vm = ThreadViewModel(loader: loader, uri: "at://a/1")
         let first = Task { await vm.load() }
         for _ in 0..<200 where !loader.isHolding { try await Task.sleep(for: .milliseconds(5)) }
+        guard loader.isHolding else { return XCTFail("the first load never reached the loader") }
 
         await vm.load()
         loader.releaseFirst(with: CancellationError())

@@ -272,8 +272,56 @@ final class TimelineViewModelTests: XCTestCase {
         }
     }
 
-    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+    private struct TimedOut: Error {}
+
+    /// Waits up to about a second; on timeout the test fails instead of going on
+    /// to await a request that never started.
+    private func waitUntil(_ condition: @MainActor () -> Bool, file: StaticString = #filePath, line: UInt = #line) async throws {
         for _ in 0..<200 where !condition() { try await Task.sleep(for: .milliseconds(5)) }
+        guard condition() else {
+            XCTFail("timed out waiting for the condition", file: file, line: line)
+            throw TimedOut()
+        }
+    }
+
+    // Two head refreshes in flight (polling plus the refresh after posting): the
+    // one started first must not land after the newer one and push it down.
+    func testEarlierRefreshFinishingLastIsDropped() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let initial = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "a")], cursor: "c1")))
+        await initial.value
+
+        let older = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let newer = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: nil, newest: true, with: .success(TimelinePage(posts: [sample(id: "c"), sample(id: "b"), sample(id: "a")], cursor: "x")))
+        await newer.value
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "b"), sample(id: "a")], cursor: "y")))
+        await older.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["c", "b", "a"])
+    }
+
+    // Coming back to an author page after more than a page of new posts: the
+    // fresh page does not touch the rows held, so it replaces them and its cursor
+    // continues from there instead of skipping the posts in between.
+    func testRefreshWithNoOverlapReplacesRowsAndCursor() async {
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [sample(id: "old1"), sample(id: "old2")], cursor: "c-old")),
+            .success(TimelinePage(posts: [sample(id: "new1"), sample(id: "new2")], cursor: "c-new"))
+        ])
+        let vm = TimelineViewModel(loader: loader)
+        await vm.load()
+
+        await vm.refresh()
+        await vm.loadMore()
+
+        XCTAssertEqual(vm.posts.map(\.id), ["new1", "new2"])
+        XCTAssertEqual(loader.requestedCursors.last, "c-new")
     }
 
     // Returning to an author page in the detail pane restarts its polling; the

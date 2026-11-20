@@ -70,6 +70,11 @@ public final class TimelineViewModel: ObservableObject {
     /// Bumped by every `load()`. A response belonging to an older load (one that a
     /// polling restart superseded) is dropped instead of replacing newer state.
     private var loadGeneration = 0
+    /// Order of head-page requests (`load` and `refresh`). A head response older
+    /// than the newest one already applied is dropped, so an earlier refresh that
+    /// finishes last cannot push newer posts down.
+    private var headRequestCount = 0
+    private var appliedHeadRequest = 0
     private let loader: TimelineLoading
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
@@ -155,10 +160,13 @@ public final class TimelineViewModel: ObservableObject {
         let endInterval = tracer.beginInterval("Timeline load")
         loadGeneration += 1
         let generation = loadGeneration
+        headRequestCount += 1
+        let request = headRequestCount
         state = .loading
         do {
             let page = try await loader.loadPage(cursor: nil)
             guard generation == loadGeneration else { endInterval("superseded"); return false }
+            appliedHeadRequest = request
             cursor = page.cursor
             state = .loaded(page.posts)
             onItemsChanged()
@@ -197,8 +205,9 @@ public final class TimelineViewModel: ObservableObject {
     }
 
     /// Refresh the head of the feed, merging fresh posts above the current rows
-    /// (deduplicated by id) without disturbing the loaded tail or the cursor. If
-    /// nothing is loaded yet this behaves like `load()`. Failures are swallowed so
+    /// (deduplicated by id) without disturbing the loaded tail or the cursor,
+    /// unless the fresh page shares no post with the rows held. If nothing is
+    /// loaded yet this behaves like `load()`. Failures are swallowed so
     /// a periodic refresh never replaces good content with an error screen.
     /// Returns whether the fetch succeeded, so the polling loop can drive its backoff.
     @discardableResult
@@ -207,12 +216,25 @@ public final class TimelineViewModel: ObservableObject {
             return await load()
         }
         let generation = loadGeneration
+        headRequestCount += 1
+        let request = headRequestCount
         do {
             let page = try await loader.loadPage(cursor: nil)
             // Merge into the rows as they are now, so an older page appended while
             // this request was in flight is kept.
-            guard generation == loadGeneration, case let .loaded(latest) = state else { return false }
-            state = .loaded(Self.merging(page.posts, appending: latest))
+            guard generation == loadGeneration, request > appliedHeadRequest,
+                  case let .loaded(latest) = state else { return false }
+            appliedHeadRequest = request
+            let held = Set(latest.map(\.id))
+            if !latest.isEmpty, !page.posts.contains(where: { held.contains($0.id) }) {
+                // More new posts than one page: the rows held no longer continue
+                // from this page, so start over from it rather than leave a gap
+                // that scrolling could never fill.
+                cursor = page.cursor
+                state = .loaded(page.posts)
+            } else {
+                state = .loaded(Self.merging(page.posts, appending: latest))
+            }
             onItemsChanged()
             return true
         } catch {

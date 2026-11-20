@@ -52,6 +52,11 @@ factories.
     `ThreadViewModel`). A head refresh and an older-page fetch each merge into
     the rows as they are when the response arrives, so finishing out of order
     keeps both.
+  - Head-page requests are ordered: a refresh started before the newest applied
+    head response is dropped, so it cannot push newer posts down.
+  - A refreshed head page that shares no post with the rows held (more than a
+    page of new posts arrived while the page was hidden) replaces the rows and
+    the cursor, so scrolling continues without a gap.
   - Only `CancellationError` and `URLError.cancelled` count as cancellation; any
     other error is still reported for session expiry.
   - Closing the window stops the shown author's polling.
