@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS prototype toolbar, sidebar and menus)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-prototype-chrome-design.md, apps/macos/Views/SidebarView.swift, apps/macos/Views/WorkspaceCommands.swift
+- updated: [[app-shell]], [[macos]]
+- note: The macOS window takes the prototype's unified toolbar, sidebar groups and rows (home renamed フォロー中), a header with a "新着 n 件" bar on every timeline, and the prototype's menu shortcuts (reply ⌘↩, reload ⌘R, search ⌘F, like L).
+
 ## 2026-11-20 ingest (macOS prototype colors and dark mode)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md, core/Sources/YoruMimizukuKit/DesignTokens.swift, apps/macos/Theme.swift
