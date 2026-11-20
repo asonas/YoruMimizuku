@@ -63,7 +63,7 @@ Both galleries inject a throwaway `UserDefaults(suiteName: "as.ason.YoruMimizuku
 |---|---|---|---|
 | 密度 (density) segmented picker | ✓ | ✓ | Switches `DisplayDensity` (`.compact`/`.comfortable`), driving `bodyStackSpacing`/`mediaMaxWidth` |
 | テーマ (theme) menu | ✓ | — | A small set of named randoma11y presets plus "swap colors", calling the same `ThemeStore.apply(urlString:)`/`reset()`/`swap()` API `SettingsView`'s 外観 tab uses. Dropped on iPad — three controls already fill the sheet's toolbar at iPad width |
-| 幅 (width) slider, 320–900pt | ✓ | ✓ | Feeds `contentWidth` into `PostRowView`, crossing the 680pt reflow boundary (`TimelineLayout`) so the vertical ↔ body-left/media-right reflow is visible live |
+| 幅 (width) slider, 320–900pt | ✓ | ✓ | Sets the column width (macOS: the frame `MediaReflowLayout` is offered; iPadOS: `PostRowView.contentWidth`), crossing the 680pt reflow boundary (`TimelineLayout`) so the vertical ↔ body-left/media-right reflow is visible live |
 | 余白注記 (caption) toggle | ✓ | ✓ | Shows/hides the `metricsUsed` caption under each variant's `id` |
 
 ## Snapshot operations

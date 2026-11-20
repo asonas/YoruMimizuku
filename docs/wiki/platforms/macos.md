@@ -1,7 +1,7 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-11-18
+updated: 2026-11-20
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
@@ -62,6 +62,12 @@ The feed (`apps/macos/Views/FeedView.swift`) renders its rows with a SwiftUI `Li
 `LazyVStack` lays rows out from an *estimated* height before each row is actually measured. On the first layout pass a row can be assigned a slot taller than its content, and a normal body re-render — including the per-second relative-time (`now`) tick that the window already drives ([[app-shell]]) — does **not** revisit that estimate. The result is a blank gap below the row that only collapses when a full re-layout is forced (scrolling the row off and back, or a scene-phase change such as backgrounding the app). The gap was reproducible at launch, independent of the row's text length, width, `AttributedString` rich-text vs plain text, `.fixedSize`, and `.textSelection` — i.e. it is a `LazyVStack` slot-estimation artifact, not a content-measurement one.
 
 A plain `VStack` measures every row eagerly and sidesteps the estimation, but realizing the whole feed at once is not viable (~98% CPU and ~1 GB memory on a long timeline). `List` is the middle ground: it measures variable row heights correctly (no phantom gap) and recycles rows (bounded memory). The cost is that `List` brings its own chrome, which is neutralized per-row with `.listRowInsets(EdgeInsets())`, `.listRowSeparator(.hidden)` (each row draws its own `Divider` so the separator color follows the theme), `.listRowBackground(Color.clear)`, plus `.scrollContentBackground(.hidden)` and `.environment(\.defaultMinListRowHeight, 0)` on the list. j/k focus still scrolls via `ScrollViewReader.scrollTo`, and the loading / failed / empty states render outside the `List` in a plain `ScrollView`. The same row view ([[timeline-streaming]]) is reused unchanged.
+
+In long sessions, rows with media in the right-hand rail sometimes kept the table height of the stacked layout and showed a blank gap under the post (for example 414pt for a row whose rail layout needs 247pt). Switching tabs, which rebuilds the `List`, cleared it. The action that leaves the stale height was not identified. Rows now decide stacked vs media-rail layout from the width their layout pass is offered instead of a width stored in `FeedView` state, so a row can lay out stacked only when the table offers it a narrow width ([[timeline-media-layout]]).
+
+### Text size and contrast
+
+The default base text size is one point above the system body size (14pt with the 13pt system body), and every text style keeps its ratio to it. SwiftUI adds no font leading for Hiragino Sans, so post body lines get explicit spacing of `DesignMetrics.bodyLineSpacingRatio` times the body size (0.5em comfortable, 0.25em compact), which grows with the user's chosen size. `tertiaryText` (handles, timestamps, counts) is a 0.38 blend from the text color toward the background, about 4.9:1 on the default palette (`apps/macos/Typography.swift`, `apps/macos/Theme.swift`).
 
 ### Scroll performance
 

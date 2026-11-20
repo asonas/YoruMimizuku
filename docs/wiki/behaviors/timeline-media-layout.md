@@ -1,7 +1,7 @@
 ---
 title: Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 type: behavior
-updated: 2026-06-24
+updated: 2026-11-20
 sources:
   - docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md
   - docs/superpowers/plans/2026-06-23-timeline-image-reflow.md
@@ -69,7 +69,7 @@ When the feed column is wide enough, the post row's content region reflows from 
 
 Quote cards stay in the left (text) column in both layouts. The body column grows to fill the region while the media rail stays pinned to the right edge, so no trailing whitespace builds up on the right and the media never strands mid-row. The body's line length therefore grows with the window — accepted deliberately to avoid a right-hand gap (this supersedes the original design, which capped the text column at 620 pt, left-aligned the row, and left blank space on the right; the gap was disliked in a wide window, `2026-06-23-timeline-image-reflow-design.md` §決定事項).
 
-The width that drives this decision is measured **once per feed layout pass** in `FeedView`, not in each row. `FeedView` stores `@State private var contentWidth: CGFloat = 0` and updates it via `.onGeometryChange(for: CGFloat.self)` on the `List` (available on macOS 15+, the app's deployment target). The measured width is passed as `PostRowView.contentWidth` to every row. `PostRowView.regionWidth(forContentWidth:)` subtracts the row's horizontal padding, avatar column width, and column spacing to get the region width that `TimelineLayout.placement` consumes (`2026-06-23-timeline-image-reflow-design.md` §幅の測定方針).
+On macOS the decision is made **inside the row's layout pass**, from the width the row is offered. `PostRowView` splits its content into three blocks (author and body, media, quote and action bar) and hands them to `MediaReflowLayout`, a SwiftUI `Layout` that stacks them or moves the media block into the rail depending on `TimelineLayout.placement(regionWidth:)` of the offered width. An unspecified width counts as wide. Earlier, `FeedView` measured the column with `.onGeometryChange`, stored it as `contentWidth` after an 80 ms debounce, and passed it to every row (`2026-06-23-timeline-image-reflow-design.md` §幅の測定方針). In long sessions some rail rows kept the stacked height as a blank gap under the post until the tab was rebuilt; the action that triggers it was not identified. Deciding from the offered width means a row lays out stacked only when it is offered a narrow width (`apps/macos/Views/PostRowView.swift`, `PostRowLayoutTests`). iPadOS still uses the stored `contentWidth` (`apps/ipados/Views/TimelineListView.swift`).
 
 ## Edge Cases
 

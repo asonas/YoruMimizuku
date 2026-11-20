@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS timeline gap and readability)
+
+- sources: apps/macos/Views/PostRowView.swift, apps/macos/Views/FeedView.swift, apps/macos/Typography.swift, apps/macos/Theme.swift, core/Sources/YoruMimizukuKit/DesignMetrics.swift
+- updated: [[timeline-media-layout]], [[design-system]], [[macos]]
+- note: macOS rows now pick stacked vs media-rail layout from the offered width (`MediaReflowLayout`), removing the blank gap under rail posts. Default text size is 14pt, body line spacing is a ratio of the font size, and tertiaryText meets 4.5:1 on the default palette.
+
 ## 2026-11-18 ingest (macOS Dock badge)
 
 - Updated [[notifications]] and [[macos]] with account-scoped server counts, visible-page read boundaries, and the independent Dock preference from `0001-notification-read-state.md`.
