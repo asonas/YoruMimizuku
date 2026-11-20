@@ -9,6 +9,8 @@ public enum WorkspaceTab: Hashable, Sendable {
     case filter(UUID)
     case conversation(UUID)
     case author(UUID)
+    /// A pinned feed or list (macOS), keyed by its AT-URI.
+    case savedFeed(String)
 }
 
 /// One conversation tab: anchored on a post URI, it owns the `ThreadViewModel`
@@ -156,6 +158,15 @@ public final class WorkspaceModel: ObservableObject {
     @Published public private(set) var authors: [AuthorTab] = []
     @Published public var selection: WorkspaceTab = .home {
         didSet { if !isRestoring { persist() } }
+    }
+    /// The pinned feeds and lists the macOS sidebar shows, in pin order. Set by the
+    /// app whenever the pins load; unpinning the selected one falls back to home.
+    @Published public var savedFeeds: [SavedFeedSource] = [] {
+        didSet {
+            if case let .savedFeed(id) = selection, !savedFeeds.contains(where: { $0.id == id }) {
+                selection = .home
+            }
+        }
     }
 
     public let filterStore: SavedFilterStore
@@ -384,15 +395,19 @@ public final class WorkspaceModel: ObservableObject {
         case let .author(id):
             guard let tab = author(id: id) else { return "ホーム" }
             return tab.displayName.isEmpty ? tab.handle : tab.displayName
+        case let .savedFeed(id):
+            return savedFeeds.first { $0.id == id }?.title ?? "ホーム"
         }
     }
 
     // MARK: - Cycling
 
-    /// All tabs in display order: the two pinned tabs, the filters, then the open
-    /// conversations. Drives the Cmd-Shift-J/K cycling shortcuts.
+    /// All tabs in display order: the two pinned tabs, the saved feeds and lists,
+    /// the filters, then the open conversations. Drives the Cmd-Shift-J/K cycling
+    /// shortcuts.
     public var orderedTabs: [WorkspaceTab] {
         [.home, .notifications]
+            + savedFeeds.map { .savedFeed($0.id) }
             + filters.map { .filter($0.id) }
             + conversations.map { .conversation($0.id) }
             + authors.map { .author($0.id) }

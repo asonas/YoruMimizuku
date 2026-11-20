@@ -59,6 +59,14 @@ public struct FeedGeneratorView: Decodable, Equatable, Sendable {
     public let displayName: String
     public let description: String?
     public let avatar: String?
+
+    public init(uri: String, creator: ProfileViewBasic, displayName: String, description: String?, avatar: String?) {
+        self.uri = uri
+        self.creator = creator
+        self.displayName = displayName
+        self.description = description
+        self.avatar = avatar
+    }
 }
 
 /// `app.bsky.graph.getList`, read only for the list itself.
@@ -73,4 +81,12 @@ public struct ListView: Decodable, Equatable, Sendable {
     public let description: String?
     public let avatar: String?
     public let creator: ProfileViewBasic
+
+    public init(uri: String, name: String, description: String?, avatar: String?, creator: ProfileViewBasic) {
+        self.uri = uri
+        self.name = name
+        self.description = description
+        self.avatar = avatar
+        self.creator = creator
+    }
 }

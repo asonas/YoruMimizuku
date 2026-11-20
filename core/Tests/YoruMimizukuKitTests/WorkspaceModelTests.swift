@@ -285,4 +285,37 @@ final class WorkspaceModelTests: XCTestCase {
         model.selection = .conversation(id)
         XCTAssertEqual(model.selectionTitle, "ホーム")
     }
+
+    // MARK: - Saved feeds (macOS sidebar)
+
+    private func savedSource(_ id: String, _ title: String) -> SavedFeedSource {
+        SavedFeedSource(id: id, kind: .feed, title: title, description: nil, creatorHandle: nil, avatarURL: nil)
+    }
+
+    func testOrderedTabsPutSavedFeedsBetweenNotificationsAndFilters() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "f", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+        model.savedFeeds = [savedSource("at://f/a", "A"), savedSource("at://l/b", "B")]
+
+        XCTAssertEqual(Array(model.orderedTabs.prefix(4)), [.home, .notifications, .savedFeed("at://f/a"), .savedFeed("at://l/b")])
+        guard case .filter = model.orderedTabs[4] else { return XCTFail("filters follow the saved feeds") }
+    }
+
+    func testSelectionTitleForSavedFeedIsItsTitle() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.savedFeeds = [savedSource("at://f/a", "話題の議論")]
+        model.selection = .savedFeed("at://f/a")
+
+        XCTAssertEqual(model.selectionTitle, "話題の議論")
+    }
+
+    func testUnpinningTheSelectedSavedFeedFallsBackToHome() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.savedFeeds = [savedSource("at://f/a", "A")]
+        model.selection = .savedFeed("at://f/a")
+
+        model.savedFeeds = []
+
+        XCTAssertEqual(model.selection, .home)
+    }
 }
