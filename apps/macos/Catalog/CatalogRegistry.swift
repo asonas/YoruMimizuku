@@ -12,7 +12,7 @@ enum CatalogRegistry {
         switch variant {
         case .actionBar:
             // The action bar is a PostRow slot, so show a standard row focused on it.
-            return AnyView(PostRowView(post: CatalogFixtures.post(for: .actionBar), density: density, now: now, contentWidth: width))
+            return AnyView(PostRowView(post: CatalogFixtures.post(for: .actionBar), density: density, now: now))
         case .quoteCard:
             return AnyView(QuoteCardView(quote: CatalogFixtures.quote(), density: density, now: now))
         case .linkCard:
@@ -22,7 +22,7 @@ enum CatalogRegistry {
         case .toast:
             return AnyView(ToastView(message: ToastMessage(id: 0, text: "リンクをコピーしました")))
         default:
-            return AnyView(PostRowView(post: CatalogFixtures.post(for: variant), density: density, now: now, contentWidth: width))
+            return AnyView(PostRowView(post: CatalogFixtures.post(for: variant), density: density, now: now))
         }
     }
 }

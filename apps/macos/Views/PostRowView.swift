@@ -57,10 +57,6 @@ struct PostRowView: View, @MainActor Equatable {
     /// redundant when the parent is the row right above, so it is hidden.
     var connectsToPrevious: Bool = false
     var connectsToNext: Bool = false
-    /// The feed column's measured width (the List row width), injected by `FeedView`
-    /// once per layout pass. Drives the vertical/reflow decision via `TimelineLayout`.
-    /// Default 0 keeps the row vertical until the first measurement arrives.
-    var contentWidth: CGFloat = 0
 
     @EnvironmentObject private var theme: ThemeStore
     @Environment(\.openURL) private var openURL
@@ -87,9 +83,6 @@ struct PostRowView: View, @MainActor Equatable {
 
     private var avatarSize: CGFloat { density == .compact ? 24 : 42 }
     private var columnSpacing: CGFloat { density == .compact ? 8 : 11 }
-    /// The row's horizontal padding. Single-sourced here because both the row
-    /// chrome (`.padding(.horizontal:)`) and `regionWidth` depend on it; if they
-    /// drift apart the reflow width math silently goes wrong.
     private var horizontalRowPadding: CGFloat { density == .compact ? 12 : 16 }
     private var leadingInset: CGFloat { avatarSize + columnSpacing }
 
@@ -119,7 +112,6 @@ struct PostRowView: View, @MainActor Equatable {
             && lhs.connectsToPrevious == rhs.connectsToPrevious
             && lhs.connectsToNext == rhs.connectsToNext
             && lhs.canDelete == rhs.canDelete
-            && lhs.contentWidth == rhs.contentWidth
     }
 
     var body: some View {
@@ -132,8 +124,7 @@ struct PostRowView: View, @MainActor Equatable {
             }
             HStack(alignment: .top, spacing: columnSpacing) {
                 avatarColumn
-                content
-                Spacer(minLength: 0)
+                content.frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -265,65 +256,24 @@ struct PostRowView: View, @MainActor Equatable {
         hasInlineMedia || hasLinkCard
     }
 
-    @ViewBuilder
     private var content: some View {
-        let region = regionWidth(forContentWidth: contentWidth)
-        if TimelineLayout.placement(regionWidth: Double(region)) == .reflow && hasReflowMedia {
-            // The body grows to fill the row; the media rail is pinned to the right
-            // edge. The text takes whatever width is left (line length grows with the
-            // window — accepted to avoid a right-hand gap), so the media never strands
-            // mid-row and no trailing whitespace appears.
-            HStack(alignment: .top, spacing: CGFloat(TimelineLayout.columnGap)) {
-                VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
-                    authorLine
-                    bodyText
-                    quoteSection
-                    actionBarSection
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                mediaColumn(maxWidth: CGFloat(TimelineLayout.mediaRailWidth))
-                    .frame(width: CGFloat(TimelineLayout.mediaRailWidth), alignment: .top)
-            }
-            .frame(maxWidth: .infinity)
-        } else {
-            VStack(alignment: .leading, spacing: CGFloat(DesignMetrics.bodyStackSpacing(density))) {
+        let spacing = CGFloat(DesignMetrics.bodyStackSpacing(density))
+        return MediaReflowLayout(spacing: spacing, reflows: hasReflowMedia) {
+            VStack(alignment: .leading, spacing: spacing) {
                 authorLine
                 bodyText
-                verticalMedia
+            }
+            VStack(alignment: .leading, spacing: spacing) {
+                if hasInlineMedia {
+                    mediaSection(maxWidth: imageMaxWidth).padding(.top, CGFloat(DesignMetrics.mediaTopGap))
+                }
+                if hasLinkCard {
+                    linkCardSection.padding(.top, CGFloat(DesignMetrics.mediaTopGap))
+                }
+            }
+            VStack(alignment: .leading, spacing: spacing) {
                 quoteSection
                 actionBarSection
-            }
-        }
-    }
-
-    /// The available width for the body+media region: the row width minus the row's
-    /// horizontal padding, the avatar column, and the column spacing.
-    private func regionWidth(forContentWidth width: CGFloat) -> CGFloat {
-        width - horizontalRowPadding * 2 - avatarSize - columnSpacing
-    }
-
-    /// Media for the narrow vertical layout: image/video then link card, with the
-    /// original top paddings preserved so the stacked appearance is unchanged.
-    @ViewBuilder
-    private var verticalMedia: some View {
-        if hasInlineMedia {
-            mediaSection(maxWidth: imageMaxWidth).padding(.top, CGFloat(DesignMetrics.mediaTopGap))
-        }
-        if hasLinkCard {
-            linkCardSection.padding(.top, CGFloat(DesignMetrics.mediaTopGap))
-        }
-    }
-
-    /// Media for the wide reflow layout's right rail: image/video then link card,
-    /// stacked at the rail width.
-    @ViewBuilder
-    private func mediaColumn(maxWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if hasInlineMedia {
-                mediaSection(maxWidth: maxWidth)
-            }
-            if hasLinkCard {
-                linkCardSection
             }
         }
     }
@@ -754,5 +704,63 @@ private struct ThumbnailChrome: ViewModifier {
             .contentShape(RoundedRectangle(cornerRadius: CGFloat(DesignMetrics.thumbnailCornerRadius)))
             .accessibilityLabel(alt.isEmpty ? "画像" : alt)
             .onTapGesture(perform: onTap)
+    }
+}
+
+/// Places a post's three content blocks (author and body, media, quote and action
+/// bar) either stacked, or with the media in a right-hand rail beside the text.
+/// The choice comes from the width offered to this layout, never from a width kept
+/// in state: the feed's table keeps the height a row reports when it is first
+/// measured, so a row first laid out stacked and later switched to the rail kept
+/// the stacked height and showed a blank gap under the post.
+struct MediaReflowLayout: Layout {
+    let spacing: CGFloat
+    /// False when the post has no media to move into the rail.
+    let reflows: Bool
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(width: proposal.width, subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (subview, frame) in zip(subviews, arrange(width: bounds.width, subviews).frames) {
+            subview.place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                proposal: ProposedViewSize(width: frame.width, height: frame.height))
+        }
+    }
+
+    /// An unspecified width counts as wide, so an ideal-size query never picks the
+    /// stacked arrangement that a concrete wide proposal would not.
+    private func usesRail(_ width: CGFloat?) -> Bool {
+        reflows && TimelineLayout.placement(regionWidth: Double(width ?? .infinity)) == .reflow
+    }
+
+    private func arrange(width: CGFloat?, _ subviews: Subviews) -> (size: CGSize, frames: [CGRect]) {
+        guard usesRail(width) else { return stack(Array(subviews), width: width) }
+        let rail = CGFloat(TimelineLayout.mediaRailWidth)
+        let gap = CGFloat(TimelineLayout.columnGap)
+        let column = stack([subviews[0], subviews[2]], width: width.map { max(0, $0 - rail - gap) })
+        let mediaHeight = subviews[1].sizeThatFits(ProposedViewSize(width: rail, height: nil)).height
+        let total = width ?? column.size.width + gap + rail
+        let mediaFrame = CGRect(x: total - rail, y: 0, width: rail, height: mediaHeight)
+        let frames = [column.frames[0], mediaFrame, column.frames[1]]
+        return (CGSize(width: total, height: max(column.size.height, mediaHeight)), frames)
+    }
+
+    /// A leading-aligned vertical stack that, like `VStack`, puts `spacing` only
+    /// between blocks that have content.
+    private func stack(_ subviews: [LayoutSubview], width: CGFloat?) -> (size: CGSize, frames: [CGRect]) {
+        var frames: [CGRect] = []
+        var y: CGFloat = 0
+        var maxWidth: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+            if size.height > 0, y > 0 { y += spacing }
+            frames.append(CGRect(x: 0, y: y, width: width ?? size.width, height: size.height))
+            y += size.height
+            maxWidth = max(maxWidth, size.width)
+        }
+        return (CGSize(width: width ?? maxWidth, height: y), frames)
     }
 }

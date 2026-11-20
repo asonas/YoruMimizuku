@@ -44,14 +44,6 @@ struct FeedView: View {
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
-    @State private var contentWidth: CGFloat = 0
-    /// Cancels/restarts on every geometry change so a continuous resize (e.g. the
-    /// sidebar's collapse/expand animation firing a new width every frame) commits
-    /// `contentWidth` once, after the width settles, instead of on every frame. See
-    /// the `.onGeometryChange` below and `PostRowView`'s `.equatable()`, whose `==`
-    /// includes `contentWidth` — an un-debounced update re-renders every visible row
-    /// each frame, and can flip the reflow-layout threshold mid-animation.
-    @State private var contentWidthDebounce: Task<Void, Never>?
     /// Row ids currently laid out on screen, gathered from each row's
     /// appear/disappear. Their top-most (in display order) is the scroll anchor.
     /// A reference type mutated in place so recording the anchor on every scroll
@@ -199,8 +191,7 @@ struct FeedView: View {
                         canDelete: isOwnPost(post),
                         onDelete: { pendingDelete = post },
                         connectsToPrevious: item.connectsToPrevious,
-                        connectsToNext: item.connectsToNext,
-                        contentWidth: contentWidth
+                        connectsToNext: item.connectsToNext
                     )
                     // Skip re-rendering rows whose data is unchanged: PostRowView is
                     // Equatable on its value inputs, so a parent re-render that only
@@ -258,18 +249,8 @@ struct FeedView: View {
         .environment(\.defaultMinListRowHeight, 0)
         .onGeometryChange(for: CGFloat.self) { geometry in
             geometry.size.width
-        } action: { newWidth in
-            // Scroll restore is idempotent (`hasRestored`-guarded) and needed as
-            // soon as the first layout happens, so it runs undebounced; only the
-            // width itself — which drives the expensive row re-render — waits for
-            // the resize to settle.
+        } action: { _ in
             restoreScrollIfNeeded(proxy)
-            contentWidthDebounce?.cancel()
-            contentWidthDebounce = Task {
-                try? await Task.sleep(for: .milliseconds(80))
-                guard !Task.isCancelled else { return }
-                contentWidth = newWidth
-            }
         }
     }
 
