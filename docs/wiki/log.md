@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS pinned feeds and lists)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md, core/Sources/YoruMimizukuKit/SavedFeedsModel.swift, apps/macos/Timeline/LiveSavedFeedsLoaders.swift
+- updated: [[app-shell]], [[macos]]
+- note: The macOS sidebar lists the account's pinned feeds and lists (read-only) between 通知 and フィルター; only the selected one polls, and an ⓘ popover shows the feed's description, creator and AT-URI.
+
 ## 2026-11-20 ingest (macOS three-pane window)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-three-pane-design.md, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, apps/macos/Views/DetailPaneView.swift

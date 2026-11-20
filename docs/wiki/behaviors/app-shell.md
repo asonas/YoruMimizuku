@@ -3,6 +3,10 @@ title: App Shell (Window, Tabs, Sidebar)
 type: behavior
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md
+  - core/Sources/YoruMimizukuKit/SavedFeedsModel.swift
+  - apps/macos/Timeline/LiveSavedFeedsLoaders.swift
+  - apps/macos/Views/SavedFeedInfoButton.swift
   - docs/superpowers/specs/2026-11-20-macos-three-pane-design.md
   - apps/macos/Views/DetailPaneView.swift
   - core/Sources/YoruMimizukuKit/DetailPaneModel.swift
@@ -36,6 +40,12 @@ features:
     ios: differs
     android: planned
     note: "iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]])."
+  - name: Pinned feeds and lists in the sidebar
+    macos: full
+    windows: none
+    ios: none
+    android: planned
+    note: "macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet."
   - name: Multiple windows
     macos: full
     windows: full
@@ -99,7 +109,11 @@ Every post row's right-click (macOS) or long-press (iPadOS) context menu offers 
 
 ## Sidebar / tab UI
 
-The vertical-tab sidebar (home / notifications / filters; on iPadOS also conversations and authors) keeps its tab state in `WorkspaceModel` (`@MainActor ObservableObject`), rendered by the `NavigationSplitView` in `MainWindowView`. The `SidebarRow` component is display-only and receives theme colors from `ThemeStore`. Its look and density follow the reference app cmux (`2026-06-05-yorumimizuku-cmux-sidebar.md`):
+### Pinned feeds and lists (macOS)
+
+The macOS sidebar reads ホーム, 通知, フィード, リスト, フィルター. フィード and リスト list the feeds and lists the account pinned in Bluesky (`app.bsky.actor.getPreferences`, `savedFeedsPrefV2`), in pin order; a section with no pins is hidden, and the pinned following timeline is the home row rather than a second entry. Selecting one shows its timeline (`app.bsky.feed.getFeed` / `app.bsky.feed.getListFeed`) in the middle column, titles the window, and gives the header an ⓘ popover with the description, the creator's handle and the AT-URI. Pins are read-only in the app and are re-read whenever the app becomes active: a reload replaces them, a feed unpinned elsewhere stops polling, and if it was selected the window falls back to home. Only the selected pinned feed polls and pinned feeds carry no unread badge. Deleted feeds and unresolvable lists are skipped (`docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md`, `core/Sources/YoruMimizukuKit/SavedFeedsModel.swift`, `apps/macos/Timeline/LiveSavedFeedsLoaders.swift`, `apps/macos/Views/SavedFeedInfoButton.swift`).
+
+The vertical-tab sidebar (home / notifications / filters; on macOS also pinned feeds and lists; on iPadOS also conversations and authors) keeps its tab state in `WorkspaceModel` (`@MainActor ObservableObject`), rendered by the `NavigationSplitView` in `MainWindowView`. The `SidebarRow` component is display-only and receives theme colors from `ThemeStore`. Its look and density follow the reference app cmux (`2026-06-05-yorumimizuku-cmux-sidebar.md`):
 
 - Selection is a **solid fill** (`RoundedRectangle(cornerRadius: 6)` in the accent color) with the foreground forced to white, not a faint tint or a left bar.
 - Navigation rows (home / notifications) are icon + title; a conversation row is display name (12.5 semibold) + body snippet (11, up to 2 lines) + `@handle` (10 monospaced). A close `xmark` appears top-right on hover only.
