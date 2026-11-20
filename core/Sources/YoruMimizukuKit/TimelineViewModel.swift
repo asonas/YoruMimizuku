@@ -137,6 +137,13 @@ public final class TimelineViewModel: ObservableObject {
         }
     }
 
+    /// Drop every loaded post by `did`, after the viewer muted that account.
+    public func removePosts(byAuthor did: String) {
+        guard case let .loaded(current) = state else { return }
+        state = .loaded(current.filter { ATURI.repo($0.id) != did })
+        recountNewArrivals()
+    }
+
     /// A controller bound to this view model's post storage, or nil without an
     /// injected interactor.
     private var controller: PostInteractionController? {

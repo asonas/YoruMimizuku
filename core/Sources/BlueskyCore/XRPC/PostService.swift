@@ -101,6 +101,26 @@ public struct PostService: Sendable {
         return outcome.refreshed
     }
 
+    /// Mute an account for the viewer (`app.bsky.graph.muteActor`). Mutes are
+    /// private to the viewer. Returns refreshed tokens when a refresh occurred.
+    @discardableResult
+    public func muteActor(
+        pds: URL, issuer: URL, accessToken: String, refreshToken: String?, actor: String
+    ) async throws -> TokenResponse? {
+        let payload = try JSONEncoder().encode(["actor": actor])
+        let url = pds.appendingPathComponent("xrpc/app.bsky.graph.muteActor")
+        let outcome = try await perform(
+            method: .post, url: url,
+            headers: ["Content-Type": "application/json", "Accept": "application/json"],
+            body: payload, issuer: issuer, accessToken: accessToken, refreshToken: refreshToken
+        )
+        guard (200..<300).contains(outcome.response.statusCode) else {
+            let errorBody = try? JSONDecoder().decode(XRPCErrorResponse.self, from: outcome.response.body)
+            throw XRPCError.requestFailed(status: outcome.response.statusCode, body: errorBody)
+        }
+        return outcome.refreshed
+    }
+
     /// Like a post: create an `app.bsky.feed.like` whose subject is the post's
     /// strong ref. The returned `uri` is the like record's AT-URI (its rkey is what
     /// `deleteRecord` needs to undo the like).

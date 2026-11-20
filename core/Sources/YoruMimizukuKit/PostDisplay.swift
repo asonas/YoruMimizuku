@@ -130,6 +130,8 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let authorDisplayName: String
     public let authorHandle: String
     public let avatarURL: URL?
+    /// Trusted verifiers vouch for the author (the check beside the name).
+    public let authorIsVerified: Bool
     public let body: String
     /// The body split into display spans (plain text plus tappable links,
     /// hashtags, and mentions). For mock/plain posts this is a single text span.
@@ -186,6 +188,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         authorDisplayName: String,
         authorHandle: String,
         avatarURL: URL? = nil,
+        authorIsVerified: Bool = false,
         body: String,
         bodySegments: [RichTextSegment]? = nil,
         createdAt: Date,
@@ -207,6 +210,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.authorDisplayName = authorDisplayName
         self.authorHandle = authorHandle
         self.avatarURL = avatarURL
+        self.authorIsVerified = authorIsVerified
         self.body = body
         let segments = bodySegments ?? RichText.segments(text: body, facets: [])
         self.bodySegments = segments

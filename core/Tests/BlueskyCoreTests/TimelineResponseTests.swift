@@ -76,6 +76,21 @@ final class TimelineResponseTests: XCTestCase {
 
     /// Custom feeds (`getFeed`) mark a feed's pinned post with `reasonPin`,
     /// which carries no reposter. The page must still decode.
+    /// The author's verification badge comes from `verification.verifiedStatus`.
+    func testAuthorVerificationDecodesFromVerifiedStatus() throws {
+        let body = Data(##"""
+        [
+          { "did": "did:plc:a", "handle": "a.example", "verification": { "verifications": [], "verifiedStatus": "valid", "trustedVerifierStatus": "none" } },
+          { "did": "did:plc:b", "handle": "b.example", "verification": { "verifications": [], "verifiedStatus": "invalid", "trustedVerifierStatus": "none" } },
+          { "did": "did:plc:c", "handle": "c.example" }
+        ]
+        """##.utf8)
+
+        let authors = try JSONDecoder().decode([ProfileViewBasic].self, from: body)
+
+        XCTAssertEqual(authors.map(\.isVerified), [true, false, false])
+    }
+
     func testPinnedPostReasonDecodesWithoutARepost() throws {
         let body = Data(##"""
         {

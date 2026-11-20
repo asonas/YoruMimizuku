@@ -64,6 +64,7 @@ extension PostDisplay {
             authorDisplayName: author.displayName ?? author.handle,
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
+            authorIsVerified: author.isVerified,
             body: post.record.text,
             bodySegments: RichText.segments(text: post.record.text, facets: post.record.facets),
             createdAt: Self.parseISO8601(post.record.createdAt) ?? Date(timeIntervalSince1970: 0),

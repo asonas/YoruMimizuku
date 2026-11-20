@@ -319,12 +319,29 @@ public struct ProfileViewBasic: Decodable, Equatable, Sendable {
     public let handle: String
     public let displayName: String?
     public let avatar: String?
+    /// Whether trusted verifiers vouch for the account
+    /// (`verification.verifiedStatus == "valid"`).
+    public let isVerified: Bool
 
-    public init(did: String, handle: String, displayName: String?, avatar: String?) {
+    public init(did: String, handle: String, displayName: String?, avatar: String?, isVerified: Bool = false) {
         self.did = did
         self.handle = handle
         self.displayName = displayName
         self.avatar = avatar
+        self.isVerified = isVerified
+    }
+
+    private enum CodingKeys: String, CodingKey { case did, handle, displayName, avatar, verification }
+    private struct Verification: Decodable { let verifiedStatus: String? }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        did = try container.decode(String.self, forKey: .did)
+        handle = try container.decode(String.self, forKey: .handle)
+        displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+        avatar = try container.decodeIfPresent(String.self, forKey: .avatar)
+        let verification = try? container.decodeIfPresent(Verification.self, forKey: .verification)
+        isVerified = verification?.verifiedStatus == "valid"
     }
 }
 

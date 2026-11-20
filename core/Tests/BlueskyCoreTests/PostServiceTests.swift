@@ -172,6 +172,25 @@ extension PostServiceTests {
         XCTAssertEqual(quoted["cid"] as? String, "bafyaaa")
     }
 
+    func testMuteActorPostsTheActorDID() async throws {
+        let http = RoutingHTTPClient(routes: [
+            .init(matches: { $0.absoluteString.contains("app.bsky.graph.muteActor") },
+                  response: HTTPResponse(statusCode: 200, body: Data())),
+        ])
+        let service = makeService(http: http)
+
+        let refreshed = try await service.muteActor(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: "rtk", actor: "did:plc:bob"
+        )
+
+        XCTAssertNil(refreshed)
+        let req = try XCTUnwrap(http.sentRequests.last)
+        XCTAssertEqual(req.method, .post)
+        XCTAssertTrue(req.url.absoluteString.hasSuffix("/xrpc/app.bsky.graph.muteActor"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(req.body)) as? [String: Any])
+        XCTAssertEqual(json["actor"] as? String, "did:plc:bob")
+    }
+
     func testDeleteRecordSendsRepoCollectionRkey() async throws {
         let http = RoutingHTTPClient(routes: [
             .init(matches: { $0.absoluteString.contains("com.atproto.repo.deleteRecord") },

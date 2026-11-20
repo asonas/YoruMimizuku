@@ -28,6 +28,19 @@ final class PostDisplayMappingTests: XCTestCase {
         )
     }
 
+    func testCarriesTheAuthorVerification() {
+        let verified = PostView(
+            uri: "at://did:plc:alice/app.bsky.feed.post/aaa", cid: "cid",
+            author: ProfileViewBasic(did: "did:plc:alice", handle: "alice.example", displayName: nil, avatar: nil, isVerified: true),
+            record: PostRecord(text: "hi", createdAt: "2026-06-04T12:00:00.000Z"),
+            replyCount: nil, repostCount: nil, likeCount: nil,
+            indexedAt: "2026-06-04T12:00:01.000Z", labels: []
+        )
+
+        XCTAssertTrue(PostDisplay(FeedViewPost(post: verified)).authorIsVerified)
+        XCTAssertFalse(PostDisplay(FeedViewPost(post: post())).authorIsVerified)
+    }
+
     func testMapsPlainPost() {
         let item = FeedViewPost(post: post(text: "hi there", replyCount: 1, repostCount: 2, likeCount: 3))
 

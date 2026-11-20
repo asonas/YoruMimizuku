@@ -671,4 +671,19 @@ final class TimelineViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.newArrivals, 1)
     }
+
+    // MARK: - Muting
+
+    func testRemovingAnAuthorDropsTheirPostsOnly() async {
+        let vm = TimelineViewModel(loader: StubLoader(pages: [page([
+            "at://did:plc:bob/app.bsky.feed.post/1",
+            "at://did:plc:alice/app.bsky.feed.post/2",
+            "at://did:plc:bob/app.bsky.feed.post/3"
+        ])]))
+        await vm.load()
+
+        vm.removePosts(byAuthor: "did:plc:bob")
+
+        XCTAssertEqual(vm.posts.map(\.id), ["at://did:plc:alice/app.bsky.feed.post/2"])
+    }
 }
