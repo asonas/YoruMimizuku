@@ -7,3 +7,7 @@ DerivedData/
 apps/macos/Info.plist
 apps/ipados/Info.plist
 build/
+
+# Agent worktrees and exported conversation context
+.claude/worktrees/
+.dev/contexts/
