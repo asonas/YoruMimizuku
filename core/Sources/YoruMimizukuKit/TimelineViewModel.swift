@@ -75,6 +75,10 @@ public final class TimelineViewModel: ObservableObject {
     /// finishes last cannot push newer posts down.
     private var headRequestCount = 0
     private var appliedHeadRequest = 0
+    /// Bumped whenever the rows are replaced (`load()` or a refresh that starts
+    /// over). An older-page fetch from before that belongs to rows no longer
+    /// shown: its page is dropped and it no longer holds `isLoadingMore`.
+    private var pageGeneration = 0
     private let loader: TimelineLoading
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
@@ -167,6 +171,7 @@ public final class TimelineViewModel: ObservableObject {
             let page = try await loader.loadPage(cursor: nil)
             guard generation == loadGeneration else { endInterval("superseded"); return true }
             appliedHeadRequest = request
+            startNewPages()
             cursor = page.cursor
             state = .loaded(page.posts)
             onItemsChanged()
@@ -188,12 +193,12 @@ public final class TimelineViewModel: ObservableObject {
     /// arrives, so a head refresh that finished meanwhile is kept.
     public func loadMore() async {
         guard case .loaded = state, !isLoadingMore, let cursor else { return }
-        let generation = loadGeneration
+        let generation = pageGeneration
         isLoadingMore = true
-        defer { isLoadingMore = false }
+        defer { if generation == pageGeneration { isLoadingMore = false } }
         do {
             let page = try await loader.loadPage(cursor: cursor)
-            guard generation == loadGeneration, case let .loaded(latest) = state else { return }
+            guard generation == pageGeneration, case let .loaded(latest) = state else { return }
             self.cursor = page.cursor
             // Appending older posts to the tail never moves the head, so the unread
             // boundary is unaffected; no onItemsChanged() needed here.
@@ -233,7 +238,7 @@ public final class TimelineViewModel: ObservableObject {
                 // example after more than a page of new posts: start over from it
                 // rather than leave a gap that scrolling could never fill, and
                 // drop any older-page fetch still running for the old rows.
-                loadGeneration += 1
+                startNewPages()
                 cursor = page.cursor
                 state = .loaded(Self.merging(page.posts, appending: []))
             } else {
@@ -246,6 +251,12 @@ public final class TimelineViewModel: ObservableObject {
             // Keep showing the current feed.
             return false
         }
+    }
+
+    /// The rows are being replaced: forget any older-page fetch for the old ones.
+    private func startNewPages() {
+        pageGeneration += 1
+        isLoadingMore = false
     }
 
     /// Start the periodic refresh loop if it is not already running (idempotent).

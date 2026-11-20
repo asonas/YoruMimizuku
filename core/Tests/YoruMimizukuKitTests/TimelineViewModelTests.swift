@@ -361,6 +361,57 @@ final class TimelineViewModelTests: XCTestCase {
         await next.value
     }
 
+    // A replacement applied by an earlier refresh must not drop a later refresh
+    // that finishes afterwards.
+    func testLaterRefreshAfterAReplacementIsStillApplied() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let initial = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "a")], cursor: "c-a")))
+        await initial.value
+
+        let earlier = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let later = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "b")], cursor: "c-b")))
+        await earlier.value
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "c"), sample(id: "b")], cursor: "c-c")))
+        await later.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["c", "b"])
+    }
+
+    // After a replacement the new tail can fetch its next page at once, even
+    // while the dropped fetch for the old rows has not come back yet.
+    func testLoadMoreCanStartRightAfterAReplacement() async throws {
+        let loader = GatedLoader()
+        let vm = TimelineViewModel(loader: loader)
+        let initial = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "old1")], cursor: "c-old")))
+        await initial.value
+
+        let staleTail = Task { await vm.loadMore() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let head = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "new1")], cursor: "c-new")))
+        await head.value
+
+        let freshTail = Task { await vm.loadMore() }
+        try await waitUntil { loader.requestedCursors.contains("c-new") }
+        loader.release(cursor: "c-old", with: .success(TimelinePage(posts: [sample(id: "old2")], cursor: "c-older")))
+        await staleTail.value
+        loader.release(cursor: "c-new", with: .success(TimelinePage(posts: [sample(id: "new2")], cursor: nil)))
+        await freshTail.value
+
+        XCTAssertEqual(vm.posts.map(\.id), ["new1", "new2"])
+        XCTAssertFalse(vm.isLoadingMore)
+        loader.releaseAll(with: .success(TimelinePage(posts: [], cursor: nil)))
+    }
+
     // A feed that was empty adopts the first non-empty page's cursor, so its
     // second page can be reached.
     func testRefreshOfAnEmptyFeedAdoptsTheCursor() async {
