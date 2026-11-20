@@ -61,7 +61,7 @@ final class FontSettingsStore: ObservableObject {
     /// enumerating every installed family (the enumeration is deferred to
     /// `availableFamilies`).
     private static func isInstalled(_ family: String) -> Bool {
-        NSFontManager.shared.availableMembers(ofFontFamily: family) != nil
+        family == AppTypography.systemFamily || NSFontManager.shared.availableMembers(ofFontFamily: family) != nil
     }
 
     /// Restore the built-in default family and size.

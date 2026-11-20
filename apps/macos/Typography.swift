@@ -7,12 +7,15 @@ import AppKit
 /// text style. `FontSettingsStore` owns the user's choice and keeps `family` in
 /// sync; views re-read it whenever the store publishes a change.
 ///
-/// The default is `Hiragino Sans` (ヒラギノ角ゴシック) — Apple's bundled Japanese
-/// face, so no font files are shipped. Marked `nonisolated(unsafe)` because it is
+/// The default is the system font (`systemFamily`), as in the desktop prototype:
+/// San Francisco for Latin text, with macOS falling back to Hiragino for
+/// Japanese. Any installed family can be chosen instead. Marked `nonisolated(unsafe)` because it is
 /// only ever read/written on the main thread (UI), where strict concurrency would
 /// otherwise complain about the mutable global.
 enum AppTypography {
-    static let systemDefaultFamily = "Hiragino Sans"
+    /// Stands for the system font; not a real family name.
+    static let systemFamily = ".system"
+    static let systemDefaultFamily = systemFamily
     nonisolated(unsafe) static var family = systemDefaultFamily
 
     /// The macOS-standard point size of the body text style (≈13pt). All other
@@ -47,14 +50,21 @@ extension Font {
     /// A font sized to a Dynamic Type text style, scaling with it, in the app's
     /// current family. `.headline` keeps its semibold emphasis unless overridden.
     static func app(_ style: Font.TextStyle, weight: Font.Weight? = nil) -> Font {
-        Font.custom(AppTypography.family, size: AppTypography.pointSize(style), relativeTo: style)
-            .weight(weight ?? defaultWeight(style))
+        let size = AppTypography.pointSize(style)
+        let font = AppTypography.family == AppTypography.systemFamily
+            ? Font.system(size: size)
+            : Font.custom(AppTypography.family, size: size, relativeTo: style)
+        return font.weight(weight ?? defaultWeight(style))
     }
 
     /// A font at a fixed point size in the app's current family, mirroring
     /// `.system(size:weight:)`. The user's size scaling still applies.
     static func appSize(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        Font.custom(AppTypography.family, fixedSize: size * AppTypography.sizeRatio).weight(weight)
+        let scaled = size * AppTypography.sizeRatio
+        let font = AppTypography.family == AppTypography.systemFamily
+            ? Font.system(size: scaled)
+            : Font.custom(AppTypography.family, fixedSize: scaled)
+        return font.weight(weight)
     }
 
     private static func defaultWeight(_ style: Font.TextStyle) -> Font.Weight {

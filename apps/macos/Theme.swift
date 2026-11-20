@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import YoruMimizukuKit
 
 extension Color {
@@ -19,27 +20,32 @@ extension Color {
     }
 }
 
-/// Holds the active `ThemePalette` and exposes the full "Nocturne" set of semantic
-/// colors derived from it. The palette is seeded from a randoma11y URL (see
-/// `RandomA11yURLParser`) and persisted so it survives launches; background and
-/// text can be swapped without re-entering a URL. Only two colors come from
-/// randoma11y, so neutral surfaces/dividers are blended from the pair while the
-/// brand accent and star stay fixed.
+extension NSColor {
+    convenience init(_ palette: PaletteColor) {
+        switch palette.colorSpace {
+        case .displayP3:
+            self.init(displayP3Red: palette.red, green: palette.green, blue: palette.blue, alpha: palette.opacity)
+        case .sRGB:
+            self.init(srgbRed: palette.red, green: palette.green, blue: palette.blue, alpha: palette.opacity)
+        }
+    }
+}
+
+/// The window's colors: the desktop prototype's light and dark tokens
+/// (`DesignTokens`), following the system appearance. A randoma11y URL, when set,
+/// replaces only the background and text pair, oriented to the appearance; the
+/// accent and reaction colors stay the prototype's. Each color resolves per
+/// appearance at draw time, so light/dark switches need no state here.
 @MainActor
 final class ThemeStore: ObservableObject {
     @Published private(set) var palette: ThemePalette
-    /// The randoma11y URL last applied, shown back in the settings screen.
+    /// The randoma11y URL last applied, shown back in the settings screen. Empty
+    /// means the prototype's own background and text.
     @Published private(set) var sourceURL: String
 
     private let defaults: UserDefaults
     private static let paletteKey = "theme.palette"
     private static let sourceURLKey = "theme.sourceURL"
-
-    /// Neutral gray — selected tabs, links, the active source, reply markers,
-    /// controls. Monochrome by default; dark enough to carry white text.
-    private static let accentColor = Color(hex: 0x595959)
-    /// Neutral gray — the brand star (kept monochrome with the rest of the UI).
-    private static let starColor = Color(hex: 0x808080)
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -52,7 +58,7 @@ final class ThemeStore: ObservableObject {
         sourceURL = defaults.string(forKey: Self.sourceURLKey) ?? ""
     }
 
-    /// Parses `urlString` and adopts its palette, throwing `RandomA11yParseError`
+    /// Parses `urlString` and adopts its pair, throwing `RandomA11yParseError`
     /// (surfaced in the settings screen) when the URL is not a valid randoma11y link.
     func apply(urlString: String) throws {
         let parsed = try RandomA11yURLParser.parse(urlString)
@@ -61,13 +67,7 @@ final class ThemeStore: ObservableObject {
         persist()
     }
 
-    /// Swaps which color is the background and which is the text.
-    func swap() {
-        palette = palette.swapped()
-        persist()
-    }
-
-    /// Restores the built-in warm-stone palette and forgets the stored URL.
+    /// Returns to the prototype's colors and forgets the stored URL.
     func reset() {
         palette = .default
         sourceURL = ""
@@ -82,44 +82,51 @@ final class ThemeStore: ObservableObject {
         defaults.set(sourceURL, forKey: Self.sourceURLKey)
     }
 
+    /// The randoma11y pair in effect, if any.
+    private var override: ThemePalette? { sourceURL.isEmpty ? nil : palette }
+
+    /// A color that picks its token for the appearance it is drawn in.
+    private func token(_ pick: @escaping @Sendable (DesignTokens) -> PaletteColor) -> Color {
+        let override = self.override
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            return NSColor(pick(DesignTokens.resolve(dark: dark, override: override)))
+        })
+    }
+
     // MARK: - Semantic colors
 
-    var background: Color { Color(palette.background) }
-    var surface: Color { Color(palette.surface) }
-    var surfaceElevated: Color { Color(palette.background.blended(toward: palette.text, fraction: 0.22)) }
+    var background: Color { token(\.content) }
+    var surface: Color { token(\.chrome) }
+    var surfaceElevated: Color { token(\.field) }
+    var sidebar: Color { token(\.side) }
 
-    var accent: Color { Self.accentColor }
-    var star: Color { Self.starColor }
+    var accent: Color { token(\.accent) }
+    /// Text and icons drawn on an accent fill.
+    var accentForeground: Color { token(\.accentForeground) }
+    var accentTint: Color { token(\.accentTint) }
+    var like: Color { token(\.like) }
+    var repost: Color { token(\.repost) }
+    var warn: Color { token(\.warn) }
+    var warnTint: Color { token(\.warnTint) }
+    var proto: Color { token(\.proto) }
+    var protoTint: Color { token(\.protoTint) }
+    /// Neutral icons for empty and error states.
+    var star: Color { token(\.fg3) }
 
-    var primaryText: Color { Color(palette.text) }
-    var secondaryText: Color { Color(palette.secondaryText) }
-    /// Handles, timestamps, and counts. 0.38 keeps the default palette at about
-    /// 4.9:1 against the background, above WCAG AA's 4.5:1 for small text.
-    var tertiaryText: Color { Color(palette.text.blended(toward: palette.background, fraction: 0.38)) }
-    var avatarPlaceholder: Color { Color(palette.avatarPlaceholder) }
+    var primaryText: Color { token(\.fg) }
+    var secondaryText: Color { token(\.fg2) }
+    /// Handles, timestamps and counts; at least 4.5:1 on the background.
+    var tertiaryText: Color { token(\.fg3) }
+    var avatarPlaceholder: Color { token(\.selection) }
 
-    var divider: Color { Color(palette.divider) }
-    var hairline: Color { Color(palette.text.withOpacity(0.06)) }
-    var rowHover: Color { Color(palette.text.withOpacity(0.05)) }
+    var divider: Color { token(\.separator) }
+    var hairline: Color { token(\.separator) }
+    var rowHover: Color { token(\.hover) }
+    var selection: Color { token(\.selection) }
 
-    private var canvasTop: Color { Color(palette.background.blended(toward: palette.text, fraction: 0.03)) }
-    private var canvasBottom: Color { background }
-
-    /// The full-window night canvas: a vertical warm gradient lit by a soft star
-    /// glow in the top-trailing corner, like a moon just out of frame.
+    /// The plain content background behind feeds and panes.
     var canvas: some View {
-        LinearGradient(
-            colors: [canvasTop, canvasBottom],
-            startPoint: .top, endPoint: .bottom
-        )
-        .overlay(alignment: .topTrailing) {
-            RadialGradient(
-                colors: [star.opacity(0.12), .clear],
-                center: .topTrailing, startRadius: 0, endRadius: 420
-            )
-            .blendMode(.screen)
-            .allowsHitTesting(false)
-        }
-        .ignoresSafeArea()
+        background.ignoresSafeArea()
     }
 }

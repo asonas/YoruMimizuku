@@ -106,8 +106,8 @@ private enum SettingsTab: String, CaseIterable, Identifiable {
 
 // MARK: - Appearance
 
-/// Theme settings: paste a randoma11y.com URL to recolor the UI, preview the
-/// resulting background/text pair, and swap which color is which.
+/// Theme settings: the window follows the system's light/dark appearance; a
+/// randoma11y.com URL optionally replaces the background/text pair.
 private struct AppearanceSettingsView: View {
     @EnvironmentObject private var theme: ThemeStore
 
@@ -152,7 +152,7 @@ private struct AppearanceSettingsView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(urlInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Text("1色目を背景、2色目を文字色として適用します。")
+            Text("背景と文字の色だけを置き換えます。明るい外観では明るい方を、暗い外観では暗い方を背景にします。")
                 .font(.app(.caption2))
                 .foregroundStyle(theme.secondaryText)
         }
@@ -184,11 +184,6 @@ private struct AppearanceSettingsView: View {
 
     private var actions: some View {
         HStack(spacing: 10) {
-            Button {
-                theme.swap()
-            } label: {
-                Label("背景色と文字色を入れ替える", systemImage: "arrow.left.arrow.right")
-            }
             Spacer()
             Button("デフォルトに戻す") {
                 theme.reset()
@@ -265,6 +260,8 @@ private struct FontSettingsContentView: View {
 
     private var familyPicker: some View {
         Picker("フォントファミリ", selection: $fontSettings.family) {
+            Text("システム").font(.system(size: 13)).tag(AppTypography.systemFamily)
+            Divider()
             ForEach(fontSettings.availableFamilies, id: \.self) { name in
                 Text(name)
                     .font(.custom(name, size: 13))

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS prototype colors and dark mode)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md, core/Sources/YoruMimizukuKit/DesignTokens.swift, apps/macos/Theme.swift
+- updated: [[design-system]]
+- note: The macOS window takes the desktop prototype's light/dark color tokens and follows the system appearance; randoma11y now overrides only the background/text pair, and the default font is the system font.
+
 ## 2026-11-20 ingest (macOS commands, search and lists)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/ListMembershipModel.swift

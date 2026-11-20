@@ -1,8 +1,10 @@
 ---
 title: Design System (Vocabulary, Catalog, Snapshots)
 type: concept
-updated: 2026-07-25
+updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md
+  - core/Sources/YoruMimizukuKit/DesignTokens.swift
   - docs/superpowers/specs/2026-07-03-design-catalog-design.md
   - docs/superpowers/plans/2026-07-03-design-catalog.md
   - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
@@ -11,6 +13,10 @@ sources:
 # Design System (Vocabulary, Catalog, Snapshots)
 
 This page documents the shared vocabulary for discussing layout ("PostRow の `actionBarTopGap`"), the DEBUG-only in-app design catalog used to eyeball components, and the snapshot-test setup that catches unintended visual regressions. It exists because spacing used to be scattered magic numbers with no common name, and there was no way to render a component in isolation outside the live timeline (`2026-07-03-design-catalog-design.md` §背景と問題). See [[architecture]] for the surrounding module layout.
+
+## Colors (macOS)
+
+Since 2026-11-20 the macOS window takes its colors from the desktop prototype: `DesignTokens.light` and `.dark` (`core/Sources/YoruMimizukuKit/DesignTokens.swift`) hold content, chrome, side, fg/fg2/fg3, separator, hover, selection, the system-blue accent with its foreground and tint, like (pink), repost (green), warn, proto and field, and `ThemeStore` resolves each per appearance at draw time. fg3 is darkened/lightened from the prototype so every text token keeps WCAG AA 4.5:1 on content. A randoma11y URL replaces only the background/text pair, oriented so the lighter color is the light background and the darker one the dark background; accent and reaction colors stay. The default font is the system font at body 14pt. Debug builds accept `-YMAppearance dark|light` (`docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md`).
 
 ## Naming rule
 
@@ -62,7 +68,7 @@ Both galleries inject a throwaway `UserDefaults(suiteName: "as.ason.YoruMimizuku
 | Control | macOS | iPadOS | Effect |
 |---|---|---|---|
 | 密度 (density) segmented picker | ✓ | ✓ | Switches `DisplayDensity` (`.compact`/`.comfortable`), driving `bodyStackSpacing`/`mediaMaxWidth` |
-| テーマ (theme) menu | ✓ | — | A small set of named randoma11y presets plus "swap colors", calling the same `ThemeStore.apply(urlString:)`/`reset()`/`swap()` API `SettingsView`'s 外観 tab uses. Dropped on iPad — three controls already fill the sheet's toolbar at iPad width |
+| テーマ (theme) menu | ✓ | — | A small set of named randoma11y presets, calling the same `ThemeStore.apply(urlString:)`/`reset()` API `SettingsView`'s 外観 tab uses. Dropped on iPad — three controls already fill the sheet's toolbar at iPad width |
 | 幅 (width) slider, 320–900pt | ✓ | ✓ | Sets the column width (macOS: the frame `MediaReflowLayout` is offered; iPadOS: `PostRowView.contentWidth`), crossing the 680pt reflow boundary (`TimelineLayout`) so the vertical ↔ body-left/media-right reflow is visible live |
 | 余白注記 (caption) toggle | ✓ | ✓ | Shows/hides the `metricsUsed` caption under each variant's `id` |
 

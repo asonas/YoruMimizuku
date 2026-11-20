@@ -349,7 +349,7 @@ private struct SidebarRow: View {
                 if badge > 0, !isSelected {
                     Text(badge > 99 ? "99+" : "\(badge)")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(theme.accentForeground)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Capsule().fill(theme.accent))
@@ -424,7 +424,7 @@ private struct SidebarRow: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(isSelected ? Color.white.opacity(0.85) : theme.tertiaryText)
+                .foregroundStyle(isSelected ? theme.accentForeground.opacity(0.85) : theme.tertiaryText)
                 .padding(4)
         }
         .buttonStyle(.plain)
@@ -437,10 +437,10 @@ private struct SidebarRow: View {
         return isHovered ? theme.rowHover : .clear
     }
 
-    private var titleColor: Color { isSelected ? .white : theme.primaryText }
-    private var subtitleColor: Color { isSelected ? Color.white.opacity(0.82) : theme.secondaryText }
-    private var metaColor: Color { isSelected ? Color.white.opacity(0.7) : theme.tertiaryText }
-    private var iconColor: Color { isSelected ? .white : theme.tertiaryText }
+    private var titleColor: Color { isSelected ? theme.accentForeground : theme.primaryText }
+    private var subtitleColor: Color { isSelected ? theme.accentForeground.opacity(0.82) : theme.secondaryText }
+    private var metaColor: Color { isSelected ? theme.accentForeground.opacity(0.7) : theme.tertiaryText }
+    private var iconColor: Color { isSelected ? theme.accentForeground : theme.tertiaryText }
 }
 
 /// One filter row that observes its own `TimelineViewModel` so the unread badge

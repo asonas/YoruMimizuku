@@ -572,7 +572,7 @@ struct PostRowView: View, @MainActor Equatable {
                 showRepostOptions = true
             } label: {
                 actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath",
-                            active: post.isReposted, activeColor: theme.accent,
+                            active: post.isReposted, activeColor: theme.repost,
                             accessibilityDescription: "リポスト \(post.repostCount)件")
             }
             .help(post.isReposted ? "リポスト済み" : "リポスト / 引用")
@@ -585,7 +585,7 @@ struct PostRowView: View, @MainActor Equatable {
                 onLike()
             } label: {
                 actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart",
-                            active: post.isLiked, activeColor: theme.star,
+                            active: post.isLiked, activeColor: theme.like,
                             accessibilityDescription: "いいね \(post.likeCount)件")
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
@@ -639,9 +639,9 @@ struct PostRowView: View, @MainActor Equatable {
         HStack(spacing: CGFloat(DesignMetrics.actionBarItemSpacing)) {
             actionLabel("\(post.replyCount)", systemImage: "bubble.left",
                         accessibilityDescription: "返信 \(post.replyCount)件")
-            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.accent,
+            actionLabel("\(post.repostCount)", systemImage: "arrow.2.squarepath", active: post.isReposted, activeColor: theme.repost,
                         accessibilityDescription: "リポスト \(post.repostCount)件")
-            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.star,
+            actionLabel("\(post.likeCount)", systemImage: post.isLiked ? "heart.fill" : "heart", active: post.isLiked, activeColor: theme.like,
                         accessibilityDescription: "いいね \(post.likeCount)件")
         }
         .font(.app(.caption))

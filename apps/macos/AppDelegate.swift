@@ -18,6 +18,15 @@ import Foundation
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        // `-YMAppearance dark|light` pins this app's appearance for checking a
+        // theme without switching the whole system.
+        switch UserDefaults.standard.string(forKey: "YMAppearance") {
+        case "dark": NSApp.appearance = NSAppearance(named: .darkAqua)
+        case "light": NSApp.appearance = NSAppearance(named: .aqua)
+        default: break
+        }
+        #endif
         NSAppleEventManager.shared().setEventHandler(
             self,
             andSelector: #selector(handleQuitEvent(_:withReply:)),
