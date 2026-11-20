@@ -44,6 +44,8 @@ struct MainWindowView: View {
     var makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     /// Builds a composer VM that quotes `post`.
     var makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
+    /// Mutes an account (by DID) for the window's account.
+    var muteAuthor: @MainActor (String) async throws -> Void
 
     @State private var lightbox: ImageGallery?
     /// The composer sheet's view model; non-nil while the sheet is open.
@@ -250,7 +252,8 @@ struct MainWindowView: View {
                 onQuote: { openQuoteComposer($0, refreshing: model) },
                 onOpenAuthor: { openAuthor(for: $0) },
                 onOpenQuote: { openQuotedPost($0) },
-                currentDID: accountDID
+                currentDID: accountDID,
+                onMute: { mute($0) }
             )
         case .notifications:
             NotificationsView(
@@ -276,7 +279,8 @@ struct MainWindowView: View {
                     onQuote: { openQuoteComposer($0, refreshing: tab.model) },
                     onOpenAuthor: { openAuthor(for: $0) },
                     onOpenQuote: { openQuotedPost($0) },
-                    currentDID: accountDID
+                    currentDID: accountDID,
+                    onMute: { mute($0) }
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -296,6 +300,7 @@ struct MainWindowView: View {
                     onOpenAuthor: { openAuthor(for: $0) },
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
+                    onMute: { mute($0) },
                     headerAccessory: AnyView(SavedFeedInfoButton(source: source))
                 )
                 .id(id)
@@ -314,6 +319,7 @@ struct MainWindowView: View {
                     onOpenAuthor: { openAuthor(for: $0) },
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
+                    onMute: { mute($0) },
                     headerAccessory: AnyView(
                         Button("フィルターとして保存") { workspace.saveSearchAsFilter() }
                             .buttonStyle(.borderless)
@@ -329,6 +335,24 @@ struct MainWindowView: View {
             }
         case .conversation, .author:
             Color.clear.background(theme.canvas)
+        }
+    }
+
+    /// Mute `post`'s author for the window's account, then drop their posts from
+    /// every timeline in the window.
+    private func mute(_ post: PostDisplay) {
+        guard let did = ATURI.repo(post.id) else { return }
+        Task {
+            do {
+                try await muteAuthor(did)
+                model.removePosts(byAuthor: did)
+                for tab in workspace.filters { tab.model.removePosts(byAuthor: did) }
+                for source in savedFeeds.sources { savedFeeds.timeline(for: source.id)?.removePosts(byAuthor: did) }
+                workspace.search?.model.removePosts(byAuthor: did)
+                toastCenter.show("@\(post.authorHandle) をミュートしました")
+            } catch {
+                toastCenter.show("ミュートできませんでした")
+            }
         }
     }
 

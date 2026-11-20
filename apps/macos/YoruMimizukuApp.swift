@@ -53,7 +53,7 @@ struct YoruMimizukuApp: App {
         .commands {
             NewPostCommands()
             SidebarCommands()
-            WorkspaceCommands()
+            WorkspaceCommands(displaySettings: displaySettings)
             #if DEBUG
             CommandGroup(after: .help) {
                 OpenCatalogButton()

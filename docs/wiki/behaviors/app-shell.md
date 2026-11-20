@@ -3,6 +3,7 @@ title: App Shell (Window, Tabs, Sidebar)
 type: behavior
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md
   - docs/superpowers/specs/2026-11-20-macos-prototype-chrome-design.md
   - docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md
   - apps/macos/Views/WorkspaceCommands.swift
@@ -131,6 +132,10 @@ On macOS a conversation or author page opens in the window's third column instea
 ## Post row action paths
 
 Every post row's right-click (macOS) or long-press (iPadOS) context menu offers the same three paths regardless of platform: 「リンクをコピー」(copy the public permalink), 「ブラウザで開く」(open that permalink in the default browser), and — only on the viewer's own posts — 「削除」(destructive), which still goes through the existing `confirmationDialog` unchanged (`apps/macos/Views/FeedView.swift`, `apps/ipados/Views/TimelineListView.swift`). On iPadOS the action bar already carries a visible `safari` button wired to the same `onOpenPermalink` closure, so the context-menu entry is a second, more discoverable route to an action that already existed; on macOS there is no visible action-bar Safari button, so the context menu is the only browser-open path for now — adding a visible macOS action-bar button was deliberately left open for later reconsideration (`apps/macos/Views/PostRowView.swift`, `apps/ipados/Views/PostRowView.swift`, `2026-07-24-apple-hig-remediation.md` S6).
+
+## Timeline rows (macOS)
+
+Timeline lists use the prototype's compact row (`TimelineRowView`): why-line (repost / reply), name with a check for verified authors, @handle and a Japanese relative time, the body clamped to four lines, thumbnails, tags and the reactions (counts only above zero, hidden by 表示 > 反応の数を隠す). Clicking a row, or resting j/k on it for 0.3 s, shows it in the detail pane. この人をミュート (post menu and right-click) mutes the author for the window's account and drops their posts from every timeline in the window ([[timeline-media-layout]], `docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md`).
 
 ## Commands, search and lists (macOS)
 

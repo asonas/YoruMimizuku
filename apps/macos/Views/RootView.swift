@@ -234,6 +234,7 @@ private struct AuthenticatedRootView: View {
     private let onLogout: () -> Void
     private let makeComposer: @MainActor (PostDisplay?) -> ComposerViewModel
     private let makeQuoteComposer: @MainActor (PostDisplay) -> ComposerViewModel
+    private let muter: LiveAuthorMuter
 
     init(
         accountManager: AccountManager,
@@ -296,6 +297,7 @@ private struct AuthenticatedRootView: View {
             )
         )
         _listMembership = StateObject(wrappedValue: SharedListMembership.model(for: did, accountManager: accountManager))
+        muter = LiveAuthorMuter(accountManager: accountManager, accountDID: did)
         _savedFeeds = StateObject(
             wrappedValue: SavedFeedsModel(
                 loader: LiveSavedFeedsLoader(accountManager: accountManager, accountDID: did),
@@ -341,7 +343,8 @@ private struct AuthenticatedRootView: View {
             onAddAccount: onAddAccount,
             onLogout: onLogout,
             makeComposer: makeComposer,
-            makeQuoteComposer: makeQuoteComposer
+            makeQuoteComposer: makeQuoteComposer,
+            muteAuthor: { [muter] in try await muter.mute($0) }
         )
     }
 }

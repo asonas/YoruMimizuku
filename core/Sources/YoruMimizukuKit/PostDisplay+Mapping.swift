@@ -40,7 +40,7 @@ extension QuotedPost {
         self.init(
             id: record.uri,
             cid: record.cid,
-            authorDisplayName: author.displayName ?? author.handle,
+            authorDisplayName: author.nameOrHandle,
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             body: record.value.text,
@@ -61,7 +61,7 @@ extension PostDisplay {
         self.init(
             id: post.uri,
             cid: post.cid,
-            authorDisplayName: author.displayName ?? author.handle,
+            authorDisplayName: author.nameOrHandle,
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             authorIsVerified: author.isVerified,
@@ -88,7 +88,7 @@ extension PostDisplay {
     /// parent; deeper ancestry needs a thread fetch.
     public init(_ feedViewPost: FeedViewPost) {
         let contextLabel = feedViewPost.reason.map { reason in
-            "Reposted by \(reason.by.displayName ?? reason.by.handle)"
+            "\(reason.by.nameOrHandle) がリポスト"
         }
         let replyParent = feedViewPost.reply?.parent.map { parent in
             ReplyParent(PostDisplay(postView: parent))
@@ -129,4 +129,12 @@ extension PostDisplay {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+}
+
+extension ProfileViewBasic {
+    /// The display name, or the handle when the name is missing or blank.
+    var nameOrHandle: String {
+        guard let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else { return handle }
+        return name
+    }
 }

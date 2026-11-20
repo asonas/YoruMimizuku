@@ -84,9 +84,15 @@ final class DisplaySettingsStore: ObservableObject {
     @Published var density: DisplayDensity {
         didSet { defaults.set(density.rawValue, forKey: Self.densityKey) }
     }
+    /// Whether post rows show reply / repost / like counts (the prototype's
+    /// 表示 > 反応の数を表示／隠す). The icons stay either way.
+    @Published var showsReactionCounts: Bool {
+        didSet { defaults.set(showsReactionCounts, forKey: Self.countsKey) }
+    }
 
     private let defaults: UserDefaults
     private static let densityKey = "display.density"
+    private static let countsKey = "display.showsReactionCounts"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -96,5 +102,6 @@ final class DisplaySettingsStore: ObservableObject {
         } else {
             density = .default
         }
+        showsReactionCounts = defaults.object(forKey: Self.countsKey) as? Bool ?? true
     }
 }

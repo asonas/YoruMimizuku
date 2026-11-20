@@ -6,6 +6,7 @@ import YoruMimizukuKit
 /// key window's timeline). They are disabled when no main window is key, e.g.
 /// while Settings is in front. The sidebar toggle (⌃⌘S) is `SidebarCommands`.
 struct WorkspaceCommands: Commands {
+    @ObservedObject var displaySettings: DisplaySettingsStore
     @FocusedObject private var workspace: WorkspaceModel?
     @FocusedValue(\.postActions) private var post
     @FocusedValue(\.windowActions) private var window
@@ -23,6 +24,9 @@ struct WorkspaceCommands: Commands {
             Button("新着を読み込む") { window?.reload() }
                 .keyboardShortcut("r", modifiers: .command)
                 .disabled(window == nil)
+            Button(displaySettings.showsReactionCounts ? "反応の数を隠す" : "反応の数を表示") {
+                displaySettings.showsReactionCounts.toggle()
+            }
         }
 
         CommandGroup(after: .pasteboard) {
@@ -52,6 +56,8 @@ struct WorkspaceCommands: Commands {
                 Divider()
                 ListMembershipMenu(context: lists, actorDID: authorDID, handle: post.authorHandle)
             }
+            Button("この人をミュート") { post?.mute() }
+                .disabled(post == nil || post?.isOwn == true)
         }
     }
 }
@@ -65,11 +71,13 @@ struct PostActions {
     let authorHandle: String
     /// For the "リストに追加" submenu; nil where lists are unavailable.
     let listMembership: ListMembershipContext?
+    let isOwn: Bool
     let reply: @MainActor () -> Void
     let repost: @MainActor () -> Void
     let quote: @MainActor () -> Void
     let like: @MainActor () -> Void
     let copyLink: @MainActor () -> Void
+    let mute: @MainActor () -> Void
     let openInBrowser: @MainActor () -> Void
 }
 

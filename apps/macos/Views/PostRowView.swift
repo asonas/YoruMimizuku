@@ -672,20 +672,18 @@ struct PostRowView: View, @MainActor Equatable {
 /// `PostRowView`, which forced a full text re-typeset every time a row passed under
 /// the cursor mid-scroll; that was a dominant scroll-time cost in Time Profiler.
 struct RowHoverHighlight: ViewModifier {
-    /// Whether this row is the j/k focus target (draws the leading accent bar).
+    /// Whether this row is the j/k focus target (the prototype's selected row).
     var isFocused: Bool = false
     @EnvironmentObject private var theme: ThemeStore
     @State private var isHovered = false
 
     func body(content: Content) -> some View {
         content
-            .background(isFocused || isHovered ? theme.rowHover : Color.clear)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isFocused ? theme.selection : isHovered ? theme.rowHover : Color.clear)
+            )
             .animation(.easeOut(duration: 0.12), value: isHovered)
-            .overlay(alignment: .leading) {
-                if isFocused {
-                    Rectangle().fill(theme.accent).frame(width: 3)
-                }
-            }
             .onHover { isHovered = $0 }
     }
 }

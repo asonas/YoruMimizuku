@@ -3,6 +3,8 @@ title: Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 type: behavior
 updated: 2026-11-20
 sources:
+  - docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md
+  - apps/macos/Views/TimelineRowView.swift
   - docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md
   - docs/superpowers/plans/2026-06-23-timeline-image-reflow.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
@@ -30,6 +32,10 @@ features:
 # Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 
 This page documents two related layout improvements to the timeline post row landed in the `feature/timeline-image-reflow` branch: a height cap for tall single images, and a two-column reflow that activates when the feed column is wide enough. Both are described in `2026-06-23-timeline-image-reflow-design.md`.
+
+## macOS lists since 2026-11-20
+
+On macOS the timeline lists no longer lay out full media: following the desktop prototype, a list row (`TimelineRowView`) shows up to four 64×44 thumbnails (an ALT badge when the image has alt text, a play mark on video) and hides sensitive media behind a warn-colored tag; full images, link cards and quoted posts are read in the detail pane, which follows the selected row. The reflow described below still applies to `PostRowView`, which the detail pane uses until its own rebuild ([[app-shell]], `docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md`).
 
 ## Problem
 

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-20 ingest (macOS prototype timeline rows)
+
+- sources: docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md, apps/macos/Views/TimelineRowView.swift
+- updated: [[app-shell]], [[timeline-media-layout]]
+- note: macOS timeline lists use the prototype's compact row with thumbnails, tags and reaction counts; selecting a row shows it in the detail pane; authors can be muted.
+
 ## 2026-11-20 ingest (macOS prototype toolbar, sidebar and menus)
 
 - sources: docs/superpowers/specs/2026-11-20-macos-prototype-chrome-design.md, apps/macos/Views/SidebarView.swift, apps/macos/Views/WorkspaceCommands.swift

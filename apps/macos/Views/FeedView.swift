@@ -34,6 +34,8 @@ struct FeedView: View {
     /// The signed-in account's DID. Rows whose author DID matches gain a "削除"
     /// context-menu action. Nil disables delete everywhere (e.g. previews).
     var currentDID: String? = nil
+    /// Mutes the post's author ("この人をミュート").
+    var onMute: (PostDisplay) -> Void = { _ in }
     /// The j/k/l/o/n keys are plain window-wide shortcuts, so only the timeline
     /// column registers them; a feed embedded in the detail pane (an author page)
     /// turns them off to avoid a second binding for the same keys.
@@ -85,6 +87,14 @@ struct FeedView: View {
         // so check the head again whenever the count grows.
         .onChange(of: model.newArrivals) { _, count in
             if count > 0 { recordScrollAnchor() }
+        }
+        // As in the prototype, the detail pane follows the selection: once j/k
+        // (or the first load) rests on a post, open it there.
+        .task(id: focusedPostID) {
+            guard registersKeyboardShortcuts, let post = focusedPost else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            onOpenConversation(post)
         }
         // Prefetch the focused author's list membership for the right-click
         // "リストに追加" checks, once focus has rested on the post for a moment.
@@ -220,65 +230,48 @@ struct FeedView: View {
         // Same-thread posts are regrouped the way Bluesky's web feed shows them
         // (oldest first within the block, connector line, no divider inside).
         let items = FeedThreading.arrange(posts)
+        // Each row's predecessor, so a separator can hide next to the selection.
+        let previousByID = Dictionary(
+            zip(items.dropFirst().map(\.id), items.map(\.id)), uniquingKeysWith: { first, _ in first }
+        )
         return List {
             ForEach(items) { item in
                 let post = item.post
-                VStack(alignment: .leading, spacing: 0) {
-                    PostRowView(
-                        post: post, density: displaySettings.density, now: now,
-                        onImageTap: { urls, index in
-                            focusedPostID = post.id
-                            onImageTap(urls, index)
-                        },
-                        onReplyTap: { target in
-                            if target.id == post.id {
-                                onReply(post)
-                            } else {
-                                onOpenConversation(target)
-                            }
-                        },
-                        onSelect: { focusedPostID = post.id },
-                        onLike: { Task { await model.toggleLike(post) } },
-                        onRepost: { Task { await model.toggleRepost(post) } },
-                        onQuote: { onQuote(post) },
-                        onAvatarTap: { onOpenAuthor(post) },
-                        onCopyLink: { copyPermalink(post) },
-                        onOpenConversation: { onOpenConversation(post) },
-                        onQuoteTap: { onOpenQuote($0) },
-                        canDelete: isOwnPost(post),
-                        onDelete: { pendingDelete = post },
-                        connectsToPrevious: item.connectsToPrevious,
-                        connectsToNext: item.connectsToNext
-                    )
-                    // Skip re-rendering rows whose data is unchanged: PostRowView is
-                    // Equatable on its value inputs, so a parent re-render that only
-                    // recreates the closures no longer re-typesets every visible row.
-                    .equatable()
-                    // Clicking the row's open area moves j/k focus here, so navigation
-                    // resumes from the post the user just clicked. The tap target lives
-                    // in a background layer *behind* the row content rather than as an
-                    // overlay in front of it: the action-bar buttons (like / repost /
-                    // reply / copy) and tappable embeds sit in the foreground and
-                    // consume their own clicks, while clicks on empty space and body
-                    // text — which carry no gesture — fall through to this background
-                    // and only move focus. An `.onTapGesture` placed in front would
-                    // share the buttons' pixels and steal the first click for focus,
-                    // making like / repost feel like they fire a beat late.
-                    .background {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .onTapGesture { focusedPostID = post.id }
-                    }
-                    // Focus + hover highlight in an isolated layer: hovering rows
-                    // during a scroll re-renders only this background, not the row
-                    // body (which stays cached via `.equatable()`).
-                    .rowHoverHighlight(isFocused: post.id == focusedPostID)
-                    // Rows joined by the thread line read as one block; the divider
-                    // only closes the block (or separates standalone rows).
-                    if !item.connectsToNext {
-                        Divider().overlay(theme.divider)
+                TimelineRowView(
+                    post: post, now: now,
+                    showsCounts: displaySettings.showsReactionCounts,
+                    canDelete: isOwnPost(post),
+                    onImageTap: { urls, index in onImageTap(urls, index) },
+                    onSelect: { focusedPostID = post.id },
+                    onReply: { onReply(post) },
+                    onRepost: { Task { await model.toggleRepost(post) } },
+                    onQuote: { onQuote(post) },
+                    onLike: { Task { await model.toggleLike(post) } },
+                    onAvatarTap: { onOpenAuthor(post) },
+                    onQuoteTap: { onOpenQuote($0) },
+                    onCopyLink: { copyPermalink(post) },
+                    onMute: { onMute(post) },
+                    onDelete: { pendingDelete = post }
+                )
+                // Unchanged rows skip re-rendering: the closures are recreated on
+                // every parent update and deliberately left out of `==`.
+                .equatable()
+                // Clicking a row selects it and shows it in the detail pane, as
+                // in the prototype. The tap target sits behind the row so its
+                // buttons and links keep their own clicks.
+                .background {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { select(post) }
+                }
+                .rowHoverHighlight(isFocused: post.id == focusedPostID)
+                .overlay(alignment: .top) {
+                    // The prototype's inset separator, hidden around the selection.
+                    if let previous = previousByID[item.id], post.id != focusedPostID, previous != focusedPostID {
+                        Rectangle().fill(theme.divider).frame(height: 1).padding(.leading, 50).padding(.trailing, 8)
                     }
                 }
+                .padding(.horizontal, 6)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
@@ -390,6 +383,12 @@ struct FeedView: View {
         }
     }
 
+    /// Select a row and show it in the detail pane (the prototype's single click).
+    private func select(_ post: PostDisplay) {
+        focusedPostID = post.id
+        onOpenConversation(post)
+    }
+
     private func copyPermalink(_ post: PostDisplay) {
         guard let url = PostPermalink.url(for: post) else { return }
         let pb = NSPasteboard.general
@@ -405,11 +404,13 @@ struct FeedView: View {
             authorDID: ATURI.repo(post.id),
             authorHandle: post.authorHandle,
             listMembership: listMembership,
+            isOwn: isOwnPost(post),
             reply: { onReply(post) },
             repost: { Task { await model.toggleRepost(post) } },
             quote: { onQuote(post) },
             like: { Task { await model.toggleLike(post) } },
             copyLink: { copyPermalink(post) },
+            mute: { onMute(post) },
             openInBrowser: {
                 if let url = PostPermalink.url(for: post) { NSWorkspace.shared.open(url) }
             }

@@ -308,7 +308,14 @@ final class PostDisplayMappingTests: XCTestCase {
 
         let display = PostDisplay(item)
 
-        XCTAssertEqual(display.contextLabel, "Reposted by Bob")
+        XCTAssertEqual(display.contextLabel, "Bob がリポスト")
+    }
+
+    /// An empty display name falls back to the handle, like a missing one.
+    func testAnEmptyDisplayNameFallsBackToTheHandle() {
+        let display = PostDisplay(FeedViewPost(post: post(displayName: "")))
+
+        XCTAssertEqual(display.authorDisplayName, "alice.bsky.social")
     }
 
     func testMapsFacetsIntoBodySegments() {
