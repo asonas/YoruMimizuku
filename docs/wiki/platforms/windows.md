@@ -1,8 +1,9 @@
 ---
 title: Platform — Windows
 type: platform
-updated: 2026-06-20
+updated: 2026-11-21
 sources:
+  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
   - apps/windows/README.md
   - core/Package.swift
@@ -40,6 +41,12 @@ app drives the UI. The app runs self-contained and signs in via OAuth end to end
 
 This page matters for cross-machine context: the Windows build runs on a
 different machine / agent, so it reconstructs the same picture from this wiki.
+
+**Direction (proposed 2026-11-21):** replace the Swift core and the C ABI bridge
+with a C# core inside `apps/windows`, keep the WinUI app, then bring the
+2026-11-20 macOS redesign to Windows. The comparison of approaches, the phased
+plan and the open decisions are in `docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`; until the user confirms it, this
+page describes the current build.
 
 ## Architecture (as built)
 

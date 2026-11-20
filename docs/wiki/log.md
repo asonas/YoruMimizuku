@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows C# core handoff)
+
+- sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
+- updated: [[windows]]
+- note: proposed replacing the Swift core and C ABI bridge on Windows with a C# core; handoff for the agent on the Windows machine.
+
 ## 2026-11-20 ingest (release tooling)
 
 - sources: docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md, mise.toml, .claude/skills/releasing/SKILL.md
