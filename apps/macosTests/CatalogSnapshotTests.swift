@@ -57,6 +57,12 @@ final class CatalogSnapshotTests: XCTestCase {
         theme.reset()
         let display = DisplaySettingsStore(defaults: sandbox)
 
+        // Each variant is recorded in both appearances with the appearance pinned,
+        // since the colors resolve per appearance at draw time. Light keeps the
+        // plain names; dark adds "-dark".
+        let appearances: [(name: NSAppearance.Name, suffix: String)] = [(.aqua, ""), (.darkAqua, "-dark")]
+        for (appearanceName, suffix) in appearances {
+        let appearance = NSAppearance(named: appearanceName)!
         for variant in CatalogVariant.allCases where variant.platforms.contains(.macOS) {
             guard let view = CatalogRegistry.view(for: variant, width: Self.contentWidth) else { continue }
             let host = NSHostingView(
@@ -65,7 +71,10 @@ final class CatalogSnapshotTests: XCTestCase {
                     .environmentObject(theme)
                     .environmentObject(display)
                     .frame(width: Self.contentWidth)
-                    .fixedSize(horizontal: false, vertical: true))
+                    .fixedSize(horizontal: false, vertical: true)
+                    // The window's own background, so dark text is not drawn on
+                    // the transparent (white-looking) bitmap.
+                    .background(theme.background))
             host.frame = NSRect(x: 0, y: 0, width: Self.contentWidth, height: host.fittingSize.height)
             // macOS 27 needs a window and committed layers to capture images and backgrounds.
             let window = NSWindow(
@@ -73,20 +82,24 @@ final class CatalogSnapshotTests: XCTestCase {
                 styleMask: .borderless,
                 backing: .buffered,
                 defer: false)
+            window.appearance = appearance
             window.contentView = host
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
             CATransaction.flush()
 
-            guard let image = Self.pinnedScaleImage(of: host) else {
-                XCTFail("Could not render bitmap for variant \(variant.rawValue)")
+            var rendered: NSImage?
+            appearance.performAsCurrentDrawingAppearance { rendered = Self.pinnedScaleImage(of: host) }
+            guard let image = rendered else {
+                XCTFail("Could not render bitmap for variant \(variant.rawValue)\(suffix)")
                 continue
             }
 
             assertSnapshot(
                 of: image,
                 as: .image(perceptualPrecision: 0.98),
-                named: variant.rawValue)
+                named: variant.rawValue + suffix)
+        }
         }
     }
 
