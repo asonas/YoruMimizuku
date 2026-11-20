@@ -323,4 +323,48 @@ final class WorkspaceModelTests: XCTestCase {
 
         XCTAssertEqual(model.selection, .home)
     }
+
+    // MARK: - Dropping a person on a filter
+
+    private func userTerms(_ model: WorkspaceModel, _ id: UUID) -> [String] {
+        model.savedFilter(id: id)?.terms.filter { $0.kind == .user }.map(\.value) ?? []
+    }
+
+    func testDroppingAPersonOnAFilterAddsAFromTerm() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "Swift", terms: [FilterTerm(kind: .keyword, value: "swift")], combinator: .and)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "@alice.example", toFilter: id), .added)
+        XCTAssertEqual(userTerms(model, id), ["alice.example"])
+        XCTAssertEqual(model.savedFilter(id: id)?.terms.first?.value, "swift")
+    }
+
+    func testDroppingSomeoneAlreadyInTheFilterChangesNothing() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "people", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .or)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "Alice.example", toFilter: id), .alreadyIncluded)
+        XCTAssertEqual(userTerms(model, id), ["alice.example"])
+    }
+
+    /// In an AND filter two from: terms can never both match, so the drop is refused.
+    func testDroppingASecondPersonOnAnAndFilterIsRefused() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "alice", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .and)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "bob.example", toFilter: id), .wouldMatchNothing)
+        XCTAssertEqual(userTerms(model, id), ["alice.example"])
+    }
+
+    func testDroppingASecondPersonOnAnOrFilterAddsThem() async {
+        let model = makeModel(persistence: FakePersistence())
+        model.addFilter(name: "people", terms: [FilterTerm(kind: .user, value: "alice.example")], combinator: .or)
+        let id = model.filters[0].id
+
+        XCTAssertEqual(model.addAuthor(handle: "bob.example", toFilter: id), .added)
+        XCTAssertEqual(userTerms(model, id), ["alice.example", "bob.example"])
+    }
 }

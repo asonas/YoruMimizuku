@@ -66,14 +66,22 @@ public struct SavedFeedSource: Identifiable, Equatable, Sendable {
     public let description: String?
     public let creatorHandle: String?
     public let avatarURL: URL?
+    public let creatorDID: String?
+    /// A curated list (people chosen by hand), the kind a person can be added to.
+    public let isCuratedList: Bool
 
-    public init(id: String, kind: Kind, title: String, description: String?, creatorHandle: String?, avatarURL: URL?) {
+    public init(
+        id: String, kind: Kind, title: String, description: String?, creatorHandle: String?, avatarURL: URL?,
+        creatorDID: String? = nil, isCuratedList: Bool = false
+    ) {
         self.id = id
         self.kind = kind
         self.title = title
         self.description = description
         self.creatorHandle = creatorHandle
         self.avatarURL = avatarURL
+        self.creatorDID = creatorDID
+        self.isCuratedList = isCuratedList
     }
 
     /// The pinned feeds and lists in the order the account keeps them. The
@@ -93,13 +101,15 @@ public struct SavedFeedSource: Identifiable, Equatable, Sendable {
                 guard let feed = feedsByURI[item.value] else { return nil }
                 return SavedFeedSource(
                     id: feed.uri, kind: .feed, title: feed.displayName, description: feed.description,
-                    creatorHandle: feed.creator.handle, avatarURL: feed.avatar.flatMap(URL.init(string:))
+                    creatorHandle: feed.creator.handle, avatarURL: feed.avatar.flatMap(URL.init(string:)),
+                    creatorDID: feed.creator.did
                 )
             case "list":
                 guard let list = listsByURI[item.value] else { return nil }
                 return SavedFeedSource(
                     id: list.uri, kind: .list, title: list.name, description: list.description,
-                    creatorHandle: list.creator.handle, avatarURL: list.avatar.flatMap(URL.init(string:))
+                    creatorHandle: list.creator.handle, avatarURL: list.avatar.flatMap(URL.init(string:)),
+                    creatorDID: list.creator.did, isCuratedList: list.purpose == "app.bsky.graph.defs#curatelist"
                 )
             default:
                 return nil

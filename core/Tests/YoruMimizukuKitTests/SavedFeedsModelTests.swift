@@ -16,7 +16,8 @@ final class SavedFeedsModelTests: XCTestCase {
     private func list(_ uri: String, _ name: String) -> ListView {
         ListView(
             uri: uri, name: name, description: nil, avatar: nil,
-            creator: ProfileViewBasic(did: "did:plc:me", handle: "me.example", displayName: nil, avatar: nil)
+            creator: ProfileViewBasic(did: "did:plc:me", handle: "me.example", displayName: nil, avatar: nil),
+            purpose: "app.bsky.graph.defs#curatelist"
         )
     }
 
@@ -43,6 +44,8 @@ final class SavedFeedsModelTests: XCTestCase {
         XCTAssertEqual(sources.map(\.title), ["B", "近しい人", "A"])
         XCTAssertEqual(sources.first?.creatorHandle, "creator.example")
         XCTAssertEqual(sources.first?.description, "about B")
+        XCTAssertEqual(sources.map(\.creatorDID), ["did:plc:c", "did:plc:me", "did:plc:c"])
+        XCTAssertEqual(sources.map(\.isCuratedList), [false, true, false])
     }
 
     private final class ScriptedLoader: SavedFeedsLoading, @unchecked Sendable {

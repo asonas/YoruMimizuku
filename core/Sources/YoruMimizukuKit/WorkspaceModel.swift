@@ -282,6 +282,30 @@ public final class WorkspaceModel: ObservableObject {
         addFilter(name: "#\(clean)", terms: [FilterTerm(kind: .hashtag, value: clean)], combinator: .and)
     }
 
+    public enum AuthorDropResult: Equatable, Sendable {
+        case added
+        case alreadyIncluded
+        /// The filter joins its conditions with AND and already names a person;
+        /// a second `from:` could never match, so nothing is changed.
+        case wouldMatchNothing
+    }
+
+    /// Add a `from:` condition for `handle` to a filter (dropping a person on it).
+    /// Returns nil when the filter does not exist.
+    @discardableResult
+    public func addAuthor(handle: String, toFilter id: UUID) -> AuthorDropResult? {
+        guard var edited = savedFilter(id: id) else { return nil }
+        let clean = handle.hasPrefix("@") ? String(handle.dropFirst()) : handle
+        let users = edited.terms.filter { $0.kind == .user }
+        if users.contains(where: { $0.value.caseInsensitiveCompare(clean) == .orderedSame }) {
+            return .alreadyIncluded
+        }
+        if edited.combinator == .and, !users.isEmpty { return .wouldMatchNothing }
+        edited.terms.append(FilterTerm(kind: .user, value: clean))
+        updateFilter(edited)
+        return .added
+    }
+
     public func filter(id: UUID) -> FilterTab? { filters.first { $0.id == id } }
 
     /// The backing `SavedFilter` for an id (for the editor); nil if absent.

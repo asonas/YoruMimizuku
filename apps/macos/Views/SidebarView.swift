@@ -12,6 +12,7 @@ struct SidebarView: View {
     /// Opens the app's native `Settings { }` scene (⌘,'s target); the gear
     /// button below calls this directly instead of toggling a per-window sheet.
     @Environment(\.openSettings) private var openSettings
+    @Environment(\.listMembership) private var listMembership
     var accountHandle: String
     var accountAvatarURL: URL?
     /// The active account's DID, used to mark the current row in the switcher.
@@ -117,6 +118,10 @@ struct SidebarView: View {
                     title: source.title,
                     isSelected: workspace.selection == .savedFeed(source.id)
                 ) { workspace.selection = .savedFeed(source.id) }
+                // Only the window account's own curated lists take people.
+                .modifier(AuthorDropTarget(isEnabled: source.isCuratedList && source.creatorDID == accountDID) { author in
+                    addToList(author, source)
+                })
             }
         }
     }
@@ -154,8 +159,34 @@ struct SidebarView: View {
                     },
                     onSelect: { workspace.selection = .filter(tab.id) }
                 )
+                .modifier(AuthorDropTarget(isEnabled: true) { author in addToFilter(author, tab) })
             }
         }
+    }
+
+    private func addToList(_ author: DraggedAuthor, _ list: SavedFeedSource) {
+        guard let listMembership else { return }
+        Task {
+            do {
+                let wrote = try await listMembership.model.setMembership(author.did, of: list.id, to: true)
+                listMembership.notify(wrote
+                    ? "@\(author.handle) を「\(list.title)」に追加しました"
+                    : "@\(author.handle) はすでに「\(list.title)」にいます")
+            } catch {
+                listMembership.notify("リストを更新できませんでした")
+            }
+        }
+    }
+
+    private func addToFilter(_ author: DraggedAuthor, _ tab: FilterTab) {
+        let message: String
+        switch workspace.addAuthor(handle: author.handle, toFilter: tab.id) {
+        case .added: message = "@\(author.handle) を「\(tab.title)」に追加しました"
+        case .alreadyIncluded: message = "@\(author.handle) はすでに「\(tab.title)」にいます"
+        case .wouldMatchNothing: message = "「\(tab.title)」は条件を AND でつなぐため、2 人目は追加できません"
+        case nil: return
+        }
+        listMembership?.notify(message)
     }
 
     private func sectionLabel(_ text: String) -> some View {
@@ -435,5 +466,32 @@ private struct FilterSidebarRow: View {
             badge: showsBadges ? model.unreadCount : 0,
             action: onSelect
         )
+    }
+}
+
+/// Accepts a post author dropped on a sidebar row and outlines the row while a
+/// drag hovers over it. Disabled rows ignore the drop.
+private struct AuthorDropTarget: ViewModifier {
+    let isEnabled: Bool
+    let onDrop: (DraggedAuthor) -> Void
+    @EnvironmentObject private var theme: ThemeStore
+    @State private var isTargeted = false
+
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content
+                .overlay {
+                    if isTargeted {
+                        RoundedRectangle(cornerRadius: 6).strokeBorder(theme.accent, lineWidth: 2)
+                    }
+                }
+                .dropDestination(for: DraggedAuthor.self) { authors, _ in
+                    guard let author = authors.first else { return false }
+                    onDrop(author)
+                    return true
+                } isTargeted: { isTargeted = $0 }
+        } else {
+            content
+        }
     }
 }

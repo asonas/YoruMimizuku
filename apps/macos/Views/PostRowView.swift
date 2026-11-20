@@ -236,6 +236,7 @@ struct PostRowView: View, @MainActor Equatable {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .modifier(AuthorDragSource(post: post))
         .accessibilityLabel("@\(post.authorHandle) のプロフィール")
         .help("@\(post.authorHandle) のページを開く")
     }

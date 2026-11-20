@@ -55,6 +55,11 @@ targets:
           - CFBundleURLName: as.ason.YoruMimizuku
             CFBundleURLSchemes:
               - as.ason
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: as.ason.YoruMimizuku.author
+            UTTypeDescription: Bluesky author
+            UTTypeConformsTo:
+              - public.data
   YoruMimizukuPad:
     type: application
     platform: iOS
