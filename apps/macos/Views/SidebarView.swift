@@ -193,7 +193,8 @@ struct SidebarView: View {
         Text(text)
             .font(.appSize(10, weight: .semibold))
             .tracking(1)
-            .foregroundStyle(theme.tertiaryText)
+            // fg2, not fg3: on the translucent sidebar fg3 drops below 4.5:1.
+            .foregroundStyle(theme.secondaryText)
             .padding(.horizontal, 12)
             .padding(.top, 14)
             .padding(.bottom, 4)
@@ -438,8 +439,9 @@ private struct SidebarRow: View {
     }
 
     private var titleColor: Color { isSelected ? theme.accentForeground : theme.primaryText }
-    private var subtitleColor: Color { isSelected ? theme.accentForeground.opacity(0.82) : theme.secondaryText }
-    private var metaColor: Color { isSelected ? theme.accentForeground.opacity(0.7) : theme.tertiaryText }
+    // Small text on the accent fill stays opaque: dimmed, it falls below 4.5:1.
+    private var subtitleColor: Color { isSelected ? theme.accentForeground : theme.secondaryText }
+    private var metaColor: Color { isSelected ? theme.accentForeground : theme.secondaryText }
     private var iconColor: Color { isSelected ? theme.accentForeground : theme.tertiaryText }
 }
 
