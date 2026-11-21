@@ -94,15 +94,26 @@
 
                         <Border x:Name="DetailBar" Height="39" Padding="8,0" Visibility="Collapsed"
                                 BorderBrush="{ThemeResource AppHairlineBrush}" BorderThickness="0,0,0,1">
-                            <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                            <Grid ColumnSpacing="2" VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
                                 <Button Click="OnDetailCloseClick" Style="{StaticResource DetailBarButtonStyle}"
                                         ToolTipService.ToolTip="閉じる" AutomationProperties.Name="閉じる">
                                     <FontIcon Glyph="&#xE711;" FontSize="12" />
                                 </Button>
-                                <TextBlock x:Name="DetailTitle" Margin="8,0,0,0" VerticalAlignment="Center"
+                                <TextBlock x:Name="DetailTitle" Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                            Foreground="{ThemeResource AppTextBrush}" />
-                            </StackPanel>
+                                <!-- A conversation's スレッド / レコード switch, as in the prototype. -->
+                                <SelectorBar x:Name="DetailTabs" Grid.Column="2" Visibility="Collapsed"
+                                             Padding="0" SelectionChanged="OnDetailTabChanged">
+                                    <SelectorBarItem x:Name="ThreadTabItem" Text="スレッド" />
+                                    <SelectorBarItem x:Name="RecordTabItem" Text="レコード" />
+                                </SelectorBar>
+                            </Grid>
                         </Border>
 
                         <ContentControl x:Name="DetailHost" Grid.Row="1"

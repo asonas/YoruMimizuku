@@ -30,8 +30,8 @@ public sealed class AuthorViewModel : ObservableObject
     /// <summary>The author's posts, read as <paramref name="account"/>. The tab
     /// outlives an account switch, so the feed is built for whichever account
     /// the window shows when the tab is displayed.</summary>
-    public TimelineViewModel FeedFor(IAccountClient account) =>
-        new(account, cursor => account.AuthorFeedLoadAsync(Actor, cursor));
+    public TimelineViewModel FeedFor(IAccountClient account, Core.MutedAuthors muted) =>
+        new(account, muted, cursor => account.AuthorFeedLoadAsync(Actor, cursor));
 
     public async Task LoadProfileAsync(IAccountClient account)
     {

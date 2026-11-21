@@ -26,7 +26,7 @@ public sealed partial class AuthorView : UserControl
 
     public async Task LoadAsync()
     {
-        _feed = new FeedView(_vm.FeedFor(_account), _workspace);
+        _feed = new FeedView(_vm.FeedFor(_account, _workspace.Muted), _workspace);
         FeedHost.Content = _feed;
         await Task.WhenAll(_vm.LoadProfileAsync(_account), _feed.LoadAsync());
         RenderHeader();

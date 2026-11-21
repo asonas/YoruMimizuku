@@ -63,6 +63,10 @@ public sealed class WorkspaceViewModel : ObservableObject
     /// <summary>The detail pane: one page at a time.</summary>
     public Core.DetailPaneModel<DetailPage> Detail { get; } = new();
 
+    /// <summary>The authors this window's account muted (この人をミュート); every
+    /// timeline in the window leaves their posts out.</summary>
+    public Core.MutedAuthors Muted { get; } = new();
+
     /// <summary>This window's account. Every account-scoped call made from this
     /// window goes through it, so another window's switch never redirects it.
     /// Set when the shell is entered; null while signed out.</summary>
@@ -218,6 +222,12 @@ public sealed class WorkspaceViewModel : ObservableObject
     public void OpenConversation(string anchorUri, string title)
     {
         Detail.Open(new Core.DetailEntry.Conversation(anchorUri), () => new ConversationPage(anchorUri, title));
+    }
+
+    /// <summary>Open <paramref name="post"/>'s conversation on its レコード tab (レコードを表示).</summary>
+    public void OpenRecord(PostItem post)
+    {
+        Detail.OpenRecord(new Core.DetailEntry.Conversation(post.Id), () => new ConversationPage(post.Id, post.AuthorDisplayName));
     }
 
     public void OpenAuthor(PostItem post)

@@ -146,8 +146,14 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   for ⌘: Ctrl+1…Ctrl+9 select the first nine sidebar rows, Ctrl+R reloads the
   timeline, and on the selected post Ctrl+Enter replies, Ctrl+Shift+R reposts and
   Ctrl+Shift+C copies its link. The right-click menu selects its post and lists
-  返信, リポスト, 引用して投稿, いいね, リンクをコピー and リストに追加 with their
-  keys (`App/MainWindow.xaml.cs`, `App/Views/FeedView.xaml`) ([[app-shell]]).
+  返信, リポスト, 引用して投稿, いいね, リンクをコピー, レコードを表示 (Ctrl+Alt+I),
+  リストに追加 and この人をミュート with their keys (`App/MainWindow.xaml.cs`,
+  `App/Views/FeedView.xaml`) ([[app-shell]]).
+- レコードを表示 opens the conversation on the detail pane's レコード tab, whose
+  bar switch (スレッド / レコード) every conversation has; この人をミュート mutes
+  the author for the window's account and the window's `MutedAuthors` drops their
+  posts from every timeline it shows (`App/Views/RecordView.cs`,
+  `Core/MutedAuthors.cs`) ([[app-shell]]).
 - Feed rows render external link preview cards in the X-style large layout (hero
   image, bold title, grey description, host line). A post's own
   `app.bsky.embed.external` card comes through `PostDisplayDTO.linkCard`; a bare

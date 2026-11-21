@@ -194,6 +194,9 @@ public sealed partial class MainWindow : Window
         ReauthBar.IsOpen = false;
         // Detail pages were built on the previous client, so they go with it.
         _workspace.Detail.Close();
+        // Mutes are the account's, so another account's timelines show everyone. Signing
+        // in again to the same account keeps them, since that account still mutes them.
+        if (account?.Did != _workspace.AccountDid) _workspace.Muted.Clear();
         _workspace.Account = account is null ? null : App.Client.ForAccount(account.Did);
         // Pins belong to the account, so the previous account's go, and the new one's load.
         _workspace.ClearSavedFeeds();
@@ -588,7 +591,7 @@ public sealed partial class MainWindow : Window
         switch (tab.Kind)
         {
             case WorkspaceTabKind.Home:
-                var feed = new FeedView(TimelineViewModel.Home(account), _workspace);
+                var feed = new FeedView(TimelineViewModel.Home(account, _workspace.Muted), _workspace);
                 await feed.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ShowTimeline(feed);
                 break;
@@ -601,13 +604,13 @@ public sealed partial class MainWindow : Window
                 // A new view per selection, and FeedView polls only while on screen, so
                 // only the selected pin polls, as on macOS.
                 var pinned = new FeedView(
-                    new TimelineViewModel(account, cursor => account.SavedFeedLoadAsync(pin, cursor)), _workspace);
+                    new TimelineViewModel(account, _workspace.Muted, cursor => account.SavedFeedLoadAsync(pin, cursor)), _workspace);
                 await pinned.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ShowTimeline(pinned);
                 break;
             case WorkspaceTabKind.Filter or WorkspaceTabKind.Search when tab.Filter is { } filter:
                 var search = new FeedView(
-                    new TimelineViewModel(account, cursor => account.SearchLoadAsync(filter.ToSearchJson(), cursor)),
+                    new TimelineViewModel(account, _workspace.Muted, cursor => account.SearchLoadAsync(filter.ToSearchJson(), cursor)),
                     _workspace);
                 if (tab.Kind == WorkspaceTabKind.Search)
                 {
@@ -648,22 +651,38 @@ public sealed partial class MainWindow : Window
     private void ShowDetail()
     {
         var page = _workspace.Detail.Current;
-        DetailBar.Visibility = page is null ? Visibility.Collapsed : Visibility.Visible;
-        DetailEmpty.Visibility = page is null ? Visibility.Visible : Visibility.Collapsed;
-        DetailTitle.Text = page?.Title ?? "";
-        DetailHost.Content = page is not null && _workspace.Account is { } account
-            ? BuildDetailView(page, account)
-            : null;
+        // The shown page with another tab: switch views without reloading it.
+        if (page is null || !ReferenceEquals(page, _shownDetailPage))
+        {
+            _shownDetailPage = page;
+            DetailBar.Visibility = page is null ? Visibility.Collapsed : Visibility.Visible;
+            DetailEmpty.Visibility = page is null ? Visibility.Visible : Visibility.Collapsed;
+            DetailTitle.Text = page?.Title ?? "";
+            DetailHost.Content = page is not null && _workspace.Account is { } account
+                ? BuildDetailView(page, account)
+                : null;
+        }
+        var conversation = DetailHost.Content as ConversationPane;
+        DetailTabs.Visibility = conversation is null ? Visibility.Collapsed : Visibility.Visible;
+        if (conversation is null) return;
+        var tab = _workspace.Detail.Tab;
+        DetailTabs.SelectedItem = tab == Core.DetailTab.Record ? RecordTabItem : ThreadTabItem;
+        conversation.Show(tab);
     }
+
+    private DetailPage? _shownDetailPage;
+
+    /// The bar's スレッド / レコード switch. Setting the selection from the model
+    /// lands here too, and showing the tab already shown does nothing.
+    private void OnDetailTabChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args) =>
+        _workspace.Detail.ShowTab(ReferenceEquals(sender.SelectedItem, RecordTabItem) ? Core.DetailTab.Record : Core.DetailTab.Thread);
 
     private UIElement BuildDetailView(DetailPage page, IAccountClient account)
     {
         switch (page)
         {
             case ConversationPage conversation:
-                var thread = new ConversationView(new ThreadViewModel(account, conversation.AnchorUri), _workspace);
-                _ = thread.LoadAsync();
-                return thread;
+                return new ConversationPane(new ThreadViewModel(account, conversation.AnchorUri), _workspace);
             case AuthorPage author:
                 var view = new AuthorView(author.Author, account, _workspace);
                 _ = LoadAuthorAsync(author, view);

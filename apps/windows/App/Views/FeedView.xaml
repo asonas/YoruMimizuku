@@ -72,12 +72,25 @@
                                         <FontIcon Glyph="&#xE71B;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="レコードを表示" Tag="{x:Bind}" Click="OnOpenRecordClick"
+                                                KeyboardAcceleratorTextOverride="Ctrl+Alt+I">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE943;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
                                 <MenuFlyoutSeparator />
                                 <MenuFlyoutSubItem Text="リストに追加" Tag="{x:Bind}">
                                     <MenuFlyoutSubItem.Icon>
                                         <FontIcon Glyph="&#xE8FD;" />
                                     </MenuFlyoutSubItem.Icon>
                                 </MenuFlyoutSubItem>
+                                <!-- Hidden on the viewer's own posts, which the row's delete
+                                     button covers, as the macOS row menu does. -->
+                                <MenuFlyoutItem x:Name="MuteItem" Text="この人をミュート" Tag="{x:Bind}" Click="OnMuteClick">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE74F;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
                             </MenuFlyout>
                         </Border.ContextFlyout>
                         <StackPanel Spacing="3">

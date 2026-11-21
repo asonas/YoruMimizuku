@@ -99,6 +99,21 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null, Vid
     public Task UnrepostAsync(string repostUri, CancellationToken cancellationToken = default) =>
         DeleteRecordAsync(Repost, repostUri, cancellationToken);
 
+    /// <summary>Mutes <paramref name="actorDid"/> for the account (<c>app.bsky.graph.muteActor</c>). Mutes are private to the viewer.</summary>
+    public Task MuteActorAsync(string actorDid, CancellationToken cancellationToken = default) =>
+        xrpc.ProcedureAsync("app.bsky.graph.muteActor", XrpcClient.Json(new JsonObject { ["actor"] = actorDid }), cancellationToken);
+
+    /// <summary>The record at <paramref name="uri"/> exactly as stored in its repo (<c>com.atproto.repo.getRecord</c>).</summary>
+    public Task<RecordResponse> GetRecordAsync(string uri, CancellationToken cancellationToken = default)
+    {
+        var address = AtUri.Parse(uri) ?? throw new ArgumentException($"Not a record URI: {uri}", nameof(uri));
+        return xrpc.QueryAsync(
+            "com.atproto.repo.getRecord",
+            [("repo", address.Repo), ("collection", address.Collection), ("rkey", address.Rkey)],
+            RecordResponse.FromJson,
+            cancellationToken);
+    }
+
     private async Task<JsonObject?> FeatureAsync(DetectedFeature feature, CancellationToken cancellationToken) =>
         feature switch
         {
@@ -131,13 +146,7 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null, Vid
 
     private async Task<JsonObject> ReplyAsync(string parentUri, CancellationToken cancellationToken)
     {
-        var address = AtUri.Parse(parentUri)
-            ?? throw new ArgumentException($"Not a record URI: {parentUri}", nameof(parentUri));
-        var parent = await xrpc.QueryAsync(
-            "com.atproto.repo.getRecord",
-            [("repo", address.Repo), ("collection", address.Collection), ("rkey", address.Rkey)],
-            RecordResponse.FromJson,
-            cancellationToken);
+        var parent = await GetRecordAsync(parentUri, cancellationToken);
         var parentRef = new StrongRef(parent.Uri, parent.Cid ?? throw new JsonException("The parent record has no cid."));
         var root = JsonFields.Tolerant(() => parent.Value.Optional("reply")?.Optional("root") is { } json
             ? new StrongRef(json.RequiredString("uri"), json.RequiredString("cid"))

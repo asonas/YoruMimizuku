@@ -83,6 +83,12 @@ public interface IAccountClient
     /// <summary>Delete this account's own post record (app.bsky.feed.post). <paramref name="uri"/> is the post AT-URI.</summary>
     Task DeletePostAsync(string uri);
 
+    /// <summary>Mute <paramref name="actorDid"/> for this account (app.bsky.graph.muteActor).</summary>
+    Task MuteActorAsync(string actorDid);
+
+    /// <summary>The record at <paramref name="uri"/> as stored in its repo, as indented JSON with sorted keys.</summary>
+    Task<string> RecordLoadAsync(string uri);
+
     Task<AvatarDto> AvatarAsync();
     Task<ProfileDto> ProfileAsync(string actor);
 }

@@ -104,6 +104,10 @@ public sealed class CoreAccountClient(
 
     public Task DeletePostAsync(string uri) => Run(() => posts.DeletePostAsync(uri));
 
+    public Task MuteActorAsync(string actorDid) => Run(() => posts.MuteActorAsync(actorDid));
+
+    public Task<string> RecordLoadAsync(string uri) => Run(async () => (await posts.GetRecordAsync(uri)).PrettyValue);
+
     public Task<AvatarDto> AvatarAsync() => Run(async () => new AvatarDto(await profiles.GetAvatarAsync()));
 
     public Task<ProfileDto> ProfileAsync(string actor) =>

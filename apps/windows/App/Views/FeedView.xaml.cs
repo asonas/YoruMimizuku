@@ -34,7 +34,11 @@ public sealed partial class FeedView : UserControl
         InitializeComponent();
         _refreshTimer.Tick += async (_, _) => await Vm.RefreshAsync();
         Loaded += OnLoaded;
-        Unloaded += (_, _) => _refreshTimer.Stop();
+        Unloaded += (_, _) =>
+        {
+            _refreshTimer.Stop();
+            _workspace.Muted.AuthorMuted -= OnAuthorMuted;
+        };
         KeyDown += OnFeedKeyDown;
         PreviewKeyDown += OnFeedPreviewKeyDown;
     }
@@ -59,7 +63,14 @@ public sealed partial class FeedView : UserControl
         _scrollViewer = FindScrollViewer(PostsList);
         if (_scrollViewer is not null) _scrollViewer.ViewChanged += OnViewChanged;
         if (_hasLoaded) _refreshTimer.Start();
+        // Only the timelines on screen hold posts to drop: the others are built again,
+        // and filtered, when they are shown. Loaded can repeat, so unsubscribe first.
+        _workspace.Muted.AuthorMuted -= OnAuthorMuted;
+        _workspace.Muted.AuthorMuted += OnAuthorMuted;
+        Vm.RemoveMutedPosts();
     }
+
+    private void OnAuthorMuted(string did) => Vm.RemoveMutedPosts();
 
     // -- Rich text + images per realized row --
 
@@ -649,8 +660,42 @@ public sealed partial class FeedView : UserControl
         }
         PostsList.SelectedItem = post;
         menu.Visibility = post.AuthorDid is null ? Visibility.Collapsed : Visibility.Visible;
+        if (flyout.Items.OfType<MenuFlyoutItem>().FirstOrDefault(i => i.Name == "MuteItem") is { } mute)
+        {
+            mute.Visibility = post.AuthorDid is { } author && author != Vm.Account.Did ? Visibility.Visible : Visibility.Collapsed;
+        }
         if (post.AuthorDid is not { } did) return;
         ListMembershipMenu.Attach(flyout, menu, Vm.Account.ListMembership, did, post.AuthorHandle);
+    }
+
+    private void OnOpenRecordClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: PostItem item }) _workspace.OpenRecord(item);
+    }
+
+    private async void OnMuteClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: PostItem item }) await MuteAuthorAsync(item);
+    }
+
+    /// Mute the post's author for the window's account, then drop their posts from
+    /// every timeline in the window. No confirmation, as on macOS.
+    private async Task MuteAuthorAsync(PostItem post)
+    {
+        if (post.AuthorDid is not { } did) return;
+        var origin = XamlRoot;
+        try
+        {
+            await Vm.Account.MuteActorAsync(did);
+        }
+        catch (Exception ex)
+        {
+            Services.AppLog.Write("mute failed", ex);
+            Services.ToastCenter.Shared.Show(origin, "ミュートできませんでした");
+            return;
+        }
+        _workspace.Muted.Mute(did);
+        Services.ToastCenter.Shared.Show(origin, $"@{post.AuthorHandle} をミュートしました");
     }
 
     /// The avatar drags its post's author onto a sidebar list.
@@ -711,13 +756,16 @@ public sealed partial class FeedView : UserControl
     /// click and the selectable body takes Ctrl+C-like chords.
     private async void OnFeedPreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (!IsKeyDown(VirtualKey.Control) || IsKeyDown(VirtualKey.Menu)) return;
+        if (!IsKeyDown(VirtualKey.Control)) return;
         var shift = IsKeyDown(VirtualKey.Shift);
-        Func<PostItem, Task>? command = (e.Key, shift) switch
+        var alt = IsKeyDown(VirtualKey.Menu);
+        Func<PostItem, Task>? command = (e.Key, shift, alt) switch
         {
-            (VirtualKey.Enter, false) => OpenReplyComposer,
-            (VirtualKey.R, true) => post => post.ToggleRepostAsync(),
-            (VirtualKey.C, true) => CopyPermalinkAsync,
+            (VirtualKey.Enter, false, false) => OpenReplyComposer,
+            (VirtualKey.R, true, false) => post => post.ToggleRepostAsync(),
+            (VirtualKey.C, true, false) => CopyPermalinkAsync,
+            // ⌥⌘I, with Ctrl for ⌘ and Alt for ⌥.
+            (VirtualKey.I, false, true) => post => { _workspace.OpenRecord(post); return Task.CompletedTask; },
             _ => null,
         };
         if (command is null) return;

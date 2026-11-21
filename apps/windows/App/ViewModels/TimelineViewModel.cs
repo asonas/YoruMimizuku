@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using YoruMimizuku.App.Interop;
@@ -17,6 +18,7 @@ namespace YoruMimizuku.App.ViewModels;
 public sealed class TimelineViewModel : ObservableObject
 {
     private readonly Func<string?, Task<TimelinePageDto>> _loadPage;
+    private readonly Core.MutedAuthors _muted;
 
     /// <summary>The account this feed reads as and acts as (like, repost, delete, compose).</summary>
     public IAccountClient Account { get; }
@@ -50,14 +52,17 @@ public sealed class TimelineViewModel : ObservableObject
     private string? _cursor;
     public bool CanLoadMore => _cursor is not null;
 
-    public TimelineViewModel(IAccountClient account, Func<string?, Task<TimelinePageDto>> loadPage)
+    /// <param name="muted">The window's muted authors, whose posts every page leaves out.</param>
+    public TimelineViewModel(IAccountClient account, Core.MutedAuthors muted, Func<string?, Task<TimelinePageDto>> loadPage)
     {
         Account = account;
+        _muted = muted;
         _loadPage = loadPage;
     }
 
     /// <summary>Home timeline feed.</summary>
-    public static TimelineViewModel Home(IAccountClient account) => new(account, cursor => account.TimelineLoadAsync(cursor));
+    public static TimelineViewModel Home(IAccountClient account, Core.MutedAuthors muted) =>
+        new(account, muted, cursor => account.TimelineLoadAsync(cursor));
 
     public async Task LoadAsync()
     {
@@ -67,10 +72,13 @@ public sealed class TimelineViewModel : ObservableObject
         {
             var page = await _loadPage(null);
             Posts.Clear();
-            foreach (var dto in page.Posts) Posts.Add(new PostItem(dto, Account));
+            foreach (var dto in Visible(page)) Posts.Add(new PostItem(dto, Account));
             _cursor = page.Cursor;
             OnPropertyChanged(nameof(CanLoadMore));
             await ApplyThreadingAsync();
+            // A page made only of muted posts leaves no row to scroll to, so the next
+            // page would never be requested; fetch it now, as macOS does.
+            if (Posts.Count == 0 && page.Posts.Count > 0) await LoadMoreAsync();
         }
         catch (Exception ex)
         {
@@ -103,7 +111,7 @@ public sealed class TimelineViewModel : ObservableObject
         try
         {
             var page = await _loadPage(_cursor);
-            foreach (var dto in page.Posts)
+            foreach (var dto in Visible(page))
             {
                 if (!Contains(dto.Id)) Posts.Add(new PostItem(dto, Account));
             }
@@ -121,7 +129,7 @@ public sealed class TimelineViewModel : ObservableObject
         {
             var page = await _loadPage(null);
             var insertAt = 0;
-            foreach (var dto in page.Posts)
+            foreach (var dto in Visible(page))
             {
                 if (Contains(dto.Id)) continue;
                 Posts.Insert(insertAt++, new PostItem(dto, Account));
@@ -129,6 +137,17 @@ public sealed class TimelineViewModel : ObservableObject
             await ApplyThreadingAsync();
         }
         catch { /* keep showing the current feed */ }
+    }
+
+    private IEnumerable<PostDisplayDto> Visible(TimelinePageDto page) => page.Posts.Where(p => !_muted.Hides(p.Id));
+
+    /// <summary>Drop the shown posts by authors muted since they loaded.</summary>
+    public void RemoveMutedPosts()
+    {
+        for (var i = Posts.Count - 1; i >= 0; i--)
+        {
+            if (_muted.Hides(Posts[i].Id)) Posts.RemoveAt(i);
+        }
     }
 
     private bool Contains(string id)

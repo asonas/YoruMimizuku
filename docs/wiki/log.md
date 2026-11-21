@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows record and mute)
+
+- sources: apps/windows/Core/DetailPaneModel.cs, apps/windows/Core/MutedAuthors.cs, apps/windows/Core/PostService.cs, apps/windows/App/Views/RecordView.cs, apps/windows/App/Views/FeedView.xaml, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[windows]]
+- note: closes issue #38. Windows adds レコードを表示 (Ctrl+Alt+I and the post menu) with the detail pane's スレッド / レコード switch, and この人をミュート, which mutes the author for the window's account and drops their posts from every timeline in the window. The `bug:` part of the "Menu bar commands" note is gone; the row stays `differs` for Windows because there is no menu bar.
+
 ## 2026-11-21 ingest (Windows filter drop)
 
 - sources: apps/windows/Core/SavedFilter.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/MainWindow.xaml.cs

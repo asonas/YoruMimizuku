@@ -346,4 +346,44 @@ public class PostServiceTests
             ],
             http.Requests.Select(r => (Text(r.Json, "repo"), Text(r.Json, "collection"), Text(r.Json, "rkey"))));
     }
+
+    /// この人をミュート: the mute is the viewer's, sent as the account (Swift
+    /// testMuteActorPostsTheActorDID).
+    [Fact]
+    public async Task MuteActorPostsTheActorDid()
+    {
+        var http = Routes(Ok("app.bsky.graph.muteActor", "{}"));
+
+        await Service(http).MuteActorAsync("did:plc:bob");
+
+        var request = http.Single("app.bsky.graph.muteActor");
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal("did:plc:bob", Text(request.Json, "actor"));
+    }
+
+    /// レコードを表示 reads the record as stored in the author's repo.
+    [Fact]
+    public async Task GetRecordReadsThePostFromItsRepo()
+    {
+        var http = Routes(Ok("com.atproto.repo.getRecord", """
+            {"uri":"at://did:plc:bob/app.bsky.feed.post/3k","cid":"bafy","value":{"text":"hi"}}
+            """));
+
+        var record = await Service(http).GetRecordAsync("at://did:plc:bob/app.bsky.feed.post/3k");
+
+        var query = http.Single("com.atproto.repo.getRecord").Query;
+        Assert.Equal(("did:plc:bob", "app.bsky.feed.post", "3k"), (query["repo"], query["collection"], query["rkey"]));
+        Assert.Equal("hi", Text(record.Value, "text"));
+    }
+
+    /// A URI that names no record is refused before anything is sent (Swift
+    /// LiveRecordLoader.malformedURI).
+    [Fact]
+    public async Task GetRecordRefusesAMalformedUri()
+    {
+        var http = Routes();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Service(http).GetRecordAsync("at://did:plc:bob/app.bsky.feed.post"));
+        Assert.Empty(http.Requests);
+    }
 }
