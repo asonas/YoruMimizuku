@@ -665,11 +665,26 @@ public sealed partial class MainWindow : Window
     private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
         // Ctrl+F, the macOS 検索 ⌘F: focus the search box.
-        if (e.Key == VirtualKey.F && IsKeyDown(VirtualKey.Control) && !IsKeyDown(VirtualKey.Shift))
+        if (IsKeyDown(VirtualKey.Control) && !IsKeyDown(VirtualKey.Shift))
         {
-            SearchBox.Focus(FocusState.Keyboard);
-            e.Handled = true;
-            return;
+            switch (e.Key)
+            {
+                case VirtualKey.F:
+                    SearchBox.Focus(FocusState.Keyboard);
+                    e.Handled = true;
+                    return;
+                // Ctrl+R, the macOS 新着を読み込む ⌘R, as the timeline's 更新 button.
+                case VirtualKey.R:
+                    _ = ReloadTimelineAsync();
+                    e.Handled = true;
+                    return;
+                // Ctrl+1…Ctrl+9, the macOS ⌘1…⌘9: the first nine sidebar rows, in the
+                // order Ctrl+Shift+J/K cycles.
+                case >= VirtualKey.Number1 and <= VirtualKey.Number9:
+                    SelectRow(e.Key - VirtualKey.Number1);
+                    e.Handled = true;
+                    return;
+            }
         }
         if (!IsCtrlShiftDown()) return;
         switch (e.Key)
@@ -688,6 +703,28 @@ public sealed partial class MainWindow : Window
                 break;
         }
     }
+
+    /// Select a sidebar row by position. The selected row selected again still shows
+    /// its timeline, as clicking it does, so it leaves settings.
+    private void SelectRow(int index)
+    {
+        if (index >= _workspace.Tabs.Count) return;
+        var tab = _workspace.Tabs[index];
+        if (!ReferenceEquals(tab, _workspace.Selected))
+        {
+            _workspace.Selected = tab; // fires Changed -> BuildTabs + ShowSelectedAsync
+            return;
+        }
+        BuildTabs();
+        _ = ShowSelectedAsync();
+    }
+
+    private Task ReloadTimelineAsync() => ContentHost.Content switch
+    {
+        FeedView feed => feed.Vm.RefreshAsync(),
+        NotificationsView notifications => notifications.Vm.RefreshAsync(),
+        _ => Task.CompletedTask,
+    };
 
     /// Open another independent workspace window over the same session
     /// (Ctrl+Shift+N), the Windows analogue of a macOS WindowGroup window.

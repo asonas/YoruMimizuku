@@ -111,10 +111,11 @@ public sealed class PostItem : ObservableObject
 
     // Label for the repost menu's first item: cancel when already reposted, otherwise repost.
     public string RepostActionText => IsReposted ? "リポストを取り消す" : "リポスト";
+    public string LikeActionText => IsLiked ? "いいねを取り消す" : "いいね";
 
     private static Brush Brush(string key) => (Brush)Application.Current.Resources[key];
 
-    private void NotifyLike() { OnPropertyChanged(nameof(IsLiked)); OnPropertyChanged(nameof(LikeGlyph)); OnPropertyChanged(nameof(LikeBrush)); }
+    private void NotifyLike() { OnPropertyChanged(nameof(IsLiked)); OnPropertyChanged(nameof(LikeGlyph)); OnPropertyChanged(nameof(LikeBrush)); OnPropertyChanged(nameof(LikeActionText)); }
     private void NotifyRepost() { OnPropertyChanged(nameof(IsReposted)); OnPropertyChanged(nameof(RepostGlyph)); OnPropertyChanged(nameof(RepostBrush)); OnPropertyChanged(nameof(RepostActionText)); }
 
     private int _repostCount;

@@ -194,7 +194,7 @@ public sealed partial class ConversationView : UserControl
     {
         switch (e.Key)
         {
-            case VirtualKey.F:
+            case VirtualKey.L:
                 await ToggleFocusedLikeAsync();
                 e.Handled = true;
                 break;

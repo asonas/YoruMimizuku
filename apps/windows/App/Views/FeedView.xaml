@@ -12,7 +12,7 @@
         </Grid.RowDefinitions>
 
         <CommandBar x:Name="Commands" Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent">
-            <AppBarButton Icon="Refresh" Label="更新" Click="OnRefreshClick" />
+            <AppBarButton Icon="Refresh" Label="更新" Click="OnRefreshClick" ToolTipService.ToolTip="新着を読み込む (Ctrl+R)" />
             <AppBarButton Icon="Add" Label="投稿" Click="OnComposeClick" />
         </CommandBar>
 
@@ -37,9 +37,42 @@
                             BorderThickness="{x:Bind RowBorderThickness, Mode=OneWay}" Padding="16,11"
                             Background="Transparent">
                         <!-- Transparent, not null, so a right-click anywhere on the row
-                             reaches this menu (the selectable body keeps its text menu). -->
+                             reaches this menu (the selectable body keeps its text menu).
+                             The macOS 投稿 menu: opening it selects the post, and the
+                             shortcuts shown are FeedView's keys for the selected post. -->
                         <Border.ContextFlyout>
                             <MenuFlyout Opening="OnPostMenuOpening">
+                                <MenuFlyoutItem Text="返信" Tag="{x:Bind}" Click="OnReplyMenuClick"
+                                                KeyboardAcceleratorTextOverride="Ctrl+Enter">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE97A;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="{x:Bind RepostActionText, Mode=OneWay}" Tag="{x:Bind}"
+                                                Click="OnRepostMenuClick" KeyboardAcceleratorTextOverride="Ctrl+Shift+R">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE8EE;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="引用して投稿" Tag="{x:Bind}" Click="OnQuoteMenuClick">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE90A;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutItem Text="{x:Bind LikeActionText, Mode=OneWay}" Tag="{x:Bind}"
+                                                Click="OnLikeClick" KeyboardAcceleratorTextOverride="L">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xEB51;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator />
+                                <MenuFlyoutItem Text="リンクをコピー" Tag="{x:Bind}" Click="OnCopyLinkClick"
+                                                KeyboardAcceleratorTextOverride="Ctrl+Shift+C">
+                                    <MenuFlyoutItem.Icon>
+                                        <FontIcon Glyph="&#xE71B;" />
+                                    </MenuFlyoutItem.Icon>
+                                </MenuFlyoutItem>
+                                <MenuFlyoutSeparator />
                                 <MenuFlyoutSubItem Text="リストに追加" Tag="{x:Bind}">
                                     <MenuFlyoutSubItem.Icon>
                                         <FontIcon Glyph="&#xE8FD;" />

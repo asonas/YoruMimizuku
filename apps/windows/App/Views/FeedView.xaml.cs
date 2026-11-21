@@ -36,6 +36,7 @@ public sealed partial class FeedView : UserControl
         Loaded += OnLoaded;
         Unloaded += (_, _) => _refreshTimer.Stop();
         KeyDown += OnFeedKeyDown;
+        PreviewKeyDown += OnFeedPreviewKeyDown;
     }
 
     /// <summary>Add a timeline-specific action after 更新 and 投稿.</summary>
@@ -581,14 +582,20 @@ public sealed partial class FeedView : UserControl
     private async void OnRetryClick(object sender, RoutedEventArgs e) => await Vm.RetryAsync();
     private void OnComposeClick(object sender, RoutedEventArgs e) => OpenComposer();
 
+    // The action bar's buttons and the post menu's items.
     private async void OnLikeClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: PostItem item }) await item.ToggleLikeAsync();
+        if (sender is FrameworkElement { Tag: PostItem item }) await item.ToggleLikeAsync();
     }
 
     private async void OnCopyLinkClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: PostItem item }) await CopyPermalinkAsync(item);
+        if (sender is FrameworkElement { Tag: PostItem item }) await CopyPermalinkAsync(item);
+    }
+
+    private async void OnReplyMenuClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: PostItem item }) await OpenReplyComposer(item);
     }
 
     private async void OnDeleteClick(object sender, RoutedEventArgs e)
@@ -629,8 +636,10 @@ public sealed partial class FeedView : UserControl
         }
     }
 
-    /// The row's right-click menu: "リストに追加" for the post's author, on the
-    /// timeline's account. A post whose URI names no repo has no author to add.
+    /// The row's right-click menu, the macOS 投稿 menu: it selects the post, as the
+    /// macOS row menu does, so the keys then act on it too. "リストに追加" is for the
+    /// post's author, on the timeline's account; a post whose URI names no repo has
+    /// no author to add.
     private void OnPostMenuOpening(object sender, object e)
     {
         if (sender is not MenuFlyout flyout ||
@@ -638,11 +647,9 @@ public sealed partial class FeedView : UserControl
         {
             return;
         }
-        if (post.AuthorDid is not { } did)
-        {
-            flyout.Hide();
-            return;
-        }
+        PostsList.SelectedItem = post;
+        menu.Visibility = post.AuthorDid is null ? Visibility.Collapsed : Visibility.Visible;
+        if (post.AuthorDid is not { } did) return;
         ListMembershipMenu.Attach(flyout, menu, Vm.Account.ListMembership, did, post.AuthorHandle);
     }
 
@@ -699,8 +706,29 @@ public sealed partial class FeedView : UserControl
 
     // -- Keyboard --
 
+    /// The macOS 投稿 menu's shortcuts, with Ctrl for ⌘, on the post j/k selected.
+    /// They are read before the list sees the key, since a list item takes Enter as a
+    /// click and the selectable body takes Ctrl+C-like chords.
+    private async void OnFeedPreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (!IsKeyDown(VirtualKey.Control) || IsKeyDown(VirtualKey.Menu)) return;
+        var shift = IsKeyDown(VirtualKey.Shift);
+        Func<PostItem, Task>? command = (e.Key, shift) switch
+        {
+            (VirtualKey.Enter, false) => OpenReplyComposer,
+            (VirtualKey.R, true) => post => post.ToggleRepostAsync(),
+            (VirtualKey.C, true) => CopyPermalinkAsync,
+            _ => null,
+        };
+        if (command is null) return;
+        e.Handled = true;
+        if (FocusedPost is { } focused) await command(focused);
+    }
+
     private async void OnFeedKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // The plain keys only: Ctrl+Shift+J/K and Ctrl+Shift+N belong to the window.
+        if (IsKeyDown(VirtualKey.Control) || IsKeyDown(VirtualKey.Menu)) return;
         switch (e.Key)
         {
             case VirtualKey.J:
@@ -715,7 +743,7 @@ public sealed partial class FeedView : UserControl
                 OpenComposer();
                 e.Handled = true;
                 break;
-            case VirtualKey.F:
+            case VirtualKey.L:
                 await ToggleFocusedLikeAsync();
                 e.Handled = true;
                 break;
@@ -763,6 +791,13 @@ public sealed partial class FeedView : UserControl
         if (posted) await Vm.RefreshAsync();
     }
 
+    private async Task OpenReplyComposer(PostItem item)
+    {
+        var dialog = new ComposerDialog(Vm.Account, replyParentUri: item.Id) { XamlRoot = XamlRoot };
+        var posted = await dialog.ShowComposeAsync();
+        if (posted) await Vm.RefreshAsync();
+    }
+
     private async Task OpenQuoteComposer(PostItem item)
     {
         var preview = $"{item.AuthorDisplayName}\n{item.Body}";
@@ -799,6 +834,10 @@ public sealed partial class FeedView : UserControl
             await Launcher.LaunchUriAsync(uri);
         }
     }
+
+    private static bool IsKeyDown(VirtualKey key) =>
+        Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
 
     private static bool TryUri(string? value, out Uri uri)
     {
