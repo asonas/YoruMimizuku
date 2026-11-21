@@ -41,6 +41,14 @@ final class NotificationDisplayMappingTests: XCTestCase {
         XCTAssertNil(display.text)
     }
 
+    // #13: a blank display name shows the handle, as it does for posts.
+    func testFallsBackToHandleWhenTheDisplayNameIsBlank() {
+        for name in ["", "  "] {
+            let display = NotificationDisplay(notification(reason: .follow, text: nil, displayName: name))
+            XCTAssertEqual(display.authorDisplayName, "bob.bsky.social", "display name \(name.debugDescription)")
+        }
+    }
+
     func testParsesIndexedAtTimestamp() {
         let display = NotificationDisplay(notification(reason: .like, text: nil))
         XCTAssertEqual(display.createdAt, ISO8601DateFormatter().date(from: "2026-06-04T12:00:00Z"))

@@ -50,7 +50,7 @@ extension NotificationDisplay {
         self.init(
             id: "\(notification.uri)|\(notification.cid)",
             reason: notification.reason,
-            authorDisplayName: author.displayName ?? author.handle,
+            authorDisplayName: author.nameOrHandle,
             authorHandle: author.handle,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             text: notification.record.text,
