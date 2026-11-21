@@ -99,9 +99,9 @@ internal static class CoreDtos
             s.Text,
             Url(s.Url));
 
-    private static PostImageDto Image(PostImage i) => new(Url(i.ThumbUrl), Url(i.FullsizeUrl), i.Alt);
+    private static PostImageDto Image(PostImage i) => new(Url(i.ThumbUrl), Url(i.FullsizeUrl), i.Alt, i.AspectRatio);
 
-    private static PostVideoDto Video(PostVideo v) => new(Url(v.ThumbUrl), v.Alt);
+    private static PostVideoDto Video(PostVideo v) => new(Url(v.ThumbUrl), v.Alt, Url(v.PlaylistUrl), v.AspectRatio);
 
     private static string? Url(Uri? url) => url?.OriginalString;
 

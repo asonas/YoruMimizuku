@@ -14,7 +14,8 @@ public sealed record NextAccountDto(string? NextDid);
 
 public sealed record RichSegmentDto(string Kind, string Text, string? Url);
 
-public sealed record PostImageDto(string? ThumbUrl, string? FullsizeUrl, string Alt);
+/// <summary><paramref name="AspectRatio"/> is width divided by height, when the embed reports it.</summary>
+public sealed record PostImageDto(string? ThumbUrl, string? FullsizeUrl, string Alt, double? AspectRatio = null);
 
 public sealed record LinkCardDto(
     string Url,
@@ -23,7 +24,7 @@ public sealed record LinkCardDto(
     string? ThumbUrl,
     string? Host);
 
-public sealed record PostVideoDto(string? ThumbUrl, string? Alt);
+public sealed record PostVideoDto(string? ThumbUrl, string? Alt, string? PlaylistUrl = null, double? AspectRatio = null);
 
 public sealed record QuotedPostDto(
     string Id,

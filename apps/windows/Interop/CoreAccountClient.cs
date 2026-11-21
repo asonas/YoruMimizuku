@@ -19,7 +19,11 @@ namespace YoruMimizuku.App.Interop;
 /// <see cref="CoreException.SessionExpired"/> for it. Until OAuth lands nothing
 /// signals it, so the default recognizes nothing.
 /// </param>
-public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? isSessionExpired = null) : IAccountClient
+/// <param name="videos">Uploads a draft's video; without it a draft with a video fails.</param>
+public sealed class CoreAccountClient(
+    XrpcClient xrpc,
+    Func<Exception, bool>? isSessionExpired = null,
+    VideoUploadService? videos = null) : IAccountClient
 {
     /// <summary>What the bridge's thread endpoint builds: depths 0 to 3 below the focus.</summary>
     private const int ThreadReplyDepth = 3;
@@ -27,7 +31,7 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
     private readonly FeedService feeds = new(xrpc);
     private readonly NotificationService notifications = new(xrpc);
     private readonly SearchService search = new(xrpc);
-    private readonly PostService posts = new(xrpc);
+    private readonly PostService posts = new(xrpc, videos: videos);
     private readonly ProfileService profiles = new(xrpc);
 
     public string Did => xrpc.Did;
@@ -119,8 +123,10 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
 
     /// <summary>
     /// The draft the composer builds: <c>text</c>, <c>images</c> of
-    /// <c>{ dataBase64, mimeType, alt }</c>, <c>replyParentURI</c> and <c>quote { uri, cid }</c>.
-    /// As in the bridge, an image whose data is not valid base64 is left out.
+    /// <c>{ dataBase64, mimeType, alt }</c>, an optional <c>video</c> of
+    /// <c>{ dataBase64, mimeType, alt, filename, width, height }</c>, <c>replyParentURI</c>
+    /// and <c>quote { uri, cid }</c>. As in the bridge, an image whose data is not valid
+    /// base64 is left out; a video whose data is not valid base64 is an error.
     /// </summary>
     private static PostDraft ParseDraft(JsonElement draft)
     {
@@ -137,11 +143,21 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
         var quote = Optional(draft, "quote") is { } q
             ? new StrongRef(q.GetProperty("uri").GetString()!, q.GetProperty("cid").GetString()!)
             : null;
+        var video = Optional(draft, "video") is { } v
+            ? new DraftVideo(
+                Base64(v.GetProperty("dataBase64").GetString()!) ?? throw new JsonException("The video data is not base64."),
+                v.GetProperty("mimeType").GetString()!,
+                v.GetProperty("filename").GetString()!,
+                v.GetProperty("alt").GetString()!,
+                Optional(v, "width")?.GetInt32(),
+                Optional(v, "height")?.GetInt32())
+            : null;
         return new PostDraft(
             draft.GetProperty("text").GetString()!,
             images,
             Optional(draft, "replyParentURI")?.GetString(),
-            quote);
+            quote,
+            video);
     }
 
     private static JsonElement? Optional(JsonElement json, string name) =>

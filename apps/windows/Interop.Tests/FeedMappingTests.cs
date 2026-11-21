@@ -72,7 +72,7 @@ public class FeedMappingTests
               "body": "hello timeline", "segments": [ { "kind": "text", "text": "hello timeline" } ],
               "createdAt": "2026-06-04T12:00:00.000Z",
               "images": [
-                { "thumbUrl": "https://cdn.example/thumb1.jpg", "fullsizeUrl": "https://cdn.example/full1.jpg", "alt": "a cat" },
+                { "thumbUrl": "https://cdn.example/thumb1.jpg", "fullsizeUrl": "https://cdn.example/full1.jpg", "alt": "a cat", "aspectRatio": 1.7777777777777777 },
                 { "thumbUrl": "https://cdn.example/thumb2.jpg", "fullsizeUrl": "https://cdn.example/full2.jpg", "alt": "" }
               ],
               "replyCount": 1, "repostCount": 2, "likeCount": 3, "isLiked": false, "isReposted": false
@@ -273,7 +273,7 @@ public class FeedMappingTests
               "authorDisplayName": "x.bsky.social", "authorHandle": "x.bsky.social",
               "body": "video", "segments": [ { "kind": "text", "text": "video" } ],
               "createdAt": "2026-06-04T12:00:00.000Z", "images": [],
-              "video": { "thumbUrl": "https://video.example/watch/thumbnail.jpg" },
+              "video": { "thumbUrl": "https://video.example/watch/thumbnail.jpg", "playlistUrl": "https://video.example/watch/playlist.m3u8" },
               "quote": {
                 "id": "at://did:plc:quoted/app.bsky.feed.post/qqq", "cid": "bafyquoted",
                 "authorDisplayName": "quoted.bsky.social", "authorHandle": "quoted.bsky.social",

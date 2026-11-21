@@ -24,6 +24,9 @@ public sealed class CoreClient(ISecureStorage storage, HttpMessageHandler transp
 {
     private readonly AccountManager accounts = new(storage, transport, config);
     private readonly LinkPreviewLoader previews = new(new HttpClient(transport, disposeHandler: false));
+    // The video service takes a Bearer service-auth token, not the account's DPoP proof,
+    // so it gets the bare transport. A large file can take longer than the default 100 s.
+    private readonly VideoUploadService videos = new(new HttpClient(transport, disposeHandler: false) { Timeout = TimeSpan.FromMinutes(10) });
     private readonly ConcurrentDictionary<string, PendingLogin> pendingLogins = new();
     private readonly ConcurrentDictionary<string, IAccountClient> accountClients = new();
 
@@ -74,5 +77,6 @@ public sealed class CoreClient(ISecureStorage storage, HttpMessageHandler transp
     public IAccountClient ForAccount(string did) =>
         accountClients.GetOrAdd(did, d => new CoreAccountClient(
             new XrpcClient(d, accounts.GetPds(d), new HttpClient(new AccountHandler(accounts, d) { InnerHandler = transport })),
-            error => error is OAuthException { IsSessionExpired: true }));
+            error => error is OAuthException { IsSessionExpired: true },
+            videos));
 }

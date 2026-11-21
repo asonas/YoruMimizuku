@@ -54,6 +54,45 @@ public class WriteAndFailureTests
     }
 
     [Fact]
+    public async Task PostCreateUploadsTheComposersVideoInsteadOfItsImages()
+    {
+        var http = Routes(
+            ("com.atproto.server.getServiceAuth", """{"token":"svc-token"}"""),
+            ("app.bsky.video.uploadVideo", """{"jobId":"job1","state":"JOB_STATE_CREATED"}"""),
+            ("app.bsky.video.getJobStatus", """{"jobStatus":{"jobId":"job1","state":"JOB_STATE_COMPLETED","blob":{"$type":"blob"}}}"""),
+            ("com.atproto.repo.createRecord", Created));
+        var videos = new Core.VideoUploadService(new HttpClient(http), delay: (_, _) => Task.CompletedTask);
+        // ComposerViewModel.SubmitAsync's draft with a video attached.
+        var draft = new
+        {
+            text = "clip",
+            images = new List<object>(),
+            video = new
+            {
+                dataBase64 = Convert.ToBase64String(new byte[] { 4, 5 }),
+                mimeType = "video/quicktime",
+                alt = "a dog",
+                filename = "clip.mov",
+                width = (int?)1080,
+                height = (int?)1920,
+            },
+            replyParentURI = (string?)null,
+            quote = (object?)null,
+        };
+
+        await new CoreAccountClient(http.Xrpc(), videos: videos).PostCreateAsync(draft);
+
+        var upload = http.Single("app.bsky.video.uploadVideo");
+        Assert.Equal("clip.mov", upload.Query["name"]);
+        Assert.Equal("video/quicktime", upload.ContentType);
+        Assert.Equal([4, 5], upload.Body);
+        var embed = http.Single("com.atproto.repo.createRecord").Json.GetProperty("record").GetProperty("embed");
+        Assert.Equal("app.bsky.embed.video", Text(embed, "$type"));
+        Assert.Equal("a dog", Text(embed, "alt"));
+        Assert.Equal(1080, embed.GetProperty("aspectRatio").GetProperty("width").GetInt32());
+    }
+
+    [Fact]
     public async Task LikesRepostsAndDeletesActOnTheMatchingCollection()
     {
         var http = Routes(("com.atproto.repo.createRecord", Created), ("com.atproto.repo.deleteRecord", "{}"));

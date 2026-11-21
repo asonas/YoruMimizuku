@@ -196,6 +196,64 @@ public class PostServiceTests
     }
 
     [Fact]
+    public async Task CreatePostWithAVideoUploadsItThroughTheVideoServiceAndEmbedsTheProcessedBlob()
+    {
+        const string blob = """{"$type":"blob","ref":{"$link":"bafyvideo"},"mimeType":"video/mp4","size":3}""";
+        var http = Routes(
+            Ok("com.atproto.server.getServiceAuth", """{"token":"svc-token"}"""),
+            Ok("app.bsky.video.uploadVideo", """{"jobId":"job1","state":"JOB_STATE_CREATED"}"""),
+            Ok("app.bsky.video.getJobStatus", $$$"""{"jobStatus":{"jobId":"job1","state":"JOB_STATE_COMPLETED","blob":{{{blob}}}}}"""),
+            Ok("com.atproto.repo.createRecord", Created));
+        var videos = new VideoUploadService(new HttpClient(http), delay: (_, _) => Task.CompletedTask);
+        var service = new PostService(
+            http.Xrpc(), new FixedClock(new DateTimeOffset(2026, 6, 5, 0, 0, 0, TimeSpan.Zero)), videos);
+
+        await service.CreatePostAsync(new PostDraft(
+            "clip",
+            [new DraftImage([0x9], "image/png", "ignored")],
+            Video: new DraftVideo([0x1, 0x2, 0x3], "video/mp4", "clip.mp4", "a dog", 1920, 1080)));
+
+        var auth = http.Single("com.atproto.server.getServiceAuth");
+        Assert.Equal("pds.example", auth.Uri.Host);
+        Assert.Equal("did:web:pds.example", auth.Query["aud"]);
+        Assert.Equal("com.atproto.repo.uploadBlob", auth.Query["lxm"]);
+        Assert.Equal(new DateTimeOffset(2026, 6, 5, 0, 30, 0, TimeSpan.Zero).ToUnixTimeSeconds().ToString(), auth.Query["exp"]);
+        var upload = http.Single("app.bsky.video.uploadVideo");
+        Assert.Equal("video.bsky.app", upload.Uri.Host);
+        Assert.Equal("Bearer svc-token", upload.Authorization);
+        Assert.Equal([0x1, 0x2, 0x3], upload.Body);
+        Assert.DoesNotContain(http.Requests, r => r.Path == "/xrpc/com.atproto.repo.uploadBlob");
+        var embed = CreatedRecord(http).GetProperty("embed");
+        Assert.Equal("app.bsky.embed.video", Text(embed, "$type"));
+        Assert.Equal("a dog", Text(embed, "alt"));
+        Assert.Equal(1920, embed.GetProperty("aspectRatio").GetProperty("width").GetInt32());
+        Assert.Equal(1080, embed.GetProperty("aspectRatio").GetProperty("height").GetInt32());
+        Assert.Equal(JsonSerializer.Serialize(JsonDocument.Parse(blob)), JsonSerializer.Serialize(embed.GetProperty("video")));
+    }
+
+    [Fact]
+    public async Task CreatePostWithAQuoteAndAVideoNestsTheVideoAsMedia()
+    {
+        var http = Routes(
+            Ok("com.atproto.server.getServiceAuth", """{"token":"svc-token"}"""),
+            Ok("app.bsky.video.uploadVideo", """{"jobId":"job1","state":"JOB_STATE_CREATED"}"""),
+            Ok("app.bsky.video.getJobStatus", """{"jobStatus":{"jobId":"job1","state":"JOB_STATE_COMPLETED","blob":{"$type":"blob"}}}"""),
+            Ok("com.atproto.repo.createRecord", Created));
+        var videos = new VideoUploadService(new HttpClient(http), delay: (_, _) => Task.CompletedTask);
+
+        await new PostService(http.Xrpc(), null, videos).CreatePostAsync(new PostDraft(
+            "見て", Quote: Alice, Video: new DraftVideo([0x1], "video/mp4", "a.mp4", "", null, null)));
+
+        var embed = CreatedRecord(http).GetProperty("embed");
+        Assert.Equal("app.bsky.embed.recordWithMedia", Text(embed, "$type"));
+        Assert.Equal(Alice.Uri, Text(embed.GetProperty("record").GetProperty("record"), "uri"));
+        var media = embed.GetProperty("media");
+        Assert.Equal("app.bsky.embed.video", Text(media, "$type"));
+        Assert.False(media.TryGetProperty("alt", out _));
+        Assert.False(media.TryGetProperty("aspectRatio", out _));
+    }
+
+    [Fact]
     public async Task AReplyKeepsTheConversationRootOfAParentThatIsItselfAReply()
     {
         var http = Routes(

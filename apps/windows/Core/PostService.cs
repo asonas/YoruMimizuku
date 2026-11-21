@@ -11,17 +11,26 @@ public sealed record StrongRef(string Uri, string Cid);
 public sealed record DraftImage(byte[] Data, string MimeType, string Alt);
 
 /// <summary>
+/// A video to attach, as the file's bytes, sent as-is (no transcoding). The width and
+/// height give the embed's aspect ratio; either may be unknown.
+/// </summary>
+public sealed record DraftVideo(byte[] Data, string MimeType, string Filename, string Alt, int? Width, int? Height);
+
+/// <summary>
 /// A post to publish. <paramref name="ReplyParentUri"/> is the post it answers;
-/// <paramref name="Quote"/> is the post it quotes.
+/// <paramref name="Quote"/> is the post it quotes. A <paramref name="Video"/> takes the
+/// media slot, so any <paramref name="Images"/> are then left out.
 /// </summary>
 public sealed record PostDraft(
     string Text,
     IReadOnlyList<DraftImage>? Images = null,
     string? ReplyParentUri = null,
-    StrongRef? Quote = null);
+    StrongRef? Quote = null,
+    DraftVideo? Video = null);
 
 /// <summary>Reading and writing posts as the account. Records go to the account's own repo.</summary>
-public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null) : IPostsService
+/// <param name="videos">Uploads a draft's video; a draft with a video fails without it.</param>
+public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null, VideoUploadService? videos = null) : IPostsService
 {
     private const string Post = "app.bsky.feed.post";
     private const string Like = "app.bsky.feed.like";
@@ -39,8 +48,10 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null) : I
 
     /// <summary>
     /// Publishes <paramref name="draft"/>. Trailing whitespace is dropped from the text.
-    /// Images are uploaded first, in order. Links, hashtags and mentions become facets; a
-    /// mention whose handle does not resolve to a DID stays plain text. A reply joins the
+    /// Images are uploaded first, in order; a video instead goes to the video service
+    /// under a service-auth token from the PDS, and is embedded once processed. Links,
+    /// hashtags and mentions become facets; a mention whose handle does not resolve to a
+    /// DID stays plain text. A reply joins the
     /// parent's conversation: its root is the parent's root, or the parent when the parent
     /// is not itself a reply.
     /// </summary>
@@ -48,16 +59,9 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null) : I
     {
         var text = PostText.TrimTrailingWhitespace(draft.Text);
 
-        var images = new JsonArray();
-        foreach (var image in draft.Images ?? [])
-        {
-            var blob = await xrpc.ProcedureAsync(
-                "com.atproto.repo.uploadBlob",
-                XrpcClient.Bytes(image.Data, image.MimeType),
-                json => JsonNode.Parse(json.Required("blob").GetRawText())!,
-                cancellationToken);
-            images.Add(new JsonObject { ["image"] = blob, ["alt"] = image.Alt });
-        }
+        var media = draft.Video is { } video
+            ? await VideoEmbedAsync(video, cancellationToken)
+            : await ImagesEmbedAsync(draft.Images ?? [], cancellationToken);
 
         var facets = new JsonArray();
         foreach (var facet in FacetDetector.Detect(text))
@@ -72,7 +76,7 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null) : I
 
         var record = new JsonObject { ["$type"] = Post, ["text"] = text, ["createdAt"] = Now() };
         if (facets.Count > 0) record["facets"] = facets;
-        if (Embed(images, draft.Quote) is { } embed) record["embed"] = embed;
+        if (Embed(media, draft.Quote) is { } embed) record["embed"] = embed;
         if (draft.ReplyParentUri is { } parentUri) record["reply"] = await ReplyAsync(parentUri, cancellationToken);
         return await CreateRecordAsync(Post, record, cancellationToken);
     }
@@ -141,10 +145,53 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null) : I
         return new JsonObject { ["root"] = Ref(root ?? parentRef), ["parent"] = Ref(parentRef) };
     }
 
-    /// <summary>The embed for images, a quote, or both; null for neither.</summary>
-    private static JsonObject? Embed(JsonArray images, StrongRef? quote)
+    /// <summary>Uploads each image to the PDS; the images embed, or null for none.</summary>
+    private async Task<JsonObject?> ImagesEmbedAsync(IReadOnlyList<DraftImage> draftImages, CancellationToken cancellationToken)
     {
-        var media = images.Count > 0 ? new JsonObject { ["$type"] = "app.bsky.embed.images", ["images"] = images } : null;
+        var images = new JsonArray();
+        foreach (var image in draftImages)
+        {
+            var blob = await xrpc.ProcedureAsync(
+                "com.atproto.repo.uploadBlob",
+                XrpcClient.Bytes(image.Data, image.MimeType),
+                json => JsonNode.Parse(json.Required("blob").GetRawText())!,
+                cancellationToken);
+            images.Add(new JsonObject { ["image"] = blob, ["alt"] = image.Alt });
+        }
+        return images.Count > 0 ? new JsonObject { ["$type"] = "app.bsky.embed.images", ["images"] = images } : null;
+    }
+
+    /// <summary>
+    /// Asks the PDS for a 30-minute token that lets the video service upload the blob
+    /// on the account's behalf, uploads the video, waits for processing, and returns
+    /// the video embed. An empty alt text is left out.
+    /// </summary>
+    private async Task<JsonObject> VideoEmbedAsync(DraftVideo video, CancellationToken cancellationToken)
+    {
+        var uploader = videos ?? throw new InvalidOperationException("This post service cannot upload videos.");
+        var expires = (clock ?? TimeProvider.System).GetUtcNow().AddMinutes(30).ToUnixTimeSeconds();
+        var token = await xrpc.QueryAsync(
+            "com.atproto.server.getServiceAuth",
+            [
+                ("aud", VideoUploadService.Audience(xrpc.Pds)),
+                ("lxm", "com.atproto.repo.uploadBlob"),
+                ("exp", expires.ToString(CultureInfo.InvariantCulture)),
+            ],
+            json => json.RequiredString("token"),
+            cancellationToken);
+        var job = await uploader.UploadVideoAsync(token, xrpc.Did, video.Filename, video.Data, video.MimeType, cancellationToken);
+        var blob = await uploader.PollUntilCompleteAsync(job.JobId, token, cancellationToken: cancellationToken);
+
+        var embed = new JsonObject { ["$type"] = "app.bsky.embed.video", ["video"] = blob };
+        if (video is { Width: { } width, Height: { } height })
+            embed["aspectRatio"] = new JsonObject { ["width"] = width, ["height"] = height };
+        if (video.Alt.Length > 0) embed["alt"] = video.Alt;
+        return embed;
+    }
+
+    /// <summary>The embed for media (images or a video), a quote, or both; null for neither.</summary>
+    private static JsonObject? Embed(JsonObject? media, StrongRef? quote)
+    {
         if (quote is null) return media;
         var record = new JsonObject { ["$type"] = "app.bsky.embed.record", ["record"] = Ref(quote) };
         return media is null

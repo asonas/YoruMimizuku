@@ -25,6 +25,9 @@ public sealed class XrpcClient(string did, Uri pds, HttpClient http)
     /// <summary>The account the calls act as: the repo that writes go to.</summary>
     public string Did { get; } = did;
 
+    /// <summary>The account's PDS, which every call goes to.</summary>
+    public Uri Pds { get; } = pds;
+
     /// <summary>
     /// A GET of <paramref name="nsid"/>. Parameters with a null value are left out; a
     /// name may repeat for an array parameter. Every value is percent-encoded, '+'
@@ -66,7 +69,7 @@ public sealed class XrpcClient(string did, Uri pds, HttpClient http)
         new ByteArrayContent(data) { Headers = { ContentType = new MediaTypeHeaderValue(mimeType) } };
 
     private Uri Endpoint(string nsid, string query) =>
-        new(pds.AbsoluteUri.TrimEnd('/') + "/xrpc/" + nsid + (query.Length > 0 ? "?" + query : ""));
+        new(Pds.AbsoluteUri.TrimEnd('/') + "/xrpc/" + nsid + (query.Length > 0 ? "?" + query : ""));
 
     private async Task<byte[]> SendAsync(string nsid, HttpRequestMessage request, CancellationToken cancellationToken)
     {
@@ -83,7 +86,7 @@ public sealed class XrpcClient(string did, Uri pds, HttpClient http)
         return parse(document.RootElement);
     }
 
-    private static HttpRequestException Failure(string nsid, HttpStatusCode status, byte[] body)
+    internal static HttpRequestException Failure(string nsid, HttpStatusCode status, byte[] body)
     {
         var message = $"{nsid} failed with HTTP {(int)status}";
         try

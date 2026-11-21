@@ -7,7 +7,7 @@ using System.Web;
 namespace YoruMimizuku.Core.Tests;
 
 /// <summary>A request as it reached the HTTP boundary, with its body read at send time.</summary>
-internal sealed record SentRequest(HttpMethod Method, Uri Uri, string? ContentType, byte[]? Body)
+internal sealed record SentRequest(HttpMethod Method, Uri Uri, string? ContentType, byte[]? Body, string? Authorization = null)
 {
     public string Path => Uri.AbsolutePath;
 
@@ -46,7 +46,9 @@ internal sealed class StubHttp(Func<SentRequest, HttpResponseMessage> respond) :
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? null : await request.Content.ReadAsByteArrayAsync(cancellationToken);
-        var sent = new SentRequest(request.Method, request.RequestUri!, request.Content?.Headers.ContentType?.MediaType, body);
+        var sent = new SentRequest(
+            request.Method, request.RequestUri!, request.Content?.Headers.ContentType?.MediaType, body,
+            request.Headers.Authorization?.ToString());
         lock (requests) requests.Add(sent);
         return respond(sent);
     }
