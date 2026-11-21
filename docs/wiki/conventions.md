@@ -49,7 +49,7 @@ features:
     windows: none
     ios: planned
     android: planned
-    note: "Windows feed polls every 30s; no Jetstream subscription over the bridge yet ([[windows]])."
+    note: "Windows feed polls every 30s; no Jetstream subscription yet ([[windows]])."
 ```
 
 - **Platforms** (all four required per feature): `macos`, `windows`, `ios`, `android`.
@@ -63,6 +63,14 @@ features:
 - **`note` is mandatory** whenever any platform is `differs` / `limited` / `none` / `unknown`. This is where the *why* lives — keep it to one line and link the relevant page (e.g. `[[windows]]`); the full reasoning stays in the page prose. `full` / `planned`-only features need no note.
 - The matrix groups rows under one section per behavior page (the heading links back to the source page), and collects every note into a closing **Notes** section.
 
+## Platform differences
+
+macOS (Swift core, `core/`) and Windows (C# core, `apps/windows/Core`) share no code. The wiki is where the two are held to one behavior, so it records each difference between them and says whether it is **deliberate**. Code structure is not recorded here; read it from the code.
+
+- A **deliberate** difference is a choice: an OS convention, a platform API, or a decided trade-off. Mark the platform `differs` (or `limited` / `none`) and make the `note` say why, citing what decided it: a spec, an issue, or the code that implements the convention.
+- A difference with no such reason is a **bug** in one core. Open an issue for it, and write the note as `bug: <issue link>` so the matrix shows it as a defect to fix, not a design.
+- When a fix lands in one core, check the other core: if it now behaves the same, set the platform back to `full` and drop the note.
+
 ## Workflow
 
 ### Ingest (agent task — not automatable)
@@ -71,8 +79,9 @@ When a raw source is added or changed, or behavior changes land:
 1. Read the changed source(s) in `docs/superpowers/`.
 2. Update or create the affected wiki page(s): summarize, keep prose accurate, add inline citations, set `sources` and `updated`. On a `behavior` page, also update its `features:` platform status (and `note`) whenever the change affects what works on which platform — that is what keeps the support matrix honest.
 3. Update cross-references (`[[links]]`) on related pages.
-4. Add an entry to the **top** of `log.md`: a `## YYYY-MM-DD <op>` heading followed by a short bullet body (`sources` / `updated` / `created` / `note`).
-5. Run lint + rebuild (below) and fix anything it reports.
+4. Check platform differences (see "Platform differences"): every `differs` / `limited` / `none` you touched, and every macOS/Windows contrast in the prose you changed, is either deliberate with a cited reason or a `bug:` note with an issue link.
+5. Add an entry to the **top** of `log.md`: a `## YYYY-MM-DD <op>` heading followed by a short bullet body (`sources` / `updated` / `created` / `note`).
+6. Run lint + rebuild (below) and fix anything it reports.
 
 A single source change typically touches 1–3 wiki pages plus `support-matrix.md` and `index.md`, and `log.md`.
 
