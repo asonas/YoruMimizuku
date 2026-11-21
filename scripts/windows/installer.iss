@@ -27,6 +27,23 @@ ArchitecturesInstallIn64BitMode=x64
 CloseApplications=yes
 RestartApplications=no
 
+; Builds up to 0.8.x shipped the Swift core; an update over them must not leave its DLLs behind.
+[InstallDelete]
+Type: files; Name: "{app}\app\YoruMimizukuBridge.dll"
+Type: files; Name: "{app}\app\swift*.dll"
+Type: files; Name: "{app}\app\_FoundationICU.dll"
+Type: files; Name: "{app}\app\Foundation.dll"
+Type: files; Name: "{app}\app\FoundationEssentials.dll"
+Type: files; Name: "{app}\app\FoundationInternationalization.dll"
+Type: files; Name: "{app}\app\FoundationNetworking.dll"
+Type: files; Name: "{app}\app\FoundationXML.dll"
+Type: files; Name: "{app}\app\BlocksRuntime.dll"
+Type: files; Name: "{app}\app\dispatch.dll"
+Type: files; Name: "{app}\app\concrt140.dll"
+Type: files; Name: "{app}\app\msvcp140*.dll"
+Type: files; Name: "{app}\app\vccorlib140.dll"
+Type: files; Name: "{app}\app\vcruntime140*.dll"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
