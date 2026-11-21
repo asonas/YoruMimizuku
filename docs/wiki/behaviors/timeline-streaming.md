@@ -17,6 +17,8 @@ sources:
   - core/Sources/YoruMimizukuKit/LinkPreviewLoader.swift
   - core/Sources/YoruMimizukuKit/FeedThreading.swift
   - core/Sources/YoruMimizukuKit/ToastCenter.swift
+  - apps/windows/App/Services/ToastCenter.cs
+  - apps/windows/App/Views/ToastView.xaml.cs
   - core/Sources/YoruMimizukuKit/RichText.swift
   - core/Sources/YoruMimizukuKit/PostDisplay.swift
   - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
@@ -116,16 +118,16 @@ features:
     note: "bug: https://github.com/asonas/YoruMimizuku/issues/34. macOS's relative-time label in the author line is tappable and opens that post's conversation in the window's detail pane, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]])."
   - name: Copy-link toast confirmation
     macos: full
-    windows: none
+    windows: full
     ios: planned
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/35. The shared YoruMimizukuKit ToastCenter backs a bottom-overlay pill reading 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink; only macOS renders it today. ToastCenter is core and reusable, but wiring it into iPadOS and Windows is a tracked follow-up ([[ipados]])."
+    note: "A bottom-overlay pill reads 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink, on macOS (YoruMimizukuKit ToastCenter) and Windows (the app's own ToastCenter, shown only in the window that copied). Wiring it into iPadOS is a tracked follow-up ([[ipados]], [[windows]])."
   - name: In-app author tab for body @mentions
     macos: full
-    windows: none
+    windows: limited
     ios: planned
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/36. macOS routes @mention taps in a post body to the in-app author page (opened in the window's detail pane) via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/36 (conversation view only). macOS routes @mention taps in a post body to the in-app author page via RichText.mentionDID(from:); Windows feed and author rows do the same through the C# RichText.MentionDid, but its conversation view still renders post bodies as plain text with no links, an open follow-up ([[windows]]). iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser ([[ipados]])."
 ---
 
 # Timeline Fetching and Streaming
@@ -172,7 +174,7 @@ Second, `FeedView.copyPermalink` and `ConversationView.copyPermalink` now call t
 
 Third, `RichText.mentionDID(from:)` — the inverse of the mention-URL builder used when rendering facets — extracts the actor identifier (DID or handle) from a bare `https://bsky.app/profile/<id>` URL, returning nil for post permalinks, hashtag URLs, and non-`bsky.app` hosts. `MainWindowView`'s `openURL` action checks it right after the existing hashtag branch: a match calls `workspace.openAuthor(did:handle:displayName:avatarURL:)` with an empty handle/display name (filled in once the author profile resolves) instead of falling through to `.systemAction` and the browser (`core/Sources/YoruMimizukuKit/RichText.swift`, `apps/macos/Views/MainWindowView.swift`).
 
-All three affordances are macOS-only for now. [[ipados]] keeps its existing whole-row-tap-opens-thread behavior and its own `openURL` handler (which still intercepts only hashtags, not mentions) unchanged; parity — including bringing the already-shared `ToastCenter` to the iPad UI — is tracked as a dedicated follow-up plan rather than part of this change. Windows is not addressed by this change either.
+All three affordances are macOS-only for now. [[ipados]] keeps its existing whole-row-tap-opens-thread behavior and its own `openURL` handler (which still intercepts only hashtags, not mentions) unchanged; parity — including bringing the already-shared `ToastCenter` to the iPad UI — is tracked as a dedicated follow-up plan rather than part of this change. On [[windows]] the toast and the mention link came later (2026-11-21): `FeedView` and `ConversationView` call the app's `Services/ToastCenter` after the clipboard write, and `ToastView`, mounted over the whole shell in `MainWindow.xaml`, shows the pill for 1.8 s (a newer copy restarts the timer; a tap dismisses it). Because the Windows shell is multi-window and the center is process-wide, each message carries the `XamlRoot` it was raised in and only that window shows it. A feed row's `@mention` segment becomes a `Hyperlink` that opens the account in an author tab (`WorkspaceViewModel.OpenAuthor`) when `Core.RichText.MentionDid` recognizes its `bsky.app/profile/<did>` URL; the conversation view still shows bodies as plain text (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Services/ToastCenter.cs`, `apps/windows/App/Views/ToastView.xaml.cs`).
 
 ## Deleting your own posts
 

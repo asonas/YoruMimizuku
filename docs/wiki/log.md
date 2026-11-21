@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows parity follow-ups on the C# core)
+
+- sources: apps/windows/Core/VideoUploadService.cs, apps/windows/Core/PostService.cs, apps/windows/Core/TimelineLayout.cs, apps/windows/App/Services/ToastCenter.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ComposerDialog.xaml.cs
+- updated: [[compose-post]], [[timeline-streaming]], [[timeline-media-layout]], [[windows]]
+- note: re-implemented the set-aside bridge commit 98897fe on the C# core. Windows gains video posts (combined status text: differs), draft discard confirmation (Esc asks instead of being blocked: differs), the copy-link toast, feed @mention links (conversation bodies still plain text: limited), the 5:4 tall-image crop and the 680-wide media reflow. Drops the bug notes for #29, #30, #32, #33 and #35; #36 stays for the conversation view.
+
 ## 2026-11-21 audit (Windows platform differences)
 
 - updated: [[app-shell]], [[compose-post]], [[oauth-flow]], [[timeline-media-layout]], [[timeline-streaming]]

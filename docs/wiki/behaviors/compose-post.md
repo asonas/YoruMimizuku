@@ -1,7 +1,7 @@
 ---
 title: Composing Posts
 type: behavior
-updated: 2026-07-26
+updated: 2026-11-21
 sources:
   - docs/adr/0005-compose-post.md
   - docs/adr/0008-ipados.md
@@ -19,6 +19,9 @@ sources:
   - apps/windows/App/ViewModels/ComposerViewModel.cs
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
+  - apps/windows/App/Services/VideoAttachment.cs
+  - apps/windows/Core/VideoUploadService.cs
+  - apps/windows/Core/PostService.cs
 features:
   - name: Post / reply / quote (facets, mention resolution)
     macos: full
@@ -33,16 +36,16 @@ features:
     note: "Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]])."
   - name: Video attachment (one, alt text, exclusive with images)
     macos: full
-    windows: planned
+    windows: differs
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/29. macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]])."
+    note: "macOS (fileImporter), iPadOS (PhotosPicker) and Windows (FileOpenPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows shows one combined upload/processing status instead of per-phase text, because the C# PostService runs the whole upload as one awaited call with no progress callback ([[windows]])."
   - name: Draft discard confirmation
     macos: full
-    windows: planned
+    windows: differs
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/30. A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail."
+    note: "A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). On Windows Esc asks the same question as キャンセル rather than being blocked, because a WinUI ContentDialog closes through one Closing path for both and only one dialog can be open at a time (ComposerDialog.xaml.cs). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail."
 ---
 
 # Composing Posts
@@ -123,8 +126,21 @@ On [[macos]] the composer adds a video button (`fileImporter` for `.movie` /
 dimensions (for `aspectRatio`) and a poster frame for the thumbnail, and show the
 upload/processing phase (`ComposerViewModel.SubmitPhase`) while the post is in
 flight (`apps/macos/Media/VideoAttachment.swift`, `apps/ipados/Media/VideoAttachment.swift`,
-`core/Sources/BlueskyCore/XRPC/VideoUploadService.swift`). [[windows]] video attach
-is specced for a follow-up (`0014-compose-video-upload.md` §"Windows").
+`core/Sources/BlueskyCore/XRPC/VideoUploadService.swift`).
+
+On [[windows]] the C# core runs the same four steps: `PostService` asks the PDS for
+the service-auth token (`aud` = `did:web:<PDS host>`, `lxm` =
+`com.atproto.repo.uploadBlob`, 30-minute `exp`) through the account's DPoP client,
+and `VideoUploadService` talks to the video service over the bare transport with
+the Bearer token, polling every 2 s for up to 90 attempts
+(`apps/windows/Core/PostService.cs`, `apps/windows/Core/VideoUploadService.cs`,
+`VideoUploadServiceTests`, `PostServiceTests`). `ComposerDialog` adds a 動画を追加
+button (`FileOpenPicker` for `.mp4` / `.m4v` / `.mov`); `VideoAttachment` reads the
+display size from the file's video properties (swapping width and height for a
+clip recorded sideways) and the poster comes from the shell thumbnail. No
+transcoding, as on macOS. While the post is on its way the dialog shows
+「動画をアップロード・処理中…」 for the whole upload rather than one line per
+phase, since the core call reports no progress.
 
 ## UI entry points
 
@@ -156,5 +172,7 @@ Post button (`apps/macos/Views/ComposerView.swift`, `apps/macos/Views/ComposerTe
 ## Draft discard protection
 
 A draft has unsaved content when it holds non-blank text, images, or a video; reply or quote targets alone do not count as unsaved content since reopening the composer recreates them. `ComposerViewModel.hasUnsavedContent` exposes this distinction. The Cancel button on [[macos]] or iPad checks this before closing: with unsaved content, it shows a confirmation dialog asking "下書きを破棄しますか？" with "破棄する" (discard) and "編集を続ける" (keep editing) buttons; with nothing unsaved, it closes immediately. Interactive dismissal (Esc on [[macos]], sheet swipe-down on [[ipados]]) is disabled outright whenever there's unsaved content or a submission in flight — that path is simply blocked with no dialog, not routed through the confirmation. While a post submission is in flight, the Cancel button is also disabled, forcing the user to wait for the post to complete or fail. In-flight post cancellation is not implemented; this is a known limitation for future enhancement.
+
+On [[windows]] `ComposerViewModel.HasUnsavedContent` draws the same line. A WinUI `ContentDialog` closes through one `Closing` path for キャンセル and Esc, and only one dialog can be open at a time, so `ComposerDialog.ShowComposeAsync` lets the composer close, asks 「下書きを破棄しますか？」 with 破棄する / 編集を続ける, and shows the same draft again when the user keeps editing. Esc therefore asks instead of being blocked. While submitting, `Closing` is cancelled and both buttons are disabled (`apps/windows/App/Views/ComposerDialog.xaml.cs`).
 
 Interactive verification of this on both platforms (dialogs, disabled controls, swipe-dismiss blocking) is still pending — see [[manual-verification]] "P0-4".

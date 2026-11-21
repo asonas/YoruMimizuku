@@ -18,6 +18,10 @@ sources:
   - apps/windows/App/Views/AuthorView.xaml.cs
   - apps/windows/App/Views/FilterEditorDialog.xaml.cs
   - apps/windows/App/Views/FeedView.xaml.cs
+  - apps/windows/App/Services/ToastCenter.cs
+  - apps/windows/App/Services/VideoAttachment.cs
+  - apps/windows/Core/VideoUploadService.cs
+  - apps/windows/Core/TimelineLayout.cs
   - apps/windows/App/Views/ConversationView.xaml.cs
   - apps/windows/App/MainWindow.xaml.cs
   - scripts/windows/build-app.ps1
@@ -149,6 +153,20 @@ advances, where macOS keeps it and re-authenticates ([[oauth-flow]]).
   build an Inno Setup installer EXE and, when given the WinSparkle private key,
   generate `appcast-windows*.xml` for GitHub Pages / GitHub Releases hosting
   ([[auto-updates]]).
+- **Timeline media layout**: a single image is capped at 5:4 with a top-anchored
+  crop and a 全体表示 badge, and a row 680 wide or more moves its images, video
+  and link card into a 300-wide rail on the right, using the C# port of
+  `TimelineLayout` ([[timeline-media-layout]]).
+- **Copy-link toast and mention links**: copying a permalink shows a
+  「リンクをコピーしました」 pill in that window only (`Services/ToastCenter.cs`
+  tags each message with its `XamlRoot`, since the shell is multi-window), and a
+  feed body's `@mention` opens the account in an author tab; the conversation view
+  still renders bodies as plain text ([[timeline-streaming]]).
+- **Video posts and draft protection**: the composer attaches one video
+  (`.mp4` / `.m4v` / `.mov`, exclusive with images, with alt text), which the C#
+  `PostService` uploads through the Bluesky video service with a PDS service-auth
+  token; closing a draft with unsaved text or media asks first, and the dialog
+  cannot close while a post is submitting ([[compose-post]]).
 - The feed's repost button opens a `MenuFlyout` with **リポスト** (toggle) and
   **引用** (quote): choosing 引用 opens `ComposerDialog` with the post's
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS

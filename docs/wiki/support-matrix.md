@@ -50,8 +50,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Post / reply / quote (facets, mention resolution) | ○ | ○ | ○ | − |
 | Image attachment (up to 4, alt text) | ○ | ○ | ○ | − |
-| Video attachment (one, alt text, exclusive with images) | ○ | − | ○ | − |
-| Draft discard confirmation | ○ | − | ○ | − |
+| Video attachment (one, alt text, exclusive with images) | ○ | △ | ○ | − |
+| Draft discard confirmation | ○ | △ | ○ | − |
 
 ## [[filters]] — Saved-Search Filters
 
@@ -85,8 +85,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Tall-image crop (5:4 cap with top-anchor and "全体表示" hint) | ○ | × | ○ | − |
-| Wide-column reflow (body left / media right at ≥ 680 pt) | ○ | × | ○ | − |
+| Tall-image crop (5:4 cap with top-anchor and "全体表示" hint) | ○ | ○ | ○ | − |
+| Wide-column reflow (body left / media right at ≥ 680 pt) | ○ | ○ | ○ | − |
 
 ## [[timeline-streaming]] — Timeline Fetching and Streaming
 
@@ -105,8 +105,8 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Conversation child reply tree | ○ | ○ | ○ | − |
 | Thread grouping in the feed (web-style) | ○ | ○ | ○ | − |
 | Timestamp tap opens the conversation | ○ | × | − | − |
-| Copy-link toast confirmation | ○ | × | − | − |
-| In-app author tab for body @mentions | ○ | × | − | − |
+| Copy-link toast confirmation | ○ | ○ | − | − |
+| In-app author tab for body @mentions | ○ | △ | − | − |
 
 ## Notes
 
@@ -122,16 +122,16 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Display density A / B** ([[app-shell]]): The shared density model exists, but the current iPadOS UI does not expose or apply the A/B display-density setting yet ([[ipados]]).
 - **Sparkle / WinSparkle update checks and install** ([[auto-updates]]): Windows has WinSparkle wiring, update settings, and installer/appcast generation hooks, but it stays disabled until a Windows EdDSA public key and installer appcast are published ([[windows]]).
 - **Image attachment (up to 4, alt text)** ([[compose-post]]): Windows now exposes a per-image alt-text editor with a remove button and WIC downsampling/JPEG re-encode before upload; iPadOS uses PhotosPicker with alt-text fields and JPEG re-encoding ([[ipados]], [[windows]]).
-- **Video attachment (one, alt text, exclusive with images)** ([[compose-post]]): bug: https://github.com/asonas/YoruMimizuku/issues/29. macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]]).
-- **Draft discard confirmation** ([[compose-post]]): bug: https://github.com/asonas/YoruMimizuku/issues/30. A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail.
+- **Video attachment (one, alt text, exclusive with images)** ([[compose-post]]): macOS (fileImporter), iPadOS (PhotosPicker) and Windows (FileOpenPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows shows one combined upload/processing status instead of per-phase text, because the C# PostService runs the whole upload as one awaited call with no progress callback ([[windows]]).
+- **Draft discard confirmation** ([[compose-post]]): A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). On Windows Esc asks the same question as キャンセル rather than being blocked, because a WinUI ContentDialog closes through one Closing path for both and only one dialog can be open at a time (ComposerDialog.xaml.cs). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail.
 - **Saved-search filters (structured terms, AND/OR)** ([[filters]]): iPadOS can create and browse saved keyword search tabs, but the full structured multi-row editor is not present yet ([[ipados]]).
 - **OS banner + unread badge** ([[notifications]]): macOS supports the numeric Dock badge. Banners are pending. iPadOS has an in-app badge. Windows displays a toast and flashes the taskbar ([[macos]], [[ipados]], [[windows]]).
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows has no ASWebAuthenticationSession, so it embeds WebView2 for the two-step login (`0027-windows-csharp-core.md` §3) ([[ipados]], [[windows]]).
 - **Token refresh & session recovery** ([[oauth-flow]]): bug: https://github.com/asonas/YoruMimizuku/issues/31. On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]]).
 - **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS and iPadOS blur media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain (the shared MediaWarning + a Gaussian blur in PostRowView). Windows gates the same media but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look ([[windows]], [[ipados]]).
-- **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): bug: https://github.com/asonas/YoruMimizuku/issues/32. The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images from its own PostDisplayDTO unchanged ([[windows]], [[ipados]]).
-- **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): bug: https://github.com/asonas/YoruMimizuku/issues/33. Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]]).
+- **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit for macOS and iPadOS (PostRowView singleImage, tallCropHint overlay) and are ported to the Windows C# core (Core/TimelineLayout.cs), which FeedView uses with the image aspect ratio carried in PostImageDto ([[windows]], [[ipados]]).
+- **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow follows the width the row's content region gets: macOS decides inside the row's layout pass, iPadOS from TimelineListView's scene width, and Windows from the row grid's SizeChanged in FeedView ([[windows]], [[ipados]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11 (`0002-overall-design.md` §14): interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
 - **Delete own post** ([[timeline-streaming]]): macOS, iPadOS, and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then prune the row (Windows via IAccountClient.DeletePostAsync; restores on failure). iPadOS uses a SwiftUI confirmationDialog ([[windows]], [[ipados]]).
 - **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS, iPadOS, and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows carries its core's LoadFailure on CoreException (kind/title/message) ([[windows]], [[ipados]]).
@@ -141,5 +141,5 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Conversation child reply tree** ([[timeline-streaming]]): macOS, iPadOS, and Windows render the descendant reply tree below the anchor; Windows builds it with its core's ThreadNode.ChildTree and indents each reply with a left connector, tappable to re-anchor ([[ipados]], [[windows]]).
 - **Thread grouping in the feed (web-style)** ([[timeline-streaming]]): macOS and iPadOS group only a single author's self-thread into one oldest-first block (over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; multi-author/branching replies stay independent rows with their reply-context marker. Authors are compared by DID (the API's author DID, else the repo in the post URI). Windows groups the same way in its C# core's FeedThreading.Arrange ([[windows]], [[ipados]]).
 - **Timestamp tap opens the conversation** ([[timeline-streaming]]): bug: https://github.com/asonas/YoruMimizuku/issues/34. macOS's relative-time label in the author line is tappable and opens that post's conversation in the window's detail pane, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]]).
-- **Copy-link toast confirmation** ([[timeline-streaming]]): bug: https://github.com/asonas/YoruMimizuku/issues/35. The shared YoruMimizukuKit ToastCenter backs a bottom-overlay pill reading 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink; only macOS renders it today. ToastCenter is core and reusable, but wiring it into iPadOS and Windows is a tracked follow-up ([[ipados]]).
-- **In-app author tab for body @mentions** ([[timeline-streaming]]): bug: https://github.com/asonas/YoruMimizuku/issues/36. macOS routes @mention taps in a post body to the in-app author page (opened in the window's detail pane) via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]]).
+- **Copy-link toast confirmation** ([[timeline-streaming]]): A bottom-overlay pill reads 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink, on macOS (YoruMimizukuKit ToastCenter) and Windows (the app's own ToastCenter, shown only in the window that copied). Wiring it into iPadOS is a tracked follow-up ([[ipados]], [[windows]]).
+- **In-app author tab for body @mentions** ([[timeline-streaming]]): bug: https://github.com/asonas/YoruMimizuku/issues/36 (conversation view only). macOS routes @mention taps in a post body to the in-app author page via RichText.mentionDID(from:); Windows feed and author rows do the same through the C# RichText.MentionDid, but its conversation view still renders post bodies as plain text with no links, an open follow-up ([[windows]]). iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser ([[ipados]]).

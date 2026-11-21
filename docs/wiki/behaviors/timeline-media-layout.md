@@ -12,19 +12,21 @@ sources:
   - apps/macos/Views/FeedView.swift
   - apps/ipados/Views/PostRowView.swift
   - apps/ipados/Views/TimelineListView.swift
+  - apps/windows/Core/TimelineLayout.cs
+  - apps/windows/App/Views/FeedView.xaml.cs
 features:
   - name: Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)
     macos: full
-    windows: none
+    windows: full
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/32. The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images from its own PostDisplayDTO unchanged ([[windows]], [[ipados]])."
+    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit for macOS and iPadOS (PostRowView singleImage, tallCropHint overlay) and are ported to the Windows C# core (Core/TimelineLayout.cs), which FeedView uses with the image aspect ratio carried in PostImageDto ([[windows]], [[ipados]])."
   - name: Wide-column reflow (body left / media right at ≥ 680 pt)
     macos: full
-    windows: none
+    windows: full
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/33. Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]])."
+    note: "Reflow follows the width the row's content region gets: macOS decides inside the row's layout pass, iPadOS from TimelineListView's scene width, and Windows from the row grid's SizeChanged in FeedView ([[windows]], [[ipados]])."
 ---
 
 # Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
@@ -62,6 +64,10 @@ All layout constants and pure computations live in `TimelineLayout` (`core/Sourc
 | `maxSingleImageRatio` | 5.0 | Upper bound (panorama clamp, unchanged) |
 
 The key functions are: `placement(regionWidth:)` → `.vertical` or `.reflow`; `clampedSingleImageRatio(_:)` → clamped ratio; `isTallCropped(_:)` → whether the crop hint should show. All are covered by `TimelineLayoutTests` in `YoruMimizukuKitTests`. (There is no text-column-width helper: in reflow the body fills the remaining width, so no width math is needed beyond the placement decision.)
+
+## On Windows
+
+[[windows]] ports `TimelineLayout` to its C# core (`apps/windows/Core/TimelineLayout.cs`, `TimelineLayoutTests`, the same cases as the Swift tests) and applies it in `FeedView`. Each row's body and media sit in one grid; on `SizeChanged` the row measures that region and, at 680 or more with media to move (images, a video, or a link card, including the OGP card a bare link will fetch), puts the media column in a 300-wide rail after a 16 gap, otherwise stacks it under the body at up to 440 wide. A single image's height is its width over the clamped ratio (4:3 when the embed reports none), filled top-anchored with an `ImageBrush`; below 5:4 a small 全体表示 badge sits at the bottom right instead of the macOS gradient, and the tap still opens the lightbox. Images are rebuilt only when the post or the media width changes (`apps/windows/App/Views/FeedView.xaml.cs`).
 
 ## Wide-Column Reflow (≥ 680 pt Region Width)
 
