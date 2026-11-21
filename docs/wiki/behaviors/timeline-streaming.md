@@ -60,15 +60,16 @@ features:
     android: planned
   - name: Keyboard navigation & post actions (j/k, n, f, o)
     macos: full
-    windows: full
+    windows: differs
     ios: full
     android: planned
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows likes with l; macOS likes with f and opens the post's links with l) ([[windows]])."
   - name: Timeline keys for repost, quote, links and labeled media (r, ⇧R, l, s)
     macos: full
     windows: none
     ios: planned
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows binds only j/k/n/f/o). iPadOS keeps the earlier keys ([[windows]], [[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows binds only j/k/n/l/o, with l for the like). iPadOS keeps the earlier keys ([[windows]], [[ipados]])."
   - name: Copy post permalink
     macos: full
     windows: full

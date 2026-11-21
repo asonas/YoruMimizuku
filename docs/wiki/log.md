@@ -13,7 +13,7 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 - sources: apps/macos/Views/FeedView.swift, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/PostDisplay.swift, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, core/Sources/YoruMimizukuKit/PostInteractionController.swift
 - updated: [[timeline-streaming]], [[app-shell]]
-- note: f likes again (l moves to opening the post's links, at most five), r reposts (undo asks first), ⇧R quotes, s uncovers labeled media in the detail pane. Likes and reposts in flight survive refreshes and ignore repeat toggles. Windows lacks r/⇧R/l/s: bug note.
+- note: f likes again (l moves to opening the post's links, at most five), r reposts (undo asks first), ⇧R quotes, s uncovers labeled media in the detail pane. Likes and reposts in flight survive refreshes and ignore repeat toggles. Windows lacks r/⇧R/s and likes with l, where macOS opens links: bug note (#39).
 
 ## 2026-11-21 ingest (Windows record and mute)
 
