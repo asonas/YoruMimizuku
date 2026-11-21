@@ -72,7 +72,8 @@ public sealed record PostDisplayDto(
     string? ViewerLikeUri,
     string? ViewerRepostUri,
     bool IsLiked,
-    bool IsReposted);
+    bool IsReposted,
+    List<string> WebLinks);
 
 public sealed record TimelinePageDto(List<PostDisplayDto> Posts, string? Cursor);
 

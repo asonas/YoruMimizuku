@@ -44,6 +44,21 @@
                         </Grid>
                     </Grid>
                     <RichTextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
+                    <!-- The labeled-media warning, with 表示する / 隠す, as on macOS. -->
+                    <Grid x:Name="MediaWarningBar" Visibility="Collapsed" Margin="0,4,0,0"
+                          Padding="12,6" CornerRadius="8" ColumnSpacing="8"
+                          Background="{ThemeResource AppRowHoverBrush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="MediaWarningText" FontSize="12.5" FontWeight="Bold" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource AppSecondaryTextBrush}" />
+                        <Button x:Name="MediaRevealButton" Grid.Column="1" Click="OnMediaRevealClick" />
+                    </Grid>
+                    <!-- Images and the video poster, populated in RenderMedia(). -->
+                    <StackPanel x:Name="MediaHost" Spacing="8" Margin="0,4,0,0" MaxWidth="600"
+                                HorizontalAlignment="Left" Visibility="Collapsed" />
                     <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
                         <Button Click="OnFocusedReplyClick" Background="Transparent"
                                 BorderThickness="0" Padding="2" ToolTipService.ToolTip="返信">

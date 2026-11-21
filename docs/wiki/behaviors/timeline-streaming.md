@@ -60,16 +60,15 @@ features:
     android: planned
   - name: Keyboard navigation & post actions (j/k, n, f, o)
     macos: full
-    windows: differs
+    windows: full
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows likes with l; macOS likes with f and opens the post's links with l) ([[windows]])."
   - name: Timeline keys for repost, quote, links and labeled media (r, ⇧R, l, s)
     macos: full
-    windows: none
+    windows: full
     ios: planned
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows binds only j/k/n/l/o, with l for the like). iPadOS keeps the earlier keys ([[windows]], [[ipados]])."
+    note: "iPadOS keeps the earlier keys ([[ipados]]). Windows binds the same keys in FeedView, focus-scoped like its other plain keys ([[windows]])."
   - name: Copy post permalink
     macos: full
     windows: full
@@ -170,11 +169,11 @@ On macOS the timeline column also binds (2026-11-21):
 
 The 投稿 menu titles name these keys. While the image lightbox is open, neither the keys nor the 投稿 menu act on the timeline (`apps/macos/Views/FeedView.swift`, `apps/macos/Views/WorkspaceCommands.swift`). The conversation view used to bind the same `f` / `o` shortcuts to its anchor post (`0010-timeline-ux-enhancements.md` §5.3). On macOS the conversation now sits in the detail pane next to the timeline, so those keys belong to the timeline column only and act on its focused row; the conversation's anchor is liked or opened through its action bar and context menu (`docs/adr/0026-macos-three-pane.md`).
 
-While a like or repost is being sent, the Swift core (macOS and iPadOS) ignores another toggle of the same kind on that post, and a refresh or thread reload whose copy may predate the change (it is still being sent, or the fetch started before it succeeded) shows the viewer's change on top. If the request fails, only that change is undone on the post as it is by then, so counts from a refresh in between are kept, a like or repost a newer copy already shows stays, and the result of an earlier successful request is not lost (`PendingInteractions` in `core/Sources/YoruMimizukuKit/PostInteractionController.swift`, 2026-11-21). The Windows `PostItem` handles requests in flight in its own way ([[windows]]).
+While a like or repost is being sent, the Swift core (macOS and iPadOS) ignores another toggle of the same kind on that post, and a refresh or thread reload whose copy may predate the change (it is still being sent, or the fetch started before it succeeded) shows the viewer's change on top. If the request fails, only that change is undone on the post as it is by then, so counts from a refresh in between are kept, a like or repost a newer copy already shows stays, and the result of an earlier successful request is not lost (`PendingInteractions` in `core/Sources/YoruMimizukuKit/PostInteractionController.swift`, 2026-11-21). The Windows `PostItem` also ignores a second change of the same kind while one is being sent, and undoes a failed unlike or unrepost as it does a failed like or repost. It needs no ledger for refreshes: the Windows refresh only inserts posts it does not already show and never replaces a shown row, so a refresh cannot bring back an older copy of a post the viewer just changed; only the first load and 再試行 rebuild the rows ([[windows]], `apps/windows/App/ViewModels/PostItem.cs`, `apps/windows/App/ViewModels/TimelineViewModel.cs`).
 
 Every interactive post row also carries a copy-link action: a `link` icon in the action bar copies the post's public permalink to the clipboard. The permalink is `https://bsky.app/profile/{handle-or-did}/post/{rkey}`, assembled by the pure, unit-tested `PostPermalink.url(for:)` helper in `YoruMimizukuKit` (backed by `ATURI.repo` / `ATURI.rkey` in `BlueskyCore`); it prefers the author handle and falls back to the author DID when the handle is empty or the sentinel `handle.invalid`. The icon appears only on interactive rows, so the non-interactive ancestor rows in the conversation view do not show it (`0010-timeline-ux-enhancements.md` §5.4).
 
-On [[windows]], `FeedView` now binds `j` / `k` / `n` / `l` / `o` (like moved from `f` to `l` with macOS; the conversation pane's like key moved too): `l` toggles the selected row's like through the existing optimistic `PostItem.ToggleLikeAsync`, and `o` opens the post's permalink in the default browser. Feed rows and the conversation focus row both show the copy-link action; it calls `ICoreClient.PostPermalinkAsync` (the core's port of `PostPermalink.url(id:authorHandle:)`), then writes the URL to the WinUI clipboard (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Views/ConversationView.xaml.cs`).
+On [[windows]], `FeedView` binds the macOS keys on the selected row: `j` / `k` / `n` / `f` / `r` / `⇧R` / `l` / `s` / `o`. `f` toggles the like through the optimistic `PostItem.ToggleLikeAsync`; `r` asks 「リポストを取り消しますか？」 before undoing a repost and does nothing while one is being sent, and Ctrl+Shift+R and the post menus' リポスト go through the same path; `l` opens the links from the core's `PostDisplay.WebLinks` (at most `LinkOpenLimit`, with the same two toasts); `s` toggles the labeled media in the detail pane's conversation (`WorkspaceViewModel.ToggleMediaReveal`, `ConversationPage.RevealsMedia`); and `o` opens the post's permalink in the default browser. While the lightbox is open only its own keys (Esc, ←, →) work. The keys are focus-scoped, so they act in the timeline that has focus; the conversation pane takes `f` (like) and `o` for its anchor post (2026-11-21, #39). Feed rows and the conversation focus row both show the copy-link action; it calls `ICoreClient.PostPermalinkAsync` (the core's port of `PostPermalink.url(id:authorHandle:)`), then writes the URL to the WinUI clipboard (`apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/Views/ConversationView.xaml.cs`).
 
 On [[ipados]], rows expose visible touch actions for reply, repost, like, quote,
 copy permalink, and open permalink. The hardware-keyboard path is wired without

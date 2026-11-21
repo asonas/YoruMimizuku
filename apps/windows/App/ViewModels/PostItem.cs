@@ -38,6 +38,11 @@ public sealed class PostItem : ObservableObject
     /// preview card when the post carries no external embed of its own.</summary>
     public string? FirstLinkUrl =>
         Segments.FirstOrDefault(s => s.Kind == "link" && !string.IsNullOrEmpty(s.Url))?.Url;
+    /// <summary>The post's web links: the body's links, then the link card, each once
+    /// (the core's <c>PostDisplay.WebLinks</c>).</summary>
+    public IReadOnlyList<string> WebLinks { get; }
+    /// <summary>The links the l key opens, at most <c>PostDisplay.LinkOpenLimit</c>.</summary>
+    public IEnumerable<string> LinksToOpen => WebLinks.Take(Core.PostDisplay.LinkOpenLimit);
     public bool HasImages => Images.Count > 0;
     public bool HasContext => !string.IsNullOrEmpty(ContextLabel);
     public bool IsReply => ReplyParent is not null;
@@ -151,41 +156,73 @@ public sealed class PostItem : ObservableObject
         Quote = dto.Quote;
         ReplyParent = dto.ReplyParent;
         ReplyCount = dto.ReplyCount;
+        WebLinks = dto.WebLinks;
         _repostCount = dto.RepostCount;
         _likeCount = dto.LikeCount;
         _viewerLikeUri = dto.ViewerLikeUri;
         _viewerRepostUri = dto.ViewerRepostUri;
     }
 
-    public async Task ToggleLikeAsync()
+    // Whether a like or repost change is being sent. A second change of the same
+    // kind is ignored until it ends, as the Swift PendingInteractions does, so a
+    // repeated key never sends the opposite request on top of a pending one.
+    private bool _sendingLike;
+    private bool _sendingRepost;
+
+    /// <summary>Whether a repost change for this post is still being sent.</summary>
+    public bool IsSendingRepost => _sendingRepost;
+
+    public Task ToggleLikeAsync() => SetLikeAsync(!IsLiked);
+
+    public Task ToggleRepostAsync() => SetRepostAsync(!IsReposted);
+
+    /// <summary>Like (<paramref name="on"/>) or unlike. Nothing happens when the post
+    /// is already in that state or a like change is still being sent.</summary>
+    public async Task SetLikeAsync(bool on)
     {
-        if (IsLiked)
+        if (_sendingLike || IsLiked == on) return;
+        _sendingLike = true;
+        try
         {
-            var record = _viewerLikeUri!;
-            _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike();
-            if (record != "pending:like") { try { await _account.UnlikeAsync(record); } catch { } }
+            if (on)
+            {
+                _viewerLikeUri = "pending:like"; LikeCount += 1; NotifyLike();
+                try { var r = await _account.LikeAsync(Id, Cid); _viewerLikeUri = r.RecordUri; }
+                catch { _viewerLikeUri = null; LikeCount = Math.Max(0, LikeCount - 1); NotifyLike(); }
+            }
+            else
+            {
+                var record = _viewerLikeUri!;
+                _viewerLikeUri = null; LikeCount = Math.Max(0, LikeCount - 1); NotifyLike();
+                try { await _account.UnlikeAsync(record); }
+                catch { _viewerLikeUri = record; LikeCount += 1; NotifyLike(); }
+            }
         }
-        else
-        {
-            _viewerLikeUri = "pending:like"; LikeCount += 1; NotifyLike();
-            try { var r = await _account.LikeAsync(Id, Cid); _viewerLikeUri = r.RecordUri; }
-            catch { _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike(); }
-        }
+        finally { _sendingLike = false; }
     }
 
-    public async Task ToggleRepostAsync()
+    /// <summary>Repost (<paramref name="on"/>) or undo the repost. Nothing happens when
+    /// the post is already in that state or a repost change is still being sent.</summary>
+    public async Task SetRepostAsync(bool on)
     {
-        if (IsReposted)
+        if (_sendingRepost || IsReposted == on) return;
+        _sendingRepost = true;
+        try
         {
-            var record = _viewerRepostUri!;
-            _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost();
-            if (record != "pending:repost") { try { await _account.UnrepostAsync(record); } catch { } }
+            if (on)
+            {
+                _viewerRepostUri = "pending:repost"; RepostCount += 1; NotifyRepost();
+                try { var r = await _account.RepostAsync(Id, Cid); _viewerRepostUri = r.RecordUri; }
+                catch { _viewerRepostUri = null; RepostCount = Math.Max(0, RepostCount - 1); NotifyRepost(); }
+            }
+            else
+            {
+                var record = _viewerRepostUri!;
+                _viewerRepostUri = null; RepostCount = Math.Max(0, RepostCount - 1); NotifyRepost();
+                try { await _account.UnrepostAsync(record); }
+                catch { _viewerRepostUri = record; RepostCount += 1; NotifyRepost(); }
+            }
         }
-        else
-        {
-            _viewerRepostUri = "pending:repost"; RepostCount += 1; NotifyRepost();
-            try { var r = await _account.RepostAsync(Id, Cid); _viewerRepostUri = r.RecordUri; }
-            catch { _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost(); }
-        }
+        finally { _sendingRepost = false; }
     }
 }

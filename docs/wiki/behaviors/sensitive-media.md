@@ -1,7 +1,7 @@
 ---
 title: Sensitive Media Blur
 type: behavior
-updated: 2026-06-24
+updated: 2026-11-21
 sources:
   - docs/adr/0002-overall-design.md
   - docs/adr/0012-ipados-parity.md
@@ -11,6 +11,7 @@ sources:
   - apps/macos/Views/PostRowView.swift
   - apps/ipados/Views/PostRowView.swift
   - apps/windows/App/Views/FeedView.xaml.cs
+  - apps/windows/App/Views/ConversationView.xaml.cs
 features:
   - name: Sensitive media blur (content labels)
     macos: full
@@ -53,6 +54,15 @@ mapped by the C# core's `PostDisplay` from the same labels as `MediaWarning.from
 (`apps/windows/App/Views/FeedView.xaml.cs`, `PopulateCurtain`). The privacy
 outcome matches macOS (media hidden until reveal); only the visual differs
 (cover vs blur). A true blur would need a Composition/Win2D effect, deferred.
+
+The conversation in the detail pane shows the anchor's media as macOS does: a
+labeled post shows a 閲覧注意 bar with 表示する / 隠す and keeps the images and
+video poster hidden until revealed. The state belongs to the conversation page
+(`ConversationPage.RevealsMedia`), so the timeline's `s` key and the bar's button
+flip the same switch (2026-11-21). The conversation stacks the images at full
+width with their alt text under them; unlike macOS, tapping one there does not
+open the lightbox, which belongs to the timeline's `FeedView`
+(`apps/windows/App/Views/ConversationView.xaml.cs`).
 
 ## Deferred
 

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows timeline post keys)
+
+- sources: apps/windows/Core/PostDisplay.cs, apps/windows/App/ViewModels/PostItem.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ConversationView.xaml.cs
+- updated: [[timeline-streaming]], [[app-shell]], [[sensitive-media]], [[windows]]
+- note: closes issue #39. Windows takes f (like), r (repost, undo asks first), ⇧R (quote), l (open up to five links) and s (labeled media in the conversation), and the conversation view now shows the anchor's images and video poster behind a 閲覧注意 bar. `PostItem` ignores a repeat like or repost while one is out and undoes a failed removal; the Windows refresh never replaces shown rows, so it needs no ledger like the Swift `PendingInteractions`. Both keyboard rows are now `full` for Windows. The conversation's images do not open the lightbox on Windows.
+
 ## 2026-11-21 ingest (macOS timeline post keys)
 
 - sources: apps/macos/Views/FeedView.swift, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/PostDisplay.swift, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, core/Sources/YoruMimizukuKit/PostInteractionController.swift

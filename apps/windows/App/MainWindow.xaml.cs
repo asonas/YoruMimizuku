@@ -682,7 +682,7 @@ public sealed partial class MainWindow : Window
         switch (page)
         {
             case ConversationPage conversation:
-                return new ConversationPane(new ThreadViewModel(account, conversation.AnchorUri), _workspace);
+                return new ConversationPane(new ThreadViewModel(account, conversation.AnchorUri), conversation, _workspace);
             case AuthorPage author:
                 var view = new AuthorView(author.Author, account, _workspace);
                 _ = LoadAuthorAsync(author, view);

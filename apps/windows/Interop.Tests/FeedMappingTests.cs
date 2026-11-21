@@ -75,14 +75,14 @@ public class FeedMappingTests
                 { "thumbUrl": "https://cdn.example/thumb1.jpg", "fullsizeUrl": "https://cdn.example/full1.jpg", "alt": "a cat", "aspectRatio": 1.7777777777777777 },
                 { "thumbUrl": "https://cdn.example/thumb2.jpg", "fullsizeUrl": "https://cdn.example/full2.jpg", "alt": "" }
               ],
-              "replyCount": 1, "repostCount": 2, "likeCount": 3, "isLiked": false, "isReposted": false
+              "replyCount": 1, "repostCount": 2, "likeCount": 3, "isLiked": false, "isReposted": false, "webLinks": []
             },
             {
               "id": "at://did:plc:carol/app.bsky.feed.post/ccc", "cid": "bafyrecarol",
               "authorDisplayName": "carol.bsky.social", "authorHandle": "carol.bsky.social",
               "body": "reposted thing", "segments": [ { "kind": "text", "text": "reposted thing" } ],
               "createdAt": "2026-06-04T11:00:00.000Z", "contextLabel": "Bob がリポスト", "images": [],
-              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
             }
           ]
         }
@@ -241,7 +241,7 @@ public class FeedMappingTests
               },
               "replyCount": 0, "repostCount": 0, "likeCount": 0,
               "viewerLikeUri": "at://did:plc:me/app.bsky.feed.like/abc", "viewerRepostUri": "at://did:plc:me/app.bsky.feed.repost/def",
-              "isLiked": true, "isReposted": true
+              "isLiked": true, "isReposted": true, "webLinks": ["https://example.com"]
             },
             {
               "id": "at://did:plc:alice/app.bsky.feed.post/lbl", "cid": "cid",
@@ -253,7 +253,7 @@ public class FeedMappingTests
                 "description": "An interview with the artist.",
                 "thumbUrl": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:x/bafkthumb@jpeg", "host": "ableton.com"
               },
-              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": ["https://www.ableton.com/ja/blog/satsuki/"]
             },
             {
               "id": "at://did:plc:x/app.bsky.feed.post/x", "cid": "cid",
@@ -266,7 +266,7 @@ public class FeedMappingTests
                 "body": "quoted with pics", "createdAt": "2026-06-10T08:00:00.000Z",
                 "images": [ { "thumbUrl": "https://cdn.example/q-thumb.jpg", "fullsizeUrl": "https://cdn.example/q-full.jpg", "alt": "" } ]
               },
-              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
             },
             {
               "id": "at://did:plc:x/app.bsky.feed.post/y", "cid": "cid",
@@ -279,7 +279,7 @@ public class FeedMappingTests
                 "authorDisplayName": "quoted.bsky.social", "authorHandle": "quoted.bsky.social",
                 "body": "the quoted text", "createdAt": "2026-06-10T08:00:00.000Z", "images": []
               },
-              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+              "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
             }
           ]
         }
@@ -339,7 +339,7 @@ public class FeedMappingTests
               "id": "at://did:plc:b/app.bsky.feed.post/mid", "authorDisplayName": "bob.bsky.social", "authorHandle": "bob.bsky.social",
               "body": "子", "segments": [ { "kind": "text", "text": "子" } ]
             },
-            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
           },
           "replies": []
         }

@@ -21,10 +21,10 @@ public sealed class ConversationPane : UserControl
     private readonly ThreadViewModel _vm;
     private RecordView? _record;
 
-    public ConversationPane(ThreadViewModel vm, WorkspaceViewModel workspace)
+    public ConversationPane(ThreadViewModel vm, ConversationPage page, WorkspaceViewModel workspace)
     {
         _vm = vm;
-        _thread = new ConversationView(vm, workspace);
+        _thread = new ConversationView(vm, page, workspace);
         _host.Children.Add(_thread);
         Content = _host;
         _ = _thread.LoadAsync();

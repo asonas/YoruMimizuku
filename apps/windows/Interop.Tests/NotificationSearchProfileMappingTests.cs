@@ -186,14 +186,14 @@ public class NotificationSearchProfileMappingTests
             "authorDisplayName": "bob.bsky.social", "authorHandle": "bob.bsky.social",
             "body": "swift", "segments": [ { "kind": "text", "text": "swift" } ],
             "createdAt": "2026-06-04T13:00:00.000Z", "images": [],
-            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
           },
           {
             "id": "at://did:plc:alice/app.bsky.feed.post/aaa", "cid": "bafyreialice",
             "authorDisplayName": "Alice", "authorHandle": "alice.bsky.social",
             "body": "hi #swift", "segments": [ { "kind": "text", "text": "hi #swift" } ],
             "createdAt": "2026-06-04T12:00:00.000Z", "images": [],
-            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false
+            "replyCount": 0, "repostCount": 0, "likeCount": 0, "isLiked": false, "isReposted": false, "webLinks": []
           }
         ]
         """, page.Posts);

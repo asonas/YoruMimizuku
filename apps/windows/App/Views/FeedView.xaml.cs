@@ -629,7 +629,7 @@ public sealed partial class FeedView : UserControl
 
     private async void OnRepostMenuClick(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuFlyoutItem { Tag: PostItem item }) await item.ToggleRepostAsync();
+        if (sender is MenuFlyoutItem { Tag: PostItem item }) await RepostOrConfirmUndoAsync(item);
     }
 
     private async void OnQuoteMenuClick(object sender, RoutedEventArgs e)
@@ -762,7 +762,7 @@ public sealed partial class FeedView : UserControl
         Func<PostItem, Task>? command = (e.Key, shift, alt) switch
         {
             (VirtualKey.Enter, false, false) => OpenReplyComposer,
-            (VirtualKey.R, true, false) => post => post.ToggleRepostAsync(),
+            (VirtualKey.R, true, false) => RepostOrConfirmUndoAsync,
             (VirtualKey.C, true, false) => CopyPermalinkAsync,
             // ⌥⌘I, with Ctrl for ⌘ and Alt for ⌥.
             (VirtualKey.I, false, true) => post => { _workspace.OpenRecord(post); return Task.CompletedTask; },
@@ -777,6 +777,10 @@ public sealed partial class FeedView : UserControl
     {
         // The plain keys only: Ctrl+Shift+J/K and Ctrl+Shift+N belong to the window.
         if (IsKeyDown(VirtualKey.Control) || IsKeyDown(VirtualKey.Menu)) return;
+        // While the lightbox covers the posts, the post keys would act on a post the
+        // reader cannot see, as on macOS; only the lightbox's own keys work.
+        var lightboxOpen = Lightbox.Visibility == Visibility.Visible;
+        if (lightboxOpen && e.Key is not (VirtualKey.Escape or VirtualKey.Left or VirtualKey.Right)) return;
         switch (e.Key)
         {
             case VirtualKey.J:
@@ -791,8 +795,27 @@ public sealed partial class FeedView : UserControl
                 OpenComposer();
                 e.Handled = true;
                 break;
-            case VirtualKey.L:
+            case VirtualKey.F:
                 await ToggleFocusedLikeAsync();
+                e.Handled = true;
+                break;
+            case VirtualKey.R when IsKeyDown(VirtualKey.Shift):
+                if (FocusedPost is { } quoted) await OpenQuoteComposer(quoted);
+                e.Handled = true;
+                break;
+            case VirtualKey.R:
+                if (FocusedPost is { } reposted) await RepostOrConfirmUndoAsync(reposted);
+                e.Handled = true;
+                break;
+            case VirtualKey.L:
+                if (FocusedPost is { } linked) await OpenLinksAsync(linked);
+                e.Handled = true;
+                break;
+            case VirtualKey.S:
+                if (FocusedPost is { IsSensitive: true } labeled && (labeled.HasImages || labeled.HasVideo))
+                {
+                    _workspace.ToggleMediaReveal(labeled);
+                }
                 e.Handled = true;
                 break;
             case VirtualKey.O:
@@ -857,6 +880,48 @@ public sealed partial class FeedView : UserControl
     private async Task ToggleFocusedLikeAsync()
     {
         if (FocusedPost is { } post) await post.ToggleLikeAsync();
+    }
+
+    /// Repost <paramref name="post"/>, or ask before undoing an existing repost.
+    /// Nothing happens while a repost change for it is still being sent. The r key,
+    /// Ctrl+Shift+R and the menus share it, as macOS's r and 投稿 > リポスト do.
+    private async Task RepostOrConfirmUndoAsync(PostItem post)
+    {
+        if (post.IsSendingRepost) return;
+        if (!post.IsReposted)
+        {
+            await post.SetRepostAsync(true);
+            return;
+        }
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "リポストを取り消しますか？",
+            PrimaryButtonText = "取り消す",
+            CloseButtonText = "キャンセル",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary) await post.SetRepostAsync(false);
+    }
+
+    /// Open the post's links in the default browser, at most
+    /// <c>PostDisplay.LinkOpenLimit</c> of them, and say so when there are none or more.
+    private async Task OpenLinksAsync(PostItem post)
+    {
+        var origin = XamlRoot;
+        if (post.WebLinks.Count == 0)
+        {
+            Services.ToastCenter.Shared.Show(origin, "リンクがありません");
+            return;
+        }
+        foreach (var link in post.LinksToOpen)
+        {
+            if (Uri.TryCreate(link, UriKind.Absolute, out var uri)) await Launcher.LaunchUriAsync(uri);
+        }
+        if (post.WebLinks.Count > Core.PostDisplay.LinkOpenLimit)
+        {
+            Services.ToastCenter.Shared.Show(origin, $"リンクは最初の{Core.PostDisplay.LinkOpenLimit}件まで開きます");
+        }
     }
 
     private async Task OpenFocusedPermalinkAsync()

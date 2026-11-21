@@ -40,7 +40,8 @@ internal static class CoreDtos
             p.ViewerLikeUri,
             p.ViewerRepostUri,
             p.IsLiked,
-            p.IsReposted);
+            p.IsReposted,
+            p.WebLinks.Select(u => u.OriginalString).ToList());
 
     /// <summary>One level only: the parent's own parent is not carried.</summary>
     private static ReplyParentDto ReplyParent(PostDisplay p) =>

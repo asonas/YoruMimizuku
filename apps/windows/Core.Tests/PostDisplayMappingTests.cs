@@ -320,6 +320,24 @@ public class PostDisplayMappingTests
     }
 
     [Fact]
+    public void WebLinksListBodyLinksThenTheCardOnceEach()
+    {
+        var text = "a https://a.example b https://b.example @bob #tag";
+        var facets = new[]
+        {
+            new Facet(2, 19, [new FacetFeature.Link("https://a.example")]),
+            new Facet(22, 39, [new FacetFeature.Link("https://b.example")]),
+            new Facet(40, 44, [new FacetFeature.Mention("did:plc:bob")]),
+            new Facet(45, 49, [new FacetFeature.Tag("tag")]),
+        };
+        var card = new EmbedExternal("https://a.example", "A", "", null);
+
+        var display = Feed(Post(text: text, facets: facets, embed: Embed(external: card)));
+
+        Assert.Equal([new Uri("https://a.example"), new Uri("https://b.example")], display.WebLinks);
+    }
+
+    [Fact]
     public void BodySegmentsFallBackToPlainTextWhenNoFacets()
     {
         var segment = Assert.Single(Feed(Post(text: "plain body")).Segments);

@@ -15,14 +15,24 @@ namespace YoruMimizuku.App.Views;
 public sealed partial class ConversationView : UserControl
 {
     private readonly ThreadViewModel _vm;
+    private readonly ConversationPage _page;
     private readonly WorkspaceViewModel _workspace;
 
-    public ConversationView(ThreadViewModel vm, WorkspaceViewModel workspace)
+    public ConversationView(ThreadViewModel vm, ConversationPage page, WorkspaceViewModel workspace)
     {
         _vm = vm;
+        _page = page;
         _workspace = workspace;
         InitializeComponent();
         KeyDown += OnConversationKeyDown;
+        // The timeline's s key flips the page's state while this view is shown.
+        // Loaded can repeat, so unsubscribe first.
+        Loaded += (_, _) =>
+        {
+            _page.RevealsMediaChanged -= RenderMedia;
+            _page.RevealsMediaChanged += RenderMedia;
+        };
+        Unloaded += (_, _) => _page.RevealsMediaChanged -= RenderMedia;
     }
 
     public async Task LoadAsync()
@@ -46,6 +56,7 @@ public sealed partial class ConversationView : UserControl
         LikeGlyph.Glyph = post.LikeGlyph;
         LikeGlyph.Foreground = post.LikeBrush;
         LikeCount.Text = post.LikeCount.ToString();
+        RenderMedia();
 
         if (post.ReplyParent is { } parent)
         {
@@ -59,6 +70,94 @@ public sealed partial class ConversationView : UserControl
             ParentCard.Visibility = Visibility.Collapsed;
         }
     }
+
+    // -- Focused post media --
+
+    /// Mirrors the macOS ConversationView: a labeled post shows its warning with
+    /// 表示する / 隠す and keeps its media hidden until revealed; images stack at full
+    /// width with their alt text under them, and the video poster opens the post in
+    /// the browser, as in the feed.
+    private void RenderMedia()
+    {
+        MediaHost.Children.Clear();
+        if (_vm.Focused is not { } post || !(post.HasImages || post.HasVideo))
+        {
+            MediaWarningBar.Visibility = Visibility.Collapsed;
+            MediaHost.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var revealed = !post.IsSensitive || _page.RevealsMedia;
+        MediaWarningBar.Visibility = post.IsSensitive ? Visibility.Visible : Visibility.Collapsed;
+        MediaWarningText.Text = post.MediaWarning == "graphic" ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）";
+        MediaRevealButton.Content = _page.RevealsMedia ? "隠す" : "表示する";
+        MediaHost.Visibility = revealed ? Visibility.Visible : Visibility.Collapsed;
+        if (!revealed) return;
+
+        foreach (var image in post.Images)
+        {
+            if (!Uri.TryCreate(image.FullsizeUrl ?? image.ThumbUrl, UriKind.Absolute, out var url)) continue;
+            MediaHost.Children.Add(new Border
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = new Image { Source = new BitmapImage(url), Stretch = Stretch.Uniform }
+            });
+            if (!string.IsNullOrEmpty(image.Alt))
+            {
+                MediaHost.Children.Add(new Border
+                {
+                    BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                    BorderThickness = new Thickness(2, 0, 0, 0),
+                    Padding = new Thickness(10, 0, 0, 0),
+                    Child = new TextBlock
+                    {
+                        Text = image.Alt,
+                        FontSize = 12.5,
+                        TextWrapping = TextWrapping.Wrap,
+                        IsTextSelectionEnabled = true,
+                        Foreground = (Brush)Application.Current.Resources["AppSecondaryTextBrush"]
+                    }
+                });
+            }
+        }
+
+        if (post.HasVideo && Uri.TryCreate(post.Video!.ThumbUrl, UriKind.Absolute, out var thumb))
+        {
+            var poster = new Grid();
+            poster.Children.Add(new Image { Source = new BitmapImage(thumb), Stretch = Stretch.Uniform });
+            poster.Children.Add(new Border
+            {
+                Width = 52,
+                Height = 52,
+                CornerRadius = new CornerRadius(26),
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Black) { Opacity = 0.55 },
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Child = new FontIcon
+                {
+                    Glyph = "",
+                    FontSize = 22,
+                    Foreground = new SolidColorBrush(Microsoft.UI.Colors.White)
+                }
+            });
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(8),
+                BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
+                BorderThickness = new Thickness(1),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Child = poster
+            };
+            border.Tapped += async (_, e) => { e.Handled = true; await OpenPermalinkAsync(post); };
+            ToolTipService.SetToolTip(border, "ブラウザで開く");
+            MediaHost.Children.Add(border);
+        }
+    }
+
+    private void OnMediaRevealClick(object sender, RoutedEventArgs e) => _page.RevealsMedia = !_page.RevealsMedia;
 
     private async void OnFocusedLikeClick(object sender, RoutedEventArgs e)
     {
@@ -192,9 +291,12 @@ public sealed partial class ConversationView : UserControl
 
     private async void OnConversationKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // The plain keys only: Ctrl+F belongs to the window's search box.
+        if (IsKeyDown(VirtualKey.Control) || IsKeyDown(VirtualKey.Menu)) return;
         switch (e.Key)
         {
-            case VirtualKey.L:
+            // f likes, as in the timeline (l there opens the post's links).
+            case VirtualKey.F:
                 await ToggleFocusedLikeAsync();
                 e.Handled = true;
                 break;
@@ -204,6 +306,10 @@ public sealed partial class ConversationView : UserControl
                 break;
         }
     }
+
+    private static bool IsKeyDown(VirtualKey key) =>
+        Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
 
     private async Task ToggleFocusedLikeAsync()
     {

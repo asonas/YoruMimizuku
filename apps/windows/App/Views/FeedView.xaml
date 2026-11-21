@@ -54,13 +54,14 @@
                                         <FontIcon Glyph="&#xE8EE;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
-                                <MenuFlyoutItem Text="引用して投稿" Tag="{x:Bind}" Click="OnQuoteMenuClick">
+                                <MenuFlyoutItem Text="引用して投稿" Tag="{x:Bind}" Click="OnQuoteMenuClick"
+                                                KeyboardAcceleratorTextOverride="Shift+R">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xE90A;" />
                                     </MenuFlyoutItem.Icon>
                                 </MenuFlyoutItem>
                                 <MenuFlyoutItem Text="{x:Bind LikeActionText, Mode=OneWay}" Tag="{x:Bind}"
-                                                Click="OnLikeClick" KeyboardAcceleratorTextOverride="L">
+                                                Click="OnLikeClick" KeyboardAcceleratorTextOverride="F">
                                     <MenuFlyoutItem.Icon>
                                         <FontIcon Glyph="&#xEB51;" />
                                     </MenuFlyoutItem.Icon>

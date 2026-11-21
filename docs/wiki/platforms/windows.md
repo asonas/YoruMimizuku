@@ -138,10 +138,13 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   derive the actor DID from the post AT-URI, notification actors open by handle,
   and `AuthorView` renders a profile header over a reused feed loaded through
   `AuthorFeedLoadAsync` / `ProfileAsync` ([[author-tab]]).
-- Timeline rows support the Windows parity shortcuts: j/k focus, n compose,
-  l toggles like, o opens the focused post's bsky.app permalink, and the link
-  action copies that permalink to the clipboard. Conversation focus rows support
-  l/o/copy too ([[timeline-streaming]]).
+- Timeline rows take the macOS keys: j/k focus, n compose, f toggles like, r
+  reposts (asking before an undo), ⇧R quotes, l opens the post's links (at most
+  five), s uncovers labeled media in the detail pane's conversation, and o opens
+  the bsky.app permalink; the link action copies that permalink to the clipboard.
+  A repeated like or repost is ignored while one is being sent. The conversation
+  focus row takes f/o/copy and shows the anchor's images and video poster behind
+  the 閲覧注意 bar ([[timeline-streaming]], [[sensitive-media]]).
 - The macOS menu bar commands are keys and the post's right-click menu, with Ctrl
   for ⌘: Ctrl+1…Ctrl+9 select the first nine sidebar rows, Ctrl+R reloads the
   timeline, and on the selected post Ctrl+Enter replies, Ctrl+Shift+R reposts and

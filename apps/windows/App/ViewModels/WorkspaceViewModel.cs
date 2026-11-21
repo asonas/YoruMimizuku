@@ -42,6 +42,23 @@ public sealed class ConversationPage(string anchorUri, string title) : DetailPag
 {
     public string AnchorUri { get; } = anchorUri;
     public override string Title => title;
+
+    private bool _revealsMedia;
+
+    /// <summary>Whether the reader uncovered the anchor's labeled media, with the
+    /// conversation's 表示する / 隠す button or the timeline's s key.</summary>
+    public bool RevealsMedia
+    {
+        get => _revealsMedia;
+        set
+        {
+            if (_revealsMedia == value) return;
+            _revealsMedia = value;
+            RevealsMediaChanged?.Invoke();
+        }
+    }
+
+    public event Action? RevealsMediaChanged;
 }
 
 public sealed class AuthorPage(AuthorViewModel author) : DetailPage
@@ -222,6 +239,15 @@ public sealed class WorkspaceViewModel : ObservableObject
     public void OpenConversation(string anchorUri, string title)
     {
         Detail.Open(new Core.DetailEntry.Conversation(anchorUri), () => new ConversationPage(anchorUri, title));
+    }
+
+    /// <summary>Uncover or cover <paramref name="post"/>'s labeled media in the detail
+    /// pane, opening its conversation first when another page is shown (the s key).
+    /// Port of the Swift <c>DetailPaneModel.toggleMediaReveal</c>.</summary>
+    public void ToggleMediaReveal(PostItem post)
+    {
+        OpenConversation(post.Id, post.AuthorDisplayName);
+        if (Detail.Current is ConversationPage page) page.RevealsMedia = !page.RevealsMedia;
     }
 
     /// <summary>Open <paramref name="post"/>'s conversation on its レコード tab (レコードを表示).</summary>

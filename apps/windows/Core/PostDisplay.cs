@@ -98,6 +98,20 @@ public sealed record PostDisplay(
 
     public bool IsReposted => ViewerRepostUri is not null;
 
+    /// <summary>The web links in this post, in reading order: the body's links, then
+    /// the link card. Each URL appears once. Port of the Swift
+    /// <c>PostDisplay.webLinks</c>.</summary>
+    public IReadOnlyList<Uri> WebLinks =>
+        Segments.Where(s => s.Kind == RichTextSegmentKind.Link).Select(s => s.Url)
+            .Append(LinkCard?.Url)
+            .OfType<Uri>()
+            .DistinctBy(u => u.AbsoluteUri)
+            .ToList();
+
+    /// <summary>At most this many links open at once, so a post stuffed with links
+    /// cannot flood the browser.</summary>
+    public const int LinkOpenLimit = 5;
+
     /// <summary>One hydrated post, without reply parent or context label. Missing counts read as zero.</summary>
     public static PostDisplay From(PostView post) =>
         new(
