@@ -13,7 +13,7 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 - sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
 - updated: [[windows]]
-- note: proposed replacing the Swift core and C ABI bridge on Windows with a C# core; handoff for the agent on the Windows machine.
+- note: approved replacing the Swift core and C ABI bridge on Windows with a C# core; handoff for the agent on the Windows machine.
 
 ## 2026-11-20 ingest (release tooling)
 
