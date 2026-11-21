@@ -18,28 +18,11 @@ public partial class App : Application
     public const string RedirectUri = "as.ason:/callback";
     public const string Scope = "atproto transition:generic";
 
-    /// <summary>
-    /// The core every window talks to. Release builds use the Swift bridge until the
-    /// C# core replaces it (Phase 5); Debug builds use the C# core unless
-    /// YORUMIMIZUKU_CORE=swift is set (apps/windows/README.md).
-    /// </summary>
-    public static ICoreClient Client { get; } = SelectClient();
+    /// <summary>The core every window talks to.</summary>
+    public static ICoreClient Client { get; } = new CoreClient(
+        new DpapiFileStorage(DpapiFileStorage.DefaultDirectory()), new SocketsHttpHandler(), OAuthClientConfig.YoruMimizuku);
 
     private Window? _window;
-
-    private static ICoreClient SelectClient()
-    {
-#if DEBUG
-        if (!string.Equals(Environment.GetEnvironmentVariable("YORUMIMIZUKU_CORE"), "swift", StringComparison.OrdinalIgnoreCase))
-        {
-            AppLog.Write("Core: C#");
-            return new CoreClient(
-                new DpapiFileStorage(DpapiFileStorage.DefaultDirectory()), new SocketsHttpHandler(), OAuthClientConfig.YoruMimizuku);
-        }
-#endif
-        AppLog.Write("Core: Swift bridge");
-        return new BridgeClient();
-    }
 
     public App()
     {
@@ -56,8 +39,8 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         AppLog.Write("OnLaunched");
-        var swiftAccountsRemoved = Client is CoreClient && RemoveSwiftAccounts();
-        // Create and show the window first; the bridge is initialized inside it so
+        var swiftAccountsRemoved = RemoveSwiftAccounts();
+        // Create and show the window first; it loads the stored account itself so
         // any failure is shown in the UI (and logged) rather than crashing before
         // a window exists.
         var mainWindow = new MainWindow();
