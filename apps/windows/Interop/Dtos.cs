@@ -40,6 +40,9 @@ public sealed record QuotedPostDto(
     List<PostImageDto> Images,
     PostVideoDto? Video);
 
+/// <summary>What feed arrange reads from one post: <paramref name="AuthorDid"/> is the repo of its AT-URI.</summary>
+public sealed record ArrangeItemDto(string Id, string AuthorDid, string CreatedAt, string? ReplyParentId);
+
 public sealed record ArrangeResultDto(string Id, bool ConnectsToPrevious, bool ConnectsToNext);
 
 public sealed record ReplyParentDto(
