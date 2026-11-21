@@ -50,8 +50,7 @@ struct DetailPaneView: View {
     }
 
     private func anchorPost(_ conversation: ConversationTab) -> PostDisplay? {
-        if case let .loaded(thread) = conversation.model.state { return thread.focus }
-        return nil
+        conversation.model.focus
     }
 
     private func bar(for entry: DetailEntry) -> some View {
@@ -138,10 +137,7 @@ private struct RecordView: View {
     let uri: String
     let load: (String) async throws -> RecordResponse
 
-    private var anchor: PostDisplay? {
-        if case let .loaded(thread) = model.state { return thread.focus }
-        return nil
-    }
+    private var anchor: PostDisplay? { model.focus }
     @EnvironmentObject private var theme: ThemeStore
 
     private enum State { case loading, loaded(String), failed }
@@ -216,10 +212,7 @@ private struct ReplyField: View {
     @State private var text = ""
     @State private var isSending = false
 
-    private var anchor: PostDisplay? {
-        if case let .loaded(thread) = model.state { return thread.focus }
-        return nil
-    }
+    private var anchor: PostDisplay? { model.focus }
 
     var body: some View {
         if let anchor { field(anchor) }
@@ -268,8 +261,8 @@ private struct ConversationTitle: View {
     let fallback: String
 
     var body: some View {
-        if case let .loaded(thread) = model.state {
-            Text(thread.focus.authorDisplayName)
+        if let focus = model.focus {
+            Text(focus.authorDisplayName)
         } else {
             Text(fallback)
         }

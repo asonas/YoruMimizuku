@@ -28,7 +28,9 @@ detail pane, which follows the selected row as in the prototype.
 - **Selection opens the detail pane.** A click selects the row and shows it in
   the detail pane; j/k selection opens it after resting 0.3 s. Any click on a
   row (a quote tag, an avatar, a reaction) cancels a pending j/k open, so an
-  explicit navigation is never overridden.
+  explicit navigation is never overridden. (Superseded on 2026-11-21 at the
+  user's request: j/k opens the pane at once with the row's post, and only the
+  thread fetch waits; see `docs/wiki/behaviors/app-shell.md`.)
 - **Muting.** 投稿 > この人をミュート and the row's right-click menu mute the
   author for the window's account (`app.bsky.graph.muteActor`, private to the
   viewer) and drop their posts from every timeline in the window, including the

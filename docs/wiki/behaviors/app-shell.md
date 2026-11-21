@@ -1,8 +1,10 @@
 ---
 title: App Shell (Window, Tabs, Sidebar)
 type: behavior
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
+  - core/Sources/YoruMimizukuKit/ThreadViewModel.swift
+  - apps/macos/Views/FeedView.swift
   - docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md
   - core/Sources/BlueskyCore/Models/Record.swift
   - docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md
@@ -129,7 +131,7 @@ Opening a post's conversation anchors the thread on that post: ancestors render 
 
 ## Detail pane (macOS)
 
-On macOS a conversation or author page opens in the window's third column instead of replacing the timeline, so the timeline keeps its scroll position. The pane shows one page at a time, as in the desktop prototype (the back/forward history and ⌘[ / ⌘] of the first version were dropped on 2026-11-20): opening another page replaces it and close (×) empties it. Its 38pt bar has close, the title and, for a conversation, the スレッド / レコード switch. スレッド shows the ancestors as compact rows, the anchor at full size (media with alt text, a warn box for labeled media, link card, quote box, counts that also act) and the replies as a tree indented 20pt per level with fold controls; レコード shows Handle / DID / URI and the record as stored (`com.atproto.repo.getRecord`), also reachable with 投稿 > レコードを表示 (⌥⌘I). A reply field under a loaded conversation sends a short reply with return or opens the composer with what was typed (`docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md`). `DetailPaneModel` holds the shown page and reuses `ConversationTab` / `AuthorTab`; an author feed polls only while its page is shown. Conversation tabs and author tabs are no longer listed in the macOS sidebar or persisted. The plain-key shortcuts (j/k/l/o/n since 2026-11-20; f was like before) belong to the timeline column only, so the feed inside an author page does not register them and the conversation view binds none of them. [[ipados]] keeps the tabbed model unchanged (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`, `apps/macos/Views/DetailPaneView.swift`, `core/Sources/YoruMimizukuKit/DetailPaneModel.swift`).
+On macOS a conversation or author page opens in the window's third column instead of replacing the timeline, so the timeline keeps its scroll position. The pane shows one page at a time, as in the desktop prototype (the back/forward history and ⌘[ / ⌘] of the first version were dropped on 2026-11-20): opening another page replaces it and close (×) empties it. Its 38pt bar has close, the title and, for a conversation, the スレッド / レコード switch. スレッド shows the ancestors as compact rows, the anchor at full size (media with alt text, a warn box for labeled media, link card, quote box, counts that also act) and the replies as a tree indented 20pt per level with fold controls; レコード shows Handle / DID / URI and the record as stored (`com.atproto.repo.getRecord`), also reachable with 投稿 > レコードを表示 (⌥⌘I). If the thread fails to load, the anchor stays and the replies area shows the error with 再試行. A reply field under the conversation (available as soon as the anchor shows) sends a short reply with return or opens the composer with what was typed (`docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md`). `DetailPaneModel` holds the shown page and reuses `ConversationTab` / `AuthorTab`; an author feed polls only while its page is shown. Conversation tabs and author tabs are no longer listed in the macOS sidebar or persisted. The plain-key shortcuts (j/k/l/o/n since 2026-11-20; f was like before) belong to the timeline column only, so the feed inside an author page does not register them and the conversation view binds none of them. [[ipados]] keeps the tabbed model unchanged (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`, `apps/macos/Views/DetailPaneView.swift`, `core/Sources/YoruMimizukuKit/DetailPaneModel.swift`).
 
 ## Post row action paths
 
@@ -137,7 +139,7 @@ Every post row's right-click (macOS) or long-press (iPadOS) context menu offers 
 
 ## Timeline rows (macOS)
 
-Timeline lists use the prototype's compact row (`TimelineRowView`): why-line (repost / reply), name with a check for verified authors, @handle and a Japanese relative time, the body clamped to four lines, thumbnails, tags and the reactions (counts only above zero, hidden by 表示 > 反応の数を隠す). Clicking a row, or resting j/k on it for 0.3 s, shows it in the detail pane. この人をミュート (post menu and right-click) mutes the author for the window's account and drops their posts from every timeline in the window ([[timeline-media-layout]], `docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md`).
+Timeline lists use the prototype's compact row (`TimelineRowView`): why-line (repost / reply), name with a check for verified authors, @handle and a Japanese relative time, the body clamped to four lines, thumbnails, tags and the reactions (counts only above zero, hidden by 表示 > 反応の数を隠す). Clicking a row, or moving to it with j/k, shows it in the detail pane at once: the pane draws the anchor from the row's own post (`ThreadViewModel.preview`), fetches the thread 0.25 s after the page appears so a run of j/k does not start a fetch per post, and shows the ancestors and replies when it arrives, keeping the anchor in view when a deep reply's older ancestors are added above it. The row's copy is for reading only: its like and repost buttons work once the thread arrives, since the copy may predate the viewer's last change. Each j/k also decodes the full-size images of the next two posts in the direction of travel at the pane's size, so they come from the image cache. この人をミュート (post menu and right-click) mutes the author for the window's account and drops their posts from every timeline in the window ([[timeline-media-layout]], `docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md`).
 
 ## Commands, search and lists (macOS)
 

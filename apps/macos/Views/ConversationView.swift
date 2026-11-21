@@ -27,6 +27,16 @@ struct ConversationView: View {
 
     private static let timeFormatter = RelativeTimeFormatter(style: .japanese)
 
+    /// Images in the anchor decode at this size; the timeline prefetches the
+    /// next posts' images at the same size so they come from the cache.
+    static let mediaMaxPointSize: CGFloat = 900
+
+    private static let anchorScrollID = "conversation-anchor"
+
+    /// How long a page that already shows its post waits before fetching the
+    /// thread, so moving through posts with j/k does not start a fetch per post.
+    private static let threadFetchDelay: Duration = .milliseconds(250)
+
     var body: some View {
         content
             .background(theme.canvas)
@@ -35,16 +45,85 @@ struct ConversationView: View {
             // the older one's late result.
             .task {
                 switch model.state {
-                case .idle, .loading: await model.load()
+                case .idle, .loading:
+                    if model.preview != nil {
+                        try? await Task.sleep(for: Self.threadFetchDelay)
+                        guard !Task.isCancelled else { return }
+                        switch model.state {
+                        case .idle, .loading: break
+                        case .loaded, .failed: return
+                        }
+                    }
+                    await model.load()
                 case .loaded, .failed: break
                 }
             }
     }
 
+    /// One scroll view for as long as there is a post to show, so the replies
+    /// arriving do not rebuild it and lose the reader's place.
     @ViewBuilder
     private var content: some View {
+        if let focus = model.focus {
+            ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(ancestors(of: focus)) { ancestor in
+                        compactRow(ancestor, depth: 0, hasReplies: true, help: "この投稿を中心に会話を開く")
+                    }
+                    anchor(focus).id(Self.anchorScrollID)
+                    Rectangle().fill(theme.divider).frame(height: 1)
+                    if case let .loaded(thread) = model.state {
+                        replies(thread.replies)
+                    } else {
+                        repliesStatus
+                    }
+                }
+                .padding(.bottom, 12)
+            }
+            // A row knows only the direct parent; a deep reply's thread adds the
+            // older ancestors above the anchor, which would push the post being
+            // read down, so bring the anchor back to the top.
+            .onChange(of: ancestors(of: focus).count) { before, after in
+                if after > before { proxy.scrollTo(Self.anchorScrollID, anchor: .top) }
+            }
+            }
+        } else {
+            stateOnly
+        }
+    }
+
+    /// Where the replies go while the thread loads, or why they did not.
+    @ViewBuilder
+    private var repliesStatus: some View {
+        if case let .failed(message) = model.state {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("返信を読み込めませんでした")
+                    .font(.app(.callout)).foregroundStyle(theme.secondaryText)
+                Text(message)
+                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
+                Button("再試行") { Task { await model.load() } }
+                    .padding(.top, 2)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+        } else {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("返信を読み込んでいます…")
+                    .font(.app(.caption)).foregroundStyle(theme.tertiaryText)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+        }
+    }
+
+    /// A page opened without the post in hand (a notification subject, a quoted
+    /// post) has nothing to show until the thread arrives.
+    @ViewBuilder
+    private var stateOnly: some View {
         switch model.state {
-        case .idle, .loading:
+        case .idle, .loading, .loaded:
             stateMessage {
                 ProgressView().controlSize(.regular)
                 Text("会話を読み込んでいます…")
@@ -60,18 +139,6 @@ struct ConversationView: View {
                     .multilineTextAlignment(.center).frame(maxWidth: 320)
                 Button("再試行") { Task { await model.load() } }
                     .buttonStyle(.borderedProminent).tint(theme.accent).padding(.top, 4)
-            }
-        case let .loaded(thread):
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(ancestors(of: thread.focus)) { ancestor in
-                        compactRow(ancestor, depth: 0, hasReplies: true, help: "この投稿を中心に会話を開く")
-                    }
-                    anchor(thread.focus)
-                    Rectangle().fill(theme.divider).frame(height: 1)
-                    replies(thread.replies)
-                }
-                .padding(.bottom, 12)
             }
         }
     }
@@ -161,7 +228,7 @@ struct ConversationView: View {
                         onImageTap(urls, post.images.prefix(index).filter { $0.fullsizeURL != nil }.count)
                     }
                 } label: {
-                    RemoteImage(url: image.fullsizeURL ?? image.thumbURL, maxPointSize: 900) { phase in
+                    RemoteImage(url: image.fullsizeURL ?? image.thumbURL, maxPointSize: Self.mediaMaxPointSize) { phase in
                         if case let .success(loaded) = phase {
                             loaded.resizable().scaledToFit()
                         } else {
@@ -223,6 +290,12 @@ struct ConversationView: View {
     }
 
     /// The prototype's counts row; the counts double as the actions.
+    /// Likes and reposts act on the loaded thread, not the row's copy.
+    private var isThreadLoaded: Bool {
+        if case .loaded = model.state { return true }
+        return false
+    }
+
     private func stats(_ post: PostDisplay) -> some View {
         HStack(spacing: 18) {
             Button { onReply(post) } label: { stat(.messageCircle, post.replyCount, color: nil) }
@@ -233,11 +306,13 @@ struct ConversationView: View {
             }
             .help(post.isReposted ? "リポストを取り消す" : "リポスト")
             .accessibilityLabel("\(post.isReposted ? "リポスト済み" : "リポスト") \(post.repostCount)件")
+            .disabled(!isThreadLoaded)
             Button { Task { await model.toggleLike(post) } } label: {
                 stat(.heart, post.likeCount, color: post.isLiked ? theme.like : nil)
             }
             .help(post.isLiked ? "いいねを取り消す" : "いいね")
             .accessibilityLabel("\(post.isLiked ? "いいね済み" : "いいね") \(post.likeCount)件")
+            .disabled(!isThreadLoaded)
             Button { copyPermalink(post) } label: { Icon(.link, size: 15) }
                 .foregroundStyle(theme.tertiaryText)
                 .help("リンクをコピー")

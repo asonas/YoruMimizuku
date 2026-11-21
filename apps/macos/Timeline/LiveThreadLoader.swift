@@ -9,14 +9,17 @@ import YoruMimizukuKit
 struct LiveThreadLoader: ThreadLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
+    /// The account to read as. Nil uses the current account.
+    let accountDID: String?
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, accountDID: String? = nil) {
         self.accountManager = accountManager
         self.config = config
+        self.accountDID = accountDID
     }
 
     func loadThread(uri: String) async throws -> ConversationThread {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = ThreadService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )

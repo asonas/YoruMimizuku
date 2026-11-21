@@ -13,6 +13,7 @@ struct FeedView: View {
     @EnvironmentObject private var displaySettings: DisplaySettingsStore
     @EnvironmentObject private var toastCenter: ToastCenter
     @Environment(\.listMembership) private var listMembership
+    @Environment(\.displayScale) private var displayScale
 
     /// Shown in the header. Home passes nil (the sidebar already names the pane);
     /// filter tabs pass the filter name.
@@ -46,16 +47,14 @@ struct FeedView: View {
     var headerAccessory: AnyView? = nil
 
     @State private var focusedPostID: String?
+    /// The image prefetch for the latest j/k move; a newer move replaces it.
+    @State private var prefetchTask: Task<Void, Never>?
     /// Bumped on every j/k move to scroll the focused post into view. Only keyboard
     /// navigation increments it; a click sets `focusedPostID` (for the highlight)
     /// without touching it, so tapping a post focuses it in place rather than
     /// yanking the feed. A counter (not the id) guarantees the scroll fires even
     /// when navigation lands back on a post a click had already focused.
     @State private var scrollTick = 0
-    /// Opens the post j/k rested on in the detail pane, as in the prototype.
-    /// Cancelled by the next move or by any click on a row, so an explicit
-    /// navigation (a quote, an author) is never overridden.
-    @State private var keyboardOpenTask: Task<Void, Never>?
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
@@ -84,8 +83,6 @@ struct FeedView: View {
         }
         .background(theme.canvas)
         .background { if registersKeyboardShortcuts { postNavShortcuts } }
-        // A j/k open still pending when the list goes away must not land.
-        .onDisappear { keyboardOpenTask?.cancel() }
         .onChange(of: model.state) { _, _ in
             guard registersKeyboardShortcuts, focusedPostID == nil else { return }
             focusedPostID = FeedThreading.arrange(model.posts).first?.id
@@ -243,7 +240,6 @@ struct FeedView: View {
                     canDelete: isOwnPost(post),
                     onImageTap: { urls, index in onImageTap(urls, index) },
                     onSelect: {
-                        keyboardOpenTask?.cancel()
                         focusedPostID = post.id
                     },
                     onActivate: { select(post) },
@@ -252,7 +248,6 @@ struct FeedView: View {
                     onQuote: { onQuote(post) },
                     onLike: { Task { await model.toggleLike(post) } },
                     onAvatarTap: {
-                        keyboardOpenTask?.cancel()
                         onOpenAuthor(post)
                     },
                     onQuoteTap: { onOpenQuote($0) },
@@ -383,22 +378,39 @@ struct FeedView: View {
         }
         // Keyboard movement scrolls the focused post into view; a click does not.
         scrollTick += 1
-        keyboardOpenTask?.cancel()
         if let post = focusedPost {
-            keyboardOpenTask = Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                guard !Task.isCancelled else { return }
-                onOpenConversation(post)
-            }
+            onOpenConversation(post)
+        }
+        if let id = focusedPostID, let index = ids.firstIndex(of: id) {
+            prefetchMedia(ofPostsAfter: index, in: ids, step: offset < 0 ? -1 : 1)
         }
         if focusedPostID == ids.last {
             Task { await model.loadMore() }
         }
     }
 
+    /// Decode the next posts' images, in the direction of travel, at the size the
+    /// detail pane shows them, so j/k lands on images already in the cache.
+    private func prefetchMedia(ofPostsAfter index: Int, in ids: [String], step: Int) {
+        prefetchTask?.cancel()
+        let upcoming = (1...2).map { index + $0 * step }.filter { ids.indices.contains($0) }.map { ids[$0] }
+        let postsByID = Dictionary(model.posts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let urls = upcoming.compactMap { postsByID[$0] }.flatMap { $0.images.compactMap(\.fullsizeURL) }
+        guard !urls.isEmpty else { return }
+        let maxPixel = ConversationView.mediaMaxPointSize * displayScale
+        prefetchTask = Task(priority: .utility) {
+            // Holding j or k replaces this task before it starts, so passing
+            // rows never begin downloads that nothing will show.
+            try? await Task.sleep(for: .milliseconds(150))
+            for url in urls {
+                guard !Task.isCancelled else { return }
+                _ = try? await ImageDownsampler.shared.image(for: url, maxPixel: maxPixel)
+            }
+        }
+    }
+
     /// Select a row and show it in the detail pane (the prototype's single click).
     private func select(_ post: PostDisplay) {
-        keyboardOpenTask?.cancel()
         focusedPostID = post.id
         onOpenConversation(post)
     }
@@ -426,7 +438,6 @@ struct FeedView: View {
             copyLink: { copyPermalink(post) },
             mute: { onMute(post) },
             openRecord: {
-                keyboardOpenTask?.cancel()
                 focusedPostID = post.id
                 onOpenRecord(post)
             },

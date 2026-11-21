@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (instant detail pane on j/k)
+
+- sources: core/Sources/YoruMimizukuKit/ThreadViewModel.swift, apps/macos/Views/FeedView.swift
+- updated: [[app-shell]]
+- note: j/k and clicks show the row's post in the detail pane at once; the thread loads after it, and the next posts' images are prefetched.
+
 ## 2026-11-21 ingest (Windows C# core handoff)
 
 - sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md

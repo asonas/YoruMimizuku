@@ -260,10 +260,13 @@ private struct AuthenticatedRootView: View {
             wrappedValue: NotificationsViewModel(loader: LiveNotificationsLoader(accountManager: accountManager, accountDID: did))
         )
         let filterStore = SavedFilterStore(port: FilterFileStore(did: did))
-        let makeThreadModel: @MainActor (String) -> ThreadViewModel = { uri in
+        // Conversations read and write as the window's account, the one whose
+        // timeline the opened post came from.
+        let makeThreadModel: @MainActor (String, PostDisplay?) -> ThreadViewModel = { uri, preview in
             ThreadViewModel(
-                loader: LiveThreadLoader(accountManager: accountManager), uri: uri,
-                interactor: LivePostInteractor(accountManager: accountManager)
+                loader: LiveThreadLoader(accountManager: accountManager, accountDID: did), uri: uri,
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did),
+                preview: preview
             )
         }
         let makeAuthorModel: @MainActor (String) -> TimelineViewModel = { authorDID in
@@ -284,7 +287,7 @@ private struct AuthenticatedRootView: View {
         _workspace = StateObject(
             wrappedValue: WorkspaceModel(
                 filterStore: filterStore,
-                makeThreadModel: makeThreadModel,
+                makeThreadModel: { makeThreadModel($0, nil) },
                 // Filters and toolbar searches read and write as the window's
                 // account, so likes and reposts in them work too.
                 makeFilterModel: { filter in
