@@ -39,8 +39,9 @@ public sealed partial class ConversationView : UserControl
         var post = _vm.Focused;
         if (post is null) return;
         FocusedAuthor.Text = post.AuthorDisplayName;
-        FocusedHandle.Text = post.AuthorHandle;
-        FocusedBody.Text = post.Body;
+        FocusedHandle.Text = "@" + post.AuthorHandle;
+        FocusedTime.Text = post.RelativeTime;
+        PostBody.Fill(FocusedBody, post.Segments, _workspace);
         FocusedAvatar.ProfilePicture = post.AvatarUrl is { Length: > 0 } url ? new BitmapImage(new Uri(url)) : null;
         LikeGlyph.Glyph = post.LikeGlyph;
         LikeGlyph.Foreground = post.LikeBrush;
@@ -49,13 +50,13 @@ public sealed partial class ConversationView : UserControl
         if (post.ReplyParent is { } parent)
         {
             ParentAuthor.Text = parent.AuthorDisplayName;
-            ParentBody.Text = parent.Body;
-            ParentButton.Tag = parent;
-            ParentButton.Visibility = Visibility.Visible;
+            PostBody.Fill(ParentBody, parent.Segments, _workspace);
+            ParentCard.Tag = parent;
+            ParentCard.Visibility = Visibility.Visible;
         }
         else
         {
-            ParentButton.Visibility = Visibility.Collapsed;
+            ParentCard.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -92,9 +93,9 @@ public sealed partial class ConversationView : UserControl
 
     /// The parent and every reply re-anchor the pane: each opens its own conversation
     /// in place of this one, as on macOS.
-    private void OnParentClick(object sender, RoutedEventArgs e)
+    private void OnParentTapped(object sender, TappedRoutedEventArgs e)
     {
-        if (sender is Button { Tag: ReplyParentDto parent })
+        if (sender is Border { Tag: ReplyParentDto parent })
         {
             _workspace.OpenConversation(parent.Id, parent.AuthorDisplayName);
         }
@@ -121,52 +122,72 @@ public sealed partial class ConversationView : UserControl
     {
         var content = new StackPanel { Spacing = 2 };
 
-        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        // Avatar, name and handle, then the time in its own column so a long name
+        // is cut off instead of the time.
+        var header = new Grid { ColumnSpacing = 6 };
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         header.Children.Add(new PersonPicture
         {
             Width = 24,
             Height = 24,
             ProfilePicture = node.Post.AvatarUrl is { Length: > 0 } a ? new BitmapImage(new Uri(a)) : null
         });
-        header.Children.Add(new TextBlock
+        var names = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        names.Children.Add(new TextBlock
         {
             Text = node.Post.AuthorDisplayName,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         });
-        header.Children.Add(new TextBlock
+        names.Children.Add(new TextBlock
         {
             Text = "@" + node.Post.AuthorHandle,
             FontSize = 12,
             Opacity = 0.6,
-            VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis
+            VerticalAlignment = VerticalAlignment.Center
         });
-        content.Children.Add(header);
-        content.Children.Add(new TextBlock { Text = node.Post.Body, TextWrapping = TextWrapping.Wrap });
-
-        var row = new Button
+        Grid.SetColumn(names, 1);
+        header.Children.Add(names);
+        var time = new TextBlock
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Text = Services.RelativeTime.Format(node.Post.CreatedAt),
+            FontSize = 12,
+            FontFamily = new FontFamily("Consolas"),
+            Foreground = (Brush)Application.Current.Resources["AppTertiaryTextBrush"],
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(time, 2);
+        header.Children.Add(time);
+        content.Children.Add(header);
+        // Selection off: a selectable RichTextBlock takes the press, so a tap on the
+        // text would not reach the row.
+        var body = new RichTextBlock { TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = false };
+        PostBody.Fill(body, node.Post.Segments, _workspace);
+        content.Children.Add(body);
+
+        // A Border, not a Button: a Button captures the pointer, so the links in the
+        // body would never get their click.
+        var row = new Border
+        {
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
             BorderThickness = new Thickness(1, 0, 0, 0),
             Margin = new Thickness(node.Depth * 16, 0, 0, 0),
             Padding = new Thickness(10, 4, 4, 4),
-            Content = content,
-            Tag = node.Post
+            Child = content
         };
-        row.Click += OnReplyRowClick;
+        HighlightOnHover(row);
+        row.Tapped += (_, _) => _workspace.OpenConversation(node.Post.Id, node.Post.AuthorDisplayName);
         return row;
     }
 
-    private void OnReplyRowClick(object sender, RoutedEventArgs e)
+    private static void HighlightOnHover(Border row)
     {
-        if (sender is Button { Tag: PostDisplayDto post })
-        {
-            _workspace.OpenConversation(post.Id, post.AuthorDisplayName);
-        }
+        var idle = row.Background;
+        row.PointerEntered += (_, _) => row.Background = (Brush)Application.Current.Resources["AppRowHoverBrush"];
+        row.PointerExited += (_, _) => row.Background = idle;
     }
 
     private async void OnConversationKeyDown(object sender, KeyRoutedEventArgs e)

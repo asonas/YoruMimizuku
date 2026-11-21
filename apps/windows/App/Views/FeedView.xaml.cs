@@ -63,7 +63,7 @@ public sealed partial class FeedView : UserControl
     {
         if (args.InRecycleQueue || args.Item is not PostItem post) return;
         if (args.ItemContainer?.ContentTemplateRoot is not FrameworkElement root) return;
-        if (root.FindName("BodyRich") is RichTextBlock rich) PopulateRich(rich, post);
+        if (root.FindName("BodyRich") is RichTextBlock rich) PostBody.Fill(rich, post.Segments, _workspace);
         if (root.FindName("ContentLayout") is Grid layout) UpdateContentLayout(layout, post, layout.ActualWidth);
         if (root.FindName("VideoHost") is Border videoHost) PopulateVideo(videoHost, post);
         if (root.FindName("MediaCurtain") is Border curtain) PopulateCurtain(curtain, post);
@@ -76,50 +76,6 @@ public sealed partial class FeedView : UserControl
                     ? Visibility.Visible
                     : Visibility.Collapsed;
         }
-    }
-
-    private void PopulateRich(RichTextBlock rich, PostItem post)
-    {
-        rich.Blocks.Clear();
-        var paragraph = new Paragraph();
-        foreach (var seg in post.Segments)
-        {
-            switch (seg.Kind)
-            {
-                case "link" when TryUri(seg.Url, out var uri):
-                    var link = new Hyperlink { NavigateUri = uri };
-                    link.Inlines.Add(new Run { Text = seg.Text });
-                    paragraph.Inlines.Add(link);
-                    break;
-                case "tag":
-                    var tagLink = new Hyperlink();
-                    tagLink.Inlines.Add(new Run { Text = seg.Text });
-                    var tag = seg.Text.TrimStart('#');
-                    tagLink.Click += (_, _) => _workspace.OpenHashtagFilter(tag);
-                    paragraph.Inlines.Add(tagLink);
-                    break;
-                case "mention" when TryUri(seg.Url, out var profileUri)
-                                    && Core.RichText.MentionDid(profileUri) is { Length: > 0 } actor:
-                    // Opens the mentioned account in the detail pane, as on macOS.
-                    var mentionLink = new Hyperlink();
-                    mentionLink.Inlines.Add(new Run { Text = seg.Text });
-                    var handle = seg.Text.TrimStart('@');
-                    mentionLink.Click += (_, _) => _workspace.OpenAuthor(actor, handle, "", null);
-                    paragraph.Inlines.Add(mentionLink);
-                    break;
-                case "mention":
-                    paragraph.Inlines.Add(new Run
-                    {
-                        Text = seg.Text,
-                        Foreground = (Brush)Application.Current.Resources["AppAccentBrush"]
-                    });
-                    break;
-                default:
-                    paragraph.Inlines.Add(new Run { Text = seg.Text });
-                    break;
-            }
-        }
-        rich.Blocks.Add(paragraph);
     }
 
     private void OnContentLayoutSizeChanged(object sender, SizeChangedEventArgs e)

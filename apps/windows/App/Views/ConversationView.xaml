@@ -6,14 +6,18 @@
 
     <ScrollViewer Padding="12">
         <StackPanel Spacing="10">
-            <!-- Ancestor (reply parent); a click re-anchors the pane on it. -->
-            <Button x:Name="ParentButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                    Visibility="Collapsed" Click="OnParentClick">
+            <!-- Ancestor (reply parent); a tap re-anchors the pane on it. A Border, not a
+                 Button, so the links in its body get their clicks (a Button captures the
+                 pointer). -->
+            <Border x:Name="ParentCard" Visibility="Collapsed" Tapped="OnParentTapped"
+                    Padding="11,5" CornerRadius="4" BorderThickness="1"
+                    BorderBrush="{ThemeResource AppHairlineBrush}" Background="{ThemeResource AppRowHoverBrush}">
                 <StackPanel Spacing="2">
                     <TextBlock x:Name="ParentAuthor" FontWeight="SemiBold" Opacity="0.8" />
-                    <TextBlock x:Name="ParentBody" TextWrapping="Wrap" Opacity="0.7" />
+                    <RichTextBlock x:Name="ParentBody" TextWrapping="Wrap" Opacity="0.7"
+                                   IsTextSelectionEnabled="False" />
                 </StackPanel>
-            </Button>
+            </Border>
 
             <Border x:Name="FocusedCard" BorderThickness="2,0,0,0" Padding="10,2">
                 <StackPanel Spacing="4">
@@ -24,12 +28,22 @@
                         </Grid.ColumnDefinitions>
                         <PersonPicture x:Name="FocusedAvatar" Grid.Column="0" Width="36" Height="36"
                                        Tapped="OnFocusedAvatarTapped" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock x:Name="FocusedAuthor" FontWeight="SemiBold" />
-                            <TextBlock x:Name="FocusedHandle" Opacity="0.6" />
-                        </StackPanel>
+                        <!-- Name and handle, then the time in its own column so a long
+                             name is cut off instead of the time. -->
+                        <Grid Grid.Column="1" ColumnSpacing="6" VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock x:Name="FocusedAuthor" FontWeight="SemiBold" />
+                                <TextBlock x:Name="FocusedHandle" Opacity="0.6" />
+                            </StackPanel>
+                            <TextBlock x:Name="FocusedTime" Grid.Column="1" FontSize="12" FontFamily="Consolas"
+                                       Foreground="{ThemeResource AppTertiaryTextBrush}" VerticalAlignment="Center" />
+                        </Grid>
                     </Grid>
-                    <TextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
+                    <RichTextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
                         <Button Click="OnFocusedReplyClick" Background="Transparent"
                                 BorderThickness="0" Padding="2" ToolTipService.ToolTip="返信">

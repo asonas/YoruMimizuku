@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows conversation view links and timestamps)
+
+- sources: apps/windows/App/Views/PostBody.cs, apps/windows/App/Views/ConversationView.xaml.cs, apps/windows/App/Views/FeedView.xaml.cs
+- updated: behaviors/timeline-streaming.md
+- note: The Windows conversation view renders bodies with links, hashtags and in-app @mentions through the feed's `PostBody.Fill`, and shows each post's time; body @mentions are now full on Windows (#36). The timestamp row is `differs`: a click anywhere on a Windows row opens the conversation, the timestamp included (#34).
+
 ## 2026-11-21 ingest (Windows detail pane shows one page)
 
 - sources: docs/adr/0022-macos-prototype-detail-pane.md, apps/windows/Core/DetailPaneModel.cs, apps/windows/App/MainWindow.xaml.cs
