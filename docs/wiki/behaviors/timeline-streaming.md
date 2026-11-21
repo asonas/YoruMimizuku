@@ -1,7 +1,7 @@
 ---
 title: Timeline Fetching and Streaming
 type: behavior
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
   - docs/superpowers/specs/2026-11-20-macos-three-pane-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
@@ -113,7 +113,7 @@ features:
     windows: full
     ios: full
     android: planned
-    note: "macOS and iPadOS group only a single author's self-thread into one oldest-first block (over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; multi-author/branching replies stay independent rows with their reply-context marker. Windows still groups the full reply chain regardless of author because its yoru_feed_arrange bridge carries no author handle — a tracked follow-up ([[windows]], [[ipados]])."
+    note: "macOS and iPadOS group only a single author's self-thread into one oldest-first block (over the tested FeedThreading.arrange) with a connector line under the avatar and the in-block reply marker/divider dropped; multi-author/branching replies stay independent rows with their reply-context marker. Authors are compared by DID (the API's author DID, else the repo in the post URI), so Windows' yoru_feed_arrange, which sends only post URIs, now groups by author too ([[windows]], [[ipados]])."
   - name: Timestamp tap opens the conversation
     macos: full
     windows: none
@@ -142,7 +142,7 @@ On the display side, the state machine (idle / loading / loaded / failed), polli
 
 ## Thread grouping in the feed
 
-A feed page that contains several posts of the same author's self-thread ("1/3 … 3/3") no longer lists them as independent newest-first rows (`2026-07-03-feed-self-thread-grouping-design.md`). The pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) climbs each post's `replyParent` links **only while the parent shares the post's author**, resolving it to the topmost same-author ancestor present on the page and emitting that self-thread as one block, oldest first, at the feed position of the block's newest member. The climb stops where the author changes, so a multi-author, branching conversation is **not** collapsed into one flat chronological block: each reply to (or from) another account stays an independent row and keeps its "@x への返信" context marker. Posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders a grouped self-thread block with a thread connector line between the grouped rows' avatars, hides the now-redundant reply marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`). iPadOS shares this path with real post handles, so it groups identically. Windows is the exception: its `yoru_feed_arrange` bridge (`BridgeOperations.swift`) reduces each post to id / createdAt / replyParentId and passes an empty `authorHandle`, so the same-author check is always trivially true and Windows still groups the whole reply chain regardless of author — carrying the author through the bridge is a tracked follow-up.
+A feed page that contains several posts of the same author's self-thread ("1/3 … 3/3") no longer lists them as independent newest-first rows (`2026-07-03-feed-self-thread-grouping-design.md`). The pure `FeedThreading.arrange` (`YoruMimizukuKit`, unit-tested) climbs each post's `replyParent` links **only while the parent shares the post's author**, resolving it to the topmost same-author ancestor present on the page and emitting that self-thread as one block, oldest first, at the feed position of the block's newest member. The climb stops where the author changes, so a multi-author, branching conversation is **not** collapsed into one flat chronological block: each reply to (or from) another account stays an independent row and keeps its "@x への返信" context marker. Posts whose parents are not on the page stay where they were, and duplicate post IDs are emitted once. The macOS `FeedView` renders a grouped self-thread block with a thread connector line between the grouped rows' avatars, hides the now-redundant reply marker inside a block, and drops the divider between grouped rows; j/k focus movement and the infinite-scroll trigger follow the displayed order (`FeedThreading.swift`, `apps/macos/Views/FeedView.swift`, `apps/macos/Views/PostRowView.swift`). iPadOS shares this path with real post handles, so it groups identically. Authors are compared by DID: the post's `authorDID` (the API's `author.did`), else the repo in the post URI, never the handle, which unresolved accounts share as `handle.invalid` (#12). Windows' `yoru_feed_arrange` sends only post URIs, so it groups by the URI's repo, which is a DID for posts from the API.
 
 ## Home / List (Jetstream live) — designed, deferred
 

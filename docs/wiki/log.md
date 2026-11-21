@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Swift core fixes from the Windows port, #9 to #16)
+
+- sources: core/Sources/BlueskyCore/OAuth/OAuthCallback.swift, core/Sources/BlueskyCore/Account/AccountManager.swift
+- updated: [[oauth-flow]], [[timeline-streaming]]
+- note: OAuth login checks iss, sub and the atproto scope; renewed tokens are saved as they are issued and a used refresh token or a replaced session is never saved; self-threads group by author DID; also link parens, + in queries, OR filter cursors, blank notification names, Windows notification subjects.
+
 ## 2026-11-21 ingest (instant detail pane on j/k)
 
 - sources: core/Sources/YoruMimizukuKit/ThreadViewModel.swift, apps/macos/Views/FeedView.swift

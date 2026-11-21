@@ -57,7 +57,7 @@ Coding agents now port well-specified logic quickly, and the Swift core has 96 t
 
 **OAuth and accounts** (for the hand port and for any library alike):
 
-- The callback's `state` and `iss` match the request and the issuer; the token response's `sub` equals the DID resolved at login start; a token without the `atproto` scope is rejected. The Swift core does not check `iss`, `sub` or the scope today: add these to the C# port and report them to the user so macOS gets the same fix.
+- The callback's `state` and `iss` match the request and the issuer; the token response's `sub` equals the DID resolved at login start; a token without the `atproto` scope is rejected. The Swift core checks these too since #15 (`OAuthCallback.verified`, `TokenResponse.verifyLogin`).
 - DPoP proofs with nonce retry; refresh happens once per account even when, say, the home timeline and notifications get 401 at the same time across services; the rotated token is saved before the retried request (as `XRPCQueryService` does), and a late, older response never overwrites it.
 - Sign in, relaunch and stay signed in, switch accounts, sign out.
 
@@ -76,7 +76,7 @@ Each phase ends in a check on Windows before the next starts.
 3. Filters: `SavedFilter`, the search merge and the composite cursor.
 4. Services over one `HttpClient` per account: timeline, author feed, thread, notifications, search, posts (create with reply root and mention resolution, delete, like, repost, image upload), profile, OGP.
 
-Do not port what C# already does (relative time) or what the view models already own; apply the Swift regression cases (`TimelineViewModelTests`, `NotificationsViewModelTests`, `NotificationPipelineRegressionTests`) to the existing C# view models instead. `FeedThreading.arrange` groups a self-thread only when parent and child share an author, but the bridge sends no authors, so Windows groups other people's replies too; pass the author in the port and record the change. Check: `dotnet test`.
+Do not port what C# already does (relative time) or what the view models already own; apply the Swift regression cases (`TimelineViewModelTests`, `NotificationsViewModelTests`, `NotificationPipelineRegressionTests`) to the existing C# view models instead. `FeedThreading.arrange` groups a self-thread only when parent and child share an author, compared by `PostDisplay.authorDID` (from the API's `author.did`), else the repo in the post URI; port it that way (#12). Check: `dotnet test`.
 
 **Phase 3. OAuth and accounts.** Port `BlueskyCore`'s OAuth (identity resolution, metadata discovery, PKCE, PAR, DPoP with ECDSA P-256 from `System.Security.Cryptography`, refresh) and its tests. Store accounts with DPAPI (`ProtectedData`). Tokens and the DPoP private key never go to logs or the repository (AGENTS.md, Publishing Policy). Check: the OAuth list, with the Debug setting pointing sign-in and account operations at the C# core.
 
@@ -100,7 +100,7 @@ Map macOS conventions (menu bar, ⌘ shortcuts) to Windows ones (Ctrl, the windo
 ## 7. Things to know
 
 - **Updates.** WinSparkle is wired but off: `UpdateService` returns early while its public key is a placeholder. Turning it on (a key pair and a Windows appcast) is a separate decision, not part of this work.
-- **Known Swift core gaps, not to copy.** An old 401 response can roll back a refresh token, and the timeline cursor is not escaped for `+`. Fix them in C# and tell the user.
+- **Swift core fixes from the Windows review (#9 to #16).** The issues found while porting are fixed in Swift too: a balanced `)` ending a link, `+` escaped in every query, an OR filter cursor that no longer matches restarting the feed, self-threads grouped by DID, blank notification names, subject loading failures, OAuth `iss`/`sub`/scope checks, and refreshed tokens saved safely (the account manager's `RefreshGate` saves each renewal as it completes, and `AccountManager.updateTokens(session:…)` drops a refresh token already used and tokens from a replaced session). Keep the C# core matching these. Report anything else found in Swift as a GitHub issue, as before.
 - **Workflow.** Follow AGENTS.md: a worktree per piece of work, TDD one step at a time, English commit messages, the wiki updated with `wiki-update`. YoruMimizuku has no pull requests: when a phase's work is done, report it and fast-forward `main` and push only after the user approves that merge.
 
 ## 8. Decisions

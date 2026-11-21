@@ -1,8 +1,10 @@
 ---
 title: Authentication (OAuth + DPoP)
 type: behavior
-updated: 2026-07-13
+updated: 2026-11-21
 sources:
+  - core/Sources/BlueskyCore/OAuth/OAuthCallback.swift
+  - core/Sources/BlueskyCore/Account/AccountManager.swift
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-07-13-session-reauth-design.md
@@ -51,7 +53,8 @@ A native OAuth client must publish a single static JSON at an HTTPS `client_id`.
 2. Authz server discovery: PDS `/.well-known/oauth-protected-resource` → identify the authorization server → fetch `/.well-known/oauth-authorization-server` metadata.
 3. PAR (Pushed Authorization Request): POST the PKCE challenge, scope, and DPoP proof; receive a `request_uri`.
 4. Browser authorization: open the authorize endpoint via `ASWebAuthenticationSession`; the user approves in the browser.
-5. Token exchange: exchange the authorization code with DPoP binding (including nonce retry). Obtain access / refresh tokens and a DPoP nonce.
+4b. Callback check: before the code is exchanged, the callback must carry exactly one `state` and one `iss`, equal byte for byte to the request's state and the discovered authorization server's issuer (RFC 9207, against mix-up); an error response is checked the same way before it is reported (`OAuthCallback.verified`, #15).
+5. Token exchange: exchange the authorization code with DPoP binding (including nonce retry). Obtain access / refresh tokens and a DPoP nonce. The token response's `sub` must be the DID resolved at the start and its `scope` must include `atproto` (`TokenResponse.verifyLogin`).
 6. Storage: store tokens and the DPoP private key per-DID in the Keychain.
 
 (`2026-06-04-yorumimizuku-design.md` §5.2). Each step was built as its own plan: discovery (`oauth-discovery`), PAR + authorize URL (`oauth-par-authz-url`), the PKCE/DPoP sender (`oauth-pkce-dpop-sender`), token exchange (`oauth-token-exchange`), the orchestrator that wires them together (`oauth-client-orchestrator`), the DPoP module (`dpop`), and the app-side login wiring (`login-integration`).
@@ -69,6 +72,7 @@ atproto refresh tokens are **single-use and rotated** — each `refresh_token` g
 Two pieces address this:
 
 - **`RefreshGate` (coalescing).** A shared actor (`core/Sources/BlueskyCore/OAuth/RefreshGate.swift`) keyed by the refresh-token value. Concurrent renewals for the same token collapse into a single network call, and a straggler still holding the now-consumed token reuses the cached result instead of replaying the dead one. One shared instance lives on `AccountManager.refreshGate` and is threaded through every XRPC service (via `LiveServiceContext`), so all tabs coalesce. Failures are not cached, so a genuinely dead token still surfaces its error. Covered by `RefreshGateTests`.
+- **Saving renewed tokens (#16).** The account manager's gate saves each renewal the moment it completes, before any waiting request retries, so a request that fails afterwards cannot leave only the used refresh token stored. The gate records every refresh token it has used, and `AccountManager.updateTokens(did:session:…)` drops a refresh token already used and tokens signed with another DPoP key than the stored session's (a re-login replaced it), so a request that renewed earlier but reports late cannot bring back an invalidated token. Account adds, removals and token writes share one lock; iPad windows share one manager.
 - **`SessionExpiry` (recovery).** When a refresh fails irrecoverably (`tokenRequestFailed` with `invalid_grant`; see the parsed OAuth error body in `OAuthError`), `SessionExpiry.reportIfExpired` posts a notification. The view models call it from their error paths (load / refresh / scroll / compose). On both macOS and iPad, `RootView` now **keeps** the account instead of dropping it: the pure helper `SessionReauth.onExpiry(currentDID:currentHandle:isPending:)` (`core/Sources/YoruMimizukuKit/SessionReauth.swift`) turns the event into a `ReauthRequest?` (nil if there is no current account, or if a re-auth is already pending — the idempotency guard against repeated poll-driven notifications). `RootView` sets its in-memory re-auth state from that request and auto-presents the existing `LoginView` in a sheet, bound to a dedicated re-auth `LoginViewModel` pre-filled with the expired account's handle, while the stale authenticated UI stays mounted behind the sheet. If the user cancels, the sheet closes but the re-auth state is not cleared, so a persistent `SessionReauthBanner` ("セッションが期限切れです" / "再ログイン") sits above the still-visible timeline as the fallback to re-open the sheet. On success, `AccountManager.add` replaces the same DID's tokens and DPoP key in place, the re-auth state clears, and the authenticated subtree's id (`"\(did)#\(reauthGeneration)"`) changes to force a fresh mount that reloads with the new tokens. Switching accounts or explicit logout also clears the re-auth state; only logout still deletes the account via `removeAndAdvance` (§ [[accounts]]). Retrying a dead session is futile, so the app routes to re-authentication instead of requiring a from-scratch re-add (`2026-07-13-session-reauth-design.md` §5).
 
 ### Proactive refresh on wake
