@@ -35,6 +35,7 @@ internal sealed class FakeAtproto : HttpMessageHandler
     private int _serial;
     private int _refreshCount;
     private int _nonceChallenges;
+    private int _rejectedTokens;
 
     /// <summary>The scope tokens are issued with; null leaves the field out.</summary>
     public string? Scope { get; set; } = "atproto transition:generic";
@@ -51,6 +52,9 @@ internal sealed class FakeAtproto : HttpMessageHandler
 
     public int RefreshCount => Volatile.Read(ref _refreshCount);
     public int NonceChallenges => Volatile.Read(ref _nonceChallenges);
+
+    /// <summary>PDS requests refused with 401 invalid_token.</summary>
+    public int RejectedTokens => Volatile.Read(ref _rejectedTokens);
     public NameValueCollection? LastPar { get; private set; }
     public NameValueCollection? LastTokenRequest { get; private set; }
 
@@ -84,6 +88,12 @@ internal sealed class FakeAtproto : HttpMessageHandler
     public void ExpireAccessTokens()
     {
         lock (_gate) _accessTokens.Clear();
+    }
+
+    /// <summary>Every refresh token issued so far stops working, as after a revoked session.</summary>
+    public void RevokeRefreshTokens()
+    {
+        lock (_gate) _refreshTokens.Clear();
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -221,6 +231,7 @@ internal sealed class FakeAtproto : HttpMessageHandler
         lock (_gate) _accessTokens.TryGetValue(accessToken, out grant);
         if (grant is null)
         {
+            Interlocked.Increment(ref _rejectedTokens);
             var expired = Json(HttpStatusCode.Unauthorized, new JsonObject { ["error"] = "invalid_token", ["message"] = "token expired" }, PdsNonce);
             expired.Headers.TryAddWithoutValidation("WWW-Authenticate", "DPoP error=\"invalid_token\"");
             return expired;

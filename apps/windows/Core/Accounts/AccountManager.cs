@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using YoruMimizuku.Core.OAuth;
 
 namespace YoruMimizuku.Core.Accounts;
@@ -16,19 +17,34 @@ public sealed class UnknownAccountException(string did) : Exception($"No stored 
 /// </summary>
 public sealed class AccountManager
 {
-    private readonly AccountStore _store;
-    private readonly OAuthLogin _login;
+    /// <summary>How long a sign-in step or a token refresh may take, as URLSession allows the Swift core.</summary>
+    internal static readonly TimeSpan NetworkTimeout = TimeSpan.FromSeconds(60);
 
-    /// <param name="transport">Carries sign-in, discovery and token refresh.</param>
+    private readonly AccountStore _store;
+    private readonly HttpMessageInvoker _http;
+    private readonly DPoPNonces _nonces = new();
+    private readonly OAuthClientConfig _config;
+    private readonly OAuthLogin _login;
+    private readonly ConcurrentDictionary<string, AccountState> _states = new();
+
+    /// <param name="transport">
+    /// Carries sign-in, discovery and token refresh. PDS requests go through each
+    /// <see cref="AccountHandler"/>'s own inner handler.
+    /// </param>
     public AccountManager(ISecureStorage storage, HttpMessageHandler transport, OAuthClientConfig config)
     {
         _store = new AccountStore(storage);
-        _login = new OAuthLogin(new HttpMessageInvoker(transport, disposeHandler: false), new DPoPNonces(), config);
+        _http = new HttpMessageInvoker(transport, disposeHandler: false);
+        _config = config;
+        _login = new OAuthLogin(_http, _nonces, config);
     }
 
     /// <summary>Starts sign-in for a handle or DID; open the result's authorization URL in WebView2.</summary>
-    public Task<PendingLogin> BeginLoginAsync(string handleOrDid, CancellationToken cancellationToken = default) =>
-        _login.BeginAsync(handleOrDid, cancellationToken);
+    public async Task<PendingLogin> BeginLoginAsync(string handleOrDid, CancellationToken cancellationToken = default)
+    {
+        using var timeout = Timeout(cancellationToken);
+        return await _login.BeginAsync(handleOrDid, timeout.Token);
+    }
 
     /// <summary>
     /// Finishes sign-in with the as.ason:/callback URL WebView2 navigated to, stores the
@@ -36,9 +52,11 @@ public sealed class AccountManager
     /// </summary>
     public async Task<AccountSummary> CompleteLoginAsync(PendingLogin pending, string callbackUrl, CancellationToken cancellationToken = default)
     {
-        var tokens = await _login.CompleteAsync(pending, callbackUrl, cancellationToken);
+        using var timeout = Timeout(cancellationToken);
+        var tokens = await _login.CompleteAsync(pending, callbackUrl, timeout.Token);
         _store.Save(new StoredAccount(pending.Did, pending.Handle, pending.Pds, pending.Issuer, tokens, pending.Key.ExportPkcs8()));
         _store.SetCurrent(pending.Did);
+        _states.TryRemove(pending.Did, out _);
         return new AccountSummary(pending.Did, pending.Handle);
     }
 
@@ -59,6 +77,7 @@ public sealed class AccountManager
     public string? RemoveAndAdvance(string did)
     {
         _store.Remove(did);
+        _states.TryRemove(did, out _);
         var next = _store.Index().Dids.FirstOrDefault();
         if (next is not null) _store.SetCurrent(next);
         return next;
@@ -67,5 +86,19 @@ public sealed class AccountManager
     /// <summary>The account's PDS, the only host its requests are authorized for.</summary>
     public Uri GetPds(string did) => (_store.Find(did) ?? throw new UnknownAccountException(did)).Pds;
 
+    /// <summary>
+    /// The one in-memory state per account, shared by every <see cref="AccountHandler"/>
+    /// for it, so their refreshes coalesce. A sign-in again or a sign-out drops it.
+    /// </summary>
+    internal AccountState State(string did) =>
+        _states.GetOrAdd(did, d => new AccountState(_store.Find(d) ?? throw new UnknownAccountException(d), _store, _http, _nonces, _config));
+
     private static AccountSummary Summary(StoredAccount account) => new(account.Did, account.Handle);
+
+    private static CancellationTokenSource Timeout(CancellationToken cancellationToken)
+    {
+        var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(NetworkTimeout);
+        return timeout;
+    }
 }
