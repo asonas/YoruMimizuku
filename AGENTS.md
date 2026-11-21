@@ -94,8 +94,9 @@ After editing `project.yml`, always re-run `xcodegen generate` to apply changes.
 ### Build and Test
 
 ```bash
-# Test the core package (fast — run this most of the time)
-cd core && swift test
+# Test the core package (fast — run this most of the time). Uses Xcode's toolchain:
+# the Command Line Tools have no XCTest.
+mise run test:core
 
 # Build including the app
 xcodebuild build -scheme YoruMimizuku -project YoruMimizuku.xcodeproj
