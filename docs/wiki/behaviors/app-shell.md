@@ -86,7 +86,7 @@ features:
     windows: differs
     ios: none
     android: planned
-    note: "Both offer 'リストに追加' in a timeline post's right-click menu and add a dragged avatar's author to an own pinned curated list, writing app.bsky.graph.listitem records on the window account after re-reading the server ([[macos]], [[windows]]). A WinUI menu can change while it is open, so Windows reads the author's membership when the menu opens and redraws it when the answer arrives, instead of prefetching on pointer rest; and the Windows post body is selectable text, so right-clicking the body itself shows the text commands (FeedView.xaml, ListMembershipMenu.cs). Dropping an avatar on a filter (a `from:` condition) edits a saved filter, not a list, so it is not part of this row; Windows does not offer it ([[filters]])."
+    note: "Both offer 'リストに追加' in a timeline post's right-click menu and add a dragged avatar's author to an own pinned curated list, writing app.bsky.graph.listitem records on the window account after re-reading the server ([[macos]], [[windows]]). A WinUI menu can change while it is open, so Windows reads the author's membership when the menu opens and redraws it when the answer arrives, instead of prefetching on pointer rest; and the Windows post body is selectable text, so right-clicking the body itself shows the text commands (FeedView.xaml, ListMembershipMenu.cs). Dropping an avatar on a filter (a `from:` condition) edits a saved filter, not a list; Windows does not offer it yet, bug: https://github.com/asonas/YoruMimizuku/issues/37 ([[filters]])."
   - name: Multiple windows
     macos: full
     windows: full
