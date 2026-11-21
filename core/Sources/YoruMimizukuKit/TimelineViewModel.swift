@@ -93,14 +93,19 @@ public final class TimelineViewModel: ObservableObject {
     private let interactor: PostInteracting?
     private let tracer: SignpostTracing
 
+    /// `interactions` is shared with the window's other view models, so a like
+    /// or repost shows in all of them; without it this timeline keeps its own.
     public init(
         loader: TimelineLoading,
         interactor: PostInteracting? = nil,
+        interactions: SharedPostInteractions? = nil,
         tracer: SignpostTracing = NoopSignpostTracing()
     ) {
         self.loader = loader
         self.interactor = interactor
+        self.interactions = interactions ?? SharedPostInteractions()
         self.tracer = tracer
+        self.interactions.register(self) { [weak self] id, transform in self?.update(id, transform) ?? false }
     }
 
     /// Toggle the viewer's like on `post`, updating the row optimistically and
@@ -152,7 +157,8 @@ public final class TimelineViewModel: ObservableObject {
     /// under way when they were muted are filtered too.
     private var hiddenAuthors: Set<String> = []
 
-    private let pending = PendingInteractions()
+    private let interactions: SharedPostInteractions
+    private var pending: PendingInteractions { interactions.pending }
 
     /// The posts of `fetch` (from `pending.fetchStarted()`) as shown: muted
     /// authors dropped, and the viewer's likes and reposts the server's copy may
@@ -189,9 +195,8 @@ public final class TimelineViewModel: ObservableObject {
         guard let interactor else { return nil }
         return PostInteractionController(
             interactor: interactor,
-            pending: pending,
-            currentPost: { [weak self] id in self?.post(id: id) },
-            writePost: { [weak self] post in self?.write(post) }
+            interactions: interactions,
+            currentPost: { [weak self] id in self?.post(id: id) }
         )
     }
 
@@ -199,10 +204,18 @@ public final class TimelineViewModel: ObservableObject {
         posts.first { $0.id == id }
     }
 
-    private func write(_ post: PostDisplay) {
-        guard case var .loaded(posts) = state, let index = posts.firstIndex(where: { $0.id == post.id }) else { return }
-        posts[index] = post
-        state = .loaded(posts)
+    /// Apply a like or repost change to every row of the post, if shown, and
+    /// return whether a row changed.
+    private func update(_ id: String, _ transform: (inout PostDisplay) -> Void) -> Bool {
+        guard case var .loaded(posts) = state else { return false }
+        var changed = false
+        for index in posts.indices where posts[index].id == id {
+            let before = posts[index]
+            transform(&posts[index])
+            changed = changed || posts[index] != before
+        }
+        if changed { state = .loaded(posts) }
+        return changed
     }
 
     /// Convenience accessor for the currently loaded posts (empty otherwise).

@@ -194,10 +194,13 @@ private struct AuthenticatedRootView: View {
         self.onSwitchAccount = onSwitchAccount
         self.onAddAccount = onAddAccount
         self.onLogout = onLogout
+        // The window's timelines and conversations show one another's likes
+        // and reposts.
+        let interactions = SharedPostInteractions()
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(
                 loader: LiveTimelineLoader(accountManager: accountManager),
-                interactor: LivePostInteractor(accountManager: accountManager)
+                interactor: LivePostInteractor(accountManager: accountManager), interactions: interactions
             )
         )
         _notificationsModel = StateObject(
@@ -211,19 +214,19 @@ private struct AuthenticatedRootView: View {
                     ThreadViewModel(
                         loader: LiveThreadLoader(accountManager: accountManager),
                         uri: uri,
-                        interactor: LivePostInteractor(accountManager: accountManager)
+                        interactor: LivePostInteractor(accountManager: accountManager), interactions: interactions
                     )
                 },
                 makeFilterModel: { filter in
                     TimelineViewModel(
                         loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries),
-                        interactor: LivePostInteractor(accountManager: accountManager)
+                        interactor: LivePostInteractor(accountManager: accountManager), interactions: interactions
                     )
                 },
                 makeAuthorModel: { did in
                     TimelineViewModel(
                         loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: did),
-                        interactor: LivePostInteractor(accountManager: accountManager)
+                        interactor: LivePostInteractor(accountManager: accountManager), interactions: interactions
                     )
                 },
                 makeAuthorHeader: { did, initial in

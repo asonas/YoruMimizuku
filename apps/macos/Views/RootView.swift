@@ -260,10 +260,13 @@ private struct AuthenticatedRootView: View {
         makeComposer: @escaping @MainActor (PostDisplay?) -> ComposerViewModel,
         makeQuoteComposer: @escaping @MainActor (PostDisplay) -> ComposerViewModel
     ) {
+        // The window's timelines and conversations show one another's likes
+        // and reposts.
+        let interactions = SharedPostInteractions()
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(
                 loader: LiveTimelineLoader(accountManager: accountManager, accountDID: did),
-                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did),
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did), interactions: interactions,
                 tracer: OSSignpostTracing.timeline
             )
         )
@@ -276,14 +279,14 @@ private struct AuthenticatedRootView: View {
         let makeThreadModel: @MainActor (String, PostDisplay?) -> ThreadViewModel = { uri, preview in
             ThreadViewModel(
                 loader: LiveThreadLoader(accountManager: accountManager, accountDID: did), uri: uri,
-                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did),
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did), interactions: interactions,
                 preview: preview
             )
         }
         let makeAuthorModel: @MainActor (String) -> TimelineViewModel = { authorDID in
             TimelineViewModel(
                 loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID, accountDID: did),
-                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did), interactions: interactions
             )
         }
         let makeAuthorHeader: @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel = { authorDID, initial in
@@ -304,7 +307,7 @@ private struct AuthenticatedRootView: View {
                 makeFilterModel: { filter in
                     TimelineViewModel(
                         loader: LiveSearchLoader(accountManager: accountManager, subqueries: filter.subqueries, accountDID: did),
-                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
+                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did), interactions: interactions
                     )
                 },
                 makeAuthorModel: makeAuthorModel,
@@ -320,7 +323,7 @@ private struct AuthenticatedRootView: View {
                 makeTimeline: { source in
                     TimelineViewModel(
                         loader: LiveSavedFeedLoader(accountManager: accountManager, accountDID: did, source: source),
-                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
+                        interactor: LivePostInteractor(accountManager: accountManager, accountDID: did), interactions: interactions
                     )
                 }
             )

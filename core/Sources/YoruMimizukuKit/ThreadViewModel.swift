@@ -56,11 +56,19 @@ public final class ThreadViewModel: ObservableObject {
     private let loader: ThreadLoading
     private let interactor: PostInteracting?
 
-    public init(loader: ThreadLoading, uri: String, interactor: PostInteracting? = nil, preview: PostDisplay? = nil) {
+    /// `interactions` is shared with the window's other view models, so a like
+    /// or repost shows in all of them; without it this page keeps its own.
+    public init(
+        loader: ThreadLoading, uri: String, interactor: PostInteracting? = nil,
+        interactions: SharedPostInteractions? = nil, preview: PostDisplay? = nil
+    ) {
         self.loader = loader
         self.uri = uri
         self.interactor = interactor
-        self.preview = preview
+        self.interactions = interactions ?? SharedPostInteractions()
+        // The opener's copy may predate a like or repost being sent.
+        self.preview = preview.map { self.interactions.pending.applied(to: $0, fetch: nil) }
+        self.interactions.register(self) { [weak self] id, transform in self?.update(id, transform) ?? false }
     }
 
     /// The post to show as the conversation's anchor: the loaded thread's focus,
@@ -74,7 +82,7 @@ public final class ThreadViewModel: ObservableObject {
     /// once the same post is chosen from a row. A shown post is left alone.
     public func adoptPreview(_ post: PostDisplay) {
         guard focus == nil, post.id == uri else { return }
-        preview = post
+        preview = pending.applied(to: post, fetch: nil)
     }
 
 
@@ -93,9 +101,8 @@ public final class ThreadViewModel: ObservableObject {
         guard let interactor else { return nil }
         return PostInteractionController(
             interactor: interactor,
-            pending: pending,
-            currentPost: { [weak self] id in self?.post(id: id) },
-            writePost: { [weak self] post in self?.write(post) }
+            interactions: interactions,
+            currentPost: { [weak self] id in self?.post(id: id) }
         )
     }
 
@@ -106,9 +113,22 @@ public final class ThreadViewModel: ObservableObject {
         return thread.focus
     }
 
-    private func write(_ post: PostDisplay) {
-        guard case let .loaded(thread) = state, thread.focus.id == post.id else { return }
-        state = .loaded(ConversationThread(focus: post, replies: thread.replies))
+    /// Apply a like or repost change to the anchor, or to the preview shown
+    /// until it loads, and return whether it changed.
+    private func update(_ id: String, _ transform: (inout PostDisplay) -> Void) -> Bool {
+        if case let .loaded(thread) = state {
+            guard thread.focus.id == id else { return false }
+            var focus = thread.focus
+            transform(&focus)
+            guard focus != thread.focus else { return false }
+            state = .loaded(ConversationThread(focus: focus, replies: thread.replies))
+            return true
+        }
+        guard var shown = preview, shown.id == id else { return false }
+        transform(&shown)
+        guard shown != preview else { return false }
+        preview = shown
+        return true
     }
 
     /// Load the thread for `uri`, moving through loading -> loaded/failed. A load
@@ -118,6 +138,9 @@ public final class ThreadViewModel: ObservableObject {
     public func load() async {
         loadGeneration += 1
         let generation = loadGeneration
+        // A reload shows the anchor as last shown, with the viewer's changes,
+        // until the thread arrives.
+        if case let .loaded(thread) = state { preview = thread.focus }
         state = .loading
         do {
             let fetch = pending.fetchStarted()
@@ -137,5 +160,6 @@ public final class ThreadViewModel: ObservableObject {
     }
 
     private var loadGeneration = 0
-    private let pending = PendingInteractions()
+    private let interactions: SharedPostInteractions
+    private var pending: PendingInteractions { interactions.pending }
 }

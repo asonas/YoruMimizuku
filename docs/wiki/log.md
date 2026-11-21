@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (likes shared between the timeline and the conversation)
+
+- sources: core/Sources/YoruMimizukuKit/PostInteractionController.swift, core/Sources/YoruMimizukuKit/TimelineViewModel.swift, core/Sources/YoruMimizukuKit/ThreadViewModel.swift, apps/macos/Views/RootView.swift, apps/ipados/Views/RootView.swift
+- updated: [[timeline-streaming]]
+- note: a like or repost made in the timeline now shows in the detail pane's conversation and the other way round, through one `SharedPostInteractions` per window.
+
 ## 2026-11-21 ingest (Windows timeline post keys)
 
 - sources: apps/windows/Core/PostDisplay.cs, apps/windows/App/ViewModels/PostItem.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ConversationView.xaml.cs

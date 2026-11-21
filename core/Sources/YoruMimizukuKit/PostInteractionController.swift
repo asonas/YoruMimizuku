@@ -1,7 +1,8 @@
 import Foundation
 
 /// The likes and reposts the viewer changed and the server's copy may not show
-/// yet, by post. A view model keeps one for as long as it lives:
+/// yet, by post. The view models of one window share it through
+/// `SharedPostInteractions`:
 /// - while a request is out, a second change of the same kind is ignored and a
 ///   fetched copy shows the change on top;
 /// - once a request succeeds, fetches that started before it still show the
@@ -84,6 +85,45 @@ final class PendingInteractions {
     }
 }
 
+/// The likes and reposts of one window's account, shared by the view models
+/// that show its posts (the timelines and the conversation in the detail pane),
+/// so a change made in one shows in the others and is not sent twice.
+@MainActor
+public final class SharedPostInteractions {
+    let pending = PendingInteractions()
+
+    typealias Update = @MainActor (String, (inout PostDisplay) -> Void) -> Bool
+
+    private struct Listener {
+        weak var owner: AnyObject?
+        let id: ObjectIdentifier
+        let update: Update
+    }
+
+    private var listeners: [Listener] = []
+
+    public init() {}
+
+    /// `update` applies a change to `owner`'s copies of the post with the id and
+    /// returns whether any changed. It is dropped once `owner` is gone.
+    func register(_ owner: AnyObject, update: @escaping Update) {
+        listeners.removeAll { $0.owner == nil }
+        listeners.append(Listener(owner: owner, id: ObjectIdentifier(owner), update: update))
+    }
+
+    /// Apply `transform` to the copies of the post shown by the registered view
+    /// models, or by `owners` only, and return the view models whose copy changed.
+    @discardableResult
+    func apply(_ id: String, only owners: Set<ObjectIdentifier>? = nil, _ transform: (inout PostDisplay) -> Void) -> Set<ObjectIdentifier> {
+        listeners.removeAll { $0.owner == nil }
+        var changed: Set<ObjectIdentifier> = []
+        for listener in listeners where owners?.contains(listener.id) ?? true {
+            if listener.update(id, transform) { changed.insert(listener.id) }
+        }
+        return changed
+    }
+}
+
 private extension PostDisplay {
     mutating func applyOptimistic(_ kind: PendingInteractions.Kind, on: Bool, recordURI: String?) {
         switch (kind, on) {
@@ -102,21 +142,23 @@ private extension PostDisplay {
 }
 
 /// Drives the optimistic like / repost changes shared by `TimelineViewModel` and
-/// `ThreadViewModel`. It reads and writes posts through the two injected closures
-/// so each view model keeps owning its own storage (an array vs a single focused
-/// post); the logic itself lives here once.
+/// `ThreadViewModel`. It reads the post from the view model that acts and writes
+/// each step to every copy the window shows, through `SharedPostInteractions`.
 ///
 /// Flow: apply the optimistic change immediately, call the network, then either
 /// confirm with the real record URI (on a fresh add) or undo the change on the
 /// post as it is by then (on failure), which may be a newer copy from a refresh.
+/// Each step leaves a copy already in its target state alone, and a failed
+/// removal is undone only where the removal changed the copy.
 @MainActor
 struct PostInteractionController {
     let interactor: PostInteracting
-    let pending: PendingInteractions
-    /// Returns the current post for an id, or nil if it is no longer present.
+    let interactions: SharedPostInteractions
+    /// Returns the acting view model's current post for an id, or nil if it is
+    /// no longer present.
     let currentPost: (String) -> PostDisplay?
-    /// Persists an updated post back into the owning view model's state.
-    let writePost: (PostDisplay) -> Void
+
+    private var pending: PendingInteractions { interactions.pending }
 
     /// Like (`on`) or unlike the post. No-op when it is already in that state or
     /// a like change for it is still being sent.
@@ -127,14 +169,17 @@ struct PostInteractionController {
             apply(id) { $0.applyOptimisticLike() }
             await add(id, .like,
                       add: { try await interactor.like(uri: original.id, cid: original.cid) },
-                      confirm: { $0.viewerLikeURI = $1 },
+                      confirm: { post, uri in
+                          guard post.isLiked else { return }
+                          post.viewerLikeURI = uri
+                      },
                       undo: { post in
                           guard post.viewerLikeURI == PostDisplay.pendingLikeURI else { return }
                           post.applyOptimisticUnlike()
                       })
         } else {
-            apply(id) { $0.applyOptimisticUnlike() }
-            await remove(id, .like, recordURI: original.viewerLikeURI,
+            let changed = interactions.apply(id) { $0.applyOptimisticUnlike() }
+            await remove(id, .like, recordURI: original.viewerLikeURI, changed: changed,
                          delete: { try await interactor.removeLike(recordURI: $0) },
                          undo: { post in
                              guard !post.isLiked else { return }
@@ -153,14 +198,17 @@ struct PostInteractionController {
             apply(id) { $0.applyOptimisticRepost() }
             await add(id, .repost,
                       add: { try await interactor.repost(uri: original.id, cid: original.cid) },
-                      confirm: { $0.viewerRepostURI = $1 },
+                      confirm: { post, uri in
+                          guard post.isReposted else { return }
+                          post.viewerRepostURI = uri
+                      },
                       undo: { post in
                           guard post.viewerRepostURI == PostDisplay.pendingRepostURI else { return }
                           post.applyOptimisticUnrepost()
                       })
         } else {
-            apply(id) { $0.applyOptimisticUnrepost() }
-            await remove(id, .repost, recordURI: original.viewerRepostURI,
+            let changed = interactions.apply(id) { $0.applyOptimisticUnrepost() }
+            await remove(id, .repost, recordURI: original.viewerRepostURI, changed: changed,
                          delete: { try await interactor.removeRepost(recordURI: $0) },
                          undo: { post in
                              guard !post.isReposted else { return }
@@ -181,14 +229,14 @@ struct PostInteractionController {
     }
 
     private func apply(_ id: String, _ transform: (inout PostDisplay) -> Void) {
-        guard var post = currentPost(id) else { return }
-        transform(&post)
-        writePost(post)
+        interactions.apply(id, transform)
     }
 
-    /// Run a removal (unlike / unrepost); undo it on failure.
+    /// Run a removal (unlike / unrepost); on failure undo it in the view models
+    /// whose copy it `changed`.
     private func remove(
         _ id: String, _ kind: PendingInteractions.Kind, recordURI: String?,
+        changed: Set<ObjectIdentifier>,
         delete: (String) async throws -> Void,
         undo: (inout PostDisplay) -> Void
     ) async {
@@ -201,7 +249,7 @@ struct PostInteractionController {
             pending.end(id, kind, succeeded: true)
         } catch {
             pending.end(id, kind, succeeded: false)
-            apply(id, undo)
+            interactions.apply(id, only: changed, undo)
         }
     }
 
