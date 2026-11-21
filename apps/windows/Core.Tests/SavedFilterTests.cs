@@ -134,6 +134,23 @@ public class SavedFilterTests
     }
 
     [Fact]
+    public void SearchesTheTypedTextAsOneKeywordNamedAfterIt()
+    {
+        var filter = SavedFilter.ForSearch("  rust from:alice #lang ");
+
+        Assert.NotNull(filter);
+        Assert.Equal("rust from:alice #lang", filter.Name);
+        Assert.Equal([FilterTermKind.Keyword], filter.Terms.Select(t => t.Kind));
+        Assert.Equal(["rust from:alice #lang"], filter.Subqueries);
+    }
+
+    [Fact]
+    public void SearchesNothingForBlankText()
+    {
+        Assert.Null(SavedFilter.ForSearch(" \t\n"));
+    }
+
+    [Fact]
     public void RejectsAnUnknownTermKind()
     {
         var json = StoredByApp.Replace("\"Kind\": \"User\"", "\"Kind\": \"List\"");

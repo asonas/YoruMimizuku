@@ -9,7 +9,9 @@ using YoruMimizuku.App.Services;
 
 namespace YoruMimizuku.App.ViewModels;
 
-public enum WorkspaceTabKind { Home, Notifications, SavedFeed, Filter }
+/// <summary><see cref="Search"/> is the transient search box result: it is never in
+/// <see cref="WorkspaceViewModel.Tabs"/>, so selecting any sidebar row discards it.</summary>
+public enum WorkspaceTabKind { Home, Notifications, SavedFeed, Filter, Search }
 
 public sealed class WorkspaceTab : ObservableObject
 {
@@ -161,7 +163,7 @@ public sealed class WorkspaceViewModel : ObservableObject
         {
             Tabs.Add(FilterTab(filter));
         }
-        if (Selected.Kind == WorkspaceTabKind.Filter)
+        if (Selected.Kind is WorkspaceTabKind.Filter or WorkspaceTabKind.Search)
         {
             Selected = HomeTab;
         }
@@ -238,6 +240,21 @@ public sealed class WorkspaceViewModel : ObservableObject
             Terms = { new FilterTermModel { Kind = FilterTermKind.Hashtag, Value = clean } }
         };
         AddFilter(filter);
+    }
+
+    /// <summary>Show posts matching <paramref name="text"/> in the timeline column without
+    /// adding a filter. Blank text is a no-op. Mirrors the Swift openSearch(query:).</summary>
+    public void OpenSearch(string text)
+    {
+        if (Core.SavedFilter.ForSearch(text) is not { } filter) return;
+        var model = SavedFilterModel.From(filter);
+        Selected = new WorkspaceTab(WorkspaceTabKind.Search, "search", "検索: " + model.Name, filter: model);
+    }
+
+    /// <summary>Keep the shown search as a filter in the sidebar and select it.</summary>
+    public void SaveSearchAsFilter()
+    {
+        if (Selected is { Kind: WorkspaceTabKind.Search, Filter: { } filter }) AddFilter(filter);
     }
 
     private static WorkspaceTab FilterTab(SavedFilterModel filter) =>

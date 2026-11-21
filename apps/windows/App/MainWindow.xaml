@@ -43,6 +43,13 @@
                 IsSettingsVisible="True"
                 SelectionChanged="OnNavSelectionChanged">
 
+                <!-- The macOS toolbar search (Ctrl+F): results show in the timeline
+                     column without saving; selecting any row below discards them. -->
+                <muxc:NavigationView.AutoSuggestBox>
+                    <AutoSuggestBox x:Name="SearchBox" PlaceholderText="検索" QueryIcon="Find"
+                                    AutomationProperties.Name="検索" QuerySubmitted="OnSearchSubmitted" />
+                </muxc:NavigationView.AutoSuggestBox>
+
                 <muxc:NavigationView.PaneFooter>
                     <Button x:Name="AccountFooter" Padding="12,8" Background="Transparent" BorderThickness="0"
                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"

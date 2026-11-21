@@ -55,6 +55,26 @@ public sealed class SavedFilterModel
 
     private static string Strip(char ch, string s) => s.StartsWith(ch) ? s[1..] : s;
 
+    public static SavedFilterModel From(Core.SavedFilter filter) => new()
+    {
+        Id = filter.Id,
+        Name = filter.Name,
+        Terms = filter.Terms.Select(t => new FilterTermModel
+        {
+            Id = t.Id,
+            Kind = t.Kind switch
+            {
+                Core.FilterTermKind.User => FilterTermKind.User,
+                Core.FilterTermKind.Hashtag => FilterTermKind.Hashtag,
+                Core.FilterTermKind.Mention => FilterTermKind.Mention,
+                _ => FilterTermKind.Keyword
+            },
+            Value = t.Value
+        }).ToList(),
+        Combinator = filter.Combinator == Core.FilterCombinator.Or ? FilterCombinator.Or : FilterCombinator.And,
+        CreatedAt = filter.CreatedAt
+    };
+
     /// <summary>Build the SavedFilter JSON object the core's search expects.</summary>
     public JsonObject ToSearchJson()
     {

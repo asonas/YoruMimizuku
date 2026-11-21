@@ -361,7 +361,10 @@ public sealed partial class MainWindow : Window
         var selected = Nav.MenuItems
             .OfType<NavigationViewItem>()
             .FirstOrDefault(i => ReferenceEquals(i.Tag, _workspace.Selected));
-        Nav.SelectedItem = selected ?? Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault();
+        // A search has no row, so no row is selected while it shows.
+        Nav.SelectedItem = _workspace.Selected.Kind == WorkspaceTabKind.Search
+            ? null
+            : selected ?? Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault();
         _syncing = false;
     }
 
@@ -552,10 +555,19 @@ public sealed partial class MainWindow : Window
                 await pinned.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ShowTimeline(pinned);
                 break;
-            case WorkspaceTabKind.Filter when tab.Filter is { } filter:
+            case WorkspaceTabKind.Filter or WorkspaceTabKind.Search when tab.Filter is { } filter:
                 var search = new FeedView(
                     new TimelineViewModel(account, cursor => account.SearchLoadAsync(filter.ToSearchJson(), cursor)),
                     _workspace);
+                if (tab.Kind == WorkspaceTabKind.Search)
+                {
+                    // Windows timelines have no header, so the macOS header button sits
+                    // beside 更新 and 投稿.
+                    var save = new AppBarButton { Icon = new SymbolIcon(Symbol.Save), Label = "フィルターとして保存" };
+                    ToolTipService.SetToolTip(save, "この検索をサイドバーのフィルターに残す");
+                    save.Click += (_, _) => _workspace.SaveSearchAsFilter();
+                    search.AddCommand(save);
+                }
                 await search.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ShowTimeline(search);
                 break;
@@ -565,7 +577,10 @@ public sealed partial class MainWindow : Window
     private bool IsCurrentContentRequest(int request, WorkspaceTab tab) =>
         request == _contentRequest &&
         ReferenceEquals(tab, _workspace.Selected) &&
-        _workspace.Tabs.Contains(tab);
+        (tab.Kind == WorkspaceTabKind.Search || _workspace.Tabs.Contains(tab));
+
+    private void OnSearchSubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args) =>
+        _workspace.OpenSearch(args.QueryText);
 
     /// Put a loaded timeline in its column, giving the detail pane back if settings
     /// had taken it.
@@ -619,6 +634,13 @@ public sealed partial class MainWindow : Window
 
     private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        // Ctrl+F, the macOS 検索 ⌘F: focus the search box.
+        if (e.Key == VirtualKey.F && IsKeyDown(VirtualKey.Control) && !IsKeyDown(VirtualKey.Shift))
+        {
+            SearchBox.Focus(FocusState.Keyboard);
+            e.Handled = true;
+            return;
+        }
         if (!IsCtrlShiftDown()) return;
         switch (e.Key)
         {
@@ -652,9 +674,10 @@ public sealed partial class MainWindow : Window
         window?.Activate();
     }
 
-    private static bool IsCtrlShiftDown() =>
-        InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down) &&
-        InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
+    private static bool IsCtrlShiftDown() => IsKeyDown(VirtualKey.Control) && IsKeyDown(VirtualKey.Shift);
+
+    private static bool IsKeyDown(VirtualKey key) =>
+        InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
 
     /// Tell the user, once, why the switch to the C# core signed them out (Phase 4).
     /// It runs after the window's content has loaded, since a dialog needs its XamlRoot.

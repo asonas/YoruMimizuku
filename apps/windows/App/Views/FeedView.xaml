@@ -11,7 +11,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <CommandBar Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent">
+        <CommandBar x:Name="Commands" Grid.Row="0" DefaultLabelPosition="Right" HorizontalAlignment="Left" Background="Transparent">
             <AppBarButton Icon="Refresh" Label="更新" Click="OnRefreshClick" />
             <AppBarButton Icon="Add" Label="投稿" Click="OnComposeClick" />
         </CommandBar>

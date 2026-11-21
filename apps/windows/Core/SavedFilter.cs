@@ -67,6 +67,19 @@ public sealed record SavedFilter(
         return value.Length == 0 ? null : prefix + value;
     }
 
+    /// <summary>
+    /// The filter a toolbar search runs and, when kept, saves: the typed text, trimmed, as
+    /// one keyword term and as the name. Null when the text is blank. Port of the Swift
+    /// <c>WorkspaceModel.openSearch(query:)</c>.
+    /// </summary>
+    public static SavedFilter? ForSearch(string text)
+    {
+        var query = text.Trim();
+        if (query.Length == 0) return null;
+        return new SavedFilter(Guid.NewGuid(), query, [new FilterTerm(Guid.NewGuid(), FilterTermKind.Keyword, query)],
+            FilterCombinator.And, DateTimeOffset.UtcNow);
+    }
+
     public static SavedFilter FromJson(JsonElement json) =>
         new(
             ParseGuid(json, "Id"),

@@ -38,6 +38,9 @@ public sealed partial class FeedView : UserControl
         KeyDown += OnFeedKeyDown;
     }
 
+    /// <summary>Add a timeline-specific action after 更新 and 投稿.</summary>
+    public void AddCommand(AppBarButton button) => Commands.PrimaryCommands.Add(button);
+
     public async Task LoadAsync()
     {
         await Vm.LoadAsync();
