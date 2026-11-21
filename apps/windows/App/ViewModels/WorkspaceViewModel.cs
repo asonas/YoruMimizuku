@@ -190,6 +190,18 @@ public sealed class WorkspaceViewModel : ObservableObject
         Changed?.Invoke();
     }
 
+    /// <summary>
+    /// Add a <c>from:</c> condition for <paramref name="handle"/> to a filter (a person
+    /// dropped on it) and save it. Null when the filter does not exist.
+    /// </summary>
+    public Core.AuthorDropResult? AddAuthor(string handle, string filterId)
+    {
+        if (Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Filter && t.Id == filterId)?.Filter is not { } filter) return null;
+        var (result, edited) = filter.ToCore().AddingAuthor(handle);
+        if (result == Core.AuthorDropResult.Added) UpdateFilter(SavedFilterModel.From(edited));
+        return result;
+    }
+
     public void RemoveFilter(string id)
     {
         var tab = Tabs.FirstOrDefault(t => t.Kind == WorkspaceTabKind.Filter && t.Id == id);

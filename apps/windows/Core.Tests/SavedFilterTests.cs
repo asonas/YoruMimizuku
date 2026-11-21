@@ -150,6 +150,90 @@ public class SavedFilterTests
         Assert.Null(SavedFilter.ForSearch(" \t\n"));
     }
 
+    // Dropping a person on a filter: ports of the Swift WorkspaceModelTests.
+
+    private static string[] UserValues(SavedFilter filter) =>
+        filter.Terms.Where(t => t.Kind == FilterTermKind.User).Select(t => t.Value).ToArray();
+
+    [Fact]
+    public void DroppingAPersonOnAFilterAddsAFromTerm()
+    {
+        var (result, edited) = Filter(FilterCombinator.And, (FilterTermKind.Keyword, "swift")).AddingAuthor("@alice.example");
+
+        Assert.Equal(AuthorDropResult.Added, result);
+        Assert.Equal(["alice.example"], UserValues(edited));
+        Assert.Equal("swift", edited.Terms[0].Value);
+    }
+
+    [Fact]
+    public void DroppingSomeoneAlreadyInTheFilterChangesNothing()
+    {
+        var filter = Filter(FilterCombinator.Or, (FilterTermKind.User, "alice.example"));
+
+        var (result, edited) = filter.AddingAuthor("Alice.example");
+
+        Assert.Equal(AuthorDropResult.AlreadyIncluded, result);
+        Assert.Same(filter, edited);
+    }
+
+    /// <summary>In an AND filter two from: terms can never both match, so the drop is refused.</summary>
+    [Fact]
+    public void DroppingASecondPersonOnAnAndFilterIsRefused()
+    {
+        var filter = Filter(FilterCombinator.And, (FilterTermKind.User, "alice.example"));
+
+        var (result, edited) = filter.AddingAuthor("bob.example");
+
+        Assert.Equal(AuthorDropResult.WouldMatchNothing, result);
+        Assert.Same(filter, edited);
+    }
+
+    /// <summary>A filter saved from a toolbar search keeps from: inside a keyword term.</summary>
+    [Fact]
+    public void AFromInsideAKeywordCountsAsAPersonInAnAndFilter()
+    {
+        var filter = Filter(FilterCombinator.And, (FilterTermKind.Keyword, "swift from:alice.example"));
+
+        Assert.Equal(AuthorDropResult.WouldMatchNothing, filter.AddingAuthor("bob.example").Result);
+    }
+
+    /// <summary>
+    /// The drop compares people the way the search query names them: a leading @, a
+    /// from: inside a keyword and blank rows follow the term's fragment.
+    /// </summary>
+    [Fact]
+    public void TheDropComparesPeopleAsTheSearchQueryNamesThem()
+    {
+        var or = Filter(FilterCombinator.Or, (FilterTermKind.User, "@alice.example"));
+        var saved = Filter(FilterCombinator.And, (FilterTermKind.Keyword, "from:alice.example swift"));
+        var blank = Filter(FilterCombinator.And, (FilterTermKind.Keyword, "swift"), (FilterTermKind.User, "  "));
+
+        Assert.Equal(AuthorDropResult.AlreadyIncluded, or.AddingAuthor("alice.example").Result);
+        Assert.Equal(AuthorDropResult.AlreadyIncluded, saved.AddingAuthor("Alice.example").Result);
+        Assert.Equal(AuthorDropResult.Added, blank.AddingAuthor("alice.example").Result);
+    }
+
+    /// <summary>
+    /// An OR filter searches each row on its own, so a keyword row that also names the
+    /// person does not stand in for a row of just that person.
+    /// </summary>
+    [Fact]
+    public void AnOrFilterGainsAPersonOnlyNamedInsideAKeyword()
+    {
+        var filter = Filter(FilterCombinator.Or, (FilterTermKind.Keyword, "from:alice.example swift"));
+
+        Assert.Equal(AuthorDropResult.Added, filter.AddingAuthor("alice.example").Result);
+    }
+
+    [Fact]
+    public void DroppingASecondPersonOnAnOrFilterAddsThem()
+    {
+        var (result, edited) = Filter(FilterCombinator.Or, (FilterTermKind.User, "alice.example")).AddingAuthor("bob.example");
+
+        Assert.Equal(AuthorDropResult.Added, result);
+        Assert.Equal(["alice.example", "bob.example"], UserValues(edited));
+    }
+
     [Fact]
     public void RejectsAnUnknownTermKind()
     {

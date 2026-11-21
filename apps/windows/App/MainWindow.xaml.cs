@@ -384,7 +384,14 @@ public sealed partial class MainWindow : Window
                 pin.Id,
             }.Where(line => !string.IsNullOrWhiteSpace(line))));
             // Only the window account's own curated lists take people.
-            if (pin.IsCuratedList && pin.CreatorDid == _workspace.AccountDid) AcceptAuthorDrops(item, pin);
+            if (pin.IsCuratedList && pin.CreatorDid == _workspace.AccountDid)
+            {
+                AcceptAuthorDrops(item, pin.Title, async author =>
+                {
+                    if (_workspace.Account is not { } account) return;
+                    await ListMembershipMenu.AddDroppedAsync(item.XamlRoot, account.ListMembership, author, pin.Id, pin.Title);
+                });
+            }
             return item;
         }
         if (tab.Kind != WorkspaceTabKind.Filter)
@@ -429,14 +436,28 @@ public sealed partial class MainWindow : Window
         grid.Children.Add(title);
         grid.Children.Add(close);
         item.Content = grid;
+        AcceptAuthorDrops(item, tab.Title, author =>
+        {
+            // Adding rebuilds the sidebar, which detaches this row.
+            var origin = item.XamlRoot;
+            var message = _workspace.AddAuthor(author.Handle, tab.Id) switch
+            {
+                Core.AuthorDropResult.Added => $"@{author.Handle} を「{tab.Title}」に追加しました",
+                Core.AuthorDropResult.AlreadyIncluded => $"@{author.Handle} はすでに「{tab.Title}」にいます",
+                Core.AuthorDropResult.WouldMatchNothing => $"「{tab.Title}」は条件を AND でつなぐため、2 人目は追加できません",
+                _ => null
+            };
+            if (message is not null) ToastCenter.Shared.Show(origin, message);
+            return Task.CompletedTask;
+        });
         return item;
     }
 
     /// <summary>
-    /// A post's avatar dropped on the row adds its author to the list; the row is
-    /// outlined while a drag hovers over it (the macOS sidebar's AuthorDropTarget).
+    /// A post's avatar dropped on the row adds its author to the list or filter; the row
+    /// is outlined while a drag hovers over it (the macOS sidebar's AuthorDropTarget).
     /// </summary>
-    private void AcceptAuthorDrops(NavigationViewItem item, SavedFeedDto list)
+    private void AcceptAuthorDrops(NavigationViewItem item, string title, Func<DraggedAuthor, Task> onDrop)
     {
         item.AllowDrop = true;
         void Outline(bool on)
@@ -448,15 +469,14 @@ public sealed partial class MainWindow : Window
         {
             if (!DraggedAuthor.IsIn(e.DataView)) return;
             e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
-            e.DragUIOverride.Caption = $"「{list.Title}」に追加";
+            e.DragUIOverride.Caption = $"「{title}」に追加";
             Outline(true);
         };
         item.DragLeave += (_, _) => Outline(false);
         item.Drop += async (_, e) =>
         {
             Outline(false);
-            if (_workspace.Account is not { } account || await DraggedAuthor.ReadAsync(e.DataView) is not { } author) return;
-            await ListMembershipMenu.AddDroppedAsync(item.XamlRoot, account.ListMembership, author, list.Id, list.Title);
+            if (await DraggedAuthor.ReadAsync(e.DataView) is { } author) await onDrop(author);
         };
     }
 

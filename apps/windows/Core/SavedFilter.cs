@@ -12,6 +12,18 @@ public enum FilterTermKind { Keyword, User, Hashtag, Mention }
 /// </summary>
 public enum FilterCombinator { And, Or }
 
+/// <summary>What dropping a person on a filter did.</summary>
+public enum AuthorDropResult
+{
+    Added,
+    AlreadyIncluded,
+    /// <summary>
+    /// The filter joins its conditions with AND and already names a person; a second
+    /// <c>from:</c> could never match, so nothing is changed.
+    /// </summary>
+    WouldMatchNothing,
+}
+
 /// <summary>One condition row of a saved filter.</summary>
 public sealed record FilterTerm(Guid Id, FilterTermKind Kind, string Value);
 
@@ -47,6 +59,34 @@ public sealed record SavedFilter(
     public string Summary => Combinator == FilterCombinator.Or
         ? "OR: " + string.Join(", ", Subqueries)
         : Subqueries.FirstOrDefault() ?? "";
+
+    /// <summary>
+    /// This filter with a <c>from:</c> condition for <paramref name="handle"/> appended (a
+    /// person dropped on it), or this filter unchanged when it already covers the person
+    /// or is an AND filter that names someone else. Port of the Swift
+    /// <c>WorkspaceModel.addAuthor(handle:toFilter:)</c>.
+    /// </summary>
+    public (AuthorDropResult Result, SavedFilter Filter) AddingAuthor(string handle)
+    {
+        var clean = (handle.StartsWith('@') ? handle[1..] : handle).Trim();
+        // Read people from the same fragments the search sends, so @, blank rows and a
+        // from: typed into a keyword count as the search counts them.
+        var fragments = Terms.Select(Fragment).OfType<string>().Select(f => f.ToLowerInvariant()).ToList();
+        var wanted = "from:" + clean.ToLowerInvariant();
+        if (Combinator == FilterCombinator.And)
+        {
+            // One query: any person named anywhere already narrows it.
+            var named = fragments
+                .SelectMany(f => f.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                .Where(word => word.StartsWith("from:", StringComparison.Ordinal))
+                .ToHashSet();
+            if (named.Contains(wanted)) return (AuthorDropResult.AlreadyIncluded, this);
+            if (named.Count > 0) return (AuthorDropResult.WouldMatchNothing, this);
+        }
+        // One query per row: only a row of just this person covers them.
+        else if (fragments.Contains(wanted)) return (AuthorDropResult.AlreadyIncluded, this);
+        return (AuthorDropResult.Added, this with { Terms = [.. Terms, new FilterTerm(Guid.NewGuid(), FilterTermKind.User, clean)] });
+    }
 
     /// <summary>
     /// The fragment for one term, or null when the value is blank once trimmed and

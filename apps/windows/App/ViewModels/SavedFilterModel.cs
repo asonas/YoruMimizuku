@@ -75,6 +75,19 @@ public sealed class SavedFilterModel
         CreatedAt = filter.CreatedAt
     };
 
+    public Core.SavedFilter ToCore() => new(
+        Id,
+        Name,
+        Terms.Select(t => new Core.FilterTerm(t.Id, t.Kind switch
+        {
+            FilterTermKind.User => Core.FilterTermKind.User,
+            FilterTermKind.Hashtag => Core.FilterTermKind.Hashtag,
+            FilterTermKind.Mention => Core.FilterTermKind.Mention,
+            _ => Core.FilterTermKind.Keyword
+        }, t.Value)).ToList(),
+        Combinator == FilterCombinator.Or ? Core.FilterCombinator.Or : Core.FilterCombinator.And,
+        CreatedAt);
+
     /// <summary>Build the SavedFilter JSON object the core's search expects.</summary>
     public JsonObject ToSearchJson()
     {
