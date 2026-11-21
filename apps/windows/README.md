@@ -2,7 +2,7 @@
 
 A WinUI 3 (C#/.NET 10) app for YoruMimizuku with its own C# core: a port of the
 Swift `BlueskyCore` and `YoruMimizukuKit` logic the macOS app uses
-(`docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`). Everything
+(`docs/adr/0027-windows-csharp-core.md`). Everything
 is managed code; no Swift toolchain or native bridge DLL is involved.
 
 ## Architecture

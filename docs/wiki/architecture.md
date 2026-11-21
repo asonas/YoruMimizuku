@@ -3,10 +3,9 @@ title: Architecture (Ports & Adapters)
 type: concept
 updated: 2026-11-21
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
-  - docs/superpowers/plans/2026-06-04-yorumimizuku-core-foundation.md
+  - docs/adr/0002-overall-design.md
+  - docs/adr/0008-ipados.md
+  - docs/adr/0027-windows-csharp-core.md
   - core/Sources/YoruMimizukuKit/RichText.swift
   - core/Sources/YoruMimizukuKit/WebURL.swift
   - core/Sources/YoruMimizukuKit/LinkCard.swift
@@ -18,12 +17,12 @@ The structural decision that makes YoruMimizuku cross-platform is a clean split 
 
 ## Two layers
 
-- **`BlueskyCore`** (Swift Package, UI-independent): holds the AT Protocol logic purely, with no dependency on SwiftUI / AppKit / UIKit. It targets macOS / iOS and is designed so the same package can later reach Windows / Android (`2026-06-04-yorumimizuku-design.md` §4.1).
+- **`BlueskyCore`** (Swift Package, UI-independent): holds the AT Protocol logic purely, with no dependency on SwiftUI / AppKit / UIKit. It targets macOS / iOS and is designed so the same package can later reach Windows / Android (`0002-overall-design.md` §4.1).
 - **The app layer** (SwiftUI on macOS / iPadOS, WinUI 3 on Windows): a thin UI that sits on top of the core. The display models and view-model logic live one step in, in `YoruMimizukuKit`, so they stay unit-testable independent of the UI framework.
 
 ## The six ports
 
-Inside `BlueskyCore`, OS touchpoints are isolated behind six protocols, with Apple implementations in a separate file group. This makes swapping in Windows/Android implementations cheap (`2026-06-04-yorumimizuku-design.md` §4.2):
+Inside `BlueskyCore`, OS touchpoints are isolated behind six protocols, with Apple implementations in a separate file group. This makes swapping in Windows/Android implementations cheap (`0002-overall-design.md` §4.2):
 
 1. Secure storage (Apple: Keychain / Security) — see [[accounts]]
 2. Crypto / P-256 signing (Apple: CryptoKit) — for DPoP, see [[oauth-flow]]
@@ -32,19 +31,19 @@ Inside `BlueskyCore`, OS touchpoints are isolated behind six protocols, with App
 5. Browser authorization session (Apple: ASWebAuthenticationSession) — see [[oauth-flow]]
 6. OS notifications (Apple: UNUserNotificationCenter) — see [[notifications]]
 
-The pure logic — the OAuth state machine, Jetstream framing/decoding, Codable models, facet parsing, and the stores — depends on none of these and stays OS-independent. Tests inject fakes for each port (e.g. `FakeHTTPClient`, an in-memory `SecureStorage`), so the suite runs without real network or Keychain access (`2026-06-04-yorumimizuku-core-foundation.md`).
+The pure logic — the OAuth state machine, Jetstream framing/decoding, Codable models, facet parsing, and the stores — depends on none of these and stays OS-independent. Tests inject fakes for each port (e.g. `FakeHTTPClient`, an in-memory `SecureStorage`), so the suite runs without real network or Keychain access (plan `2026-06-04-yorumimizuku-core-foundation` (git history)).
 
 ## BlueskyCore modules
 
-The core is organized into focused modules (`2026-06-04-yorumimizuku-design.md` §4.3): `ATProtoHTTP` (XRPC transport over `/xrpc/<nsid>`, `XRPCError`), `DPoP` (P-256 keys + proof JWTs + nonce retry), `OAuthClient` (identity resolution, discovery, PAR, PKCE, token exchange/refresh), `IdentityResolver` (handle↔DID, DID document → PDS), `AccountManager` / `SessionStore` (per-DID sessions, accounts index, refresh), `Models` (the Codable lexicon subset), `BlueskyAPI` (typed high-level calls), `RichText` (facet parsing on **UTF-8 byte offsets**), `Jetstream` (the WebSocket client + watchdog), and `Stores` (per-source timeline / cursor stores + cache).
+The core is organized into focused modules (`0002-overall-design.md` §4.3): `ATProtoHTTP` (XRPC transport over `/xrpc/<nsid>`, `XRPCError`), `DPoP` (P-256 keys + proof JWTs + nonce retry), `OAuthClient` (identity resolution, discovery, PAR, PKCE, token exchange/refresh), `IdentityResolver` (handle↔DID, DID document → PDS), `AccountManager` / `SessionStore` (per-DID sessions, accounts index, refresh), `Models` (the Codable lexicon subset), `BlueskyAPI` (typed high-level calls), `RichText` (facet parsing on **UTF-8 byte offsets**), `Jetstream` (the WebSocket client + watchdog), and `Stores` (per-source timeline / cursor stores + cache).
 
 ## Concurrency model
 
-Networking, streams, and stores are `actor`-based for thread safety. Each tab's data source is abstracted by the `TimelineSource` protocol (`loadLatest()` / `loadOlder(cursor:)`, optional `liveUpdates`), with concrete `HomeSource` / `FeedSource` / `ListSource` / `AuthorSource` / `SearchSource` / `NotificationSource` / `ThreadSource` implementations — detailed in [[timeline-streaming]] (`2026-06-04-yorumimizuku-design.md` §4.4).
+Networking, streams, and stores are `actor`-based for thread safety. Each tab's data source is abstracted by the `TimelineSource` protocol (`loadLatest()` / `loadOlder(cursor:)`, optional `liveUpdates`), with concrete `HomeSource` / `FeedSource` / `ListSource` / `AuthorSource` / `SearchSource` / `NotificationSource` / `ThreadSource` implementations — detailed in [[timeline-streaming]] (`0002-overall-design.md` §4.4).
 
 ## How the platforms attach
 
-The ports are realized per platform: `PlatformApple` provides the Apple adapters used by macOS and iPadOS, and the Swift core is Apple-only. Windows does not use it: the WinUI app has its own C# core that ports the same logic (`2026-11-21-windows-csharp-core-handoff.md`). Those platform specifics are in [[macos]], [[ipados]], and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in secure storage (`2026-06-04-yorumimizuku-design.md` §10, `2026-06-08-yorumimizuku-ipados-design.md` §4).
+The ports are realized per platform: `PlatformApple` provides the Apple adapters used by macOS and iPadOS, and the Swift core is Apple-only. Windows does not use it: the WinUI app has its own C# core that ports the same logic (`0027-windows-csharp-core.md`). Those platform specifics are in [[macos]], [[ipados]], and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in secure storage (`0002-overall-design.md` §10, `0008-ipados.md` §4).
 
 ## Image loading & caching (macOS app layer)
 

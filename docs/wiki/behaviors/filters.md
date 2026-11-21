@@ -3,12 +3,10 @@ title: Saved-Search Filters
 type: behavior
 updated: 2026-11-20
 sources:
-  - docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md
-  - docs/superpowers/specs/2026-06-05-yorumimizuku-filter-tabs-design.md
-  - docs/superpowers/specs/2026-06-05-yorumimizuku-structured-filters-design.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/plans/2026-06-05-yorumimizuku-filter-tabs.md
-  - docs/superpowers/plans/2026-06-05-yorumimizuku-structured-filters.md
+  - docs/adr/0019-macos-commands-and-lists.md
+  - docs/adr/0006-filter-tabs.md
+  - docs/adr/0007-structured-filters.md
+  - docs/adr/0008-ipados.md
   - apps/windows/App/ViewModels/SavedFilterModel.cs
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
   - apps/windows/App/Views/FilterEditorDialog.xaml.cs
@@ -26,7 +24,7 @@ features:
 
 # Saved-Search Filters
 
-A filter is effectively a "subscription to a saved search". It fetches `app.bsky.feed.searchPosts` for a user-saved condition and keeps a sidebar tab that reads matching posts, including non-follows. Updates use the same 30-second polling + top-merge + infinite scroll as home; Jetstream is not used ([[timeline-streaming]]). Filters are persisted per-account-DID in a local Codable file (`filters-<DID>.json`), and persistence is abstracted behind the `SavedFilterStoring` port so a future iCloud sync can be swapped in (`2026-06-05-yorumimizuku-filter-tabs-design.md`).
+A filter is effectively a "subscription to a saved search". It fetches `app.bsky.feed.searchPosts` for a user-saved condition and keeps a sidebar tab that reads matching posts, including non-follows. Updates use the same 30-second polling + top-merge + infinite scroll as home; Jetstream is not used ([[timeline-streaming]]). Filters are persisted per-account-DID in a local Codable file (`filters-<DID>.json`), and persistence is abstracted behind the `SavedFilterStoring` port so a future iCloud sync can be swapped in (`0006-filter-tabs.md`).
 
 ## First version (filter-tabs)
 
@@ -34,7 +32,7 @@ The first version just passed a single raw query to `searchPosts`. It added `Sea
 
 ## Extension to structured filters (structured-filters)
 
-The filter was later normalized into **multiple typed condition rows + an AND/OR combinator** (`2026-06-05-yorumimizuku-structured-filters-design.md`).
+The filter was later normalized into **multiple typed condition rows + an AND/OR combinator** (`0007-structured-filters.md`).
 
 - 4 term kinds: `keyword` (value as-is) / `user` (`from:`) / `hashtag` (`#`) / `mention` (`mentions:`). The `@` / `#` prefixes are added/stripped internally.
 - Combinator: `AND` / `OR` chosen by a segmented control; default is `AND`.

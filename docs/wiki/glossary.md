@@ -3,12 +3,12 @@ title: AT Protocol Glossary
 type: reference
 updated: 2026-06-08
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/adr/0002-overall-design.md
 ---
 
 # AT Protocol Glossary
 
-Short definitions of the AT Protocol and OAuth terms used throughout this wiki, as they apply to YoruMimizuku. The authoritative behavior is in the linked pages; this page is a quick reference (`2026-06-04-yorumimizuku-design.md`).
+Short definitions of the AT Protocol and OAuth terms used throughout this wiki, as they apply to YoruMimizuku. The authoritative behavior is in the linked pages; this page is a quick reference (`0002-overall-design.md`).
 
 - **AT Protocol (atproto)** — the federated protocol underlying Bluesky. YoruMimizuku is a native client for it ([[overview]]).
 - **DID** — Decentralized Identifier, the stable account identity (e.g. `did:plc:...`). Sessions, stored accounts, and Jetstream filters are all keyed by DID ([[accounts]]).

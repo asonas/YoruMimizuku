@@ -6,7 +6,7 @@ This command mirrors the Claude Code skill `.claude/skills/wiki-update/SKILL.md`
 
 **Read `docs/wiki/conventions.md` first, then follow it.** Summary:
 
-1. Read the changed raw source(s) under `docs/superpowers/specs/` or `plans/`.
+1. Read the changed ADR(s) under `docs/adr/` and the code that changed behavior.
 2. Update or create the affected page(s) under `docs/wiki/` (`overview.md`, `behaviors/`, `platforms/`): accurate prose, inline citations, `sources` + `updated` frontmatter, basename wikilinks like `[[oauth-flow]]`. On a `behavior` page, also update its `features:` platform status (and `note`) when the change affects which platforms support it — this feeds the generated support matrix.
 3. Check platform differences: every `differs` / `limited` / `none` you touched, and every macOS/Windows contrast in prose you changed, is deliberate with a cited reason or a `bug:` note with an issue link ("Platform differences" in conventions).
 4. Update cross-references on related pages and append one line to `docs/wiki/log.md`.

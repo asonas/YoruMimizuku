@@ -3,8 +3,7 @@ title: Auto Updates (Sparkle / WinSparkle)
 type: behavior
 updated: 2026-11-20
 sources:
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
-  - docs/superpowers/plans/2026-06-09-yorumimizuku-sparkle-auto-update.md
+  - docs/adr/0009-sparkle-auto-update.md
   - apps/macos/AppDelegate.swift
   - apps/macos/YoruMimizukuApp.swift
   - apps/macos/Update/UpdateController.swift
@@ -31,7 +30,7 @@ features:
 YoruMimizuku's macOS auto-update path uses Sparkle 2. Sparkle is
 macOS/AppKit-specific, so the updater belongs in `apps/macos` and must not enter
 `BlueskyCore`, `YoruMimizukuKit`, or the Windows/iPadOS front ends
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Why this placement).
+(`0009-sparkle-auto-update.md` §Why this placement).
 Windows uses a separate WinSparkle integration in the WinUI app layer; it shares
 the appcast/signature model, but it is not Sparkle.framework and it distributes a
 Windows installer EXE rather than the macOS `.app` ZIP.
@@ -51,14 +50,14 @@ user with the modal. Instead, a small accent dot appears on the settings gear
 when such a scheduled check finds an update. The user opens the settings sheet,
 switches to a new **アップデート** tab, and starts the normal Sparkle download,
 signature verification, in-place replacement, and relaunch flow from there
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Goal,
+(`0009-sparkle-auto-update.md` §Goal,
 §Settings sheet & gear dot).
 
 Manual installation remains the only install mode. `SUAutomaticallyUpdate` is not
 enabled, so the app does not silently download or install updates. The settings
 tab exposes "今すぐ確認", a toggle for Sparkle's `automaticallyChecksForUpdates`
 preference, and a channel picker for **リリース** versus **開発版**
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Architecture,
+(`0009-sparkle-auto-update.md` §Architecture,
 §Sparkle configuration).
 
 Status as of 2026-06-09: the app-side Sparkle wiring, settings UI, stable/dev
@@ -74,14 +73,14 @@ The implementation plan centers on a macOS-only `UpdateController` that owns
 `canCheckForUpdates`, `automaticallyChecksForUpdates`, and the selected
 `UpdateChannel`; the sidebar gear reads `updateAvailable`, while the update
 settings tab drives manual checks, the automatic-check toggle, and
-stable/development channel selection (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
-§Architecture, `2026-06-09-yorumimizuku-sparkle-auto-update.md` Task 3).
+stable/development channel selection (`0009-sparkle-auto-update.md`
+§Architecture, plan `2026-06-09-yorumimizuku-sparkle-auto-update` (git history) Task 3).
 
 The Sparkle-free state machine, version formatting, and channel persistence live
 in small value/store types (`UpdateBadgeState`, `UpdateChannel`,
 `UpdateChannelStore`) so they can be unit-tested without loading Sparkle. Sparkle
 delegate glue stays thin and remains in the macOS app layer
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Testing strategy).
+(`0009-sparkle-auto-update.md` §Testing strategy).
 
 Channel switching uses two appcast URLs rather than Sparkle's single-feed channel
 tags. `SUFeedURL` remains the stable default, and `SPUUpdaterDelegate` supplies
@@ -150,7 +149,7 @@ The appcasts are hosted on GitHub Pages from the `gh-pages` branch. Stable uses
 (`v0.6.0`, `v0.7.0`) upload a notarized/stapled `.app` ZIP for Sparkle and a
 signed/notarized/stapled DMG for first-time manual downloads. Development tags
 (`v0.7.0-dev.1`, `v0.7.0-dev.2`) upload the Sparkle ZIP to GitHub prereleases and
-update `appcast-dev.xml` (`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`
+update `appcast-dev.xml` (`0009-sparkle-auto-update.md`
 §Hosting & appcast). A stable release also replaces `appcast-dev.xml` when its
 build number is higher, so development-channel users receive it, as 1.1.0 and
 1.1.1 did. The appcasts are generated with the `generate_appcast` of the Sparkle
@@ -161,14 +160,14 @@ The EdDSA public key is committed in the macOS app's generated Info.plist via
 `SUPublicEDKey`; the private key stays in the macOS Keychain and is never
 committed or logged. Forks must generate their own Sparkle key pair and replace
 the public key, because they cannot sign updates with the upstream private key
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Key management &
+(`0009-sparkle-auto-update.md` §Key management &
 security).
 
 The release task chain changes from DMG-only notarization to app-first
 notarization: export a Developer ID `.app`, notarize and staple the `.app`, build
 the DMG from that stapled app, create the Sparkle ZIP from that stapled app, sign
 the ZIP with Sparkle's EdDSA key, then generate and publish `appcast.xml`
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md` §Release pipeline
+(`0009-sparkle-auto-update.md` §Release pipeline
 changes).
 
 ## Windows path (WinSparkle)

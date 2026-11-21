@@ -9,7 +9,7 @@ import YoruMimizukuKit
 /// opens without replacing the timeline. Cmd-Shift-J/K cycle the sidebar. The
 /// lightbox and composer sheet float above everything; settings open in their own
 /// native `Settings { }` scene window (⌘,) rather than a per-window sheet
-/// (`YoruMimizukuApp.swift`, `2026-07-24-apple-hig-remediation.md` S7).
+/// (`YoruMimizukuApp.swift`, plan `2026-07-24-apple-hig-remediation` (git history) S7).
 struct MainWindowView: View {
     @ObservedObject var model: TimelineViewModel
     @ObservedObject var notifications: NotificationsViewModel

@@ -6,7 +6,7 @@ alwaysApply: true
 This repository keeps a git-versioned LLM-wiki at `docs/wiki/` describing how the app behaves and is built. It is the cross-machine source of context (macOS and Windows agents both read it from git).
 
 - To understand the app, read `docs/wiki/index.md` first, then open only the relevant pages. Do not assume the whole wiki is in context.
-- The ground truth is `docs/superpowers/specs/` and `plans/`; the wiki is a derived layer that cites them.
-- When specs/plans change or app behavior changes, update the wiki: run the `/wiki-update` command (see `.cursor/commands/wiki-update.md`) and follow `docs/wiki/conventions.md`.
+- Code is the source of truth for how the app works. The wiki records behavior contracts and deliberate macOS/Windows differences, and cites the ADRs in `docs/adr/` for why.
+- When an ADR is added or changed, or app behavior changes, update the wiki: run the `/wiki-update` command (see `.cursor/commands/wiki-update.md`) and follow `docs/wiki/conventions.md`.
 - Never hand-edit `docs/wiki/index.md` — regenerate it with `mise run wiki:index`. Validate with `mise run wiki:lint`.
 - The actual code layout is `core/` (SPM package) + `apps/macos/` (see `docs/wiki/overview.md`).

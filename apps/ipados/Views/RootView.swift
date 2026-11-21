@@ -313,7 +313,7 @@ private struct MainShellView: View {
     #if DEBUG
     /// Opens the DEBUG-only design catalog. The iPad app has no settings screen
     /// yet, so this hangs off the sidebar instead — see
-    /// `docs/superpowers/specs/2026-07-03-design-catalog-design.md`.
+    /// `docs/adr/0016-design-catalog.md`.
     @State private var showsCatalog = false
     #endif
 

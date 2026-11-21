@@ -3,29 +3,27 @@ title: Design System (Vocabulary, Catalog, Snapshots)
 type: concept
 updated: 2026-11-20
 sources:
-  - docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md
+  - docs/adr/0025-macos-svg-icons.md
   - design/icons/README.md
-  - docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md
+  - docs/adr/0021-macos-prototype-colors.md
   - core/Sources/YoruMimizukuKit/DesignTokens.swift
-  - docs/superpowers/specs/2026-07-03-design-catalog-design.md
-  - docs/superpowers/plans/2026-07-03-design-catalog.md
-  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
+  - docs/adr/0016-design-catalog.md
 ---
 
 # Design System (Vocabulary, Catalog, Snapshots)
 
-This page documents the shared vocabulary for discussing layout ("PostRow の `actionBarTopGap`"), the DEBUG-only in-app design catalog used to eyeball components, and the snapshot-test setup that catches unintended visual regressions. It exists because spacing used to be scattered magic numbers with no common name, and there was no way to render a component in isolation outside the live timeline (`2026-07-03-design-catalog-design.md` §背景と問題). See [[architecture]] for the surrounding module layout.
+This page documents the shared vocabulary for discussing layout ("PostRow の `actionBarTopGap`"), the DEBUG-only in-app design catalog used to eyeball components, and the snapshot-test setup that catches unintended visual regressions. It exists because spacing used to be scattered magic numbers with no common name, and there was no way to render a component in isolation outside the live timeline (`0016-design-catalog.md` §背景と問題). See [[architecture]] for the surrounding module layout.
 
 ## Colors (macOS)
 
-Since 2026-11-20 the macOS window takes its colors from the desktop prototype: `DesignTokens.light` and `.dark` (`core/Sources/YoruMimizukuKit/DesignTokens.swift`) hold content, chrome, side, fg/fg2/fg3, separator, hover, selection, the system-blue accent with its foreground and tint, like (pink), repost (green), warn, proto and field, and `ThemeStore` resolves each per appearance at draw time. fg3 is darkened/lightened from the prototype so every text token keeps WCAG AA 4.5:1 on content. A randoma11y URL replaces only the background/text pair, oriented so the lighter color is the light background and the darker one the dark background; accent and reaction colors stay. The default font is the system font at body 14pt. Debug builds accept `-YMAppearance dark|light` (`docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md`).
+Since 2026-11-20 the macOS window takes its colors from the desktop prototype: `DesignTokens.light` and `.dark` (`core/Sources/YoruMimizukuKit/DesignTokens.swift`) hold content, chrome, side, fg/fg2/fg3, separator, hover, selection, the system-blue accent with its foreground and tint, like (pink), repost (green), warn, proto and field, and `ThemeStore` resolves each per appearance at draw time. fg3 is darkened/lightened from the prototype so every text token keeps WCAG AA 4.5:1 on content. A randoma11y URL replaces only the background/text pair, oriented so the lighter color is the light background and the darker one the dark background; accent and reaction colors stay. The default font is the system font at body 14pt. Debug builds accept `-YMAppearance dark|light` (`docs/adr/0021-macos-prototype-colors.md`).
 
 ## Naming rule
 
 - **Component name** = the Swift view type name with the trailing `View` dropped (`PostRowView` → "PostRow"). This is the only naming layer for components; no separate design-system vocabulary is invented.
 - **Slots** (parts of a component) = the view's existing `private var`/computed-property names, used as-is: `authorLine`, `bodyText`, `mediaSection`, `actionBar`, `staticActionBar`, `quoteSection`, `linkCardSection`, `verticalMedia`, `mediaColumn`.
 - **Variant IDs** in the catalog are `"<ComponentName>/<variant-name>"` (e.g. `PostRow/two-images`), defined once as `CatalogVariant` (`core/Sources/YoruMimizukuKit/Catalog/CatalogVariant.swift`) and shared by both platforms' galleries and snapshot tests.
-- **Spacing/radius values** are named constants in `DesignMetrics` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`). The identifier in conversation is the identifier in code — "bump `actionBarTopGap` from 6 to 8" changes one line and both platforms. Naming pattern is `<location><role>`. Only values that are discussed or reused are named; one-off decorative padding is left as a literal (`2026-07-03-design-catalog-design.md` §命名規約).
+- **Spacing/radius values** are named constants in `DesignMetrics` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`). The identifier in conversation is the identifier in code — "bump `actionBarTopGap` from 6 to 8" changes one line and both platforms. Naming pattern is `<location><role>`. Only values that are discussed or reused are named; one-off decorative padding is left as a literal (`0016-design-catalog.md` §命名規約).
 
 ### DesignMetrics reference
 
@@ -41,20 +39,20 @@ All members of `DesignMetrics`, their values, and where each applies:
 | `thumbnailCornerRadius` | 10 | Corner radius of thumbnails, video posters, and media curtains |
 | `bodyStackSpacing(_:)` | 2 (`.compact`) / 4 (`.comfortable`) | Vertical spacing of the author/body/media/actions stack, by `DisplayDensity` |
 | `mediaMaxWidth(_:)` | 320 (`.compact`) / 440 (`.comfortable`) | Maximum media width in the vertical (non-reflow) layout, by `DisplayDensity` |
-| `minimumTouchTarget` | 44 | Apple HIG minimum tappable area on touch platforms (iPad only; macOS pointer targets are exempt). Small iPad controls (PostRow avatar, sidebar close xmark, notification expand chevron) reach it via an outer `.frame(minWidth:minHeight:)` around the existing glyph-sized frame, added `2026-07-24-apple-hig-remediation.md` S2 — see [[ipados]] "Tap targets and tap accessibility (S2)" |
+| `minimumTouchTarget` | 44 | Apple HIG minimum tappable area on touch platforms (iPad only; macOS pointer targets are exempt). Small iPad controls (PostRow avatar, sidebar close xmark, notification expand chevron) reach it via an outer `.frame(minWidth:minHeight:)` around the existing glyph-sized frame, added plan `2026-07-24-apple-hig-remediation` (git history) S2 — see [[ipados]] "Tap targets and tap accessibility (S2)" |
 
-`DesignMetrics` lives in `YoruMimizukuKit` (platform-neutral) and is consumed by both `apps/macos/Views/PostRowView.swift` and `apps/ipados/Views/PostRowView.swift`, wrapped in `CGFloat(...)` at each SwiftUI call site since the constants are `Double`. Introducing the enum was a pure rename — it did not change any rendered value (`2026-07-03-design-catalog-design.md` §命名規約).
+`DesignMetrics` lives in `YoruMimizukuKit` (platform-neutral) and is consumed by both `apps/macos/Views/PostRowView.swift` and `apps/ipados/Views/PostRowView.swift`, wrapped in `CGFloat(...)` at each SwiftUI call site since the constants are `Double`. Introducing the enum was a pure rename — it did not change any rendered value (`0016-design-catalog.md` §命名規約).
 
 ## Known parity findings
 
-Adopting `DesignMetrics` on both platforms surfaced two drift points between the macOS and iPad `PostRowView` implementations, recorded here so they are not rediscovered (`2026-07-03-design-catalog.md` Task 2/3).
+Adopting `DesignMetrics` on both platforms surfaced two drift points between the macOS and iPad `PostRowView` implementations, recorded here so they are not rediscovered (plan `2026-07-03-design-catalog` (git history) Task 2/3).
 
 1. **iPad is missing the external `actionBarTopGap` wrap (open).** On macOS, `actionBarSection` wraps `actionBar`/`staticActionBar` in `.padding(.top, CGFloat(DesignMetrics.actionBarTopGap))` (6pt) before returning it (`apps/macos/Views/PostRowView.swift`). On iPad, `actionBarSection` returns `actionBar`/`staticActionBar` directly with no such wrap (`apps/ipados/Views/PostRowView.swift`). Both platforms' `actionBar`/`staticActionBar` share an *internal* `.padding(.top, 3)` — a raw literal that is deliberately left unnamed since it is symmetric on both platforms. The gap between platforms is the **missing 6pt external wrap on iPad**, not a "3 vs 6" value mismatch. Fixing it changes iPad rendering (and requires an iPad snapshot re-record), so it is deferred to its own follow-up.
 2. **macOS `staticActionBar` raw spacing literal (resolved 2026-07-03).** macOS's `staticActionBar` briefly used a raw `HStack(spacing: 26)` while `actionBar` and iPad's `staticActionBar` already used `DesignMetrics.actionBarItemSpacing`; the final review pass of the catalog branch converted it, so all four action-bar HStacks now share the constant. Only the internal `.padding(.top, 3)` literals remain, intentionally (see finding 1).
 
 ## The gallery
 
-A DEBUG-only in-app catalog renders the real production views (`PostRowView`, `ActionBar`, `QuoteCardView`, `LinkCardView`, `VideoPosterView`, and — macOS only — `ToastView`) against deterministic fixtures from `CatalogFixtures` (`core/Sources/YoruMimizukuKit/Catalog/CatalogFixtures.swift`). It never duplicates a component's implementation; adding a sample is one `CatalogVariant` case plus one registry line per app (`2026-07-03-design-catalog-design.md` §ギャラリー).
+A DEBUG-only in-app catalog renders the real production views (`PostRowView`, `ActionBar`, `QuoteCardView`, `LinkCardView`, `VideoPosterView`, and — macOS only — `ToastView`) against deterministic fixtures from `CatalogFixtures` (`core/Sources/YoruMimizukuKit/Catalog/CatalogFixtures.swift`). It never duplicates a component's implementation; adding a sample is one `CatalogVariant` case plus one registry line per app (`0016-design-catalog.md` §ギャラリー).
 
 `CatalogVariant` (`core/Sources/YoruMimizukuKit/Catalog/CatalogVariant.swift`) declares 14 variants across 6 components (PostRow ×9, ActionBar, QuoteCard, LinkCard, VideoPoster, Toast). Each variant declares which platforms it applies to; `Toast` is macOS-only (there is no iPad toast UI), so the iPad catalog and its snapshot suite carry 13 variants. `CatalogVariant.metricsUsed` lists the `DesignMetrics` identifiers each sample exercises, shown as a gallery caption.
 
@@ -76,7 +74,7 @@ Both galleries inject a throwaway `UserDefaults(suiteName: "as.ason.YoruMimizuku
 
 ## Icons (macOS)
 
-Since 2026-11-20 the macOS app uses no SF Symbols. Its 53 icons are SVGs in `design/icons`: 51 are Lucide's originals copied unchanged from a pinned revision (ISC, with the Feather MIT notice kept in `design/icons/LICENSE-lucide.txt`), `video-plus` is Lucide's `video` with a plus added, and `message-quote`, which Lucide lacks, is drawn to Lucide's conventions. `mise run icons:lint` checks the root attributes, elements, safe zone, names and metadata, and `AppIconTests` checks that every `AppIcon` case loads from the bundle. The app and test bundles copy the folder as `icons`; `AppIcon` names them, `Icon(.x, size:)` draws one (1.25× the former symbol point size; hidden from VoiceOver unless given a `label`, so icon-only buttons name themselves) and `Image.icon(.x)` gives a 16pt image for menus and labels. Liked and reposted states use color, not filled variants (`design/icons/README.md`, `docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md`).
+Since 2026-11-20 the macOS app uses no SF Symbols. Its 53 icons are SVGs in `design/icons`: 51 are Lucide's originals copied unchanged from a pinned revision (ISC, with the Feather MIT notice kept in `design/icons/LICENSE-lucide.txt`), `video-plus` is Lucide's `video` with a plus added, and `message-quote`, which Lucide lacks, is drawn to Lucide's conventions. `mise run icons:lint` checks the root attributes, elements, safe zone, names and metadata, and `AppIconTests` checks that every `AppIcon` case loads from the bundle. The app and test bundles copy the folder as `icons`; `AppIcon` names them, `Icon(.x, size:)` draws one (1.25× the former symbol point size; hidden from VoiceOver unless given a `label`, so icon-only buttons name themselves) and `Image.icon(.x)` gives a 16pt image for menus and labels. Liked and reposted states use color, not filled variants (`design/icons/README.md`, `docs/adr/0025-macos-svg-icons.md`).
 
 ## Snapshot operations
 
@@ -90,11 +88,11 @@ Both suites compare with `.image(perceptualPrecision: 0.98)` at width 560, which
 The macOS reference environment is macOS 27.0.1 / Xcode 27.0. The hosting view is attached to a temporary window and its drawing transaction is flushed before capture so images and backgrounds are present. Thirteen references were refreshed on 2026-10-08 after visual comparison with the previous references; comparison thresholds and the fixed 2x scale remain unchanged.
 
 **Density coverage gap:** both test files call `CatalogRegistry.view(for:width:)` without passing `density`, so every variant renders at the parameter's default, `.comfortable`
-(`apps/{macos,ipados}/Catalog/CatalogRegistry.swift`). `.compact`-density rendering (smaller avatar, tighter spacing) is exercised by the in-app gallery's density picker (manual) but **not** by `CatalogSnapshotTests` — a `.compact`-only regression (e.g. the PostRow avatar's 24pt vs. 42pt touch-target math, `2026-07-24-apple-hig-remediation.md` S2) has no automated coverage and must be checked by hand or reasoned about from the code.
+(`apps/{macos,ipados}/Catalog/CatalogRegistry.swift`). `.compact`-density rendering (smaller avatar, tighter spacing) is exercised by the in-app gallery's density picker (manual) but **not** by `CatalogSnapshotTests` — a `.compact`-only regression (e.g. the PostRow avatar's 24pt vs. 42pt touch-target math, plan `2026-07-24-apple-hig-remediation` (git history) S2) has no automated coverage and must be checked by hand or reasoned about from the code.
 
 ### Determinism
 
-`RemoteImage` decodes off the main actor and publishes a frame later, so a snapshot taken immediately would capture the loading placeholder. Both test files pre-decode the three bundled sample PNGs (`sample-wide`, `sample-wide2`, `sample-tall`) through `ImageDownsampler`, then hand the decoded `CGImage`s to each view via a DEBUG-only `EnvironmentValues.catalogPreloadedImages` table that `RemoteImage` consults synchronously before starting its own async load (`apps/macos/Media/RemoteImage.swift`, `apps/ipados/Media/RemoteImage.swift`). This replaced an earlier runloop-pumping approach that the plan anticipated might not be reliable enough (`2026-07-03-design-catalog.md` Task 9 step 2). Each test also resets a throwaway `ThemeStore` to its built-in palette so recorded colors do not depend on any randoma11y state persisted on the machine running the test.
+`RemoteImage` decodes off the main actor and publishes a frame later, so a snapshot taken immediately would capture the loading placeholder. Both test files pre-decode the three bundled sample PNGs (`sample-wide`, `sample-wide2`, `sample-tall`) through `ImageDownsampler`, then hand the decoded `CGImage`s to each view via a DEBUG-only `EnvironmentValues.catalogPreloadedImages` table that `RemoteImage` consults synchronously before starting its own async load (`apps/macos/Media/RemoteImage.swift`, `apps/ipados/Media/RemoteImage.swift`). This replaced an earlier runloop-pumping approach that the plan anticipated might not be reliable enough (plan `2026-07-03-design-catalog` (git history) Task 9 step 2). Each test also resets a throwaway `ThemeStore` to its built-in palette so recorded colors do not depend on any randoma11y state persisted on the machine running the test.
 
 ### Running the suites
 
@@ -130,7 +128,7 @@ TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all xcodebuild test -scheme YoruMimizukuPad 
   -only-testing:YoruMimizukuPadTests
 ```
 
-After recording, inspect every changed PNG by eye (no spinner/blank-tile placeholders, grids show equal tiles, no clipped text) and review the diff as an ordinary commit — the repository is public, so only publishable fixture text/images are used (`2026-07-03-design-catalog-design.md` §スナップショット運用). Run the suite a few times afterward to confirm the new references are stable before committing.
+After recording, inspect every changed PNG by eye (no spinner/blank-tile placeholders, grids show equal tiles, no clipped text) and review the diff as an ordinary commit — the repository is public, so only publishable fixture text/images are used (`0016-design-catalog.md` §スナップショット運用). Run the suite a few times afterward to confirm the new references are stable before committing.
 
 **When to re-record:**
 - A named `DesignMetrics` value or a component's layout intentionally changes.

@@ -1,6 +1,6 @@
 ---
 name: wiki-update
-description: Maintain the LLM-wiki under docs/wiki (ingest specs/plans into wiki pages, then lint and rebuild the index). Use when docs/superpowers specs or plans change, when app behavior changes, or when asked to update or query the project wiki.
+description: Maintain the LLM-wiki under docs/wiki (ingest ADRs and behavior changes into wiki pages, then lint and rebuild the index). Use when docs/adr decision records change, when app behavior changes, or when asked to update or query the project wiki.
 ---
 
 # wiki-update
@@ -12,7 +12,7 @@ Maintain the git-versioned LLM-wiki at `docs/wiki/`. This is the cross-machine k
 ## Ingest (write prose — your job)
 
 1. Read `docs/wiki/conventions.md` for the page format and rules.
-2. Read the changed raw source(s) under `docs/superpowers/specs/` or `plans/`.
+2. Read the changed ADR(s) under `docs/adr/` and the code that changed behavior.
 3. Update or create the affected page(s) under `docs/wiki/` (`overview.md`, `behaviors/`, `platforms/`). Keep prose accurate, add inline citations, set `sources` and `updated`, and use basename wikilinks like `[[oauth-flow]]`. On a `behavior` page, update its `features:` platform status (and `note`) when the change affects what works on which platform — this feeds the generated support matrix (see the "Platform support matrix" section in conventions).
 4. Update cross-references on related pages.
 5. Check platform differences: every `differs` / `limited` / `none` you touched, and every macOS/Windows contrast in prose you changed, is deliberate with a cited reason or a `bug:` note with an issue link ("Platform differences" in conventions).

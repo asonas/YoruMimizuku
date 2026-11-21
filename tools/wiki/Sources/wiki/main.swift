@@ -241,14 +241,15 @@ func generateMatrix() -> String {
     return out
 }
 
-// All spec/plan ground-truth files that wiki pages are expected to derive from.
+// The decision records (ADRs) that wiki pages are expected to derive from.
 func groundTruthSources() -> [String] {
-    ["docs/superpowers/specs", "docs/superpowers/plans"]
-        .flatMap { markdownFiles(in: root + "/" + $0).map(relativize) }
-        .sorted()
+    markdownFiles(in: root + "/docs/adr").map(relativize).sorted()
 }
 
-// Ground-truth specs/plans that no page lists in its `sources`. These are
+// Execution plans are deleted once they land, so a page must not cite one.
+let plansDir = "docs/plans/"
+
+// ADRs that no page lists in its `sources`. These are
 // un-ingested: real, but not yet reflected in the wiki.
 func uncitedSources() -> [String] {
     let cited = Set(pages.flatMap { $0.sources })
@@ -291,7 +292,9 @@ func runLint() {
             errors.append("\(p): type '\(t)' requires at least one 'sources' entry")
         }
         for src in page.sources where !src.hasPrefix("http") {
-            if !fm.fileExists(atPath: root + "/" + src) {
+            if src.hasPrefix(plansDir) {
+                errors.append("\(p): cites a plan, which is deleted once it lands; cite the ADR or the code instead: \(src)")
+            } else if !fm.fileExists(atPath: root + "/" + src) {
                 errors.append("\(p): source not found: \(src)")
             }
         }

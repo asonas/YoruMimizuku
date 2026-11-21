@@ -9,7 +9,7 @@ import UIKit
 /// The default is `Hiragino Sans` (ヒラギノ角ゴシック) — Apple's bundled Japanese
 /// face, so no font files are shipped. Unlike macOS, the iPad target does not yet
 /// expose a font-family / size picker (see
-/// `2026-06-24-yorumimizuku-ipados-parity-design.md` §3), so `family` is fixed and
+/// `0012-ipados-parity.md` §3), so `family` is fixed and
 /// `sizeRatio` is 1. The hooks are kept so a future settings screen can drive them.
 enum AppTypography {
     static let systemDefaultFamily = "Hiragino Sans"

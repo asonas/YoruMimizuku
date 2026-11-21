@@ -3,8 +3,8 @@ title: Platform — Windows
 type: platform
 updated: 2026-11-21
 sources:
-  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
-  - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
+  - docs/adr/0027-windows-csharp-core.md
+  - docs/adr/0004-windows-multiplatform-structure.md
   - apps/windows/README.md
   - core/Package.swift
   - apps/windows/App/Services/RelativeTime.cs
@@ -39,7 +39,7 @@ sources:
 
 Status: **implemented and running**. A WinUI 3 (C#/.NET 10) app with its own C#
 core under `apps/windows`; no Swift toolchain, bridge DLL or P/Invoke into a core
-(`2026-11-21-windows-csharp-core-handoff.md`, `apps/windows/README.md`).
+(`0027-windows-csharp-core.md`, `apps/windows/README.md`).
 
 This page matters for cross-machine context: the Windows build runs on a
 different machine / agent, so it reconstructs the same picture from this wiki.

@@ -3,9 +3,8 @@ title: Sensitive Media Blur
 type: behavior
 updated: 2026-06-24
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
-  - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
-  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
+  - docs/adr/0002-overall-design.md
+  - docs/adr/0012-ipados-parity.md
   - core/Sources/BlueskyCore/Models/Timeline.swift
   - core/Sources/YoruMimizukuKit/PostDisplay.swift
   - core/Sources/YoruMimizukuKit/PostDisplay+Mapping.swift
@@ -23,7 +22,7 @@ features:
 
 # Sensitive Media Blur
 
-A post can carry content labels that mark its media as adult or graphic. macOS honors these by blurring the post's images and video poster behind a "閲覧注意" curtain until the viewer taps to reveal it. This is the minimal moderation behavior shipped for v1.0.0; the spec's fuller moderation work (per-user label preferences, account-level labels, hiding whole posts) stays deferred (`2026-06-04-yorumimizuku-design.md` §13, §14; `2026-06-11-yorumimizuku-v1.0.0-roadmap.md` §D).
+A post can carry content labels that mark its media as adult or graphic. macOS honors these by blurring the post's images and video poster behind a "閲覧注意" curtain until the viewer taps to reveal it. This is the minimal moderation behavior shipped for v1.0.0; the spec's fuller moderation work (per-user label preferences, account-level labels, hiding whole posts) stays deferred (`0002-overall-design.md` §13, §14; plan `2026-06-11-yorumimizuku-v1.0.0-roadmap` (git history) §D).
 
 ## Where labels come from
 

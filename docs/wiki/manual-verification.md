@@ -3,12 +3,11 @@ title: Manual Verification Checklist (Apple HIG Remediation)
 type: reference
 updated: 2026-11-20
 sources:
-  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
 ---
 
 # Manual Verification Checklist (Apple HIG Remediation)
 
-This page consolidates every device/simulator-only verification item from the Apple HIG remediation plan (`2026-07-24-apple-hig-remediation.md`) — VoiceOver, Accessibility Inspector, Stage Manager, airplane mode, Reduce Motion, and maximum Dynamic Type all require an interactive human session with real hardware or a running simulator, none of which an agent session can drive. Every item below is **still pending human verification** — no agent has executed VoiceOver, Accessibility Inspector, Stage Manager, airplane-mode playback, Reduce Motion, or Dynamic Type checks for this plan. This page is the single consolidated location for that checklist (created by the plan's S8 subproject, which exists specifically to gather it); per-page sections elsewhere in this wiki (see [[app-shell]], [[ipados]], [[macos]], [[compose-post]]) cite the relevant items and link back here rather than duplicating them.
+This page consolidates every device/simulator-only verification item from the Apple HIG remediation plan (plan `2026-07-24-apple-hig-remediation` (git history)) — VoiceOver, Accessibility Inspector, Stage Manager, airplane mode, Reduce Motion, and maximum Dynamic Type all require an interactive human session with real hardware or a running simulator, none of which an agent session can drive. Every item below is **still pending human verification** — no agent has executed VoiceOver, Accessibility Inspector, Stage Manager, airplane-mode playback, Reduce Motion, or Dynamic Type checks for this plan. This page is the single consolidated location for that checklist (created by the plan's S8 subproject, which exists specifically to gather it); per-page sections elsewhere in this wiki (see [[app-shell]], [[ipados]], [[macos]], [[compose-post]]) cite the relevant items and link back here rather than duplicating them.
 
 Each subproject's automated coverage (unit tests, snapshot tests) already passed before merge — see the cited page/plan section for what *is* covered. What follows is only the remainder that automated tests cannot reach.
 

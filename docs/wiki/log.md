@@ -9,9 +9,13 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 restructure (design documents)
+
+- note: Moved the design specs to `docs/adr/` as ADRs 0002-0027 and deleted the landed plans. Re-pointed every page's `sources` to the ADRs; inline plan citations now name the plan in git history. Lint rejects a source under `docs/plans/`.
+
 ## 2026-11-21 ingest (Windows C# core, Phases 0-6)
 
-- sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md, apps/windows/README.md, scripts/windows
+- sources: docs/adr/0027-windows-csharp-core.md, apps/windows/README.md, scripts/windows
 - updated: [[windows]], [[architecture]], [[overview]], [[macos]], [[ipados]], [[accounts]], [[oauth-flow]], [[filters]], [[author-tab]], [[timeline-streaming]], [[compose-post]], [[sensitive-media]], [[timeline-media-layout]], [[app-shell]]
 - note: Windows runs its own C# core; removed the claims that it uses the Swift bridge, PlatformWindows or the Swift toolchain. Recorded the remaining differences: the one-time sign-in again after the switch, and session expiry signing the account out on Windows (Token refresh row now differs).
 
@@ -35,61 +39,61 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-11-21 ingest (Windows C# core handoff)
 
-- sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
+- sources: docs/adr/0027-windows-csharp-core.md
 - updated: [[windows]]
 - note: approved replacing the Swift core and C ABI bridge on Windows with a C# core; handoff for the agent on the Windows machine.
 
 ## 2026-11-20 ingest (release tooling)
 
-- sources: docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md, mise.toml, .claude/skills/releasing/SKILL.md
+- sources: docs/adr/0009-sparkle-auto-update.md, mise.toml, .claude/skills/releasing/SKILL.md
 - updated: [[auto-updates]]
 - note: generate_appcast now comes from the Sparkle package the archive clones into build/SourcePackages (the Homebrew cask is disabled); stable releases also refresh appcast-dev.xml when newer.
 
 ## 2026-11-20 ingest (macOS SVG icons)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-svg-icons-design.md, design/icons/README.md, apps/macos/Views/AppIcon.swift
+- sources: docs/adr/0025-macos-svg-icons.md, design/icons/README.md, apps/macos/Views/AppIcon.swift
 - updated: [[design-system]]
 - note: macOS replaces every SF Symbol with 53 SVG icons in design/icons (51 Lucide originals and 1 modified Lucide icon under ISC with the license kept, 1 drawn here; `mise run icons:lint`); catalog snapshots are re-recorded in light and dark.
 
 ## 2026-11-20 ingest (macOS prototype detail pane)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-prototype-detail-pane-design.md, apps/macos/Views/DetailPaneView.swift, apps/macos/Views/ConversationView.swift
+- sources: docs/adr/0022-macos-prototype-detail-pane.md, apps/macos/Views/DetailPaneView.swift, apps/macos/Views/ConversationView.swift
 - updated: [[app-shell]]
 - note: The macOS detail pane shows one page at a time (no back/forward), with the prototype's thread (anchor at full size, folding reply tree), a レコード tab with the stored record, and a reply field.
 
 ## 2026-11-20 ingest (macOS prototype timeline rows)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md, apps/macos/Views/TimelineRowView.swift
+- sources: docs/adr/0023-macos-prototype-rows.md, apps/macos/Views/TimelineRowView.swift
 - updated: [[app-shell]], [[timeline-media-layout]]
 - note: macOS timeline lists use the prototype's compact row with thumbnails, tags and reaction counts; selecting a row shows it in the detail pane; authors can be muted.
 
 ## 2026-11-20 ingest (macOS prototype toolbar, sidebar and menus)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-prototype-chrome-design.md, apps/macos/Views/SidebarView.swift, apps/macos/Views/WorkspaceCommands.swift
+- sources: docs/adr/0020-macos-prototype-chrome.md, apps/macos/Views/SidebarView.swift, apps/macos/Views/WorkspaceCommands.swift
 - updated: [[app-shell]], [[macos]]
 - note: The macOS window takes the prototype's unified toolbar, sidebar groups and rows (home renamed フォロー中), a header with a "新着 n 件" bar on every timeline, and the prototype's menu shortcuts (reply ⌘↩, reload ⌘R, search ⌘F, like L).
 
 ## 2026-11-20 ingest (macOS prototype colors and dark mode)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-prototype-colors-design.md, core/Sources/YoruMimizukuKit/DesignTokens.swift, apps/macos/Theme.swift
+- sources: docs/adr/0021-macos-prototype-colors.md, core/Sources/YoruMimizukuKit/DesignTokens.swift, apps/macos/Theme.swift
 - updated: [[design-system]]
 - note: The macOS window takes the desktop prototype's light/dark color tokens and follows the system appearance; randoma11y now overrides only the background/text pair, and the default font is the system font.
 
 ## 2026-11-20 ingest (macOS commands, search and lists)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-commands-and-lists-design.md, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/ListMembershipModel.swift
+- sources: docs/adr/0019-macos-commands-and-lists.md, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/ListMembershipModel.swift
 - updated: [[app-shell]], [[filters]]
 - note: macOS gains ⌘1…⌘9 and a 投稿 menu, a toolbar search with transient results, and adding people to curated lists from the post menu or by dragging an avatar onto a pinned list or a filter.
 
 ## 2026-11-20 ingest (macOS pinned feeds and lists)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-saved-feeds-sidebar-design.md, core/Sources/YoruMimizukuKit/SavedFeedsModel.swift, apps/macos/Timeline/LiveSavedFeedsLoaders.swift
+- sources: docs/adr/0024-macos-saved-feeds-sidebar.md, core/Sources/YoruMimizukuKit/SavedFeedsModel.swift, apps/macos/Timeline/LiveSavedFeedsLoaders.swift
 - updated: [[app-shell]], [[macos]]
 - note: The macOS sidebar lists the account's pinned feeds and lists (read-only) between 通知 and フィルター; only the selected one polls, and an ⓘ popover shows the feed's description, creator and AT-URI.
 
 ## 2026-11-20 ingest (macOS three-pane window)
 
-- sources: docs/superpowers/specs/2026-11-20-macos-three-pane-design.md, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, apps/macos/Views/DetailPaneView.swift
+- sources: docs/adr/0026-macos-three-pane.md, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, apps/macos/Views/DetailPaneView.swift
 - updated: [[app-shell]], [[author-tab]], [[notifications]], [[manual-verification]]
 - note: macOS opens conversations and author pages in a detail pane with back/forward history; the sidebar no longer lists or persists conversation and author tabs on macOS. iPadOS keeps tabs.
 
@@ -123,60 +127,60 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-07-25 ingest (P2 inventory and consolidated manual-verification checklist, S8)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S8 section, "実機・シミュレータ検証項目"); `apps/ipados/Views/ComposerView.swift`, `RootView.swift`, `ConversationView.swift`, `NotificationsListView.swift`, `PostRowView.swift`; `apps/macos/Views/ComposerView.swift`, `Update/UpdateBadgeState.swift`, `Views/PostRowView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S8 section, "実機・シミュレータ検証項目"); `apps/ipados/Views/ComposerView.swift`, `RootView.swift`, `ConversationView.swift`, `NotificationsListView.swift`, `PostRowView.swift`; `apps/macos/Views/ComposerView.swift`, `Update/UpdateBadgeState.swift`, `Views/PostRowView.swift`
 - created: [[manual-verification]] (`docs/wiki/manual-verification.md`, `type: reference`) — consolidates every still-pending device/simulator-only verification item from the whole apple-hig-remediation plan (P0-1, P0-2, P0-3's full matrix, P0-4, S2, S4, S5, and the cross-cutting P2 items: Reduce Motion, max Dynamic Type AX5, VoiceOver toast announcements, iPad floating/hardware keyboard + Composer interference), each marked as an unchecked pending item. No prior per-page "manual verification" section existed anywhere in the wiki (checked); the plan's own commit-log notes recorded pending-verification callouts inline per subproject (see the S7/S4/P0-3 entries below), but nothing consolidated them, which is exactly what S8 is for.
 - updated: [[app-shell]] (P0-1, P0-2, S4 paragraphs each gained a one-line pointer to [[manual-verification]]); [[macos]] (Accessibility and "New windows and window titles" sections gained pointers); [[ipados]] (Multi-scene, Tap targets, and Inline video sections gained pointers); [[compose-post]] (Draft discard protection section gained a pointer); `index.md` regenerated via `mise run wiki:index` (no `features:` blocks changed, so `wiki:matrix` was not re-run)
 - note: Four commits landed before this one, covering S8's own inventory-and-fix Steps 1-2 (all behavioral): (1)+(2) translated genuine untranslated English UI strings to Japanese, as two separate commits — first the plan's cited example (iPad `RootView.swift` "Author not found"/"Filter not found"/"Conversation not found" plus the Composer's English "Post"/"alt text"), then a broader sweep (beyond the plan's literal grep patterns) that additionally found the entire iPad sidebar still in English (Section headers "Filters"/"Conversations"/"Authors", row titles "Home"/"Notifications"), the conversation view's "Ancestors"/"Replies" section headers, and an "Unknown" fallback string in `UpdateBadgeState.versionDisplay`; matched macOS's own existing Japanese wording (`SidebarView.swift`'s `sectionLabel("会話")`/`("フィルター")`/`("ユーザー")`) where a macOS precedent existed. (3) converted genuine hardcoded colors to `ThemeStore` semantic colors on iPad: `RootView.swift`'s unread badge (`Color.blue` → `theme.accent`, matching macOS's `SidebarRow` badge exactly) and its sidebar row-selection tint (`Color.blue.opacity(0.12)` → `theme.accent.opacity(0.12)`, matching an existing iPad-internal precedent in `NotificationsListView.swift`), and `NotificationsListView.swift`'s `iconColor` (`.pink`/`.blue`/`.secondary` → `theme.star`/`theme.accent`/`theme.secondaryText`, an exact copy of macOS's `NotificationsView.swift iconColor`). Deliberately left unconverted: white-on-black text/icon overlays on video posters, sensitive-media curtains, the video-failure overlay, the image lightbox, and the debug FPS overlay (all fixed-contrast media chrome independent of theme, on both platforms), and white text on the sidebar's accent-filled selected row (contrast text against a fixed monochrome brand color, an existing intentional macOS pattern). The row-selection tint change is a real, small visual change not verified by screenshot — flagged in its commit body for human review. (4) added `accessibilityLabel` (e.g. "返信 3件") to the shared `actionLabel` helper in both platforms' `PostRowView.swift`, covering every reply/repost/like count in both the interactive `actionBar` and the static (conversation-ancestor) `actionBar`, since a bare `Label(text, systemImage:)` gives VoiceOver no more than the raw digit today; the bare icon-only copy-link/open-in-browser buttons in the same action bar were deliberately left alone as out of S8's stated "icon+number pair" scope. `xcodebuild test` passed after each of the four commits (macOS 30/30, iPad 8/8, zero snapshot diffs throughout, as expected since none of the four changes alter rendered pixels). This wiki commit is the fifth and final S8 commit.
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S7 Steps 1-2); `apps/macos/YoruMimizukuApp.swift`, `Views/RootView.swift`, `Views/SettingsView.swift`, `Views/NewPostCommand.swift`, `Views/SidebarView.swift`, `Views/MainWindowView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S7 Steps 1-2); `apps/macos/YoruMimizukuApp.swift`, `Views/RootView.swift`, `Views/SettingsView.swift`, `Views/NewPostCommand.swift`, `Views/SidebarView.swift`, `Views/MainWindowView.swift`
 - updated: [[macos]] ("New windows and window titles" cross-window settings paragraph rewritten from "known limitation" to "resolved"; "Auto updates" section's "existing settings sheet" wording corrected to "settings screen ... now a native `Settings` scene"); [[app-shell]] (Multiple windows feature note's S4-documented known limitation rewritten as resolved; the ⌘, paragraph rewritten to describe the native `Settings` scene instead of `SettingsCommands`/`OpenSettingsAction`; the sidebar-footer gear-button sentence updated to `@Environment(\.openSettings)`; `apps/macos/Views/SettingsView.swift` added to `sources`); `support-matrix.md` regenerated via `mise run wiki:matrix`
 - note: Two commits (full store-lift + Settings-scene migration described in the plan's S7 section). (1) Structural: lifted the 4 settings stores (`ThemeStore`/`DisplaySettingsStore`/`FontSettingsStore`/`NotificationSettingsStore`) from per-window `@StateObject`s in `RootView` to app-level `@StateObject`s in `YoruMimizukuApp`, injected via `.environmentObject` into the `WindowGroup` content; `RootView` now reads them via `@EnvironmentObject`. `xcodebuild test` passed in full (30/30, including `CatalogSnapshotTests` with zero diffs), confirming pure behavior preservation. (2) Behavioral: added a `Settings { SettingsView() }` scene injecting the same 4 stores plus `updateController` (needed by the settings screen's アップデート tab, not one of the "4 stores" the plan names but already app-level) and the app's font/typesetting modifiers; removed `SettingsCommands`/`OpenSettingsAction`/`FocusedValues.openSettings` (SwiftUI now wires ⌘, to the `Settings` scene automatically); replaced the sidebar gear button's `onOpenSettings` closure with `@Environment(\.openSettings)`; removed the dead `showSettings` sheet/state/`focusedSceneValue` plumbing from `MainWindowView`; stripped `SettingsView`'s custom title bar and "閉じる" button (the `Settings` scene supplies native window chrome, so keeping it would have doubled the title and left a "閉じる" button that likely no-ops since `@Environment(\.dismiss)` isn't reliably wired to close a `Settings` scene window). `xcodebuild test` passed in full again after this commit (30/30, zero snapshot diffs). Manual verification (⌘, opens the settings window; a theme change in one window/the settings window live-reflects in another already-open window) is pending human verification — not exercised by the agent, since it requires driving multiple interactive windows.
 
 ## 2026-07-25 ingest (macOS new window and window titles, S4)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S4 Tasks 1-2); `core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`; `apps/macos/YoruMimizukuApp.swift`, `Views/NewPostCommand.swift`, `Views/MainWindowView.swift`, `Views/RootView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S4 Tasks 1-2); `core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`; `apps/macos/YoruMimizukuApp.swift`, `Views/NewPostCommand.swift`, `Views/MainWindowView.swift`, `Views/RootView.swift`
 - updated: [[app-shell]] (Multiple windows feature note rewritten for ⇧⌘N + window titles + the per-window-settings-not-live-syncing limitation; ⌘N/⇧⌘N prose in "Window layout" corrected — the old text claimed a timeline client has no use for extra windows, contradicting the design spec's per-window account viewing); [[macos]] (new "New windows and window titles" section); `support-matrix.md` regenerated via `mise run wiki:matrix`
 - note: Two commits. (1) Kit/TDD: added `WindowTitle.compose(tabTitle:accountHandle:)` (built up incrementally: plain concat → empty-handle guard → `@`-dedup, each Red confirmed via compile error or assertion failure before Green) and `WorkspaceModel.selectionTitle` (6 tests, each branch driven in from a real Red against a minimal hardcoded impl — the last test, falling back to ホーム for a closed tab, passed without a new Red since the `?? "ホーム"` fallback was already forced by the filter/conversation/author tests). Full `swift test --package-path core` regression: 493/493. (2) View: `WindowGroup(id: "main")`, restored **新規ウィンドウ** on ⇧⌘N via `openWindow(id:)` alongside the unchanged ⌘N=新規投稿, rewrote the stale NewPostCommand.swift header comment to cite the spec, and wired `.navigationTitle(WindowTitle.compose(...))` on `MainWindowView`'s `NavigationSplitView`. `xcodebuild test -scheme YoruMimizuku` passed in full including `CatalogSnapshotTests` (zero snapshot diffs, as expected since window chrome isn't in the catalog). Manual verification (⇧⌘N opening a window, Mission Control/Window-menu/Dock title text, title tracking tab switches, real per-window account viewing) is pending human verification — not exercised by the agent.
 
 ## 2026-07-25 ingest (iPad tap targets, S2)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S2 Tasks 1-3); `core/Sources/YoruMimizukuKit/DesignMetrics.swift`; `apps/ipados/Views/PostRowView.swift`, `RootView.swift`, `NotificationsListView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S2 Tasks 1-3); `core/Sources/YoruMimizukuKit/DesignMetrics.swift`; `apps/ipados/Views/PostRowView.swift`, `RootView.swift`, `NotificationsListView.swift`
 - updated: [[ipados]] (new "Tap targets and tap accessibility (S2)" section); [[design-system]] (new `minimumTouchTarget` row in the DesignMetrics reference table; new "Density coverage gap" note under "Snapshot operations")
 - note: Three commits. (1) TDD-added `DesignMetrics.minimumTouchTarget = 44` (Red: compile error on the undefined member; Green: full `swift test --package-path core` regression, 484/484). (2) Structural: converted 4 `onTapGesture` sites in `PostRowView.swift` (row-wide tap, avatar, sensitive-media curtain, `ThumbnailChrome`) to `Button`/accessibility semantics with no hit-area change — `CatalogSnapshotTests` (iPad) passed with zero diffs, confirming true no-op on rendering. (3) Behavioral: gave the sidebar close xmark, notification expand chevron, and PostRow avatar Button a 44pt minimum frame while keeping their glyph visual size in an inner frame; also widened the avatar *column* (`avatarColumnWidth = max(avatarSize, 44)`) and updated `leadingInset`/the reflow region-width calc to match, so alignment holds. Re-recorded 10 `PostRow`-family snapshot references after visually inspecting each diff (reference vs. failure vs. difference images, via `xcresulttool export attachments`): all showed only the expected ~2pt column-width/margin increase at `.comfortable` density, no overlap/clipping/broken layout. Sidebar xmark and notification chevron are outside `CatalogSnapshotTests` coverage (not `PostRowView`); `.compact`-density avatar (24pt glyph) is also outside coverage since the suite always renders `.comfortable` (newly documented in [[design-system]]) — all three verified by code reasoning only, plus a manual Accessibility Inspector Hit Target check left as pending human verification (S2 Task 3 Step 3).
 
 ## 2026-07-25 ingest (iPad video playback failure fallback)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 2); `apps/ipados/Views/PostRowView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S5 Task 2); `apps/ipados/Views/PostRowView.swift`
 - updated: [[ipados]] (new "Playback-failure fallback" paragraph under "Inline video playback")
 - note: `VideoPlayerScreen` now builds its `AVPlayerItem` eagerly in `init` (previously created inside `onAppear`) so `.onReceive(item.publisher(for: \.status))` can observe a `.failed` status from the first frame; on failure an overlay shows 「動画を再生できませんでした」 + 「ブラウザで開く」 (dismisses and calls the row's existing `onOpenPermalink`), close button unaffected. No automated test — AVPlayerItem failure is not deterministically reproducible in XCTest (network/CDN-dependent); added a manual checklist item instead (機内モードで HLS 再生 → エラー表示と「ブラウザで開く」の動作), pending human verification.
 
 ## 2026-07-25 ingest (iPad notifications empty state)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S5 Task 1); `apps/ipados/Views/NotificationsListView.swift`, `apps/ipadosTests/NotificationsEmptySnapshotTests.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S5 Task 1); `apps/ipados/Views/NotificationsListView.swift`, `apps/ipadosTests/NotificationsEmptySnapshotTests.swift`
 - updated: [[notifications]] (new "Empty state (iPadOS)" subsection under the iPadOS badge section)
 - note: Confirmed the defect with a pixel-diff Red before implementing: recorded a reference PNG against the unmodified `.loaded([])` branch and visually inspected it — a blank themed-canvas gradient with no text, icon, or list rows. After adding the `ContentUnavailableView("通知はまだありません", systemImage: "bell.slash")` branch, the same test failed against that reference (0.994 pixel match, below the 1.0/0.98 threshold), which is the genuine Red. Re-recorded and visually confirmed the new reference shows the bell.slash icon and copy before committing it. Also noted for future re-recording: `xcodebuild test` on the iOS Simulator does not forward a bare `SNAPSHOT_TESTING_RECORD=all` shell env var to the test process (unlike the macOS suite) — it must be prefixed `TEST_RUNNER_SNAPSHOT_TESTING_RECORD=all` for Xcode's test runner to pass it through.
 
 ## 2026-07-24 ingest (macOS pointer buttons)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S3); `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S3); `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`
 - updated: [[macos]] (new one-line note under "Accessibility" describing the avatar `Button` conversion)
 - note: Converted the post-row and notification avatar `.onTapGesture` handlers to `Button { ... } label: { ... }.buttonStyle(.plain)` with an added `.accessibilityLabel`, restoring a keyboard/VoiceOver/pointer-standard activation path (Space, VoiceOver double-tap) that a bare `.onTapGesture` never offered. Purely structural: the existing avatar rendering is unchanged inside the label, `.buttonStyle(.plain)` keeps the visual output identical, and no 44pt minimum-frame sizing was added since macOS is a pointer environment (that's an iPad-only concern handled by a separate subproject). `xcodebuild test` (including `CatalogSnapshotTests`) passed with zero snapshot diffs.
 
 ## 2026-07-24 ingest (open-in-browser context menu)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (S6)
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (S6)
 - updated: [[app-shell]] (new "Post row action paths" section describing the unified リンクをコピー / ブラウザで開く / 削除 context-menu inventory on both platforms; `sources` extended with `apps/macos/Views/PostRowView.swift` and `apps/ipados/Views/PostRowView.swift`)
 - note: iPad's `rowContextMenu` gained a `ブラウザで開く` entry reusing the existing `onOpenPermalink` closure (already wired to the action bar's visible Safari button); macOS's `rowContextMenu` gained the same label reusing the existing private `openInBrowser()` + `onSelect()`. No visible macOS action-bar Safari button was added (left open per the plan's unresolved item 5). No feature-matrix change (existing "Copy post permalink" row's platform status is unaffected).
 
 ## 2026-07-24 ingest (iPad multi-scene)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-3); commits `69323ac` (project.yml: drop `UIRequiresFullScreen`, declare `UIApplicationSupportsMultipleScenes`, add `PortraitUpsideDown`), `8aa74f6` (`apps/ipados/Views/RootView.swift`: compact-width nav bar)
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (P0-3); commits `69323ac` (project.yml: drop `UIRequiresFullScreen`, declare `UIApplicationSupportsMultipleScenes`, add `PortraitUpsideDown`), `8aa74f6` (`apps/ipados/Views/RootView.swift`: compact-width nav bar)
 - updated: [[ipados]] (new "Multi-scene and Stage Manager" section; added a "Known limitation" bullet to "Known differences"; `sources` extended with the P0-3 plan); [[app-shell]] ("Multiple windows" feature row's `ios` note rewritten to describe real OS-level multi-scening and the shared-persistence caveat); `support-matrix.md` regenerated from the updated note
 - note: Dropped `UIRequiresFullScreen` and declared `UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes: true` so the OS can run more than one scene (Split View / Slide Over / Stage Manager / App Exposé); added the missing `PortraitUpsideDown` orientation Apple requires of multitasking-capable apps. `MainShellView` now keeps the detail navigation bar visible at compact width (`horizontalSizeClass == .compact`) since it is otherwise the only way back to the sidebar once `NavigationSplitView` collapses to one column; `columnVisibility = .all` is left unconditioned since SwiftUI ignores it once already collapsed. Two scenes on the same account are not crash-prone but share `UserDefaults`-backed conversation-tab/filter persistence with last-writer-wins semantics — documented as a known limitation, not fixed here. No automated test was added (a size-class conditional would only produce a tautological test); coverage is a manual verification matrix in the plan, marked pending human/device verification.
 
 ## 2026-07-24 ingest (thread reply rows)
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-1); `apps/macos/Views/ConversationView.swift`, `core/Sources/YoruMimizukuKit/ThreadViewModel.swift`
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (P0-1); `apps/macos/Views/ConversationView.swift`, `core/Sources/YoruMimizukuKit/ThreadViewModel.swift`
 - updated: [[app-shell]] (new "Conversation tab (thread view)" section documenting that only the focused post is interactive and ancestor/reply rows are static-action-bar re-anchor buttons; `sources` frontmatter extended with `ConversationView.swift` and `ThreadViewModel.swift`)
 - note: macOS's reply-tree rows (`replyRow`) previously passed `onLike`/`onRepost` through to a fully interactive `PostRowView`, but `ThreadViewModel.post(id:)` only ever resolves the focused post's id, so those taps were silent no-ops. Degraded `replyRow` to `interactiveActions: false` (matching the existing `parentBlock` ancestor rows) and wrapped the whole row in a re-anchor button, since `interactiveActions: false` also disables the timestamp-tap-to-open-conversation affordance the row relied on. iPadOS already had both ancestor and reply rows non-interactive, so this is a macOS-only fix.
 
@@ -188,13 +192,13 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-07-24 ingest
 
-- sources: `docs/superpowers/plans/2026-07-24-apple-hig-remediation.md` (P0-4); commits `d1c6985` (`hasUnsavedContent` detection, 8 tests), `1c8e959` (confirmation dialog + submit-time lock); `core/Sources/YoruMimizukuKit/ComposerViewModel.swift` (hasUnsavedContent logic); `apps/macos/Views/ComposerView.swift`, `apps/ipados/Views/ComposerView.swift` (confirmation dialog, dismissal guards, disabled submit during flight)
+- sources: the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history) (P0-4); commits `d1c6985` (`hasUnsavedContent` detection, 8 tests), `1c8e959` (confirmation dialog + submit-time lock); `core/Sources/YoruMimizukuKit/ComposerViewModel.swift` (hasUnsavedContent logic); `apps/macos/Views/ComposerView.swift`, `apps/ipados/Views/ComposerView.swift` (confirmation dialog, dismissal guards, disabled submit during flight)
 - updated: [[compose-post]] (features table: added "Draft discard confirmation" row macos/ios: full; new "Draft discard protection" section documenting unsaved-content definition, confirmation UX, submit-time locking, and the in-flight-cancel limitation)
 - note: Composer now confirms before discarding unsaved drafts (text / images / video, excluding reply/quote targets). While a post is submitting, Cancel is disabled and interactive dismissal is blocked (Esc on macOS, swipe-down on iPad), forcing users to wait for completion or failure. Both behaviors apply uniformly to macOS and iPadOS; Windows planned for later (spec is in P0-4 but implementation depends on the per-platform View wiring). This is part of the P0 HIG remediation for "no-op operations" and "breakage without warning" (design.md §6, feature/hig-composer-draft-protection).
 
 ## 2026-07-13 ingest
 
-- sources: `docs/superpowers/specs/2026-07-13-session-reauth-design.md`, `docs/superpowers/plans/2026-07-13-session-reauth.md`; `core/Sources/YoruMimizukuKit/SessionReauth.swift`, `apps/macos/Views/RootView.swift`, `apps/ipados/Views/RootView.swift`
+- sources: `docs/adr/0018-session-reauth.md`, the landed plan `2026-07-13-session-reauth` (removed; see git history); `core/Sources/YoruMimizukuKit/SessionReauth.swift`, `apps/macos/Views/RootView.swift`, `apps/ipados/Views/RootView.swift`
 - updated: [[oauth-flow]] (`SessionExpiry` recovery bullet and the wake-path paragraph rewritten for the new keep-and-re-auth handling and its two log lines), [[accounts]] (macOS and iPad switcher sections corrected — only user-initiated logout goes through `removeAndAdvance`; session expiry no longer does)
 - note: Behavior change on `feature/session-reauth`: on OAuth session expiry the app no longer deletes the account (`AccountManager.removeAndAdvance`) — it keeps the DID/handle/DPoP key, sets in-memory re-auth state (`SessionReauth.onExpiry`, a pure/unit-tested helper), auto-presents a handle-pre-filled re-auth login sheet, and falls back to a persistent "セッションが期限切れです" / "再ログイン" banner over the still-visible timeline if the user cancels. Both the reactive and wake expiry paths now log under the `Session` os.Logger category (the wake line reworded from "...dropping the account" to "...prompting re-auth"; the reactive path is newly logged). Switching accounts or logging out clears the re-auth state; core (`SessionExpiry`, `RefreshGate`, `AccountManager`) is unchanged — this is app-state wiring only (Approach A, no `PersistedAccount` schema change). Applies uniformly to macOS and iPadOS (shared `SessionReauth` helper + per-app `RootView` wiring); no support-matrix change since it is uniform across those platforms and Windows is out of scope for this spec (Windows keeps its existing drop-and-advance expiry behavior, unchanged).
 
@@ -206,20 +210,20 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-07-03 ingest
 
-- sources: `docs/superpowers/specs/2026-07-03-design-catalog-design.md` (§背景と問題), `docs/superpowers/plans/2026-07-03-design-catalog.md`; post-branch commits `9561ec8`, `4426a11`
+- sources: `docs/adr/0016-design-catalog.md` (§背景と問題), the landed plan `2026-07-03-design-catalog` (removed; see git history); post-branch commits `9561ec8`, `4426a11`
 - updated: [[design-system]] (parity finding 2 marked resolved — macOS `staticActionBar` now uses `actionBarItemSpacing`, only the intentional internal 3pt literal remains; documented the macOS snapshot render-scale pin — explicit 2x `NSBitmapImageRep` drawing, screen-configuration-independent, after the v1.0.0-dev.14 release gate caught all PostRow references failing on a 1x display)
 - note: The 2026-07-03 timeline fixes shipped in v1.0.0-dev.14 (two-image grid overlap fix, +6pt `actionBarTopGap`) needed no behavior-page prose changes: the grid fix restores the documented behavior (equal non-overlapping tiles) and the new gap value is already the one recorded in the DesignMetrics reference table.
 
 ## 2026-07-03 ingest
 
-- sources: `docs/superpowers/specs/2026-07-03-feed-self-thread-grouping-design.md`, `docs/superpowers/plans/2026-07-03-feed-self-thread-grouping.md`
+- sources: `docs/adr/0017-feed-self-thread-grouping.md`, the landed plan `2026-07-03-feed-self-thread-grouping` (removed; see git history)
 - updated: [[timeline-streaming]] (Thread grouping in the feed: restricted to single-author self-threads; matrix note + support-matrix bullet), `support-matrix.md`
 - note: Ingested the feed self-thread-only grouping change (merged to main as `81f3034`). `FeedThreading.arrange` now climbs `replyParent` only while the parent shares the post's `authorHandle`, so a multi-author/branching conversation no longer collapses into one flat chronological block — each foreign-author reply stays an independent row with its "@X への返信" marker (the reported symptom: a whole DDJ-FLX4 reply tree rendered as one time-sorted column in the macOS feed). Root cause was diagnosed against live `getPostThread` data: the conversation tab (`ConversationView` + `ThreadNode.childTree`) already renders a correct depth-indented tree; only the feed's `FeedThreading` over-grouped by topmost ancestor regardless of author. Behavior applies to macOS and iPadOS (both call `FeedThreading.arrange` with real `PostDisplay` handles). Windows is the exception and its matrix note/prose now say so: the `yoru_feed_arrange` bridge (`BridgeOperations.swift`) passes an empty `authorHandle` (the `ArrangeItem` DTO carries no author), so the same-author check is always trivially true and Windows keeps full-chain grouping — carrying the author through the bridge is a tracked follow-up (no regression: Windows behavior is unchanged pre/post branch). This clears the feed-self-thread-grouping spec/plan pair from the lint "uncited source" warning.
 - deferred (follow-up, not wiki): thread `authorHandle` through `yoru_feed_arrange` so Windows gets the fix; consider gitignoring `core/Package.resolved` (running `swift test` in `core/` strips Sparkle from it).
 
 ## 2026-07-03 ingest
 
-- sources: `docs/superpowers/specs/2026-07-03-design-catalog-design.md`, `docs/superpowers/plans/2026-07-03-design-catalog.md`
+- sources: `docs/adr/0016-design-catalog.md`, the landed plan `2026-07-03-design-catalog` (removed; see git history)
 - created: [[design-system]]
 - updated: [[overview]] (added link to [[design-system]]), `AGENTS.md` (Coding Conventions pointer)
 - note: Ingested the design catalog work on `feature/design-catalog` (Tasks 1–10 complete). Documented the naming rule (component = view type name minus `View`; slots = existing computed-property names; spacing/radius = `DesignMetrics` identifiers) with a full reference table of all 8 `DesignMetrics` members and their values/call sites. Documented the DEBUG-only in-app gallery on both platforms (macOS: ヘルプ > デザインカタログ window; iPadOS: sidebar row → sheet, no theme menu) and its toolbar controls (density, theme [macOS only], width slider crossing the 680pt reflow boundary, caption toggle). Documented snapshot-test operations: `YoruMimizukuTests`/`YoruMimizukuPadTests`, the iPad Pro 13-inch (M5) / iOS 26.5 simulator pin, the `EnvironmentValues.catalogPreloadedImages` determinism mechanism, and the actual re-record procedure verified against the resolved `swift-snapshot-testing` source (`SNAPSHOT_TESTING_RECORD=all|missing` env var, since neither test file passes an explicit `record:` argument). Recorded two verified parity findings between the macOS and iPad `PostRowView` implementations as drift candidates, not yet fixed: (1) iPad's `actionBarSection` is missing the external `actionBarTopGap` (6pt) wrap that macOS applies around `actionBar`/`staticActionBar` — both platforms share an identical internal `.padding(.top, 3)` inside those views, so this is a missing 6pt wrap on iPad, not a 3-vs-6 value mismatch; (2) macOS's `staticActionBar` still uses raw literals (`HStack(spacing: 26)`, `.padding(.top, 3)`) while macOS's own `actionBar` and iPad's `staticActionBar` already use the `DesignMetrics` constants. This clears the 2026-07-03 design-catalog spec/plan pair from the lint "uncited source" warning. Regenerated index (no `features:` block on this page — it is a `concept` page, not a `behavior` page, so the support matrix is unaffected).
@@ -232,19 +236,19 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-07-03 ingest
 
-- sources: `docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md`, `docs/superpowers/plans/2026-07-02-post-interaction-affordances.md`
+- sources: `docs/adr/0015-post-interaction-affordances.md`, the landed plan `2026-07-02-post-interaction-affordances` (removed; see git history)
 - updated: [[timeline-streaming]], [[ipados]]
 - note: Ingested the 2026-07-02 post-interaction affordances (macOS-only, implementation complete). Timestamp tap opens/re-anchors the conversation view (`PostRowView.timestampView`, hover cursor + underline, wired through `FeedView`/`ConversationView`); a copy-link toast via the new shared `YoruMimizukuKit.ToastCenter` (monotonic-token auto-dismiss) + `ToastView`/`MainWindowView` bottom overlay, fired from `FeedView.copyPermalink`/`ConversationView.copyPermalink`; and in-app author-tab routing for body `@mention` taps via `RichText.mentionDID(from:)` checked in `MainWindowView.openURL` right after the hashtag branch. Added three new [[timeline-streaming]] matrix rows (macOS full; Windows none, not addressed; iOS/Android planned, iPad parity tracked as a dedicated follow-up plan per the spec's non-goals) and a new "Post-row interaction affordances" prose section. Added the same follow-up as a known-differences bullet on [[ipados]]. This clears the two lint "uncited source" warnings for the spec/plan pair. Regenerated support-matrix and index.
 
 ## 2026-06-24 ingest
 
-- sources: `docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md`, `docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md`
+- sources: `docs/adr/0012-ipados-parity.md`, the landed plan `2026-06-24-yorumimizuku-ipados-parity` (removed; see git history)
 - updated: [[ipados]], [[timeline-media-layout]], [[timeline-streaming]], [[sensitive-media]]
 - note: Ingested the iPadOS timeline parity work on `feature/ipados-parity`. The iPad timeline now renders like macOS: the AppKit-free presentation foundation (ThemeStore, density store, RemoteImage/ImageDownsampler) was duplicated into `apps/ipados`, with a new UIFont-based `Typography`; the link/quote/video cards were ported; `PostRowView` was rewritten to match macOS (themed type/colors, density, 5:4 tall-image crop + 全体表示 hint, RemoteImage grid, video poster, OGP link card + lazy fallback, quote card, sensitive-media blur, reply marker, repost/quote popover, delete context menu, wide-column reflow); `TimelineListView` now does FeedThreading.arrange grouping with the connector line, themed canvas/divider, classified load-failure states, themed empty/loading states, delete confirmation, and scene-width reflow. Flipped the iOS status to `full` on [[timeline-media-layout]] (both rows), [[sensitive-media]], and [[timeline-streaming]] (delete own post, load error states, OGP cards, quote cards, video poster, thread grouping). Also fixed a latent build break: the iPad target did not compile because `TimelineListView` still treated `TimelineViewModel.state` `.failed` as a String. Remaining iPad gaps are settings surfaces only (density/theme/font pickers, structured filter editor, notification settings) — Phase 3, not yet done. Visual confirmation on device by the author is still pending.
 
 ## 2026-06-23 ingest
 
-- sources: `docs/superpowers/specs/2026-06-23-timeline-image-reflow-design.md`, `docs/superpowers/plans/2026-06-23-timeline-image-reflow.md`
+- sources: `docs/adr/0011-timeline-image-reflow.md`, the landed plan `2026-06-23-timeline-image-reflow` (removed; see git history)
 - created: [[timeline-media-layout]]
 - updated: [[overview]] (added link to [[timeline-media-layout]])
 - note: Ingested the timeline image reflow feature landed on `feature/timeline-image-reflow`. New `TimelineLayout` helper (platform-neutral, `YoruMimizukuKit`) supplies the 5:4 crop threshold, reflow threshold (680 pt), media rail width (300 pt), column gap (16 pt), and text column cap (620 pt). macOS `PostRowView` now crops tall single images to 5:4 with a top-anchor + `tallCropHint` fade overlay; wide feed columns (≥ 680 pt region width) reflow to body-left / media-right two-column layout measured once in `FeedView.onGeometryChange`. Quote cards stay in the left (text) column in both layouts. Windows and iOS are `none`/`planned` — the helper constants land in the shared core but the SwiftUI view changes are macOS-only.
@@ -257,14 +261,14 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-17 ingest
 
-- sources: `core/Sources/BlueskyCore/Models/Timeline.swift`, `core/Sources/YoruMimizukuKit/{PostDisplay,PostDisplay+Mapping}.swift`, `apps/macos/Views/PostRowView.swift`, `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`
+- sources: `core/Sources/BlueskyCore/Models/Timeline.swift`, `core/Sources/YoruMimizukuKit/{PostDisplay,PostDisplay+Mapping}.swift`, `apps/macos/Views/PostRowView.swift`, `docs/adr/0002-overall-design.md`, the landed plan `2026-06-11-yorumimizuku-v1.0.0-roadmap` (removed; see git history)
 - created: [[sensitive-media]]
-- updated: [[overview]] (linked the new page), `docs/superpowers/specs/2026-06-04-yorumimizuku-design.md` §14 (NSFW media blur minimal now in v1.0.0)
+- updated: [[overview]] (linked the new page), `docs/adr/0002-overall-design.md` §14 (NSFW media blur minimal now in v1.0.0)
 - note: Ingested the minimal NSFW/sensitive-media blur landed on `feature/nsfw-media-blur` (commit 5437d01). New `Label` decode on `PostView.labels`, `MediaWarning.from(labels:)` mapping (adult = porn/sexual/nudity, graphic = graphic-media/gore, honoring `neg`), and a tap-to-reveal blur curtain in the macOS `PostRowView`. New "Sensitive media blur (content labels)" matrix row: macOS full; Windows/iPadOS none (label decode shared in core, but only macOS gates the UI); Android planned. Per-user moderation preferences (getPreferences, subscribed labelers, per-label hide/warn/show, account-level labels) remain deferred. Regenerated support-matrix and index.
 
 ## 2026-06-15 ingest
 
-- sources: `docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md`, `core/Sources/BlueskyCore/Account/AccountManager.swift`, `core/Sources/YoruMimizukuKit/{PostInteracting,TimelineViewModel,LoadFailure}.swift`, `apps/macos/{NotificationSettings.swift,Views/{SidebarView,FeedView,PostRowView,SettingsView,MainWindowView,RootView,NewPostCommand}.swift}`
+- sources: the landed plan `2026-06-11-yorumimizuku-v1.0.0-roadmap` (removed; see git history), `core/Sources/BlueskyCore/Account/AccountManager.swift`, `core/Sources/YoruMimizukuKit/{PostInteracting,TimelineViewModel,LoadFailure}.swift`, `apps/macos/{NotificationSettings.swift,Views/{SidebarView,FeedView,PostRowView,SettingsView,MainWindowView,RootView,NewPostCommand}.swift}`
 - updated: [[timeline-streaming]], [[accounts]], [[notifications]], [[app-shell]]
 - note: Ingested four v1.0.0 finishing features landed on `feature/v1.0.0-finishing` (commits ece0f37, de381ce, cf17589, 07d028d). B-3 delete-own-post: new "Delete own post" feature row (macOS full; iPadOS/Windows none — the PostInteracting.deletePost capability is shared but no delete UI is wired off macOS) + prose on the host-decided `canDelete` ownership, confirmation dialog, and the optimistic-with-restore `TimelineViewModel.deletePost` over `PostInteracting.deletePost`. B-5 error UX: new "Load error states (offline / 429 / 5xx) with retry" row (macOS full; iPadOS/Windows unknown, not yet audited) + prose on the tested `LoadFailure` classifier and `FeedView.failedState`'s 再試行 button; refresh/loadMore swallow failures; no separate 429 backoff (poll interval is the limiter). A-5 account selector: documented the macOS sidebar-footer account `Menu` and `AccountManager.summaries()` / `removeAndAdvance(did:)` in [[accounts]], and noted the switcher lives in the sidebar footer (not the design's top-right) in [[app-shell]]. B-4 notification settings: documented the 通知 settings tab (poll interval 15/30/60/300s, badge toggle) backed by `NotificationSettingsStore` and the ⌘, settings command in [[notifications]] and [[app-shell]]. Regenerated support-matrix and index.
 
@@ -327,7 +331,7 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
-- sources: `2026-06-08-yorumimizuku-sparkle-auto-update-design.md`, `2026-06-09-yorumimizuku-sparkle-auto-update.md`
+- sources: `0009-sparkle-auto-update.md`, `2026-06-09-yorumimizuku-sparkle-auto-update.md`
 - created: [[auto-updates]]
 - updated: [[overview]], [[macos]]
 - note: Ingested the approved Sparkle auto-update design and added an implementation plan. The wiki now records the macOS-only Sparkle 2 scope, gentle settings-gear reminder, update settings tab, GitHub Pages appcast, GitHub Release ZIP/DMG split, app-first notarization, EdDSA key handling, and release task changes. The support matrix marks Sparkle auto-update as planned for macOS and unsupported on Windows/iPadOS/Android.
@@ -350,7 +354,7 @@ Recent activity: `grep "^## " log.md | head -5`.
 
 ## 2026-06-08 ingest
 
-- sources: `2026-06-08-yorumimizuku-ipados-design.md`
+- sources: `0008-ipados.md`
 - created: [[ipados]]
 - updated: [[overview]], [[architecture]], [[macos]], [[accounts]], [[app-shell]], [[author-tab]], [[compose-post]], [[filters]], [[notifications]], [[oauth-flow]], [[timeline-streaming]]
 - note: Added the dedicated iPadOS target to the wiki. iPadOS imports `BlueskyCore` / `YoruMimizukuKit` / `PlatformApple` directly (no bridge), with touch-first SwiftUI views under `apps/ipados`. Marked iOS support full for OAuth, accounts, core timeline loading, compose, author tabs, copy permalink, keyboard/post actions, and conversation reply trees; limited/differs for shell mechanics, structured filters, notifications, and rich image rendering; none for Jetstream live updates until the iPad app wires foreground live streams.
@@ -368,7 +372,7 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-08 ingest
 
 - updated: [[timeline-streaming]]
-- sources: `2026-06-08-yorumimizuku-timeline-ux-enhancements-design.md` §5.6, `2026-06-08-phase-d-conversation-child-tree.md`
+- sources: `0010-timeline-ux-enhancements.md` §5.6, `2026-06-08-phase-d-conversation-child-tree.md`
 - note: Phase D landed — the macOS conversation view now renders the descendant reply tree below the anchor. Added a "Conversation view (ancestors + reply tree)" section (tolerant `replies` decode skipping notFound/blocked, `depth=6` fetch, `ThreadNode.childTree(maxDepth:3)`, `ConversationThread`, indented render + 「さらに表示」 re-anchor) and a "Conversation child reply tree" feature row (macos full / windows none — Windows shows ancestors + re-anchor only). Documented that reply-node like/repost stay inert until re-anchored.
 
 ## 2026-06-08 ingest
@@ -478,4 +482,4 @@ Recent activity: `grep "^## " log.md | head -5`.
 ## 2026-06-06 bootstrap
 
 - created: [[overview]], [[oauth-flow]], [[timeline-streaming]], [[compose-post]], [[filters]], [[macos]], [[windows]], [[conventions]]
-- note: Initial ingest of docs/superpowers/specs and plans into the LLM-wiki layer. Added the wiki tool, pre-commit hook, and shared Claude/Cursor commands.
+- note: Initial ingest of the design specs and plans (now `docs/adr/`) into the LLM-wiki layer. Added the wiki tool, pre-commit hook, and shared Claude/Cursor commands.

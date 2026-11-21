@@ -3,13 +3,9 @@ title: Platform — iPadOS
 type: platform
 updated: 2026-11-21
 sources:
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
-  - docs/superpowers/plans/2026-06-24-yorumimizuku-ipados-parity.md
-  - docs/superpowers/specs/2026-07-02-post-interaction-affordances-design.md
-  - docs/superpowers/plans/2026-07-02-post-interaction-affordances.md
-  - docs/superpowers/plans/2026-07-10-yorumimizuku-ipados-parity-phase3.md
-  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
+  - docs/adr/0008-ipados.md
+  - docs/adr/0012-ipados-parity.md
+  - docs/adr/0015-post-interaction-affordances.md
   - project.yml
   - apps/ipados/YoruMimizukuPadApp.swift
   - apps/ipados/Views/RootView.swift
@@ -37,7 +33,7 @@ sources:
 Status: **implemented as a dedicated iPadOS target**. The app is not Mac Catalyst
 and does not share the AppKit-bound macOS view files directly. It reuses
 `BlueskyCore`, `YoruMimizukuKit`, and `PlatformApple`, with iPad-specific SwiftUI
-and UIKit edges under `apps/ipados` (`2026-06-08-yorumimizuku-ipados-design.md`).
+and UIKit edges under `apps/ipados` (`0008-ipados.md`).
 
 ## Build
 
@@ -58,7 +54,7 @@ over `KeychainStorage`, wires `LoginViewModel` to an iPadOS
 `NotificationsViewModel`, and `WorkspaceModel` instances. Each iPad scene owns its
 active account and tab set, while secure account data and the shared
 `RefreshGate` remain in the core account layer (`apps/ipados/Views/RootView.swift`,
-`2026-06-08-yorumimizuku-ipados-design.md` §5).
+`0008-ipados.md` §5).
 
 The shell uses `NavigationSplitView` with a touch-first sidebar. Home,
 notifications, saved search tabs, author tabs, and conversation tabs are available.
@@ -73,11 +69,11 @@ routed by the shell's `OpenURLAction`: hashtag links open saved-search tabs and
 `WorkspaceModel.openAuthor`), matching macOS; every other link falls through to
 the browser (`apps/ipados/Views/PostRowView.swift`, `apps/ipados/Views/RootView.swift`,
 `apps/ipados/Views/TimelineListView.swift`, `apps/ipados/Views/ToastView.swift`,
-`2026-07-10-yorumimizuku-ipados-parity-phase3.md`).
+plan `2026-07-10-yorumimizuku-ipados-parity-phase3` (git history)).
 
 ## Multi-scene and Stage Manager
 
-As of `2026-07-24-apple-hig-remediation.md` (P0-3), the app declares
+As of plan `2026-07-24-apple-hig-remediation` (git history) (P0-3), the app declares
 `UIApplicationSceneManifest.UIApplicationSupportsMultipleScenes: true` and no
 longer sets `UIRequiresFullScreen`, so the OS is free to run more than one
 scene of the app (Split View, Slide Over, Stage Manager, and App Exposé's
@@ -112,7 +108,7 @@ The full device/simulator verification matrix for Split View, Slide Over, Stage 
 
 ## Tap targets and tap accessibility (S2)
 
-As of `2026-07-24-apple-hig-remediation.md` (S2), every small iPad control
+As of plan `2026-07-24-apple-hig-remediation` (git history) (S2), every small iPad control
 reaches the Apple HIG 44×44pt minimum tappable area, named as
 `DesignMetrics.minimumTouchTarget` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`).
 Two changes landed together:
@@ -151,7 +147,7 @@ Two changes landed together:
    `CatalogSnapshotTests` (that suite only exercises `PostRowView` and a few
    standalone components, see [[design-system]]); their 44pt frames were
    verified by code reasoning only, plus a manual Accessibility Inspector Hit
-   Target check (`docs/superpowers/plans/2026-07-24-apple-hig-remediation.md`
+   Target check (the landed plan `2026-07-24-apple-hig-remediation` (removed; see git history)
    S2 Task 3, pending human verification). The `.compact` density avatar
    (24pt glyph) is likewise not exercised by the automated suite (it always
    renders at `.comfortable`, see [[design-system]] "Snapshot operations" §
@@ -160,7 +156,7 @@ Two changes landed together:
 
 ## Settings, filters, and notifications parity (Phase 3)
 
-As of `2026-07-10-yorumimizuku-ipados-parity-phase3.md`, the iPad gained the
+As of plan `2026-07-10-yorumimizuku-ipados-parity-phase3` (git history), the iPad gained the
 surfaces that were previously macOS-only:
 
 - **Settings sheet.** A `gearshape` toolbar button opens `SettingsView`, an
@@ -190,7 +186,7 @@ surfaces that were previously macOS-only:
 
 ## Timeline rendering parity
 
-As of `2026-06-24-yorumimizuku-ipados-parity-design.md`, the iPad timeline renders
+As of `0012-ipados-parity.md`, the iPad timeline renders
 the same way macOS does. The presentation foundation was duplicated into
 `apps/ipados` (decision §5 in that spec — duplicate now, extract a shared module
 later): the framework-agnostic `ThemeStore` (`apps/ipados/Theme.swift`), the density
@@ -239,7 +235,7 @@ via a close button in the top-leading corner. The tap falls back to opening
 the post's public permalink only when the video embed carries no usable
 `playlist` URL.
 
-**Playback-failure fallback** (`2026-07-24-apple-hig-remediation.md`, S5 Task 2):
+**Playback-failure fallback** (plan `2026-07-24-apple-hig-remediation` (git history), S5 Task 2):
 the `AVPlayerItem` is built eagerly in `VideoPlayerScreen.init` (rather than
 inside `onAppear`) so its `status` KVO can be observed via `.onReceive(item
 .publisher(for: \.status))` from the very first frame. If playback fails
@@ -273,7 +269,7 @@ are narrow:
 - **Font settings are family-only.** The iPad font tab picks a UI font family but
   has no body-size stepper: the iPad `AppTypography` deliberately pins its size
   ratio to 1, and reviving the `baseSize` machinery macOS drives is out of scope
-  for now (user decision, `2026-07-10-yorumimizuku-ipados-parity-phase3.md`). This
+  for now (user decision, plan `2026-07-10-yorumimizuku-ipados-parity-phase3` (git history)). This
   is the one settings control macOS has that the iPad does not.
 - **Jetstream live updates are not wired** on iPadOS. The shell polls (now at the
   user-chosen interval, default 30s) for home, notifications, and filters. This
@@ -283,7 +279,7 @@ are narrow:
   the conversation re-anchor gesture to the timestamp because a pointer UI keeps
   the row otherwise inert; the iPad already re-anchors on the **whole row tap**
   (`apps/ipados/Views/PostRowView.swift`), which is equal-or-broader on touch, so
-  no timestamp-only tap was added (`2026-07-10-yorumimizuku-ipados-parity-phase3.md`).
+  no timestamp-only tap was added (plan `2026-07-10-yorumimizuku-ipados-parity-phase3` (git history)).
 - **OS notification banners and the app badge** are still limited on iPadOS,
   because background polling is not a reliable OS-notification strategy. Only the
   in-app poll interval and sidebar unread badges are configurable.

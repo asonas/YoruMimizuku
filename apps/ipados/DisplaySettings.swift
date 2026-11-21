@@ -10,7 +10,7 @@ import YoruMimizukuKit
 ///
 /// Family-only on iPad: unlike macOS this exposes no body-size control — the iPad
 /// `AppTypography` intentionally pins its size ratio to 1 (see `Typography.swift`
-/// and `2026-06-24-yorumimizuku-ipados-parity-design.md` §3). Enumeration uses
+/// and `0012-ipados-parity.md` §3). Enumeration uses
 /// `UIFont` rather than the macOS `NSFontManager`.
 @MainActor
 final class FontSettingsStore: ObservableObject {

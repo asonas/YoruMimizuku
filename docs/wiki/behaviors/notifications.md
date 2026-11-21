@@ -3,12 +3,9 @@ title: Notifications
 type: behavior
 updated: 2026-11-20
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
+  - docs/adr/0002-overall-design.md
   - core/Sources/BlueskyCore/XRPC/NotificationsService.swift
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/plans/2026-06-08-phase-a-polling-and-badges.md
-  - docs/superpowers/plans/2026-06-08-macos-compose-notification-followups.md
-  - docs/superpowers/plans/2026-06-11-yorumimizuku-v1.0.0-roadmap.md
+  - docs/adr/0008-ipados.md
   - docs/adr/0001-notification-read-state.md
   - core/Sources/YoruMimizukuKit/NotificationUnreadStore.swift
   - apps/macos/NotificationSettings.swift
@@ -16,7 +13,6 @@ sources:
   - apps/macos/Views/MainWindowView.swift
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
   - apps/windows/App/MainWindow.xaml.cs
-  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
   - apps/ipados/Views/NotificationsListView.swift
   - apps/ipadosTests/NotificationsEmptySnapshotTests.swift
 features:
@@ -41,7 +37,7 @@ features:
 
 # Notifications
 
-Notifications reach the user through two channels: an in-app "Notifications" tab and OS-level surfacing (a banner plus a Dock badge). Both are fed by polling the same endpoints (`2026-06-04-yorumimizuku-design.md` §9).
+Notifications reach the user through two channels: an in-app "Notifications" tab and OS-level surfacing (a banner plus a Dock badge). Both are fed by polling the same endpoints (`0002-overall-design.md` §9).
 
 ## In-app tab
 
@@ -71,11 +67,11 @@ The app also has an in-app unread badge path. On Windows, `NotificationsViewMode
 On [[ipados]], `NotificationsViewModel` drives the in-app tab and sidebar badge
 through foreground polling. The MVP intentionally does not promise background
 polling-based banners; push notifications would need a separate design
-(`2026-06-08-yorumimizuku-ipados-design.md` §9).
+(`0008-ipados.md` §9).
 
 ### Empty state (iPadOS)
 
-As of `2026-07-24-apple-hig-remediation.md` (S5), an empty `.loaded([])` state in
+As of plan `2026-07-24-apple-hig-remediation` (git history) (S5), an empty `.loaded([])` state in
 `NotificationsListView` shows a `ContentUnavailableView("通知はまだありません",
 systemImage: "bell.slash")` inside a `ScrollView` with `.refreshable`, instead of a
 bare, un-refreshable blank `List`. This matches the copy and icon macOS has used
@@ -87,10 +83,10 @@ recorded reference PNG.
 ## Opening notification subjects
 
 On macOS, a notification with a target post (`subjectURI`) opens that post in the
-window's detail pane when the target-post snippet is clicked (`docs/superpowers/specs/2026-11-20-macos-three-pane-design.md`). This covers likes and
+window's detail pane when the target-post snippet is clicked (`docs/adr/0026-macos-three-pane.md`). This covers likes and
 reposts and any other subject-backed notification group. `DetailPaneModel` (and `WorkspaceModel`, for iPadOS) has a
 URI-based `openConversation(anchorID:title:handle:subtitle:)` entry point for this
 case because notification groups carry a subject URI and snippet, not a full
 `PostDisplay`. Notifications without a `subjectURI`, such as follows, remain
-non-opening (`2026-06-08-macos-compose-notification-followups.md`,
+non-opening (plan `2026-06-08-macos-compose-notification-followups` (git history),
 `WorkspaceModel.swift`, `apps/macos/Views/NotificationsView.swift`).

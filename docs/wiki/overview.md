@@ -3,31 +3,31 @@ title: YoruMimizuku Overview
 type: overview
 updated: 2026-11-21
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
-  - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
-  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
+  - docs/adr/0002-overall-design.md
+  - docs/adr/0004-windows-multiplatform-structure.md
+  - docs/adr/0027-windows-csharp-core.md
+  - docs/adr/0008-ipados.md
+  - docs/adr/0009-sparkle-auto-update.md
   - AGENTS.md
 ---
 
 # YoruMimizuku Overview
 
-This page is the entry point so that any agent reading this repository (Claude / Cursor on macOS, a build agent on Windows) forms the same picture of the app. Details live in the per-behavior and per-platform pages. The ground truth is `docs/superpowers/specs/` and `plans/`; this wiki is a derived layer that integrates them (see [[conventions]]).
+This page is the entry point so that any agent reading this repository (Claude / Cursor on macOS, a build agent on Windows) forms the same picture of the app. Details live in the per-behavior and per-platform pages. Code is the source of truth; this wiki records behavior contracts and deliberate platform differences, and cites the decision records in `docs/adr/` for why (see [[conventions]]).
 
 ## What the app is
 
-YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6), now also Windows (a C#/WinUI 3 app with its own C# core), and has a dedicated iPadOS SwiftUI target that reuses the same core/kit layers (`docs/superpowers/specs/2026-06-04-yorumimizuku-design.md`, [[windows]], [[ipados]]).
+YoruMimizuku (夜ミミズク / 星月夜) is a native client for Bluesky (the AT Protocol). It avoids Electron and aims for a memory-efficient native implementation. The UI follows Yorufukurou: a single column switched between multiple timelines via top tabs / a sidebar. Authentication uses Bluesky OAuth (PKCE + DPoP); app passwords are not used. It targets macOS first (SwiftUI / Swift 6), now also Windows (a C#/WinUI 3 app with its own C# core), and has a dedicated iPadOS SwiftUI target that reuses the same core/kit layers (`docs/adr/0002-overall-design.md`, [[windows]], [[ipados]]).
 
 The reference implementation is the same author's Ruby terminal client `tempest` (`/Users/asonas/ghq/github.com/asonas/tempest`). Its proven logic for XRPC, token refresh, multi-account, Jetstream, and facet detection serves as the blueprint, but this is a high-quality Swift reimplementation, not a port.
 
 ## Architectural backbone
 
-OS-dependent side effects (Keychain, crypto, WebSocket, HTTP, browser authorization, OS notifications) are all isolated behind protocols (ports), keeping the pure logic (OAuth state machine, Jetstream decoding, Codable models, facet parsing, stores) OS-independent. This is the foundation for cross-platform reach; the full ports-and-adapters breakdown is in [[architecture]] (`2026-06-04-yorumimizuku-design.md` §4, [[macos]] / [[windows]]).
+OS-dependent side effects (Keychain, crypto, WebSocket, HTTP, browser authorization, OS notifications) are all isolated behind protocols (ports), keeping the pure logic (OAuth state machine, Jetstream decoding, Codable models, facet parsing, stores) OS-independent. This is the foundation for cross-platform reach; the full ports-and-adapters breakdown is in [[architecture]] (`0002-overall-design.md` §4, [[macos]] / [[windows]]).
 
 ## Actual directory layout
 
-The repository migrated to a Windows-ready structure (`2026-06-05-windows-multiplatform-structure.md`); AGENTS.md was reconciled to match it on 2026-06-06. The layout is:
+The repository migrated to a Windows-ready structure (`0004-windows-multiplatform-structure.md`); AGENTS.md was reconciled to match it on 2026-06-06. The layout is:
 
 ```
 yorumimizuku/
@@ -42,19 +42,19 @@ yorumimizuku/
 │   ├── ipados/                   # SwiftUI iPadOS app (dedicated touch-first UI over the shared core)
 │   └── windows/                  # WinUI 3 (C#/.NET 10) app: C# Core + Interop + App
 ├── docs/
-│   ├── superpowers/{specs,plans} # ground-truth sources (this wiki's citations)
+│   ├── adr/                      # decision records (this wiki's citations)
 │   └── wiki/                     # this derived documentation layer
 └── design/app-icon/
 ```
 
 macOS, iPadOS, and Windows are implemented. macOS and iPadOS import the Swift
 packages directly through Apple adapters; Windows uses its own C# core in
-`apps/windows` instead (`2026-11-21-windows-csharp-core-handoff.md`). See [[macos]],
+`apps/windows` instead (`0027-windows-csharp-core.md`). See [[macos]],
 [[ipados]], and [[windows]].
 
 ## v1 scope
 
-OAuth auth, multi-account, automatic token refresh; a single column with tabs for 7 sources (home / notifications / custom feed / list / author / search / thread); Jetstream live updates for home and lists; full write path (post / reply / like / repost / image attach); notifications (in-app tab + OS banner + Dock badge); multiple windows; and display density A/B (`2026-06-04-yorumimizuku-design.md` §2).
+OAuth auth, multi-account, automatic token refresh; a single column with tabs for 7 sources (home / notifications / custom feed / list / author / search / thread); Jetstream live updates for home and lists; full write path (post / reply / like / repost / image attach); notifications (in-app tab + OS banner + Dock badge); multiple windows; and display density A/B (`0002-overall-design.md` §2).
 
 ## Architecture & reference
 

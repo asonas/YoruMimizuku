@@ -1,6 +1,6 @@
 # Windows Build Notes
 
-Spec: `docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md`
+Spec: `docs/adr/0004-windows-multiplatform-structure.md`
 
 The multi-platform migration of the Swift core (compile on Windows, swift-crypto
 for DPoP, `PlatformApple` target for Apple-only adapters, a `SignpostTracing`

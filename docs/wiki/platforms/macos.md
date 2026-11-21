@@ -3,14 +3,12 @@ title: Platform — macOS
 type: platform
 updated: 2026-11-21
 sources:
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
-  - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
-  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
-  - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
-  - docs/superpowers/specs/2026-06-04-yorumimizuku-app-icon-design.md
-  - docs/superpowers/plans/2026-06-04-yorumimizuku-app-icon.md
-  - docs/superpowers/plans/2026-07-24-apple-hig-remediation.md
+  - docs/adr/0002-overall-design.md
+  - docs/adr/0004-windows-multiplatform-structure.md
+  - docs/adr/0027-windows-csharp-core.md
+  - docs/adr/0008-ipados.md
+  - docs/adr/0009-sparkle-auto-update.md
+  - docs/adr/0003-app-icon.md
   - apps/macos/Views/SidebarView.swift
   - apps/macos/Views/PostRowView.swift
   - apps/macos/Views/NotificationsView.swift
@@ -47,14 +45,14 @@ OS touchpoints from the core's ports are implemented in `core/Sources/PlatformAp
 
 - **Secure storage**: Keychain via `import Security`. Holds OAuth access/refresh tokens and the DPoP P-256 private key, per-DID ([[oauth-flow]]).
 - **Random bytes**: `SecRandomCopyBytes` (`import Security`).
-- **Crypto (DPoP)**: now `swift-crypto` (`import Crypto`), a single shared implementation across macOS and Windows (`2026-06-05-windows-multiplatform-structure.md`). The concrete `CryptoKitDPoPProvider` lives in `BlueskyCore/Adapters`, not in `PlatformApple`.
+- **Crypto (DPoP)**: now `swift-crypto` (`import Crypto`), a single shared implementation across macOS and Windows (`0004-windows-multiplatform-structure.md`). The concrete `CryptoKitDPoPProvider` lives in `BlueskyCore/Adapters`, not in `PlatformApple`.
 - **HTTP**: `URLSession` with a `#if canImport(FoundationNetworking)` guard, shared with Windows (`URLSessionHTTPClient` in `BlueskyCore/Adapters`).
 - **Browser authorization**: `ASWebAuthenticationSession` (wired in `apps/macos/Auth`), opening the OAuth authorize endpoint and catching the `as.ason:/callback` redirect.
 - **Dock badge**. The app polls Bluesky for each account with an open window and displays the combined unread count on its Dock tile. Users can toggle it in notification settings. Notification Center banners remain planned. See [[notifications]].
 
 ## Persistence
 
-Secrets go to the Keychain; settings/state are Codable files under Application Support (account index, window/tab layout, display settings, Jetstream cursor, optional timeline snapshots). SwiftData is not used, to keep persistence reusable across all Swift platforms (`2026-06-04-yorumimizuku-design.md` §10).
+Secrets go to the Keychain; settings/state are Codable files under Application Support (account index, window/tab layout, display settings, Jetstream cursor, optional timeline snapshots). SwiftData is not used, to keep persistence reusable across all Swift platforms (`0002-overall-design.md` §10).
 
 ## Timeline rendering: `List`, not `LazyVStack`
 
@@ -89,25 +87,25 @@ A lone attached image is laid out at its true aspect ratio rather than a fixed-h
 
 ## Accessibility
 
-The sidebar's per-row close/edit affordances (`SidebarRow` in [[app-shell]]) were originally hover-only, with no keyboard or VoiceOver path. `SidebarRow` now also exposes a `.contextMenu` (right-click / Control-click) and `.accessibilityActions` mirroring the same "フィルターを編集" / "タブを閉じる" actions, plus a combined `.accessibilityElement` label (title + subtitle) so VoiceOver reads one row instead of fragments (`2026-07-24-apple-hig-remediation.md` P0-2, `apps/macos/Views/SidebarView.swift`).
+The sidebar's per-row close/edit affordances (`SidebarRow` in [[app-shell]]) were originally hover-only, with no keyboard or VoiceOver path. `SidebarRow` now also exposes a `.contextMenu` (right-click / Control-click) and `.accessibilityActions` mirroring the same "フィルターを編集" / "タブを閉じる" actions, plus a combined `.accessibilityElement` label (title + subtitle) so VoiceOver reads one row instead of fragments (plan `2026-07-24-apple-hig-remediation` (git history) P0-2, `apps/macos/Views/SidebarView.swift`).
 
-Post row and notification avatars used `.onTapGesture` (no keyboard/VoiceOver path, no pointer affordances like Space-to-activate); both are now `Button`s (`.buttonStyle(.plain)`, `.accessibilityLabel("@handle のプロフィール")`) with unchanged visual appearance — a structural, behavior-preserving change (`2026-07-24-apple-hig-remediation.md` S3, `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`).
+Post row and notification avatars used `.onTapGesture` (no keyboard/VoiceOver path, no pointer affordances like Space-to-activate); both are now `Button`s (`.buttonStyle(.plain)`, `.accessibilityLabel("@handle のプロフィール")`) with unchanged visual appearance — a structural, behavior-preserving change (plan `2026-07-24-apple-hig-remediation` (git history) S3, `apps/macos/Views/PostRowView.swift`, `apps/macos/Views/NotificationsView.swift`).
 
 VoiceOver / Accessibility Inspector verification of the sidebar's context menu and custom actions is still pending on a real macOS session — see [[manual-verification]] "P0-2".
 
 ## New windows and window titles
 
-The `WindowGroup` carries an explicit `id: "main"` (`apps/macos/YoruMimizukuApp.swift`) so the File menu can open more instances of it: **新規ウィンドウ** (⇧⌘N, matching the Windows build's Ctrl+Shift+N) calls `openWindow(id: "main")` via `@Environment(\.openWindow)`. This was previously removed with a comment claiming a timeline client has no use for extra windows, which contradicted the design spec's per-window account viewing (`2026-06-04-yorumimizuku-design.md` §8); the path is restored and the comment corrected. ⌘N is unchanged and stays 新規投稿, the client's established convention (`2026-07-24-apple-hig-remediation.md` S4, `apps/macos/Views/NewPostCommand.swift`).
+The `WindowGroup` carries an explicit `id: "main"` (`apps/macos/YoruMimizukuApp.swift`) so the File menu can open more instances of it: **新規ウィンドウ** (⇧⌘N, matching the Windows build's Ctrl+Shift+N) calls `openWindow(id: "main")` via `@Environment(\.openWindow)`. This was previously removed with a comment claiming a timeline client has no use for extra windows, which contradicted the design spec's per-window account viewing (`0002-overall-design.md` §8); the path is restored and the comment corrected. ⌘N is unchanged and stays 新規投稿, the client's established convention (plan `2026-07-24-apple-hig-remediation` (git history) S4, `apps/macos/Views/NewPostCommand.swift`).
 
 Since 2026-11-20 the window shows a unified toolbar whose title is the selected source (e.g. "フォロー中") and whose subtitle is `@handle`, via `.navigationTitle` / `.navigationSubtitle` on `MainWindowView`'s `NavigationSplitView`; Mission Control and the Window menu show the title only. Before that, under `.windowStyle(.hiddenTitleBar)`, the title was "ホーム — @asonas.bsky.social" from `WindowTitle.compose(tabTitle:accountHandle:)`. `WorkspaceModel.selectionTitle` derives the tab half (pinned ホーム/通知 labels, a pinned feed's or list's name, or a filter's title; conversations and authors open in the detail pane on macOS and do not change the title) and `WindowTitle.compose` joins it to the handle, dropping the handle segment when empty and avoiding a doubled "@" (`core/Sources/YoruMimizukuKit/WindowTitle.swift`, `WorkspaceModel.swift`).
 
-Multiple open windows on the same account now live-sync per-window UI settings (theme / display density / font / notification polling): the four settings stores were lifted from `RootView`'s per-window `@StateObject`s to app-level `@StateObject`s owned by `YoruMimizukuApp`, injected via `.environmentObject` into every `WindowGroup(id: "main")` window and the `Settings` scene alike. A change made in one window — or in the Settings window itself — is visible everywhere immediately, since every consumer reads the same `@Published` state rather than independently re-reading `UserDefaults` at its own init; this resolves the cross-window staleness this page previously documented here (`2026-07-24-apple-hig-remediation.md` S7, `apps/macos/YoruMimizukuApp.swift`, `apps/macos/Views/RootView.swift`). See [[app-shell]] for the cross-platform multi-window matrix entry and for how ⌘, and the sidebar gear now open the settings screen.
+Multiple open windows on the same account now live-sync per-window UI settings (theme / display density / font / notification polling): the four settings stores were lifted from `RootView`'s per-window `@StateObject`s to app-level `@StateObject`s owned by `YoruMimizukuApp`, injected via `.environmentObject` into every `WindowGroup(id: "main")` window and the `Settings` scene alike. A change made in one window — or in the Settings window itself — is visible everywhere immediately, since every consumer reads the same `@Published` state rather than independently re-reading `UserDefaults` at its own init; this resolves the cross-window staleness this page previously documented here (plan `2026-07-24-apple-hig-remediation` (git history) S7, `apps/macos/YoruMimizukuApp.swift`, `apps/macos/Views/RootView.swift`). See [[app-shell]] for the cross-platform multi-window matrix entry and for how ⌘, and the sidebar gear now open the settings screen.
 
 Real-window verification of ⇧⌘N, window titles in Mission Control/Window menu/Dock, and per-window account viewing is still pending — see [[manual-verification]] "S4".
 
 ## App icon
 
-The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`2026-06-04-yorumimizuku-app-icon-design.md`, `2026-06-04-yorumimizuku-app-icon.md`). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).
+The macOS AppIcon depicts a horned owl (ミミズク), after the app name 星月夜 (a starlit, moonlit night). The artwork starts from a CC0 owl SVG and is recolored to the app's dark-ground / blue-accent palette, then exported as the full AppIcon set (16–1024px, including @2x) (`0003-app-icon.md`, plan `2026-06-04-yorumimizuku-app-icon` (git history)). Sources live in `design/app-icon/`. The Windows taskbar icon is generated from this same owl artwork ([[windows]]).
 
 ## Auto updates
 
@@ -119,7 +117,7 @@ channel selection. Development updates are served from `appcast-dev.xml` on the
 repository's `gh-pages` branch, and a development-channel update test has passed.
 The stable `v0.7.0` production release has also shipped with a GitHub Release,
 DMG/ZIP artifacts, and `appcast.xml`. Details live in [[auto-updates]]
-(`2026-06-08-yorumimizuku-sparkle-auto-update-design.md`).
+(`0009-sparkle-auto-update.md`).
 
 ## Windows / iPadOS / Android
 

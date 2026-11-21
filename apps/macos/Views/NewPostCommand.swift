@@ -44,4 +44,4 @@ extension FocusedValues {
 // SwiftUI wires ⌘, to open it automatically. The former `SettingsCommands` /
 // `OpenSettingsAction` / `FocusedValues.openSettings` plumbing that routed ⌘,
 // to a per-window settings sheet is removed along with the sheet itself
-// (`2026-07-24-apple-hig-remediation.md` S7).
+// (plan `2026-07-24-apple-hig-remediation` (git history) S7).
