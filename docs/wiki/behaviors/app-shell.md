@@ -43,6 +43,8 @@ sources:
   - apps/windows/App/MainWindow.xaml.cs
   - apps/windows/App/MainWindow.xaml
   - apps/windows/Core/DetailPaneModel.cs
+  - apps/windows/Core/SavedFilter.cs
+  - apps/windows/App/ViewModels/WorkspaceViewModel.cs
   - apps/windows/App/Services/WindowPlacement.cs
   - apps/windows/App/Services/AppSettings.cs
 features:
@@ -72,10 +74,10 @@ features:
     note: "bug: https://github.com/asonas/YoruMimizuku/issues/26. macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]])."
   - name: Toolbar search (transient results)
     macos: full
-    windows: none
+    windows: differs
     ios: none
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/27. macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]])."
+    note: "Both show a submitted search in the timeline column without saving; 'フィルターとして保存' turns it into a filter and choosing any sidebar row discards it ([[filters]]). Windows has no unified toolbar, so the field is the `NavigationView` AutoSuggestBox at the top of the sidebar (Ctrl+F, the analogue of ⌘F), and its timelines have no header, so 'フィルターとして保存' sits in the timeline's command bar beside 更新 and 投稿 (MainWindow.xaml, MainWindow.xaml.cs)."
   - name: Add a person to a curated list (menu / drag)
     macos: full
     windows: none
@@ -154,6 +156,8 @@ Timeline lists use the prototype's compact row (`TimelineRowView`): why-line (re
 The View menu's ⌘1…⌘9 select the first nine sidebar rows of the key window, in the order ⌘⇧J/K cycles (`WorkspaceModel.shortcutTabs`). A 投稿 menu acts on the post focused in the timeline column: reply ⌘↩, repost ⇧⌘R, 引用して投稿, like (the plain L key), copy link ⇧⌘C and リストに追加, following the desktop prototype; it is disabled until a post is focused, and the plain keys j/k/l/o/n stay with the timeline column. The View menu also has 新着を読み込む ⌘R, and the Edit menu 検索 ⌘F, which focuses the toolbar search (`apps/macos/Views/WorkspaceCommands.swift`).
 
 The toolbar has a search field and the compose button. A submitted search shows its results in the timeline column as `WorkspaceTab.search` without saving anything; the header's "フィルターとして保存" keeps it as a filter, and choosing any sidebar row discards it ([[filters]]).
+
+On [[windows]] the search field is the `NavigationView` AutoSuggestBox at the top of the sidebar, and Ctrl+F focuses it. The typed text becomes the search by the macOS rule: trimmed, ignored when blank, and run as one keyword term named after itself (`SavedFilter.ForSearch` in `apps/windows/Core/SavedFilter.cs`, a port of `WorkspaceModel.openSearch(query:)`). The results show in the timeline column with no sidebar row selected and nothing written to the filters file. "フィルターとして保存" sits in the timeline's command bar beside 更新 and 投稿, because Windows timelines have no header; it adds the search as a filter and selects it. The search is never a sidebar row, so choosing any row, or switching accounts, discards it. The query text stays in the field, as it does in the macOS toolbar (`apps/windows/App/ViewModels/WorkspaceViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
 
 A post's right-click menu offers "リストに追加": the window account's curated lists (`app.bsky.graph.getListsWithMembership`, `purposes=curatelist`), checked where the author is on them, ending with a note that lists are public. Because a menu is built synchronously, membership comes from a cache that is filled once focus rests on a post; every change re-reads the server before writing, since the PDS accepts duplicate list items. Dragging a post's avatar onto one of the window account's own pinned curated lists adds the author to it; dropping it on a filter adds a `from:` condition, except on an AND filter that already names a person (`docs/adr/0019-macos-commands-and-lists.md`, `core/Sources/YoruMimizukuKit/ListMembershipModel.swift`, `apps/macos/Views/DraggedAuthor.swift`).
 

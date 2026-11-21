@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows toolbar search)
+
+- sources: apps/windows/Core/SavedFilter.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/MainWindow.xaml, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[windows]]
+- note: closes issue #27. Windows searches from the sidebar's AutoSuggestBox (Ctrl+F), shows the results in the timeline column without saving, keeps them with "フィルターとして保存" and discards them when any sidebar row is chosen. "Toolbar search (transient results)" is `differs` for Windows: the field is in the sidebar and the save button in the timeline's command bar, because Windows has no unified toolbar and its timelines have no header.
+
 ## 2026-11-21 ingest (Windows pinned feeds and lists)
 
 - sources: apps/windows/Core/SavedFeedsService.cs, apps/windows/Core/SavedFeedsModel.cs, apps/windows/App/MainWindow.xaml.cs

@@ -12,6 +12,7 @@ sources:
   - apps/windows/App/Views/ComposerDialog.xaml
   - apps/windows/App/Views/ComposerDialog.xaml.cs
   - apps/windows/App/ViewModels/SavedFilterModel.cs
+  - apps/windows/Core/SavedFilter.cs
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
   - apps/windows/App/ViewModels/AuthorViewModel.cs
   - apps/windows/App/ViewModels/NotificationsViewModel.cs
@@ -89,6 +90,11 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   filter tabs and an account footer, the selected timeline, and a detail pane that
   shows one conversation or author page at a time, as on macOS (the tested
   `Core/DetailPaneModel.cs`); `Ctrl+Shift+N` opens a new window ([[app-shell]]).
+- The sidebar's search box (`NavigationView.AutoSuggestBox`, Ctrl+F) shows a
+  submitted search in the timeline column without saving it; the timeline's
+  "フィルターとして保存" keeps it as a filter, and choosing any sidebar row discards
+  it. The query rule is the macOS one, in the tested `Core/SavedFilter.cs`
+  (`ForSearch`) ([[app-shell]]).
 - The sidebar lists the account's pinned feeds and lists (`savedFeedsPrefV2`)
   read-only, as on macOS: `Core/SavedFeedsService.cs` reads the pins and names them
   (`getPreferences`, one `getFeedGenerators`, `getList` per list, skipping a list the
