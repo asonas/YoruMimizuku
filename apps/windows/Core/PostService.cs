@@ -205,23 +205,10 @@ public sealed class PostService(XrpcClient xrpc, TimeProvider? clock = null, Vid
     private static JsonObject Ref(StrongRef value) => new() { ["uri"] = value.Uri, ["cid"] = value.Cid };
 
     private Task<StrongRef> CreateRecordAsync(string collection, JsonObject record, CancellationToken cancellationToken) =>
-        xrpc.ProcedureAsync(
-            "com.atproto.repo.createRecord",
-            XrpcClient.Json(new JsonObject { ["repo"] = xrpc.Did, ["collection"] = collection, ["record"] = record }),
-            json => new StrongRef(json.RequiredString("uri"), json.RequiredString("cid")),
-            cancellationToken);
+        xrpc.CreateRecordAsync(collection, record, cancellationToken);
 
-    private Task DeleteRecordAsync(string collection, string recordUri, CancellationToken cancellationToken)
-    {
-        var address = AtUri.Parse(recordUri)
-            ?? throw new ArgumentException($"Not a record URI: {recordUri}", nameof(recordUri));
-        return xrpc.ProcedureAsync(
-            "com.atproto.repo.deleteRecord",
-            XrpcClient.Json(new JsonObject { ["repo"] = xrpc.Did, ["collection"] = collection, ["rkey"] = address.Rkey }),
-            cancellationToken);
-    }
+    private Task DeleteRecordAsync(string collection, string recordUri, CancellationToken cancellationToken) =>
+        xrpc.DeleteRecordAsync(collection, recordUri, cancellationToken);
 
-    /// <summary>The current time as atproto records write it: UTC with milliseconds.</summary>
-    private string Now() =>
-        (clock ?? TimeProvider.System).GetUtcNow().UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
+    private string Now() => RepoRecords.Timestamp(clock);
 }
