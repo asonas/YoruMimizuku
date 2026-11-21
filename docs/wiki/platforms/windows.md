@@ -117,7 +117,10 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   accepts duplicate list items, 30 s trust in an unindexed change). One model per
   account is shared by its windows (`IAccountClient.ListMembership`). The menu
   reads membership when it opens and redraws when the answer arrives
-  (`App/Views/ListMembershipMenu.cs`) ([[app-shell]]).
+  (`App/Views/ListMembershipMenu.cs`) ([[app-shell]]). Dropping the avatar on a
+  saved filter adds a `from:` condition for the author and saves the filter, except
+  on an AND filter that already names a person; the rule is the macOS one, ported to
+  `SavedFilter.AddingAuthor` in `Core/SavedFilter.cs` ([[filters]]).
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
   attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are

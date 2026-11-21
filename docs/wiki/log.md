@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows filter drop)
+
+- sources: apps/windows/Core/SavedFilter.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[filters]], [[windows]]
+- note: closes issue #37. Windows adds a dropped avatar's author to a saved filter as a `from:` condition, except on an AND filter that already names a person, with the macOS toasts. The rule is a port of `WorkspaceModel.addAuthor(handle:toFilter:)` with its Swift tests. The `bug:` part of the "Add a person to a curated list (menu / drag)" note is gone; the row stays `differs` for Windows for its menu differences only.
+
 ## 2026-11-21 ingest (Windows commands)
 
 - sources: apps/windows/App/MainWindow.xaml.cs, apps/windows/App/Views/FeedView.xaml, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ConversationView.xaml.cs

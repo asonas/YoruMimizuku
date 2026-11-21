@@ -1,7 +1,7 @@
 ---
 title: Saved-Search Filters
 type: behavior
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
   - docs/adr/0019-macos-commands-and-lists.md
   - docs/adr/0006-filter-tabs.md
@@ -12,6 +12,7 @@ sources:
   - apps/windows/App/Views/FilterEditorDialog.xaml.cs
   - apps/windows/App/Services/SavedFilterStore.cs
   - apps/windows/Core/FilterSearch.cs
+  - apps/windows/Core/SavedFilter.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Saved-search filters (structured terms, AND/OR)
@@ -55,9 +56,11 @@ single keyword term from the sidebar search field. The persisted shape is still
 the structured `SavedFilter`, so adding the full editor later does not require a
 data migration (`apps/ipados/Views/RootView.swift`).
 
-## Adding from the macOS window
+## Adding from the window
 
-On macOS a filter can also start as a toolbar search ("フィルターとして保存" in the search results header) and gain people by drag and drop: dropping a post's avatar on a filter row adds a `from:` condition. An AND filter that already has a `from:` condition refuses a second person, because both could never match, and says so in a toast (`WorkspaceModel.addAuthor(handle:toFilter:)`, [[app-shell]]).
+On macOS a filter can also start as a toolbar search ("フィルターとして保存" in the search results header) and gain people by drag and drop: dropping a post's avatar on a filter row adds a `from:` condition. An AND filter that already has a `from:` condition refuses a second person, because both could never match, and says so in a toast (`WorkspaceModel.addAuthor(handle:toFilter:)`, [[app-shell]]). People are compared by the fragments the search sends, case-insensitively, so a `from:` typed into a keyword counts in an AND filter; an OR filter counts a person as present only when one row is just that person.
+
+[[windows]] does the same when an avatar is dropped on a filter row in the sidebar: the rule is a port of the Swift one in `SavedFilter.AddingAuthor` (`apps/windows/Core/SavedFilter.cs`, tested with the Swift cases), and the edited filter is saved to the account's `filters-<DID>.json` like an edit in the filter dialog.
 
 ## Known limitations
 
