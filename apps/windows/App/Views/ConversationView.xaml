@@ -6,7 +6,7 @@
 
     <ScrollViewer Padding="12">
         <StackPanel Spacing="10">
-            <!-- Ancestor (reply parent); a click opens its conversation as a new page. -->
+            <!-- Ancestor (reply parent); a click re-anchors the pane on it. -->
             <Button x:Name="ParentButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                     Visibility="Collapsed" Click="OnParentClick">
                 <StackPanel Spacing="2">

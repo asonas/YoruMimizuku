@@ -90,8 +90,8 @@ public sealed partial class ConversationView : UserControl
         await LoadAsync();
     }
 
-    /// The parent and every reply open as a new page in the detail pane, so back
-    /// returns here.
+    /// The parent and every reply re-anchor the pane: each opens its own conversation
+    /// in place of this one, as on macOS.
     private void OnParentClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ReplyParentDto parent })

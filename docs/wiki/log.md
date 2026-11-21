@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows detail pane shows one page)
+
+- sources: docs/adr/0022-macos-prototype-detail-pane.md, apps/windows/Core/DetailPaneModel.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[author-tab]], [[windows]]
+- note: the Windows detail pane drops the back / forward history (and Alt+← / Alt+→, the browser keys and the mouse side buttons) to match macOS under ADR 0022. A parent or reply in a conversation re-anchors the pane as on macOS. The "Three-pane window" row is `full` for Windows; iPadOS stays `differs` for its tabs.
+
 ## 2026-11-21 ingest (Windows three-pane window)
 
 - sources: docs/adr/0026-macos-three-pane.md, docs/adr/0027-windows-csharp-core.md, apps/windows/Core/DetailPaneModel.cs, apps/windows/App/MainWindow.xaml, apps/windows/App/MainWindow.xaml.cs

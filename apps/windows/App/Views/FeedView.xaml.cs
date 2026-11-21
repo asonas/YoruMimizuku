@@ -45,17 +45,15 @@ public sealed partial class FeedView : UserControl
         if (IsLoaded) _refreshTimer.Start();
     }
 
-    // Polls only while on screen. An author page shown again from the detail pane's
-    // history polls again; RefreshAsync merges fresh posts on top of the rows read.
+    // Polls only while on screen. A timeline loads before it is shown, so it starts
+    // polling when it appears; a detail-pane page replaced before its load finished
+    // never starts.
     private bool _hasLoaded;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (_scrollViewer is null)
-        {
-            _scrollViewer = FindScrollViewer(PostsList);
-            if (_scrollViewer is not null) _scrollViewer.ViewChanged += OnViewChanged;
-        }
+        _scrollViewer = FindScrollViewer(PostsList);
+        if (_scrollViewer is not null) _scrollViewer.ViewChanged += OnViewChanged;
         if (_hasLoaded) _refreshTimer.Start();
     }
 

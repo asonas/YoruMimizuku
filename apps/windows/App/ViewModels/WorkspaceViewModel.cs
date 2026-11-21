@@ -25,15 +25,11 @@ public sealed class WorkspaceTab : ObservableObject
     }
 }
 
-/// <summary>One page of the detail pane. The window builds <see cref="View"/> the
-/// first time the page is shown and keeps it, so back / forward shows the page as
-/// it was left.</summary>
+/// <summary>The page the detail pane shows; the window builds its view.</summary>
 public abstract class DetailPage
 {
     /// <summary>The detail bar's title.</summary>
     public abstract string Title { get; }
-
-    public Microsoft.UI.Xaml.UIElement? View { get; set; }
 }
 
 /// <summary>A conversation; <paramref name="title"/> is its anchor's author.</summary>
@@ -59,7 +55,7 @@ public sealed class WorkspaceViewModel : ObservableObject
 {
     public ObservableCollection<WorkspaceTab> Tabs { get; } = new();
 
-    /// <summary>The detail pane's pages, with back / forward.</summary>
+    /// <summary>The detail pane: one page at a time.</summary>
     public Core.DetailPaneModel<DetailPage> Detail { get; } = new();
 
     /// <summary>This window's account. Every account-scoped call made from this

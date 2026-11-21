@@ -23,7 +23,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 | Feature | macOS | Windows | iOS | Android |
 |---|:--:|:--:|:--:|:--:|
-| Three-pane window (sidebar / timeline / detail pane) | ○ | △ | △ | − |
+| Three-pane window (sidebar / timeline / detail pane) | ○ | ○ | △ | − |
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
 | Pinned feeds and lists in the sidebar | ○ | × | × | − |
 | Menu bar commands (⌘1…⌘9, 投稿 menu) | ○ | × | × | − |
@@ -113,7 +113,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 
 Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
-- **Three-pane window (sidebar / timeline / detail pane)** ([[app-shell]]): Windows keeps ADR 0026's back / forward history (Alt+← / Alt+→, the mouse's back / forward buttons), which macOS dropped with ADR 0022; Windows takes 0022's one-page pane in a later Phase 7 unit (`docs/adr/0027-windows-csharp-core.md` §6). iPadOS keeps conversation and author tabs ([[ipados]]).
+- **Three-pane window (sidebar / timeline / detail pane)** ([[app-shell]]): iPadOS keeps conversation and author tabs in its sidebar instead of a detail pane ([[ipados]]).
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
 - **Pinned feeds and lists in the sidebar** ([[app-shell]]): bug: https://github.com/asonas/YoruMimizuku/issues/25. macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet.
 - **Menu bar commands (⌘1…⌘9, 投稿 menu)** ([[app-shell]]): bug: https://github.com/asonas/YoruMimizuku/issues/26. macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]).

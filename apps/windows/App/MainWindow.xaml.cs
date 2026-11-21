@@ -76,10 +76,6 @@ public sealed partial class MainWindow : Window
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
         _workspace.Detail.Changed += ShowDetail;
-        // A keyboard's browser back / forward keys, beside Alt+Left / Alt+Right in
-        // the XAML (which cannot name these keys).
-        DetailBackButton.KeyboardAccelerators.Add(new KeyboardAccelerator { Key = VirtualKey.GoBack });
-        DetailForwardButton.KeyboardAccelerators.Add(new KeyboardAccelerator { Key = VirtualKey.GoForward });
         _notifications.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(NotificationsViewModel.UnreadCount)) return;
@@ -97,8 +93,6 @@ public sealed partial class MainWindow : Window
         AppSettings.Shared.NotificationSettingsChanged += OnNotificationSettingsChanged;
         App.Client.SessionExpired += OnSessionExpired;
         RootGrid.KeyDown += OnRootKeyDown;
-        // Mouse back / forward buttons reach here even when a list handled the press.
-        RootGrid.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), true);
         _ = InitializeAsync();
     }
 
@@ -544,23 +538,17 @@ public sealed partial class MainWindow : Window
 
     // -- Detail pane --
 
-    /// Show the detail pane's current page, building its view the first time it is
-    /// shown. A kept view comes back as it was left, and the timeline column is never
-    /// touched, so it keeps its scroll position.
+    /// Show the page the detail pane now holds, or its empty state. Only the pane is
+    /// rebuilt; the timeline column is never touched, so it keeps its scroll position.
     private void ShowDetail()
     {
-        var detail = _workspace.Detail;
-        var page = detail.Current;
+        var page = _workspace.Detail.Current;
         DetailBar.Visibility = page is null ? Visibility.Collapsed : Visibility.Visible;
         DetailEmpty.Visibility = page is null ? Visibility.Visible : Visibility.Collapsed;
-        DetailBackButton.IsEnabled = detail.CanGoBack;
-        DetailForwardButton.IsEnabled = detail.CanGoForward;
         DetailTitle.Text = page?.Title ?? "";
-        if (page is not null && page.View is null && _workspace.Account is { } account)
-        {
-            page.View = BuildDetailView(page, account);
-        }
-        DetailHost.Content = page?.View;
+        DetailHost.Content = page is not null && _workspace.Account is { } account
+            ? BuildDetailView(page, account)
+            : null;
     }
 
     private UIElement BuildDetailView(DetailPage page, IAccountClient account)
@@ -587,27 +575,7 @@ public sealed partial class MainWindow : Window
         if (ReferenceEquals(_workspace.Detail.Current, page)) DetailTitle.Text = page.Title;
     }
 
-    private void OnDetailBackClick(object sender, RoutedEventArgs e) => _workspace.Detail.GoBack();
-    private void OnDetailForwardClick(object sender, RoutedEventArgs e) => _workspace.Detail.GoForward();
     private void OnDetailCloseClick(object sender, RoutedEventArgs e) => _workspace.Detail.Close();
-
-    /// The mouse's back / forward buttons move through the detail pane's history
-    /// from anywhere in the window, as in a browser.
-    private void OnRootPointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        if (ShellRoot.Visibility != Visibility.Visible) return;
-        switch (e.GetCurrentPoint(RootGrid).Properties.PointerUpdateKind)
-        {
-            case PointerUpdateKind.XButton1Pressed:
-                _workspace.Detail.GoBack();
-                e.Handled = true;
-                break;
-            case PointerUpdateKind.XButton2Pressed:
-                _workspace.Detail.GoForward();
-                e.Handled = true;
-                break;
-        }
-    }
 
     private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {

@@ -84,10 +84,9 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   per-post separators), conversation (ancestor + descendant reply tree),
   notifications, composer, settings; a three-pane shell (ADR 0026): the
   `NavigationView` sidebar of timelines with `Ctrl+Shift+J/K` cycling, closable
-  filter tabs and an account footer, the selected timeline, and a detail pane for
-  conversations and author pages with back / forward (Alt+← / Alt+→, the mouse's
-  back / forward buttons), whose history is the tested `Core/DetailPaneModel.cs`;
-  `Ctrl+Shift+N` opens a new window ([[app-shell]]).
+  filter tabs and an account footer, the selected timeline, and a detail pane that
+  shows one conversation or author page at a time, as on macOS (the tested
+  `Core/DetailPaneModel.cs`); `Ctrl+Shift+N` opens a new window ([[app-shell]]).
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
   attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are
@@ -122,8 +121,8 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
 - The conversation view renders the focused post's descendant reply tree:
   `ThreadLoadAsync` returns the focus + tree from the core's
   `ThreadNode.ChildTree(maxDepth: 3)`, and each reply is indented by depth
-  with a left connector; the parent and each reply open as a new detail-pane
-  page, so back returns. The focused post has a reply button, since the feed's
+  with a left connector; the parent and each reply re-anchor the detail pane on
+  that post, as on macOS. The focused post has a reply button, since the feed's
   reply count opens the conversation ([[timeline-streaming]], [[app-shell]]).
 - The shell is multi-window: `Ctrl+Shift+N` opens another independent workspace
   window, the analogue of a macOS `WindowGroup` window. Only the primary window
