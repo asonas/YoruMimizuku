@@ -14,14 +14,10 @@ namespace YoruMimizuku.App.Interop;
 /// </summary>
 public sealed class BridgeClient : ICoreClient
 {
-    public static ICoreClient Shared { get; } = new BridgeClient();
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
-
-    private BridgeClient() { }
 
     // -- Lifecycle --
 

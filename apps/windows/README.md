@@ -44,6 +44,24 @@ dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
 
 `scripts\windows\ci.ps1` runs the full chain (core build/test + stage + dotnet build).
 
+### Choosing the core (Debug builds only)
+
+The app is moving from the Swift core to a C# core (`apps/windows/Core`, see
+`docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`). The choice is
+made once at startup and logged to `app.log` (`Core: C#` or `Core: Swift bridge`):
+
+- **Release** builds always use the Swift bridge.
+- **Debug** builds use the C# core, which does not load the bridge DLL. To run a
+  Debug build on the Swift bridge, set `YORUMIMIZUKU_CORE=swift` before launching:
+
+```powershell
+$env:YORUMIMIZUKU_CORE = "swift"   # Swift bridge
+Remove-Item Env:YORUMIMIZUKU_CORE  # back to the C# core
+```
+
+The two cores keep separate sign-ins. The C# core stores accounts in
+`%LOCALAPPDATA%\YoruMimizuku\accounts`.
+
 The project targets **.NET 10** + **Windows App SDK 2.1.3** and is configured
 **framework-dependent** (`SelfContained=false` + `WindowsAppSDKSelfContained=false`):
 the .NET 10 Desktop runtime and the Windows App SDK runtime are **not** bundled,

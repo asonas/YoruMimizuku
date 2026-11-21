@@ -96,12 +96,12 @@ public sealed partial class MainWindow : Window
             // window initializes it. Secondary windows reuse the live session.
             if (_isPrimary)
             {
-                await BridgeClient.Shared.InitializeAsync(App.Service, App.ClientId, App.RedirectUri, App.Scope);
+                await App.Client.InitializeAsync(App.Service, App.ClientId, App.RedirectUri, App.Scope);
             }
 
             // Restore the persisted session (DPAPI): skip the login screen if an
             // account is already stored.
-            var account = await BridgeClient.Shared.CurrentAccountAsync();
+            var account = await App.Client.CurrentAccountAsync();
             if (account is not null)
             {
                 EnterShell(account);
@@ -146,13 +146,13 @@ public sealed partial class MainWindow : Window
     private async void OnAuthenticated(string did)
     {
         LoginHost.Content = null;
-        var account = await BridgeClient.Shared.CurrentAccountAsync();
+        var account = await App.Client.CurrentAccountAsync();
         EnterShell(account);
     }
 
     private void EnterShell(AccountDto? account)
     {
-        _workspace.Account = account is null ? null : BridgeClient.Shared.ForAccount(account.Did);
+        _workspace.Account = account is null ? null : App.Client.ForAccount(account.Did);
         _filterStore = account is null ? null : new SavedFilterStore(account.Did);
         _workspace.LoadFilters(_filterStore?.Load() ?? Array.Empty<SavedFilterModel>());
         LoginHost.Visibility = Visibility.Collapsed;
@@ -183,7 +183,7 @@ public sealed partial class MainWindow : Window
         if (account is null || _workspace.Account is not { } client) return;
         AccountHandle.Text = account.Handle is { Length: > 0 } h ? "@" + h : account.Did;
         AccountFooter.Visibility = Visibility.Visible;
-        try { _accountSummaries = await BridgeClient.Shared.AccountSummariesAsync(); }
+        try { _accountSummaries = await App.Client.AccountSummariesAsync(); }
         catch (Exception ex) { AppLog.Write("account summaries load failed", ex); }
         try
         {
@@ -260,8 +260,8 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            await BridgeClient.Shared.SwitchAccountAsync(did);
-            var account = await BridgeClient.Shared.CurrentAccountAsync();
+            await App.Client.SwitchAccountAsync(did);
+            var account = await App.Client.CurrentAccountAsync();
             EnterShell(account);
         }
         catch (Exception ex) { AppLog.Write("switch account failed", ex); }
@@ -277,10 +277,10 @@ public sealed partial class MainWindow : Window
         {
             if (_workspace.AccountDid is { Length: > 0 } did)
             {
-                var next = await BridgeClient.Shared.RemoveAndAdvanceAsync(did);
+                var next = await App.Client.RemoveAndAdvanceAsync(did);
                 if (next.NextDid is { Length: > 0 })
                 {
-                    var account = await BridgeClient.Shared.CurrentAccountAsync();
+                    var account = await App.Client.CurrentAccountAsync();
                     EnterShell(account);
                     return;
                 }

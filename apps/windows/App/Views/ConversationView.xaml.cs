@@ -190,7 +190,7 @@ public sealed partial class ConversationView : UserControl
 
     private async Task CopyPermalinkAsync(PostItem post)
     {
-        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        var permalink = await App.Client.PostPermalinkAsync(post.Id, post.AuthorHandle);
         if (permalink.Url is not { Length: > 0 } url) return;
         var data = new DataPackage();
         data.SetText(url);
@@ -199,7 +199,7 @@ public sealed partial class ConversationView : UserControl
 
     private async Task OpenPermalinkAsync(PostItem post)
     {
-        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        var permalink = await App.Client.PostPermalinkAsync(post.Id, post.AuthorHandle);
         if (permalink.Url is { Length: > 0 } url && System.Uri.TryCreate(url, System.UriKind.Absolute, out var uri))
         {
             await Launcher.LaunchUriAsync(uri);

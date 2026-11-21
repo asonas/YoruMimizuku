@@ -1,5 +1,10 @@
+using System;
+using System.Net.Http;
 using Microsoft.UI.Xaml;
+using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Services;
+using YoruMimizuku.Core.Accounts;
+using YoruMimizuku.Core.OAuth;
 
 namespace YoruMimizuku.App;
 
@@ -12,7 +17,28 @@ public partial class App : Application
     public const string RedirectUri = "as.ason:/callback";
     public const string Scope = "atproto transition:generic";
 
+    /// <summary>
+    /// The core every window talks to. Release builds use the Swift bridge until the
+    /// C# core replaces it (Phase 5); Debug builds use the C# core unless
+    /// YORUMIMIZUKU_CORE=swift is set (apps/windows/README.md).
+    /// </summary>
+    public static ICoreClient Client { get; } = SelectClient();
+
     private Window? _window;
+
+    private static ICoreClient SelectClient()
+    {
+#if DEBUG
+        if (!string.Equals(Environment.GetEnvironmentVariable("YORUMIMIZUKU_CORE"), "swift", StringComparison.OrdinalIgnoreCase))
+        {
+            AppLog.Write("Core: C#");
+            return new CoreClient(
+                new DpapiFileStorage(DpapiFileStorage.DefaultDirectory()), new SocketsHttpHandler(), OAuthClientConfig.YoruMimizuku);
+        }
+#endif
+        AppLog.Write("Core: Swift bridge");
+        return new BridgeClient();
+    }
 
     public App()
     {

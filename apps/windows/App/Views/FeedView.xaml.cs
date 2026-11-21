@@ -168,7 +168,7 @@ public sealed partial class FeedView : UserControl
     private async Task LoadOgpAsync(Border host, string postId, string url)
     {
         LinkCardDto? card = null;
-        try { card = await BridgeClient.Shared.OgpLoadAsync(url); } catch { /* no card */ }
+        try { card = await App.Client.OgpLoadAsync(url); } catch { /* no card */ }
         if (card is null) return;
         if (host.Tag as string != postId) return; // container recycled to another post
         host.Child = BuildLinkCard(card);
@@ -702,7 +702,7 @@ public sealed partial class FeedView : UserControl
 
     private async Task CopyPermalinkAsync(PostItem post)
     {
-        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        var permalink = await App.Client.PostPermalinkAsync(post.Id, post.AuthorHandle);
         if (permalink.Url is not { Length: > 0 } url) return;
         var data = new DataPackage();
         data.SetText(url);
@@ -711,7 +711,7 @@ public sealed partial class FeedView : UserControl
 
     private async Task OpenPermalinkAsync(PostItem post)
     {
-        var permalink = await BridgeClient.Shared.PostPermalinkAsync(post.Id, post.AuthorHandle);
+        var permalink = await App.Client.PostPermalinkAsync(post.Id, post.AuthorHandle);
         if (permalink.Url is { Length: > 0 } url && Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             await Launcher.LaunchUriAsync(uri);

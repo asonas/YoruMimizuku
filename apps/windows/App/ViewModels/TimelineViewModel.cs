@@ -151,7 +151,7 @@ public sealed class TimelineViewModel : ObservableObject
         }
 
         List<ArrangeResultDto> arranged;
-        try { arranged = await BridgeClient.Shared.FeedArrangeAsync(items); }
+        try { arranged = await App.Client.FeedArrangeAsync(items); }
         catch { return; }
         if (arranged.Count != Posts.Count) return;
 

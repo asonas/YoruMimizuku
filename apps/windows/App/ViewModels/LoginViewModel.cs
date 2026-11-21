@@ -37,7 +37,7 @@ public sealed class LoginViewModel : ObservableObject
         ErrorMessage = null;
         try
         {
-            var begin = await BridgeClient.Shared.LoginBeginAsync(Handle.Trim());
+            var begin = await App.Client.LoginBeginAsync(Handle.Trim());
             _pendingId = begin.PendingId;
             AuthUrl = begin.AuthUrl;
             CallbackScheme = begin.CallbackScheme;
@@ -60,7 +60,7 @@ public sealed class LoginViewModel : ObservableObject
         if (_pendingId is null) return;
         try
         {
-            var account = await BridgeClient.Shared.LoginCompleteAsync(_pendingId, callbackUrl);
+            var account = await App.Client.LoginCompleteAsync(_pendingId, callbackUrl);
             Authenticated?.Invoke(account.Did);
         }
         catch (Exception ex)
