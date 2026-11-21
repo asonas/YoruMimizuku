@@ -18,6 +18,9 @@ sources:
   - docs/adr/0024-macos-saved-feeds-sidebar.md
   - core/Sources/YoruMimizukuKit/SavedFeedsModel.swift
   - apps/macos/Timeline/LiveSavedFeedsLoaders.swift
+  - apps/windows/Core/ListMembershipModel.cs
+  - apps/windows/Core/ListMembershipService.cs
+  - apps/windows/App/Views/ListMembershipMenu.cs
   - apps/windows/Core/SavedFeedsService.cs
   - apps/windows/Core/SavedFeedsModel.cs
   - apps/macos/Views/SavedFeedInfoButton.swift
@@ -80,10 +83,10 @@ features:
     note: "Both show a submitted search in the timeline column without saving; 'フィルターとして保存' turns it into a filter and choosing any sidebar row discards it ([[filters]]). Windows has no unified toolbar, so the field is the `NavigationView` AutoSuggestBox at the top of the sidebar (Ctrl+F, the analogue of ⌘F), and its timelines have no header, so 'フィルターとして保存' sits in the timeline's command bar beside 更新 and 投稿 (MainWindow.xaml, MainWindow.xaml.cs)."
   - name: Add a person to a curated list (menu / drag)
     macos: full
-    windows: none
+    windows: differs
     ios: none
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/28. macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account."
+    note: "Both offer 'リストに追加' in a timeline post's right-click menu and add a dragged avatar's author to an own pinned curated list, writing app.bsky.graph.listitem records on the window account after re-reading the server ([[macos]], [[windows]]). A WinUI menu can change while it is open, so Windows reads the author's membership when the menu opens and redraws it when the answer arrives, instead of prefetching on pointer rest; and the Windows post body is selectable text, so right-clicking the body itself shows the text commands (FeedView.xaml, ListMembershipMenu.cs). Dropping an avatar on a filter (a `from:` condition) edits a saved filter, not a list, so it is not part of this row; Windows does not offer it ([[filters]])."
   - name: Multiple windows
     macos: full
     windows: full
@@ -160,6 +163,8 @@ The toolbar has a search field and the compose button. A submitted search shows 
 On [[windows]] the search field is the `NavigationView` AutoSuggestBox at the top of the sidebar, and Ctrl+F focuses it. The typed text becomes the search by the macOS rule: trimmed, ignored when blank, and run as one keyword term named after itself (`SavedFilter.ForSearch` in `apps/windows/Core/SavedFilter.cs`, a port of `WorkspaceModel.openSearch(query:)`). The results show in the timeline column with no sidebar row selected and nothing written to the filters file. "フィルターとして保存" sits in the timeline's command bar beside 更新 and 投稿, because Windows timelines have no header; it adds the search as a filter and selects it. The search is never a sidebar row, so choosing any row, or switching accounts, discards it. The query text stays in the field, as it does in the macOS toolbar (`apps/windows/App/ViewModels/WorkspaceViewModel.cs`, `apps/windows/App/MainWindow.xaml.cs`).
 
 A post's right-click menu offers "リストに追加": the window account's curated lists (`app.bsky.graph.getListsWithMembership`, `purposes=curatelist`), checked where the author is on them, ending with a note that lists are public. Because a menu is built synchronously, membership comes from a cache that is filled once focus rests on a post; every change re-reads the server before writing, since the PDS accepts duplicate list items. Dragging a post's avatar onto one of the window account's own pinned curated lists adds the author to it; dropping it on a filter adds a `from:` condition, except on an AND filter that already names a person (`docs/adr/0019-macos-commands-and-lists.md`, `core/Sources/YoruMimizukuKit/ListMembershipModel.swift`, `apps/macos/Views/DraggedAuthor.swift`).
+
+On [[windows]] a timeline post's right-click menu has the same "リストに追加" submenu, with the same empty and loading states, checks and public-list note, and the same toasts after a change. The cache, the one-change-at-a-time rule, the re-read before writing and the 30 s trust in a change the appview has not indexed are a port of the Swift model (`apps/windows/Core/ListMembershipModel.cs`, reads and writes in `apps/windows/Core/ListMembershipService.cs`); each account has one model, shared by its windows (`IAccountClient.ListMembership`). Windows reads an author's membership when the menu opens, at most once a minute per author, and redraws the open submenu when the answer arrives, because a WinUI `MenuFlyout` can change while it is open; macOS cannot, so it prefetches when the pointer rests. The post body is selectable text on Windows, so right-clicking the body shows the text commands and the rest of the row shows the post menu. A post's avatar drags its author (the app format `as.ason.YoruMimizuku.author`, and `@handle` text for other apps); one of the account's own pinned curated lists in the sidebar accepts the drop, outlines itself while the drag is over it, and adds the author. Dropping on a filter is not offered on Windows: it edits a saved filter rather than a list and was outside issue #28 (`apps/windows/App/Views/ListMembershipMenu.cs`, `apps/windows/App/Views/FeedView.xaml.cs`, `apps/windows/App/MainWindow.xaml.cs`).
 
 ## Sidebar / tab UI
 

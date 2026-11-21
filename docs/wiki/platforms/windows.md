@@ -28,6 +28,9 @@ sources:
   - apps/windows/Core/DetailPaneModel.cs
   - apps/windows/Core/SavedFeedsService.cs
   - apps/windows/Core/SavedFeedsModel.cs
+  - apps/windows/Core/ListMembershipModel.cs
+  - apps/windows/Core/ListMembershipService.cs
+  - apps/windows/App/Views/ListMembershipMenu.cs
   - docs/adr/0026-macos-three-pane.md
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
@@ -104,6 +107,17 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   fails and drops a load that a newer one or an account change overtook. Pins reload
   when the window comes forward and when its account changes; the row tooltip carries
   the description, creator and AT-URI that macOS shows in an ⓘ popover ([[app-shell]]).
+- A timeline post's right-click menu has "リストに追加": the window account's
+  curated lists with a check where the author is on them, ending with the note
+  that lists are public. Dragging a post's avatar onto one of the account's own
+  pinned curated lists adds the author. `Core/ListMembershipService.cs` reads
+  `getListsWithMembership` (`purposes=curatelist`) and creates or deletes
+  `app.bsky.graph.listitem` records; `Core/ListMembershipModel.cs` ports the Swift
+  model (changes one at a time, a re-read before every write because the PDS
+  accepts duplicate list items, 30 s trust in an unindexed change). One model per
+  account is shared by its windows (`IAccountClient.ListMembership`). The menu
+  reads membership when it opens and redraws when the answer arrives
+  (`App/Views/ListMembershipMenu.cs`) ([[app-shell]]).
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
   attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are

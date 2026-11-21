@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows list membership)
+
+- sources: apps/windows/Core/ListMembershipModel.cs, apps/windows/Core/ListMembershipService.cs, apps/windows/App/Views/ListMembershipMenu.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[windows]]
+- note: closes issue #28. Windows adds people to the window account's curated lists from a timeline post's "リストに追加" menu and by dropping an avatar on an own pinned curated list. "Add a person to a curated list (menu / drag)" is `differs` for Windows: the menu reads membership when it opens instead of prefetching on pointer rest, because a WinUI menu can change while open, and the selectable post body keeps its text menu. Dropping an avatar on a filter is left out as a filter edit outside this row.
+
 ## 2026-11-21 ingest (Windows toolbar search)
 
 - sources: apps/windows/Core/SavedFilter.cs, apps/windows/App/ViewModels/WorkspaceViewModel.cs, apps/windows/App/MainWindow.xaml, apps/windows/App/MainWindow.xaml.cs
