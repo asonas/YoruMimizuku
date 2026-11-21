@@ -15,6 +15,14 @@ final class ThreadViewModelTests: XCTestCase {
 
     private struct StubError: Error {}
 
+    private final class FailingInteractor: PostInteracting, @unchecked Sendable {
+        func like(uri: String, cid: String) async throws -> String { throw StubError() }
+        func removeLike(recordURI: String) async throws { throw StubError() }
+        func repost(uri: String, cid: String) async throws -> String { throw StubError() }
+        func removeRepost(recordURI: String) async throws { throw StubError() }
+        func deletePost(uri: String) async throws { throw StubError() }
+    }
+
     private final class FakeInteractor: PostInteracting, @unchecked Sendable {
         func like(uri: String, cid: String) async throws -> String { "at://me/app.bsky.feed.like/new" }
         func removeLike(recordURI: String) async throws {}
@@ -111,6 +119,61 @@ final class ThreadViewModelTests: XCTestCase {
         guard case let .loaded(updated) = vm.state else { return XCTFail("expected loaded") }
         XCTAssertEqual(updated.replies.count, 1, "the child reply tree must survive a focus like")
         XCTAssertEqual(updated.replies.first?.id, "child")
+    }
+
+    // j/k shows a timeline post in the detail pane at once; only the replies wait
+    // for the thread.
+    func testPreviewIsShownUntilTheThreadArrives() async throws {
+        let preview = sample(id: "reply")
+        let loaded = ConversationThread(focus: sample(id: "reply"), replies: [ThreadNode(post: sample(id: "child"), replies: [], depth: 0)])
+        let loader = FirstCallGatedLoader(thread: loaded)
+        let vm = ThreadViewModel(loader: loader, uri: "reply", preview: preview)
+        XCTAssertEqual(vm.focus, preview)
+
+        let first = Task { await vm.load() }
+        while !loader.isHolding { await Task.yield() }
+        XCTAssertEqual(vm.focus, preview, "the preview stays while the thread loads")
+
+        loader.releaseFirst(with: StubError())
+        await first.value
+        XCTAssertEqual(vm.focus, preview, "a failed thread load keeps the post on screen")
+
+        await vm.load()
+        XCTAssertEqual(vm.state, .loaded(loaded))
+        XCTAssertEqual(vm.focus, loaded.focus)
+    }
+
+
+
+    // The preview is a timeline row's copy, possibly from before the viewer's
+    // latest like or from another account's fetch, so it is for reading only:
+    // likes and reposts act on the thread once it arrives.
+    func testLikesWaitForTheThread() async {
+        let preview = sample(id: "reply")
+        let vm = ThreadViewModel(
+            loader: StubLoader(result: .failure(StubError())), uri: "reply",
+            interactor: FakeInteractor(), preview: preview
+        )
+
+        await vm.toggleLike(preview)
+
+        XCTAssertEqual(vm.focus, preview)
+    }
+
+    // Undoing a failed like puts back the loaded post.
+    func testAFailedLikeKeepsTheLoadedAncestors() async {
+        let focus = sample(id: "reply", parent: sample(id: "root"))
+        let thread = ConversationThread(focus: focus, replies: [])
+        let vm = ThreadViewModel(
+            loader: StubLoader(result: .success(thread)), uri: "reply",
+            interactor: FailingInteractor(), preview: sample(id: "reply")
+        )
+        await vm.load()
+
+        await vm.toggleLike(focus)
+
+        XCTAssertEqual(vm.focus?.isLiked, false)
+        XCTAssertEqual(vm.focus?.replyParent?.post.id, "root")
     }
 
     func testInitialStateIsIdle() {

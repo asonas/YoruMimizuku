@@ -24,7 +24,7 @@ final class DetailPaneModelTests: XCTestCase {
 
     private func makePane() -> DetailPaneModel {
         DetailPaneModel(
-            makeThreadModel: { uri in ThreadViewModel(loader: StubThreadLoader(), uri: uri) },
+            makeThreadModel: { uri, preview in ThreadViewModel(loader: StubThreadLoader(), uri: uri, preview: preview) },
             makeAuthorModel: { _ in TimelineViewModel(loader: StubTimelineLoader()) },
             makeAuthorHeader: { did, initial in
                 ProfileHeaderViewModel(loader: StubAuthorProfileLoader(), actor: did, initial: initial)
@@ -39,6 +39,41 @@ final class DetailPaneModelTests: XCTestCase {
     private func anchorID(of entry: DetailEntry?) -> String? {
         if case let .conversation(tab) = entry { return tab.anchorID }
         return nil
+    }
+
+    /// A post opened from a row is on screen before its thread loads.
+    func testOpeningAPostShowsItBeforeTheThreadLoads() async {
+        let pane = makePane()
+        let opened = post("at://a/1")
+        pane.openConversation(opened)
+
+        guard case let .conversation(tab) = pane.current else { return XCTFail("expected a conversation") }
+        XCTAssertEqual(tab.model.focus, opened)
+    }
+
+    /// A conversation opened from a notification has no post to show until its
+    /// thread loads; choosing the same post in a timeline supplies it.
+    func testChoosingTheShownConversationFromARowSuppliesItsPost() async {
+        let pane = makePane()
+        pane.openConversation(anchorID: "at://a/1", title: "Alice", handle: "alice.bsky.social", subtitle: "")
+        let shown = pane.currentID
+        let row = post("at://a/1")
+        pane.openConversation(row)
+
+        guard case let .conversation(tab) = pane.current else { return XCTFail("expected a conversation") }
+        XCTAssertEqual(pane.currentID, shown, "the page and its load are kept")
+        XCTAssertEqual(tab.model.focus, row)
+    }
+
+    func testShowingTheRecordOfTheShownConversationSuppliesItsPost() async {
+        let pane = makePane()
+        pane.openConversation(anchorID: "at://a/1", title: "Alice", handle: "alice.bsky.social", subtitle: "")
+        let row = post("at://a/1")
+        pane.openRecord(row)
+
+        guard case let .conversation(tab) = pane.current else { return XCTFail("expected a conversation") }
+        XCTAssertEqual(pane.tab, .record)
+        XCTAssertEqual(tab.model.focus, row)
     }
 
     /// Reopening the shown conversation keeps its loaded page rather than

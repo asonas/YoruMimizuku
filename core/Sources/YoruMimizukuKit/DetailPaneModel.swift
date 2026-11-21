@@ -20,12 +20,12 @@ public final class DetailPaneModel: ObservableObject {
     /// its thread.
     @Published public var tab: Tab = .thread
 
-    private let makeThreadModel: @MainActor (String) -> ThreadViewModel
+    private let makeThreadModel: @MainActor (String, PostDisplay?) -> ThreadViewModel
     private let makeAuthorModel: @MainActor (String) -> TimelineViewModel
     private let makeAuthorHeader: @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel
 
     public init(
-        makeThreadModel: @escaping @MainActor (String) -> ThreadViewModel,
+        makeThreadModel: @escaping @MainActor (String, PostDisplay?) -> ThreadViewModel,
         makeAuthorModel: @escaping @MainActor (String) -> TimelineViewModel,
         makeAuthorHeader: @escaping @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel
     ) {
@@ -45,8 +45,12 @@ public final class DetailPaneModel: ObservableObject {
 
     public func openConversation(_ post: PostDisplay) {
         // The shown post again means "show its thread".
-        if isShowingConversation(post.id) { tab = .thread; return }
-        show(.conversation(ConversationTab(anchor: post, model: makeThreadModel(post.id))))
+        if isShowingConversation(post.id) {
+            if case let .conversation(shown) = current { shown.model.adoptPreview(post) }
+            tab = .thread
+            return
+        }
+        show(.conversation(ConversationTab(anchor: post, model: makeThreadModel(post.id, post))))
     }
 
     /// Open a conversation when only the post URI and a display snippet are known
@@ -55,7 +59,7 @@ public final class DetailPaneModel: ObservableObject {
         if isShowingConversation(anchorID) { tab = .thread; return }
         show(.conversation(ConversationTab(
             anchorID: anchorID, title: title, handle: handle, subtitle: subtitle,
-            model: makeThreadModel(anchorID)
+            model: makeThreadModel(anchorID, nil)
         )))
     }
 
@@ -77,7 +81,7 @@ public final class DetailPaneModel: ObservableObject {
 
     /// Open `post` on its レコード tab (投稿 > レコードを表示).
     public func openRecord(_ post: PostDisplay) {
-        if !isShowingConversation(post.id) { openConversation(post) }
+        openConversation(post)
         tab = .record
     }
 

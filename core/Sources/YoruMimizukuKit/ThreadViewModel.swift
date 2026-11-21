@@ -42,15 +42,38 @@ public final class ThreadViewModel: ObservableObject {
 
     @Published public private(set) var state: State = .idle
 
+    /// The post as the opener already had it (a timeline row), shown in full
+    /// until the thread arrives and kept if it fails, so only the replies wait.
+    /// It is for reading only: its like and repost state may predate the
+    /// viewer's latest change or come from another account's fetch, so likes
+    /// and reposts act on the loaded thread.
+    @Published public private(set) var preview: PostDisplay?
+
     public let uri: String
     private let loader: ThreadLoading
     private let interactor: PostInteracting?
 
-    public init(loader: ThreadLoading, uri: String, interactor: PostInteracting? = nil) {
+    public init(loader: ThreadLoading, uri: String, interactor: PostInteracting? = nil, preview: PostDisplay? = nil) {
         self.loader = loader
         self.uri = uri
         self.interactor = interactor
+        self.preview = preview
     }
+
+    /// The post to show as the conversation's anchor: the loaded thread's focus,
+    /// or the preview until then.
+    public var focus: PostDisplay? {
+        if case let .loaded(thread) = state { return thread.focus }
+        return preview
+    }
+
+    /// Supply the post for a page opened without it (a notification subject),
+    /// once the same post is chosen from a row. A shown post is left alone.
+    public func adoptPreview(_ post: PostDisplay) {
+        guard focus == nil, post.id == uri else { return }
+        preview = post
+    }
+
 
     /// Toggle the viewer's like on the focused post, optimistically. No-op unless
     /// the post is loaded and an interactor was injected.
