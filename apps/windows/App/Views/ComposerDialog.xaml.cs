@@ -3,9 +3,12 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
+using Windows.Storage.FileProperties;
 using Windows.Storage.Pickers;
 using YoruMimizuku.App.Interop;
+using YoruMimizuku.App.Services;
 using YoruMimizuku.App.ViewModels;
 
 namespace YoruMimizuku.App.Views;
@@ -27,14 +30,44 @@ public sealed partial class ComposerDialog : ContentDialog
             QuotePreview.Visibility = Visibility.Visible;
         }
         PrimaryButtonClick += OnPrimaryClick;
+        Closing += OnClosing;
         UpdateCounter();
     }
 
-    /// <summary>Show the composer; returns true if a post was created.</summary>
+    /// <summary>
+    /// Show the composer; returns true if a post was created. Closing it with unsaved
+    /// text or media (キャンセル, Esc) asks first, and reopens the same draft when the
+    /// user keeps editing: WinUI shows one ContentDialog at a time, so the
+    /// confirmation runs between two showings rather than over the composer.
+    /// </summary>
     public async Task<bool> ShowComposeAsync()
     {
-        await ShowAsync();
-        return _posted;
+        while (true)
+        {
+            await ShowAsync();
+            if (_posted) return true;
+            if (!_vm.HasUnsavedContent || await ConfirmDiscardAsync()) return false;
+        }
+    }
+
+    private async Task<bool> ConfirmDiscardAsync()
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = "下書きを破棄しますか？",
+            Content = "入力した内容は失われます。",
+            PrimaryButtonText = "破棄する",
+            CloseButtonText = "編集を続ける",
+            DefaultButton = ContentDialogButton.Close
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    /// While a post is on its way (a video can take a while), nothing closes the dialog.
+    private void OnClosing(ContentDialog sender, ContentDialogClosingEventArgs args)
+    {
+        if (_vm.IsSubmitting) args.Cancel = true;
     }
 
     private void OnTextChanged(object sender, TextChangedEventArgs e)
@@ -47,6 +80,8 @@ public sealed partial class ComposerDialog : ContentDialog
     {
         CounterText.Text = _vm.Remaining.ToString();
         IsPrimaryButtonEnabled = _vm.CanSubmit;
+        AddImageButton.IsEnabled = _vm.CanAddImage;
+        AddVideoButton.IsEnabled = _vm.CanAddVideo;
     }
 
     private async void OnAddImageClick(object sender, RoutedEventArgs e)
@@ -72,6 +107,70 @@ public sealed partial class ComposerDialog : ContentDialog
         var item = _vm.AddImage(bytes, mime);
         if (item is null) return;
         AddImageEntry(file, item);
+        UpdateCounter();
+    }
+
+    private async void OnAddVideoClick(object sender, RoutedEventArgs e)
+    {
+        if (!_vm.CanAddVideo) return;
+        var picker = new FileOpenPicker();
+        picker.FileTypeFilter.Add(".mp4");
+        picker.FileTypeFilter.Add(".m4v");
+        picker.FileTypeFilter.Add(".mov");
+        if (MainWindowAccessor.Current is { } window)
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+        }
+
+        var file = await picker.PickSingleFileAsync();
+        if (file is null) return;
+        var attachment = await VideoAttachment.LoadAsync(file);
+        var attached = _vm.SetVideo(new ComposeVideoItem
+        {
+            Data = attachment.Data,
+            MimeType = attachment.MimeType,
+            Filename = attachment.Filename,
+            Width = attachment.Width,
+            Height = attachment.Height
+        });
+        if (!attached) return;
+
+        VideoFilename.Text = attachment.Filename;
+        VideoAlt.Text = "";
+        VideoPoster.Source = await PosterAsync(file);
+        VideoPreview.Visibility = Visibility.Visible;
+        UpdateCounter();
+    }
+
+    /// The shell's thumbnail of the video; none when the system cannot make one.
+    private static async Task<BitmapImage?> PosterAsync(StorageFile file)
+    {
+        try
+        {
+            using var thumbnail = await file.GetThumbnailAsync(ThumbnailMode.VideosView, 192);
+            var bitmap = new BitmapImage();
+            await bitmap.SetSourceAsync(thumbnail);
+            return bitmap;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    private void OnVideoAltChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_vm.Video is { } video) video.Alt = VideoAlt.Text;
+    }
+
+    private void OnRemoveVideoClick(object sender, RoutedEventArgs e)
+    {
+        _vm.RemoveVideo();
+        VideoPreview.Visibility = Visibility.Collapsed;
+        VideoPoster.Source = null;
+        VideoFilename.Text = "";
+        VideoAlt.Text = "";
         UpdateCounter();
     }
 
@@ -116,7 +215,15 @@ public sealed partial class ComposerDialog : ContentDialog
     {
         var deferral = args.GetDeferral();
         args.Cancel = true; // keep the dialog open until the post resolves
+        ErrorText.Visibility = Visibility.Collapsed;
+        ProgressText.Text = _vm.SubmitStatusText;
+        ProgressText.Visibility = Visibility.Visible;
+        IsPrimaryButtonEnabled = false;
+        IsSecondaryButtonEnabled = false;
         await _vm.SubmitAsync();
+        ProgressText.Visibility = Visibility.Collapsed;
+        IsSecondaryButtonEnabled = true;
+        UpdateCounter();
         if (_vm.ErrorMessage is null)
         {
             _posted = true;

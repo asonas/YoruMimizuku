@@ -13,7 +13,10 @@
                  AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120"
                  TextChanged="OnTextChanged" />
         <Grid>
-            <Button Content="画像を追加" Click="OnAddImageClick" HorizontalAlignment="Left" />
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left">
+                <Button x:Name="AddImageButton" Content="画像を追加" Click="OnAddImageClick" />
+                <Button x:Name="AddVideoButton" Content="動画を追加" Click="OnAddVideoClick" />
+            </StackPanel>
             <TextBlock x:Name="CounterText" Text="300" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
         <ItemsControl x:Name="ImagesList">
@@ -23,6 +26,28 @@
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
         </ItemsControl>
+        <!-- The one video attachment: poster, file name, alt text, remove. -->
+        <Border x:Name="VideoPreview" Visibility="Collapsed"
+                BorderBrush="{ThemeResource AppHairlineBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="8">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Width="96" Height="64" CornerRadius="5" Background="{ThemeResource AppRowHoverBrush}">
+                    <Image x:Name="VideoPoster" Stretch="UniformToFill" />
+                    <FontIcon Glyph="&#xE768;" FontSize="20" Foreground="White" />
+                </Grid>
+                <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock x:Name="VideoFilename" TextTrimming="CharacterEllipsis" />
+                    <TextBox x:Name="VideoAlt" PlaceholderText="代替テキスト" FontSize="12"
+                             TextChanged="OnVideoAltChanged" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="削除" Click="OnRemoveVideoClick" VerticalAlignment="Top" />
+            </Grid>
+        </Border>
         <Border x:Name="QuotePreview" Visibility="Collapsed"
                 BorderBrush="{ThemeResource AppHairlineBrush}" BorderThickness="1"
                 CornerRadius="6" Padding="10">
@@ -31,5 +56,6 @@
                        Foreground="{ThemeResource AppTertiaryTextBrush}" />
         </Border>
         <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap" Visibility="Collapsed" />
+        <TextBlock x:Name="ProgressText" Foreground="{ThemeResource AppTertiaryTextBrush}" Visibility="Collapsed" />
     </StackPanel>
 </ContentDialog>
