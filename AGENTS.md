@@ -97,7 +97,8 @@ After editing `project.yml`, always re-run `xcodegen generate` to apply changes.
 # Test the core package on macOS (fast — run this most of the time). Uses Xcode's
 # toolchain (the Command Line Tools have no XCTest) and leaves core/Package.resolved
 # as committed. If it stops because a dependency changed, update Package.resolved
-# with the dependency change; do not drop the flag. On Windows: scripts/windows/test.ps1.
+# with the dependency change; do not drop the flag. (The Windows app's C# core is
+# tested separately, with scripts/windows/test.ps1.)
 mise run test:core
 
 # Build including the app

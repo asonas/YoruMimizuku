@@ -84,7 +84,7 @@ runs the full chain (`dotnet test` for the C# core, then `dotnet build`).
 ### Tests
 
 ```bash
-# Test the platform-independent core (fast; needs Xcode, not just the Command Line Tools)
+# Test the Swift core for Apple platforms (fast; needs Xcode, not just the Command Line Tools)
 mise run test:core
 
 # Build / test including the macOS app
