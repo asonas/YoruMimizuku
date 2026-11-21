@@ -35,6 +35,8 @@ struct BridgeServiceContext {
     let sender: DPoPRequestSender
     let metadataResolver: OAuthMetadataResolver
     let config: OAuthClientConfig
+    /// Shared by every request, so concurrent 401s refresh the token once.
+    let refreshGate: RefreshGate
     private let accountManager: AccountManager
 
     init(accountManager: AccountManager, config: OAuthClientConfig) throws {
@@ -49,6 +51,7 @@ struct BridgeServiceContext {
         )
         self.metadataResolver = OAuthMetadataResolver(http: http)
         self.config = config
+        self.refreshGate = accountManager.refreshGate
         self.accountManager = accountManager
     }
 
@@ -56,9 +59,10 @@ struct BridgeServiceContext {
         guard let refreshed else { return }
         try accountManager.updateTokens(
             did: account.did,
+            session: account.dpopPrivateKeyRaw,
             accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken ?? account.refreshToken,
-            scope: refreshed.scope ?? account.scope
+            refreshToken: refreshed.refreshToken,
+            scope: refreshed.scope
         )
     }
 }
