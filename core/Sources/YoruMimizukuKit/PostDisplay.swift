@@ -129,6 +129,9 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
     public let cid: String
     public let authorDisplayName: String
     public let authorHandle: String
+    /// The author's DID, when the post came from the API (nil for samples and
+    /// bridge-built posts). Handles are not unique; this is.
+    public let authorDID: String?
     public let avatarURL: URL?
     /// Trusted verifiers vouch for the author (the check beside the name).
     public let authorIsVerified: Bool
@@ -187,6 +190,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         cid: String = "",
         authorDisplayName: String,
         authorHandle: String,
+        authorDID: String? = nil,
         avatarURL: URL? = nil,
         authorIsVerified: Bool = false,
         body: String,
@@ -209,6 +213,7 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         self.cid = cid
         self.authorDisplayName = authorDisplayName
         self.authorHandle = authorHandle
+        self.authorDID = authorDID
         self.avatarURL = avatarURL
         self.authorIsVerified = authorIsVerified
         self.body = body

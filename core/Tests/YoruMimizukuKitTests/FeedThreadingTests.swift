@@ -8,16 +8,41 @@ final class FeedThreadingTests: XCTestCase {
         _ id: String,
         createdAt: TimeInterval,
         author: String = "a.example",
+        authorDID: String? = nil,
         parent: PostDisplay? = nil
     ) -> PostDisplay {
         PostDisplay(
             id: id,
             authorDisplayName: author,
             authorHandle: author,
+            authorDID: authorDID,
             body: "body \(id)",
             createdAt: Date(timeIntervalSince1970: createdAt),
             replyParent: parent.map(ReplyParent.init)
         )
+    }
+
+    // #12: accounts whose handles do not resolve all show "handle.invalid", so
+    // the author is told apart by the DID in the post URI.
+    func testRepliesBetweenDifferentAccountsWithTheSameHandleAreNotGrouped() {
+        let parent = post("at://did:plc:alice/app.bsky.feed.post/1", createdAt: 100, author: "handle.invalid")
+        let reply = post("at://did:plc:bob/app.bsky.feed.post/2", createdAt: 200, author: "handle.invalid", parent: parent)
+
+        let items = FeedThreading.arrange([reply, parent])
+
+        XCTAssertEqual(items.map(\.post.id), [reply.id, parent.id])
+        XCTAssertEqual(items.map(\.connectsToNext), [false, false])
+    }
+
+    // An AT-URI may name its repo by handle; the post's author DID decides.
+    func testSameAuthorDIDGroupsEvenWhenAURINamesTheRepoByHandle() {
+        let parent = post("at://alice.example/app.bsky.feed.post/1", createdAt: 100, authorDID: "did:plc:alice")
+        let reply = post("at://did:plc:alice/app.bsky.feed.post/2", createdAt: 200, authorDID: "did:plc:alice", parent: parent)
+
+        let items = FeedThreading.arrange([reply, parent])
+
+        XCTAssertEqual(items.map(\.post.id), [parent.id, reply.id])
+        XCTAssertEqual(items.map(\.connectsToNext), [true, false])
     }
 
     func testPlainPostsKeepOrderWithoutConnections() {

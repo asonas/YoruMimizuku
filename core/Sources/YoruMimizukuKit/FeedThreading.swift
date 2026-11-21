@@ -1,4 +1,5 @@
 import Foundation
+import BlueskyCore
 
 /// One feed row after thread grouping, with the visual-connector flags the row
 /// needs to draw the Bluesky-web-style thread line between grouped posts.
@@ -32,13 +33,20 @@ public enum FeedThreading {
         // parent shares the current post's author. The climb stops where the author
         // changes, so multi-author / branching replies do not collapse into one
         // chronological block. A visited set guards against (malformed) parent cycles.
+        // The author's DID, else the repo in the post URI (normally a DID); handles
+        // are not unique (unresolved ones are all "handle.invalid"), so the handle
+        // is the last resort, for ids that are not AT-URIs.
+        func author(of post: PostDisplay) -> String {
+            post.authorDID ?? ATURI.repo(post.id) ?? post.authorHandle
+        }
+
         func groupKey(for post: PostDisplay) -> String {
             var current = post
             var visited: Set<String> = [post.id]
             while let parentID = current.replyParent?.post.id,
                   let parent = byID[parentID],
                   !visited.contains(parentID),
-                  parent.authorHandle == current.authorHandle {
+                  author(of: parent) == author(of: current) {
                 visited.insert(parentID)
                 current = parent
             }

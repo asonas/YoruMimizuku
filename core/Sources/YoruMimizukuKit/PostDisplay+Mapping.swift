@@ -63,6 +63,7 @@ extension PostDisplay {
             cid: post.cid,
             authorDisplayName: author.nameOrHandle,
             authorHandle: author.handle,
+            authorDID: author.did,
             avatarURL: author.avatar.flatMap(URL.init(string:)),
             authorIsVerified: author.isVerified,
             body: post.record.text,
