@@ -39,9 +39,12 @@ struct FeedView: View {
     var onMute: (PostDisplay) -> Void = { _ in }
     /// Shows the post's record in the detail pane ("レコードを表示").
     var onOpenRecord: (PostDisplay) -> Void = { _ in }
-    /// The j/k/l/o/n keys are plain window-wide shortcuts, so only the timeline
+    /// Uncovers or covers the post's labeled media in the detail pane (the s key).
+    var onRevealMedia: (PostDisplay) -> Void = { _ in }
+    /// The plain-key shortcuts are window-wide, so only the timeline
     /// column registers them; a feed embedded in the detail pane (an author page)
-    /// turns them off to avoid a second binding for the same keys.
+    /// turns them off to avoid a second binding for the same keys, and the window
+    /// turns them off while the lightbox covers the posts they would act on.
     var registersKeyboardShortcuts: Bool = true
     /// Extra controls at the right end of the header (e.g. a pinned feed's info).
     var headerAccessory: AnyView? = nil
@@ -58,6 +61,9 @@ struct FeedView: View {
     /// The own-post the viewer asked to delete, pending confirmation. Set by a
     /// row's context menu; cleared when the dialog is dismissed or the delete runs.
     @State private var pendingDelete: PostDisplay?
+    /// The post whose repost the viewer asked to undo from the keyboard or the
+    /// 投稿 menu, pending confirmation.
+    @State private var pendingUnrepost: PostDisplay?
     /// Row ids currently laid out on screen, gathered from each row's
     /// appear/disappear. Their top-most (in display order) is the scroll anchor.
     /// A reference type mutated in place so recording the anchor on every scroll
@@ -113,6 +119,43 @@ struct FeedView: View {
             Button("キャンセル", role: .cancel) { pendingDelete = nil }
         } message: { _ in
             Text("削除した投稿は元に戻せません。")
+        }
+        .confirmationDialog(
+            "リポストを取り消しますか？",
+            isPresented: Binding(get: { pendingUnrepost != nil }, set: { if !$0 { pendingUnrepost = nil } }),
+            presenting: pendingUnrepost
+        ) { post in
+            Button("取り消す", role: .destructive) {
+                pendingUnrepost = nil
+                Task { await model.setRepost(post, on: false) }
+            }
+            Button("キャンセル", role: .cancel) { pendingUnrepost = nil }
+        }
+    }
+
+    /// Repost `post`, or ask before undoing an existing repost. Nothing happens
+    /// while a repost change for it is still being sent.
+    private func repostOrConfirmUndo(_ post: PostDisplay) {
+        // The 投稿 menu holds the post as it was when focus last changed.
+        guard let post = model.posts.first(where: { $0.id == post.id }), !model.isSendingRepost(post) else { return }
+        if post.isReposted {
+            pendingUnrepost = post
+        } else {
+            Task { await model.setRepost(post, on: true) }
+        }
+    }
+
+    /// Open the post's links in the default browser, at most
+    /// `PostDisplay.linkOpenLimit` of them.
+    private func openLinks(of post: PostDisplay) {
+        let links = post.linksToOpen
+        guard !links.isEmpty else {
+            toastCenter.show("リンクがありません")
+            return
+        }
+        links.forEach { NSWorkspace.shared.open($0) }
+        if post.webLinks.count > links.count {
+            toastCenter.show("リンクは最初の\(PostDisplay.linkOpenLimit)件まで開きます")
         }
     }
 
@@ -432,7 +475,7 @@ struct FeedView: View {
             listMembership: listMembership,
             isOwn: isOwnPost(post),
             reply: { onReply(post) },
-            repost: { Task { await model.toggleRepost(post) } },
+            repost: { repostOrConfirmUndo(post) },
             quote: { onQuote(post) },
             like: { Task { await model.toggleLike(post) } },
             copyLink: { copyPermalink(post) },
@@ -461,7 +504,17 @@ struct FeedView: View {
             Button("") {
                 if let post = focusedPost { Task { await model.toggleLike(post) } }
             }
-            .keyboardShortcut("l", modifiers: [])
+            .keyboardShortcut("f", modifiers: [])
+            Button("") { if let post = focusedPost { repostOrConfirmUndo(post) } }
+                .keyboardShortcut("r", modifiers: [])
+            Button("") { if let post = focusedPost { onQuote(post) } }
+                .keyboardShortcut("r", modifiers: .shift)
+            Button("") { if let post = focusedPost { openLinks(of: post) } }
+                .keyboardShortcut("l", modifiers: [])
+            Button("") {
+                if let post = focusedPost, post.mediaWarning != nil, post.hasMedia { onRevealMedia(post) }
+            }
+            .keyboardShortcut("s", modifiers: [])
             Button("") {
                 if let post = focusedPost, let url = PostPermalink.url(for: post) {
                     NSWorkspace.shared.open(url)

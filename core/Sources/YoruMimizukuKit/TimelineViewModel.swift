@@ -115,6 +115,17 @@ public final class TimelineViewModel: ObservableObject {
         await controller?.toggleRepost(post.id)
     }
 
+    /// Repost (`on`) or undo the repost of `post`. Unlike a toggle, this does
+    /// nothing when the post is already in that state by the time it runs.
+    public func setRepost(_ post: PostDisplay, on: Bool) async {
+        await controller?.setRepost(post.id, on: on)
+    }
+
+    /// Whether a repost change for `post` is still being sent.
+    public func isSendingRepost(_ post: PostDisplay) -> Bool {
+        pending.contains(post.id, .repost)
+    }
+
     /// Delete the viewer's own `post`: remove its row immediately, then call the
     /// network. If the delete fails the row is restored at its original position so
     /// a transient error never silently drops a post the server still holds. No-op
@@ -141,8 +152,14 @@ public final class TimelineViewModel: ObservableObject {
     /// under way when they were muted are filtered too.
     private var hiddenAuthors: Set<String> = []
 
-    private func visible(_ posts: [PostDisplay]) -> [PostDisplay] {
-        hiddenAuthors.isEmpty ? posts : posts.filter { !hiddenAuthors.contains(ATURI.repo($0.id) ?? "") }
+    private let pending = PendingInteractions()
+
+    /// The posts of `fetch` (from `pending.fetchStarted()`) as shown: muted
+    /// authors dropped, and the viewer's likes and reposts the server's copy may
+    /// not show yet applied on top. Nil `fetch` re-filters posts already shown.
+    private func visible(_ posts: [PostDisplay], fetch: Int? = nil) -> [PostDisplay] {
+        let shown = hiddenAuthors.isEmpty ? posts : posts.filter { !hiddenAuthors.contains(ATURI.repo($0.id) ?? "") }
+        return shown.map { pending.applied(to: $0, fetch: fetch) }
     }
 
     /// Drop every post by `did`, now and in later fetches, after the viewer muted
@@ -172,6 +189,7 @@ public final class TimelineViewModel: ObservableObject {
         guard let interactor else { return nil }
         return PostInteractionController(
             interactor: interactor,
+            pending: pending,
             currentPost: { [weak self] id in self?.post(id: id) },
             writePost: { [weak self] post in self?.write(post) }
         )
@@ -209,12 +227,14 @@ public final class TimelineViewModel: ObservableObject {
         let request = headRequestCount
         state = .loading
         do {
+            let fetch = pending.fetchStarted()
+            defer { pending.fetchFinished(fetch) }
             let page = try await loader.loadPage(cursor: nil)
             guard generation == loadGeneration else { endInterval("superseded"); return true }
             appliedHeadRequest = request
             startNewPages()
             cursor = page.cursor
-            state = .loaded(visible(page.posts))
+            state = .loaded(visible(page.posts, fetch: fetch))
             onItemsChanged()
             endInterval("loaded \(page.posts.count) posts")
             // A page made only of muted posts leaves no row to scroll to, so the
@@ -243,13 +263,15 @@ public final class TimelineViewModel: ObservableObject {
         isLoadingMore = true
         defer { if generation == pageGeneration { isLoadingMore = false } }
         do {
+            let fetch = pending.fetchStarted()
+            defer { pending.fetchFinished(fetch) }
             let page = try await loader.loadPage(cursor: cursor)
             guard generation == pageGeneration, case let .loaded(latest) = state else { return }
             self.cursor = page.cursor
             // Appending older posts to the tail never moves the head, so the unread
             // boundary is unaffected; no onItemsChanged() needed here. Older posts
             // are behind what was seen, so they never count as new arrivals.
-            state = .loaded(Self.merging(latest, appending: visible(page.posts)))
+            state = .loaded(Self.merging(latest, appending: visible(page.posts, fetch: fetch)))
             seenIDs.formUnion(page.posts.map(\.id))
         } catch {
             SessionExpiry.reportIfExpired(error)
@@ -272,6 +294,8 @@ public final class TimelineViewModel: ObservableObject {
         headRequestCount += 1
         let request = headRequestCount
         do {
+            let fetch = pending.fetchStarted()
+            defer { pending.fetchFinished(fetch) }
             let page = try await loader.loadPage(cursor: nil)
             // Merge into the rows as they are now, so an older page appended while
             // this request was in flight is kept.
@@ -288,9 +312,9 @@ public final class TimelineViewModel: ObservableObject {
                 // drop any older-page fetch still running for the old rows.
                 startNewPages()
                 cursor = page.cursor
-                state = .loaded(Self.merging(visible(page.posts), appending: []))
+                state = .loaded(Self.merging(visible(page.posts, fetch: fetch), appending: []))
             } else {
-                state = .loaded(Self.merging(visible(page.posts), appending: latest))
+                state = .loaded(Self.merging(visible(page.posts, fetch: fetch), appending: latest))
             }
             onItemsChanged()
             return true

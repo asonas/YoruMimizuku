@@ -79,6 +79,14 @@ public final class DetailPaneModel: ObservableObject {
         )))
     }
 
+    /// Uncover or cover `post`'s labeled media, opening its conversation first
+    /// when another page is shown.
+    public func toggleMediaReveal(_ post: PostDisplay) {
+        openConversation(post)
+        guard case let .conversation(shown) = current else { return }
+        shown.model.revealsMedia.toggle()
+    }
+
     /// Open `post` on its レコード tab (投稿 > レコードを表示).
     public func openRecord(_ post: PostDisplay) {
         openConversation(post)

@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (macOS timeline post keys)
+
+- sources: apps/macos/Views/FeedView.swift, apps/macos/Views/WorkspaceCommands.swift, core/Sources/YoruMimizukuKit/PostDisplay.swift, core/Sources/YoruMimizukuKit/DetailPaneModel.swift, core/Sources/YoruMimizukuKit/PostInteractionController.swift
+- updated: [[timeline-streaming]], [[app-shell]]
+- note: f likes again (l moves to opening the post's links, at most five), r reposts (undo asks first), ⇧R quotes, s uncovers labeled media in the detail pane. Likes and reposts in flight survive refreshes and ignore repeat toggles. Windows lacks r/⇧R/l/s: bug note.
+
 ## 2026-11-21 ingest (Windows record and mute)
 
 - sources: apps/windows/Core/DetailPaneModel.cs, apps/windows/Core/MutedAuthors.cs, apps/windows/Core/PostService.cs, apps/windows/App/Views/RecordView.cs, apps/windows/App/Views/FeedView.xaml, apps/windows/App/MainWindow.xaml.cs

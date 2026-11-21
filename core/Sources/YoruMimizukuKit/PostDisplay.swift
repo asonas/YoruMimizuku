@@ -180,6 +180,24 @@ public struct PostDisplay: Identifiable, Equatable, Sendable {
         bodySegments.first { $0.kind == .link }?.url
     }
 
+    /// The web links in this post, in reading order: the body's links, then the
+    /// link card. Each URL appears once.
+    public var webLinks: [URL] {
+        let candidates = bodySegments.filter { $0.kind == .link }.compactMap(\.url) + [linkCard?.url].compactMap { $0 }
+        var seen: Set<String> = []
+        return candidates.filter { $0.isWebLink && seen.insert($0.absoluteString).inserted }
+    }
+
+    /// At most this many links open at once, so a post stuffed with links cannot
+    /// flood the browser.
+    public static let linkOpenLimit = 5
+
+    /// The links the open-links action opens.
+    public var linksToOpen: [URL] { Array(webLinks.prefix(Self.linkOpenLimit)) }
+
+    /// Whether the post carries images or a video.
+    public var hasMedia: Bool { !images.isEmpty || video != nil }
+
     /// Whether the viewer has liked this post.
     public var isLiked: Bool { viewerLikeURI != nil }
     /// Whether the viewer has reposted this post.

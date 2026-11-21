@@ -146,4 +146,32 @@ final class DetailPaneModelTests: XCTestCase {
 
         XCTAssertEqual(pane.tab, .thread)
     }
+
+    private func revealsMedia(_ pane: DetailPaneModel) -> Bool? {
+        if case let .conversation(tab) = pane.current { return tab.model.revealsMedia }
+        return nil
+    }
+
+    /// Revealing a post's media from the timeline shows that post with its media
+    /// uncovered, even while another page is open.
+    func testRevealingMediaOpensThePostWithItsMediaShown() async {
+        let pane = makePane()
+        pane.openConversation(post("at://a/1"))
+
+        pane.toggleMediaReveal(post("at://a/2"))
+
+        XCTAssertEqual(anchorID(of: pane.current), "at://a/2")
+        XCTAssertEqual(revealsMedia(pane), true)
+    }
+
+    func testRevealingTheShownPostsMediaAgainCoversIt() async {
+        let pane = makePane()
+        pane.openConversation(post("at://a/1"))
+
+        pane.toggleMediaReveal(post("at://a/1"))
+        pane.toggleMediaReveal(post("at://a/1"))
+
+        XCTAssertEqual(anchorID(of: pane.current), "at://a/1")
+        XCTAssertEqual(revealsMedia(pane), false)
+    }
 }

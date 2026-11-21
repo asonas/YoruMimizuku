@@ -63,6 +63,12 @@ features:
     windows: full
     ios: full
     android: planned
+  - name: Timeline keys for repost, quote, links and labeled media (r, ⇧R, l, s)
+    macos: full
+    windows: none
+    ios: planned
+    android: planned
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows binds only j/k/n/f/o). iPadOS keeps the earlier keys ([[windows]], [[ipados]])."
   - name: Copy post permalink
     macos: full
     windows: full
@@ -152,7 +158,18 @@ Custom feed / search / author / notifications are server-computed or target non-
 
 ## Keyboard actions and permalinks
 
-The feed acts on the *focused* post — the row that `j` / `k` navigation currently sits on. Pressing **f** toggles the like on the focused post (through the same optimistic `TimelineViewModel.toggleLike` used by the action bar), and **o** opens it in the default browser; both are no-ops when no post is focused. The conversation view used to bind the same `f` / `o` shortcuts to its anchor post (`0010-timeline-ux-enhancements.md` §5.3). On macOS the conversation now sits in the detail pane next to the timeline, so those keys belong to the timeline column only and act on its focused row; the conversation's anchor is liked or opened through its action bar and context menu (`docs/adr/0026-macos-three-pane.md`).
+The feed acts on the *focused* post — the row that `j` / `k` navigation currently sits on. Pressing **f** toggles the like on the focused post (through the same optimistic `TimelineViewModel.toggleLike` used by the action bar), and **o** opens it in the default browser; both are no-ops when no post is focused.
+
+On macOS the timeline column also binds (2026-11-21):
+
+- **r** reposts the focused post. On a post already reposted it asks 「リポストを取り消しますか？」 first, and does nothing while the repost is still being sent; 投稿 > リポスト (⇧⌘R) goes through the same path. Undoing a like with f does not ask.
+- **⇧R** opens the quote composer for it.
+- **l** opens the post's web links in the default browser: the body's link facets, then the link card, each URL once, mentions and hashtags left out. At most five open (`PostDisplay.linkOpenLimit`); a toast says when more were skipped or when the post has none (`PostDisplay.webLinks` / `linksToOpen`).
+- **s** uncovers the focused post's labeled media in the detail pane, opening its conversation if another page is shown, and covers it again on a second press (`DetailPaneModel.toggleMediaReveal`, `ThreadViewModel.revealsMedia`). Posts without labeled media ignore it. Bluesky has no standard spoiler label, so only adult and graphic media labels are covered.
+
+The 投稿 menu titles name these keys. While the image lightbox is open, neither the keys nor the 投稿 menu act on the timeline (`apps/macos/Views/FeedView.swift`, `apps/macos/Views/WorkspaceCommands.swift`). The conversation view used to bind the same `f` / `o` shortcuts to its anchor post (`0010-timeline-ux-enhancements.md` §5.3). On macOS the conversation now sits in the detail pane next to the timeline, so those keys belong to the timeline column only and act on its focused row; the conversation's anchor is liked or opened through its action bar and context menu (`docs/adr/0026-macos-three-pane.md`).
+
+While a like or repost is being sent, the Swift core (macOS and iPadOS) ignores another toggle of the same kind on that post, and a refresh or thread reload whose copy may predate the change (it is still being sent, or the fetch started before it succeeded) shows the viewer's change on top. If the request fails, only that change is undone on the post as it is by then, so counts from a refresh in between are kept, a like or repost a newer copy already shows stays, and the result of an earlier successful request is not lost (`PendingInteractions` in `core/Sources/YoruMimizukuKit/PostInteractionController.swift`, 2026-11-21). The Windows `PostItem` handles requests in flight in its own way ([[windows]]).
 
 Every interactive post row also carries a copy-link action: a `link` icon in the action bar copies the post's public permalink to the clipboard. The permalink is `https://bsky.app/profile/{handle-or-did}/post/{rkey}`, assembled by the pure, unit-tested `PostPermalink.url(for:)` helper in `YoruMimizukuKit` (backed by `ATURI.repo` / `ATURI.rkey` in `BlueskyCore`); it prefers the author handle and falls back to the author DID when the handle is empty or the sentinel `handle.invalid`. The icon appears only on interactive rows, so the non-interactive ancestor rows in the conversation view do not show it (`0010-timeline-ux-enhancements.md` §5.4).
 

@@ -132,4 +132,43 @@ final class PostDisplayTests: XCTestCase {
         XCTAssertTrue(samples.allSatisfy { $0.createdAt <= now })
         XCTAssertEqual(samples, samples.sorted { $0.createdAt > $1.createdAt })
     }
+
+    // MARK: - Links the l key opens
+
+    private func linkPost(_ urls: [String], kinds: [RichTextSegment.Kind]? = nil, card: String? = nil) -> PostDisplay {
+        let segments = urls.enumerated().map { index, url in
+            RichTextSegment(id: index, kind: kinds?[index] ?? .link, text: url, url: URL(string: url))
+        }
+        return PostDisplay(
+            id: "at://a/1", authorDisplayName: "a", authorHandle: "a",
+            body: urls.joined(separator: " "), bodySegments: segments, createdAt: Date(),
+            linkCard: card.map { LinkCard(url: URL(string: $0)!, title: "t", description: "d") }
+        )
+    }
+
+    func test_webLinks_listsBodyLinksThenTheLinkCard() {
+        let post = linkPost(["https://a.example/", "https://b.example/"], card: "https://c.example/")
+        XCTAssertEqual(post.webLinks.map(\.absoluteString),
+                       ["https://a.example/", "https://b.example/", "https://c.example/"])
+    }
+
+    func test_webLinks_listsEachURLOnce() {
+        let post = linkPost(["https://a.example/", "https://a.example/"], card: "https://a.example/")
+        XCTAssertEqual(post.webLinks.map(\.absoluteString), ["https://a.example/"])
+    }
+
+    func test_webLinks_leavesOutMentionsTagsAndNonWebSchemes() {
+        let post = linkPost(
+            ["https://bsky.app/profile/did:plc:x", "https://bsky.app/hashtag/x", "file:///etc/passwd", "https://a.example/"],
+            kinds: [.mention, .tag, .link, .link]
+        )
+        XCTAssertEqual(post.webLinks.map(\.absoluteString), ["https://a.example/"])
+    }
+
+    func test_linksToOpen_stopsAtTheLimit() {
+        let urls = (1...7).map { "https://\($0).example/" }
+        let post = linkPost(urls)
+        XCTAssertEqual(PostDisplay.linkOpenLimit, 5)
+        XCTAssertEqual(post.linksToOpen.map(\.absoluteString), Array(urls.prefix(5)))
+    }
 }

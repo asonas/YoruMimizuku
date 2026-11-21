@@ -49,6 +49,9 @@ public final class ThreadViewModel: ObservableObject {
     /// and reposts act on the loaded thread.
     @Published public private(set) var preview: PostDisplay?
 
+    /// Whether the reader uncovered the anchor's labeled media.
+    @Published public var revealsMedia = false
+
     public let uri: String
     private let loader: ThreadLoading
     private let interactor: PostInteracting?
@@ -90,6 +93,7 @@ public final class ThreadViewModel: ObservableObject {
         guard let interactor else { return nil }
         return PostInteractionController(
             interactor: interactor,
+            pending: pending,
             currentPost: { [weak self] id in self?.post(id: id) },
             writePost: { [weak self] post in self?.write(post) }
         )
@@ -116,9 +120,11 @@ public final class ThreadViewModel: ObservableObject {
         let generation = loadGeneration
         state = .loading
         do {
+            let fetch = pending.fetchStarted()
+            defer { pending.fetchFinished(fetch) }
             let thread = try await loader.loadThread(uri: uri)
             guard generation == loadGeneration else { return }
-            state = .loaded(thread)
+            state = .loaded(ConversationThread(focus: pending.applied(to: thread.focus, fetch: fetch), replies: thread.replies))
         } catch {
             SessionExpiry.reportIfExpired(error)
             guard generation == loadGeneration else { return }
@@ -131,4 +137,5 @@ public final class ThreadViewModel: ObservableObject {
     }
 
     private var loadGeneration = 0
+    private let pending = PendingInteractions()
 }

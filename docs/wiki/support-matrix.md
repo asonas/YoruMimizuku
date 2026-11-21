@@ -97,6 +97,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 | Jetstream live updates (home / list) | × | × | × | − |
 | Rich text + image grid / lightbox rendering | ○ | ○ | ○ | − |
 | Keyboard navigation & post actions (j/k, n, f, o) | ○ | ○ | ○ | − |
+| Timeline keys for repost, quote, links and labeled media (r, ⇧R, l, s) | ○ | × | − | − |
 | Copy post permalink | ○ | ○ | ○ | − |
 | Delete own post | ○ | ○ | ○ | − |
 | Load error states (offline / 429 / 5xx) with retry | ○ | ○ | ○ | − |
@@ -134,6 +135,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit for macOS and iPadOS (PostRowView singleImage, tallCropHint overlay) and are ported to the Windows C# core (Core/TimelineLayout.cs), which FeedView uses with the image aspect ratio carried in PostImageDto ([[windows]], [[ipados]]).
 - **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow follows the width the row's content region gets: macOS decides inside the row's layout pass, iPadOS from TimelineListView's scene width, and Windows from the row grid's SizeChanged in FeedView ([[windows]], [[ipados]]).
 - **Jetstream live updates (home / list)** ([[timeline-streaming]]): Designed in the v1 spec but deferred by decision on 2026-06-11 (`0002-overall-design.md` §14): interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]]).
+- **Timeline keys for repost, quote, links and labeled media (r, ⇧R, l, s)** ([[timeline-streaming]]): bug: https://github.com/asonas/YoruMimizuku/issues/39 (Windows binds only j/k/n/f/o). iPadOS keeps the earlier keys ([[windows]], [[ipados]]).
 - **Delete own post** ([[timeline-streaming]]): macOS, iPadOS, and Windows offer a 「削除」 action on the viewer's own rows (post AT-URI repo DID == account DID), confirm, then prune the row (Windows via IAccountClient.DeletePostAsync; restores on failure). iPadOS uses a SwiftUI confirmationDialog ([[windows]], [[ipados]]).
 - **Load error states (offline / 429 / 5xx) with retry** ([[timeline-streaming]]): macOS, iPadOS, and Windows classify a failed first load into offline / rate-limited / server / unknown and show a titled message with a 「再試行」 button. Windows carries its core's LoadFailure on CoreException (kind/title/message) ([[windows]], [[ipados]]).
 - **External link preview cards (OGP)** ([[timeline-streaming]]): macOS, iPadOS, and Windows render app.bsky.embed.external cards and fall back to a client-side OGP fetch for bare links (Windows via ICoreClient.OgpLoadAsync; iPadOS via the ported LinkCardView + LazyLinkCardView) ([[windows]], [[ipados]]).

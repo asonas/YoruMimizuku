@@ -31,6 +31,7 @@ final class TimelineViewModelTests: XCTestCase {
         private(set) var likeCalls = 0
         private(set) var removeLikeCalls = 0
         private(set) var repostCalls = 0
+        private(set) var removeRepostCalls = 0
         private(set) var deletePostCalls = 0
         private(set) var lastLikeUri: String?
         private(set) var lastLikeCid: String?
@@ -50,6 +51,7 @@ final class TimelineViewModelTests: XCTestCase {
             return try repostResult.get()
         }
         func removeRepost(recordURI: String) async throws {
+            removeRepostCalls += 1
             if removeShouldFail { throw StubError() }
         }
         func deletePost(uri: String) async throws {
@@ -123,6 +125,219 @@ final class TimelineViewModelTests: XCTestCase {
         XCTAssertEqual(vm.posts[0].repostCount, 1)
         XCTAssertEqual(vm.posts[0].viewerRepostURI, "at://me/app.bsky.feed.repost/new")
         XCTAssertEqual(interactor.repostCalls, 1)
+    }
+
+    /// An interactor whose like and repost requests wait until the test answers
+    /// them, so a test can act while one is being sent.
+    private final class GatedInteractor: PostInteracting, @unchecked Sendable {
+        private let lock = NSLock()
+        private var waiting: [CheckedContinuation<String, Error>] = []
+        private var calls: [String] = []
+
+        var pendingCount: Int { lock.withLock { waiting.count } }
+        var callLog: [String] { lock.withLock { calls } }
+
+        private func hold(_ call: String) async throws -> String {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.withLock {
+                    calls.append(call)
+                    waiting.append(continuation)
+                }
+            }
+        }
+
+        func answer(with result: Result<String, Error>) {
+            let continuation = lock.withLock { waiting.isEmpty ? nil : waiting.removeFirst() }
+            continuation?.resume(with: result)
+        }
+
+        func like(uri: String, cid: String) async throws -> String { try await hold("like") }
+        func removeLike(recordURI: String) async throws { lock.withLock { calls.append("removeLike") } }
+        func repost(uri: String, cid: String) async throws -> String { try await hold("repost") }
+        func removeRepost(recordURI: String) async throws { lock.withLock { calls.append("removeRepost") } }
+        func deletePost(uri: String) async throws {}
+    }
+
+    /// Pressing repost again while the first repost is being sent must neither
+    /// send a second one nor try to delete a record that does not exist yet.
+    func testRepostingAgainWhileARepostIsBeingSentDoesNothing() async throws {
+        let interactor = GatedInteractor()
+        let post = sample(id: "p1")
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+
+        let first = Task { await vm.toggleRepost(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        await vm.toggleRepost(vm.posts[0])
+        interactor.answer(with: .success("at://me/app.bsky.feed.repost/new"))
+        await first.value
+
+        XCTAssertEqual(interactor.callLog, ["repost"])
+        XCTAssertEqual(vm.posts[0].viewerRepostURI, "at://me/app.bsky.feed.repost/new")
+        XCTAssertEqual(vm.posts[0].repostCount, 1)
+    }
+
+    /// A refresh that lands while a like is being sent carries the server's copy
+    /// from before the like; the row must stay liked.
+    func testARefreshWhileALikeIsBeingSentKeepsThePostLiked() async throws {
+        let interactor = GatedInteractor()
+        let post = sample(id: "p1", likeCount: 3)
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [post], cursor: nil)),
+            .success(TimelinePage(posts: [sample(id: "p1", likeCount: 3)], cursor: nil))
+        ])
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        await vm.load()
+
+        let like = Task { await vm.toggleLike(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        await vm.refresh()
+
+        XCTAssertTrue(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+
+        interactor.answer(with: .success("at://me/app.bsky.feed.like/new"))
+        await like.value
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/new")
+    }
+
+    /// A like that fails after a refresh undoes only the like, keeping the
+    /// refreshed counts rather than the copy from before the like.
+    func testALikeThatFailsAfterARefreshKeepsTheRefreshedCounts() async throws {
+        let interactor = GatedInteractor()
+        let post = sample(id: "p1", likeCount: 3)
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [post], cursor: nil)),
+            .success(TimelinePage(posts: [sample(id: "p1", likeCount: 10)], cursor: nil))
+        ])
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        await vm.load()
+
+        let like = Task { await vm.toggleLike(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        await vm.refresh()
+        interactor.answer(with: .failure(StubError()))
+        await like.value
+
+        XCTAssertFalse(vm.posts[0].isLiked)
+        XCTAssertEqual(vm.posts[0].likeCount, 10)
+    }
+
+    /// A refresh that started before a like succeeded and returns after it still
+    /// carries the copy from before the like; the row must stay liked.
+    func testARefreshThatStartedBeforeALikeSucceededKeepsThePostLiked() async throws {
+        let interactor = GatedInteractor()
+        let loader = GatedLoader()
+        let post = sample(id: "p1", likeCount: 3)
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        let load = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [post], cursor: nil)))
+        await load.value
+
+        let like = Task { await vm.toggleLike(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        let refresh = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        interactor.answer(with: .success("at://me/app.bsky.feed.like/new"))
+        await like.value
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "p1", likeCount: 3)], cursor: nil)))
+        await refresh.value
+
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/new")
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+    }
+
+    /// The undo confirmation holds the post as it was when asked; if a refresh
+    /// removed the repost meanwhile, confirming sends nothing.
+    func testUndoingARepostThatIsAlreadyGoneDoesNothing() async {
+        let interactor = FakeInteractor()
+        let post = sample(id: "p1")
+        let vm = TimelineViewModel(loader: StubLoader(result: .success([post])), interactor: interactor)
+        await vm.load()
+        var asked = post
+        asked.viewerRepostURI = "at://me/app.bsky.feed.repost/old"
+
+        await vm.setRepost(asked, on: false)
+
+        XCTAssertFalse(vm.posts[0].isReposted)
+        XCTAssertEqual(interactor.repostCalls, 0)
+        XCTAssertEqual(interactor.removeRepostCalls, 0)
+    }
+
+    /// An older-page fetch that finishes first must not make a head refresh
+    /// that started before the like forget it.
+    func testAnOlderPageFinishingFirstDoesNotDropALikeAnEarlierRefreshMisses() async throws {
+        let interactor = GatedInteractor()
+        let loader = GatedLoader()
+        let post = sample(id: "p1", likeCount: 3)
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        let load = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [post], cursor: "c1")))
+        await load.value
+
+        let refresh = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        let like = Task { await vm.toggleLike(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        interactor.answer(with: .success("at://me/app.bsky.feed.like/new"))
+        await like.value
+        let older = Task { await vm.loadMore() }
+        try await waitUntil { loader.pendingCount == 2 }
+        loader.release(cursor: "c1", with: .success(TimelinePage(posts: [sample(id: "p1", likeCount: 4, viewerLikeURI: "at://me/app.bsky.feed.like/new")], cursor: nil)))
+        await older.value
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "p1", likeCount: 3)], cursor: "c1")))
+        await refresh.value
+
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/new")
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+    }
+
+    /// A like that succeeded, then an unlike the server rejected: a fetch that
+    /// started before both still shows the post liked.
+    func testARejectedUnlikeKeepsTheLikeBeforeIt() async throws {
+        let interactor = FakeInteractor()
+        interactor.removeShouldFail = true
+        let loader = GatedLoader()
+        let post = sample(id: "p1", likeCount: 3)
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        let load = Task { await vm.load() }
+        try await waitUntil { loader.pendingCount == 1 }
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [post], cursor: nil)))
+        await load.value
+
+        let refresh = Task { await vm.refresh() }
+        try await waitUntil { loader.pendingCount == 1 }
+        await vm.toggleLike(post)
+        await vm.toggleLike(vm.posts[0])
+        loader.release(cursor: nil, with: .success(TimelinePage(posts: [sample(id: "p1", likeCount: 3)], cursor: nil)))
+        await refresh.value
+
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/new")
+        XCTAssertEqual(vm.posts[0].likeCount, 4)
+    }
+
+    /// A refresh that shows the post already liked (from another device) keeps
+    /// that like when this device's like is rejected.
+    func testARejectedLikeKeepsALikeTheServerAlreadyShows() async throws {
+        let interactor = GatedInteractor()
+        let post = sample(id: "p1", likeCount: 3)
+        let loader = StubLoader(pages: [
+            .success(TimelinePage(posts: [post], cursor: nil)),
+            .success(TimelinePage(posts: [sample(id: "p1", likeCount: 10, viewerLikeURI: "at://me/app.bsky.feed.like/other")], cursor: nil))
+        ])
+        let vm = TimelineViewModel(loader: loader, interactor: interactor)
+        await vm.load()
+
+        let like = Task { await vm.toggleLike(post) }
+        try await waitUntil { interactor.pendingCount == 1 }
+        await vm.refresh()
+        interactor.answer(with: .failure(StubError()))
+        await like.value
+
+        XCTAssertEqual(vm.posts[0].viewerLikeURI, "at://me/app.bsky.feed.like/other")
+        XCTAssertEqual(vm.posts[0].likeCount, 10)
     }
 
     func testDeletePostRemovesRowAndCallsInteractor() async {

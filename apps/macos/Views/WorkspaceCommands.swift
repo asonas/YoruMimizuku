@@ -41,12 +41,12 @@ struct WorkspaceCommands: Commands {
             Group {
                 Button("返信") { post?.reply() }
                     .keyboardShortcut(.return, modifiers: .command)
-                Button(post?.isReposted == true ? "リポストを取り消す" : "リポスト") { post?.repost() }
-                    .keyboardShortcut("r", modifiers: [.command, .shift])
-                Button("引用して投稿") { post?.quote() }
-                // Like is the plain L key in the timeline, as in the prototype; a
+                // The timeline's plain keys (R, ⇧R, F) are named in the titles: a
                 // plain-key menu equivalent would also fire while typing.
-                Button(post?.isLiked == true ? "いいねを取り消す（L）" : "いいね（L）") { post?.like() }
+                Button(post?.isReposted == true ? "リポストを取り消す（R）" : "リポスト（R）") { post?.repost() }
+                    .keyboardShortcut("r", modifiers: [.command, .shift])
+                Button("引用して投稿（⇧R）") { post?.quote() }
+                Button(post?.isLiked == true ? "いいねを取り消す（F）" : "いいね（F）") { post?.like() }
                 Divider()
                 Button("リンクをコピー") { post?.copyLink() }
                     .keyboardShortcut("c", modifiers: [.command, .shift])

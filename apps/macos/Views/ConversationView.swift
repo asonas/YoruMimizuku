@@ -22,8 +22,6 @@ struct ConversationView: View {
 
     /// Replies whose subtree the reader folded.
     @State private var folded: Set<String> = []
-    /// Whether the reader revealed the anchor's labeled media.
-    @State private var revealMedia = false
 
     private static let timeFormatter = RelativeTimeFormatter(style: .japanese)
 
@@ -187,7 +185,7 @@ struct ConversationView: View {
             if let warning = post.mediaWarning, post.hasMedia {
                 contentWarning(warning)
             }
-            if post.mediaWarning == nil || revealMedia {
+            if post.mediaWarning == nil || model.revealsMedia {
                 media(post)
             }
             if let card = post.linkCard {
@@ -210,7 +208,7 @@ struct ConversationView: View {
             Text(warning == .graphic ? "閲覧注意（過激なメディア）" : "閲覧注意（センシティブ）")
                 .font(.appSize(12.5, weight: .bold))
             Spacer(minLength: 0)
-            Button(revealMedia ? "隠す" : "表示する") { revealMedia.toggle() }
+            Button(model.revealsMedia ? "隠す" : "表示する") { model.revealsMedia.toggle() }
         }
         .foregroundStyle(theme.warn)
         .padding(.horizontal, 12)
@@ -472,6 +470,3 @@ struct ConversationView: View {
     }
 }
 
-private extension PostDisplay {
-    var hasMedia: Bool { !images.isEmpty || video != nil }
-}

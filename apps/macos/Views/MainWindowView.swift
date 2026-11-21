@@ -260,7 +260,9 @@ struct MainWindowView: View {
                 onOpenQuote: { openQuotedPost($0) },
                 currentDID: accountDID,
                 onMute: { mute($0) },
-                onOpenRecord: { detailPane.openRecord($0) }
+                onOpenRecord: { detailPane.openRecord($0) },
+                onRevealMedia: { detailPane.toggleMediaReveal($0) },
+                registersKeyboardShortcuts: lightbox == nil
             )
         case .notifications:
             NotificationsView(
@@ -288,7 +290,9 @@ struct MainWindowView: View {
                     onOpenQuote: { openQuotedPost($0) },
                     currentDID: accountDID,
                     onMute: { mute($0) },
-                    onOpenRecord: { detailPane.openRecord($0) }
+                    onOpenRecord: { detailPane.openRecord($0) },
+                    onRevealMedia: { detailPane.toggleMediaReveal($0) },
+                    registersKeyboardShortcuts: lightbox == nil
                 )
                 // Key identity on the query so editing it rebuilds the feed (and
                 // restarts its load/poll task); a relabel keeps the same identity.
@@ -310,6 +314,8 @@ struct MainWindowView: View {
                     currentDID: accountDID,
                     onMute: { mute($0) },
                     onOpenRecord: { detailPane.openRecord($0) },
+                    onRevealMedia: { detailPane.toggleMediaReveal($0) },
+                    registersKeyboardShortcuts: lightbox == nil,
                     headerAccessory: AnyView(SavedFeedInfoButton(source: source))
                 )
                 .id(id)
@@ -330,6 +336,8 @@ struct MainWindowView: View {
                     currentDID: accountDID,
                     onMute: { mute($0) },
                     onOpenRecord: { detailPane.openRecord($0) },
+                    onRevealMedia: { detailPane.toggleMediaReveal($0) },
+                    registersKeyboardShortcuts: lightbox == nil,
                     headerAccessory: AnyView(
                         Button("フィルターとして保存") { workspace.saveSearchAsFilter() }
                             .buttonStyle(.borderless)
