@@ -9,7 +9,7 @@ namespace YoruMimizuku.App.Interop;
 
 /// <summary>
 /// The account-free <see cref="ICoreClient"/> operations over the C# core, returning the
-/// bridge's DTOs, for the C# <see cref="ICoreClient"/> to call once accounts move to C#.
+/// app's DTOs, for <see cref="CoreClient"/> to call.
 /// </summary>
 public static class CoreOperations
 {

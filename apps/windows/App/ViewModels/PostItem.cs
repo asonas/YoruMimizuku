@@ -10,7 +10,7 @@ using YoruMimizuku.App.Mvvm;
 namespace YoruMimizuku.App.ViewModels;
 
 /// <summary>
-/// Observable view model for one timeline/thread row. Wraps a bridge
+/// Observable view model for one timeline/thread row. Wraps a
 /// <see cref="PostDisplayDto"/> and applies optimistic like/repost state in place
 /// (mirroring PostDisplay.applyOptimistic* in YoruMimizukuKit) before the network
 /// round-trip confirms it.

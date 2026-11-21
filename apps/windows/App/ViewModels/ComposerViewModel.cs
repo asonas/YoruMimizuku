@@ -8,7 +8,7 @@ using YoruMimizuku.App.Mvvm;
 
 namespace YoruMimizuku.App.ViewModels;
 
-/// <summary>One pending image attachment (raw bytes base64-encoded for the bridge).</summary>
+/// <summary>One pending image attachment (raw bytes base64-encoded for the core).</summary>
 public sealed class ComposeImageItem
 {
     public byte[] Data { get; init; } = Array.Empty<byte>();
@@ -18,7 +18,7 @@ public sealed class ComposeImageItem
 
 /// <summary>
 /// Mirrors the Swift ComposerViewModel: text with a 300-grapheme limit, up to 4
-/// images, optional reply parent and quote, and submit via the bridge.
+/// images, optional reply parent and quote, and submit via the core.
 /// </summary>
 public sealed class ComposerViewModel : ObservableObject
 {

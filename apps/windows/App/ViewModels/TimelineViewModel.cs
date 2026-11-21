@@ -176,7 +176,7 @@ public sealed class TimelineViewModel : ObservableObject
     }
 
     /// Optimistically remove the viewer's own post, then delete it through the
-    /// bridge; restore the row at its original position if the delete fails.
+    /// core; restore the row at its original position if the delete fails.
     /// Mirrors the macOS TimelineViewModel.deletePost.
     public async Task DeletePostAsync(string id)
     {
