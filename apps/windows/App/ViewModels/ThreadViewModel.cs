@@ -7,12 +7,15 @@ using YoruMimizuku.App.Mvvm;
 namespace YoruMimizuku.App.ViewModels;
 
 /// <summary>
-/// Loads a single post's thread. <see cref="Anchor"/> can be re-pointed at an
-/// ancestor and reloaded, matching the macOS conversation re-anchor behaviour.
+/// Loads a single post's thread. Re-anchoring on another post opens that post as
+/// a new page in the detail pane, so this model's anchor never changes.
 /// </summary>
 public sealed class ThreadViewModel : ObservableObject
 {
-    public string Anchor { get; private set; }
+    public string Anchor { get; }
+
+    /// <summary>The account the thread is read and replied to as.</summary>
+    public IAccountClient Account { get; }
 
     private PostItem? _focused;
     public PostItem? Focused { get => _focused; private set => SetProperty(ref _focused, value); }
@@ -27,9 +30,7 @@ public sealed class ThreadViewModel : ObservableObject
     private string? _errorMessage;
     public string? ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
 
-    private readonly IAccountClient _account;
-
-    public ThreadViewModel(IAccountClient account, string anchor) { _account = account; Anchor = anchor; }
+    public ThreadViewModel(IAccountClient account, string anchor) { Account = account; Anchor = anchor; }
 
     public async Task LoadAsync()
     {
@@ -37,18 +38,11 @@ public sealed class ThreadViewModel : ObservableObject
         ErrorMessage = null;
         try
         {
-            var thread = await _account.ThreadLoadAsync(Anchor);
-            Focused = new PostItem(thread.Focus, _account);
+            var thread = await Account.ThreadLoadAsync(Anchor);
+            Focused = new PostItem(thread.Focus, Account);
             ReplyTree = thread.Replies;
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }
         finally { IsLoading = false; }
-    }
-
-    public async Task ReanchorAsync(string uri)
-    {
-        Anchor = uri;
-        OnPropertyChanged(nameof(Anchor));
-        await LoadAsync();
     }
 }

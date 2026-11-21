@@ -41,13 +41,22 @@ public sealed partial class FeedView : UserControl
     public async Task LoadAsync()
     {
         await Vm.LoadAsync();
-        _refreshTimer.Start();
+        _hasLoaded = true;
+        if (IsLoaded) _refreshTimer.Start();
     }
+
+    // Polls only while on screen. An author page shown again from the detail pane's
+    // history polls again; RefreshAsync merges fresh posts on top of the rows read.
+    private bool _hasLoaded;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _scrollViewer = FindScrollViewer(PostsList);
-        if (_scrollViewer is not null) _scrollViewer.ViewChanged += OnViewChanged;
+        if (_scrollViewer is null)
+        {
+            _scrollViewer = FindScrollViewer(PostsList);
+            if (_scrollViewer is not null) _scrollViewer.ViewChanged += OnViewChanged;
+        }
+        if (_hasLoaded) _refreshTimer.Start();
     }
 
     // -- Rich text + images per realized row --
@@ -93,7 +102,7 @@ public sealed partial class FeedView : UserControl
                     break;
                 case "mention" when TryUri(seg.Url, out var profileUri)
                                     && Core.RichText.MentionDid(profileUri) is { Length: > 0 } actor:
-                    // Opens the mentioned account in an author tab, as on macOS.
+                    // Opens the mentioned account in the detail pane, as on macOS.
                     var mentionLink = new Hyperlink();
                     mentionLink.Inlines.Add(new Run { Text = seg.Text });
                     var handle = seg.Text.TrimStart('@');
@@ -480,7 +489,7 @@ public sealed partial class FeedView : UserControl
         border.Tapped += (_, e) =>
         {
             e.Handled = true;
-            _workspace.OpenConversation(quote.Id, quote.AuthorDisplayName, quote.Body);
+            _workspace.OpenConversation(quote.Id, quote.AuthorDisplayName);
         };
         ToolTipService.SetToolTip(border, "@" + quote.AuthorHandle + " の会話を開く");
         return border;
@@ -653,11 +662,13 @@ public sealed partial class FeedView : UserControl
         if (sender is MenuFlyoutItem { Tag: PostItem item }) await OpenQuoteComposer(item);
     }
 
-    private async void OnReplyClick(object sender, RoutedEventArgs e)
+    /// The reply count opens the conversation in the detail pane, where the reply
+    /// button is.
+    private void OnReplyClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: PostItem item })
         {
-            await OpenReplyComposer(item);
+            _workspace.OpenConversation(item.Id, item.AuthorDisplayName);
         }
     }
 
@@ -682,7 +693,7 @@ public sealed partial class FeedView : UserControl
     {
         if (sender is FrameworkElement { Tag: PostItem { ReplyParent: { } parent } })
         {
-            _workspace.OpenConversation(parent.Id, parent.AuthorDisplayName, parent.Body);
+            _workspace.OpenConversation(parent.Id, parent.AuthorDisplayName);
         }
     }
 
@@ -695,7 +706,7 @@ public sealed partial class FeedView : UserControl
         if (Lightbox.Visibility == Visibility.Visible) return;
         if (e.ClickedItem is PostItem item)
         {
-            _workspace.OpenConversation(item.Id, item.AuthorDisplayName, item.Body);
+            _workspace.OpenConversation(item.Id, item.AuthorDisplayName);
         }
     }
 
@@ -761,13 +772,6 @@ public sealed partial class FeedView : UserControl
     private async void OpenComposer()
     {
         var dialog = new ComposerDialog(Vm.Account) { XamlRoot = XamlRoot };
-        var posted = await dialog.ShowComposeAsync();
-        if (posted) await Vm.RefreshAsync();
-    }
-
-    private async Task OpenReplyComposer(PostItem item)
-    {
-        var dialog = new ComposerDialog(Vm.Account, replyParentUri: item.Id) { XamlRoot = XamlRoot };
         var posted = await dialog.ShowComposeAsync();
         if (posted) await Vm.RefreshAsync();
     }

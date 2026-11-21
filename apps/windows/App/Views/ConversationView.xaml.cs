@@ -50,7 +50,7 @@ public sealed partial class ConversationView : UserControl
         {
             ParentAuthor.Text = parent.AuthorDisplayName;
             ParentBody.Text = parent.Body;
-            ParentButton.Tag = parent.Id;
+            ParentButton.Tag = parent;
             ParentButton.Visibility = Visibility.Visible;
         }
         else
@@ -80,13 +80,23 @@ public sealed partial class ConversationView : UserControl
         }
     }
 
-    private async void OnParentClick(object sender, RoutedEventArgs e)
+    /// Replies to the anchor as this page's account, then reloads the thread so the
+    /// reply shows up under it.
+    private async void OnFocusedReplyClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string uri })
+        if (_vm.Focused is not { } post) return;
+        var dialog = new ComposerDialog(_vm.Account, replyParentUri: post.Id) { XamlRoot = XamlRoot };
+        if (!await dialog.ShowComposeAsync()) return;
+        await LoadAsync();
+    }
+
+    /// The parent and every reply open as a new page in the detail pane, so back
+    /// returns here.
+    private void OnParentClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ReplyParentDto parent })
         {
-            await _vm.ReanchorAsync(uri);
-            Render();
-            RenderReplies();
+            _workspace.OpenConversation(parent.Id, parent.AuthorDisplayName);
         }
     }
 
@@ -94,7 +104,7 @@ public sealed partial class ConversationView : UserControl
 
     /// Render the conversation's child reply tree below the focused post,
     /// mirroring the macOS ConversationView: each reply is indented by depth,
-    /// carries a left connector line, and re-anchors the conversation when tapped.
+    /// carries a left connector line, and opens its own conversation when tapped.
     private void RenderReplies()
     {
         RepliesHost.Children.Clear();
@@ -145,19 +155,17 @@ public sealed partial class ConversationView : UserControl
             Margin = new Thickness(node.Depth * 16, 0, 0, 0),
             Padding = new Thickness(10, 4, 4, 4),
             Content = content,
-            Tag = node.Post.Id
+            Tag = node.Post
         };
         row.Click += OnReplyRowClick;
         return row;
     }
 
-    private async void OnReplyRowClick(object sender, RoutedEventArgs e)
+    private void OnReplyRowClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string uri })
+        if (sender is Button { Tag: PostDisplayDto post })
         {
-            await _vm.ReanchorAsync(uri);
-            Render();
-            RenderReplies();
+            _workspace.OpenConversation(post.Id, post.AuthorDisplayName);
         }
     }
 

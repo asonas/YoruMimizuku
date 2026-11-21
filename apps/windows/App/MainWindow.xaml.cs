@@ -70,8 +70,16 @@ public sealed partial class MainWindow : Window
             UpdateService.Shared.Shutdown();
             NotificationAlerts.Shared.Unregister();
         };
+        // The three panes need 900 DIPs, as on macOS: the sidebar's 210 plus the
+        // timeline's and the detail pane's minimum widths.
+        WindowPlacement.SetMinimumSize(this, 900, 540);
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
+        _workspace.Detail.Changed += ShowDetail;
+        // A keyboard's browser back / forward keys, beside Alt+Left / Alt+Right in
+        // the XAML (which cannot name these keys).
+        DetailBackButton.KeyboardAccelerators.Add(new KeyboardAccelerator { Key = VirtualKey.GoBack });
+        DetailForwardButton.KeyboardAccelerators.Add(new KeyboardAccelerator { Key = VirtualKey.GoForward });
         _notifications.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(NotificationsViewModel.UnreadCount)) return;
@@ -89,6 +97,8 @@ public sealed partial class MainWindow : Window
         AppSettings.Shared.NotificationSettingsChanged += OnNotificationSettingsChanged;
         App.Client.SessionExpired += OnSessionExpired;
         RootGrid.KeyDown += OnRootKeyDown;
+        // Mouse back / forward buttons reach here even when a list handled the press.
+        RootGrid.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), true);
         _ = InitializeAsync();
     }
 
@@ -181,6 +191,8 @@ public sealed partial class MainWindow : Window
         _account = account;
         _reauth = null;
         ReauthBar.IsOpen = false;
+        // Detail pages were built on the previous client, so they go with it.
+        _workspace.Detail.Close();
         _workspace.Account = account is null ? null : App.Client.ForAccount(account.Did);
         _filterStore = account is null ? null : new SavedFilterStore(account.Did);
         _workspace.LoadFilters(_filterStore?.Load() ?? Array.Empty<SavedFilterModel>());
@@ -311,6 +323,7 @@ public sealed partial class MainWindow : Window
         _account = null;
         _reauth = null;
         ReauthBar.IsOpen = false;
+        _workspace.Detail.Close();
         _workspace.Account = null;
         _accountSummaries = new();
         AccountFooter.Visibility = Visibility.Collapsed;
@@ -345,8 +358,7 @@ public sealed partial class MainWindow : Window
     private NavigationViewItem MakeNavItem(WorkspaceTab tab)
     {
         var item = new NavigationViewItem { Tag = tab, Icon = IconFor(tab.Kind) };
-        var closable = tab.Kind is WorkspaceTabKind.Conversation or WorkspaceTabKind.Filter or WorkspaceTabKind.Author;
-        if (!closable)
+        if (tab.Kind != WorkspaceTabKind.Filter)
         {
             item.Content = tab.Kind == WorkspaceTabKind.Notifications
                 ? TitleWithBadge(tab.Title, _notifications.UnreadCount)
@@ -354,35 +366,27 @@ public sealed partial class MainWindow : Window
             return item;
         }
 
-        // Title plus a hover close button for conversation / filter tabs.
+        // Title plus edit and close buttons for filter tabs.
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        if (tab.Kind == WorkspaceTabKind.Filter)
-        {
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        }
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var title = new TextBlock { Text = tab.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(title, 0);
-        var closeColumn = 1;
-        if (tab.Kind == WorkspaceTabKind.Filter)
+        var edit = new Button
         {
-            var edit = new Button
-            {
-                Content = new FontIcon { Glyph = "\uE70F", FontSize = 11 },
-                Background = null,
-                BorderThickness = new Thickness(0),
-                Padding = new Thickness(4),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            edit.Click += async (_, _) =>
-            {
-                if (tab.Filter is { } filter) await OpenFilterEditorAsync(filter);
-            };
-            Grid.SetColumn(edit, 1);
-            grid.Children.Add(edit);
-            closeColumn = 2;
-        }
+            Content = new FontIcon { Glyph = "\uE70F", FontSize = 11 },
+            Background = null,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(4),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        edit.Click += async (_, _) =>
+        {
+            if (tab.Filter is { } filter) await OpenFilterEditorAsync(filter);
+        };
+        Grid.SetColumn(edit, 1);
+        grid.Children.Add(edit);
         var close = new Button
         {
             Content = new FontIcon { Glyph = "\uE711", FontSize = 11 },
@@ -391,13 +395,8 @@ public sealed partial class MainWindow : Window
             Padding = new Thickness(4),
             VerticalAlignment = VerticalAlignment.Center
         };
-        close.Click += (_, _) =>
-        {
-            if (tab.Kind == WorkspaceTabKind.Conversation) _workspace.CloseConversation(tab.Id);
-            else if (tab.Kind == WorkspaceTabKind.Author) _workspace.CloseAuthor(tab.Id);
-            else _workspace.RemoveFilter(tab.Id);
-        };
-        Grid.SetColumn(close, closeColumn);
+        close.Click += (_, _) => _workspace.RemoveFilter(tab.Id);
+        Grid.SetColumn(close, 2);
         grid.Children.Add(title);
         grid.Children.Add(close);
         item.Content = grid;
@@ -446,8 +445,6 @@ public sealed partial class MainWindow : Window
             WorkspaceTabKind.Home => "\uE80F",            // Home
             WorkspaceTabKind.Notifications => "\uEA8F",   // Ringer
             WorkspaceTabKind.Filter => "\uE71C",          // Filter
-            WorkspaceTabKind.Conversation => "\uE8BD",    // Message
-            WorkspaceTabKind.Author => "\uE77B",          // Contact
             _ => "\uE80F"
         }
     };
@@ -458,6 +455,9 @@ public sealed partial class MainWindow : Window
         if (args.IsSettingsSelected)
         {
             _contentRequest++;
+            // Settings take the timeline and detail columns together.
+            Grid.SetColumnSpan(ContentHost, 2);
+            DetailPane.Visibility = Visibility.Collapsed;
             ContentHost.Content = new SettingsView();
             return;
         }
@@ -511,29 +511,19 @@ public sealed partial class MainWindow : Window
             case WorkspaceTabKind.Home:
                 var feed = new FeedView(TimelineViewModel.Home(account), _workspace);
                 await feed.LoadAsync();
-                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = feed;
+                if (IsCurrentContentRequest(request, tab)) ShowTimeline(feed);
                 break;
             case WorkspaceTabKind.Notifications:
                 var notifications = new NotificationsView(_workspace, _notifications);
                 await notifications.LoadAsync();
-                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = notifications;
+                if (IsCurrentContentRequest(request, tab)) ShowTimeline(notifications);
                 break;
             case WorkspaceTabKind.Filter when tab.Filter is { } filter:
                 var search = new FeedView(
                     new TimelineViewModel(account, cursor => account.SearchLoadAsync(filter.ToSearchJson(), cursor)),
                     _workspace);
                 await search.LoadAsync();
-                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = search;
-                break;
-            case WorkspaceTabKind.Conversation when tab.ConversationAnchor is { } anchor:
-                var conversation = new ConversationView(new ThreadViewModel(account, anchor), _workspace);
-                await conversation.LoadAsync();
-                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = conversation;
-                break;
-            case WorkspaceTabKind.Author when tab.Author is { } author:
-                var authorView = new AuthorView(author, account, _workspace);
-                await authorView.LoadAsync();
-                if (IsCurrentContentRequest(request, tab)) ContentHost.Content = authorView;
+                if (IsCurrentContentRequest(request, tab)) ShowTimeline(search);
                 break;
         }
     }
@@ -542,6 +532,82 @@ public sealed partial class MainWindow : Window
         request == _contentRequest &&
         ReferenceEquals(tab, _workspace.Selected) &&
         _workspace.Tabs.Contains(tab);
+
+    /// Put a loaded timeline in its column, giving the detail pane back if settings
+    /// had taken it.
+    private void ShowTimeline(UIElement timeline)
+    {
+        Grid.SetColumnSpan(ContentHost, 1);
+        DetailPane.Visibility = Visibility.Visible;
+        ContentHost.Content = timeline;
+    }
+
+    // -- Detail pane --
+
+    /// Show the detail pane's current page, building its view the first time it is
+    /// shown. A kept view comes back as it was left, and the timeline column is never
+    /// touched, so it keeps its scroll position.
+    private void ShowDetail()
+    {
+        var detail = _workspace.Detail;
+        var page = detail.Current;
+        DetailBar.Visibility = page is null ? Visibility.Collapsed : Visibility.Visible;
+        DetailEmpty.Visibility = page is null ? Visibility.Visible : Visibility.Collapsed;
+        DetailBackButton.IsEnabled = detail.CanGoBack;
+        DetailForwardButton.IsEnabled = detail.CanGoForward;
+        DetailTitle.Text = page?.Title ?? "";
+        if (page is not null && page.View is null && _workspace.Account is { } account)
+        {
+            page.View = BuildDetailView(page, account);
+        }
+        DetailHost.Content = page?.View;
+    }
+
+    private UIElement BuildDetailView(DetailPage page, IAccountClient account)
+    {
+        switch (page)
+        {
+            case ConversationPage conversation:
+                var thread = new ConversationView(new ThreadViewModel(account, conversation.AnchorUri), _workspace);
+                _ = thread.LoadAsync();
+                return thread;
+            case AuthorPage author:
+                var view = new AuthorView(author.Author, account, _workspace);
+                _ = LoadAuthorAsync(author, view);
+                return view;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(page));
+        }
+    }
+
+    /// An author opened from a mention has no name until its profile loads.
+    private async Task LoadAuthorAsync(AuthorPage page, AuthorView view)
+    {
+        await view.LoadAsync();
+        if (ReferenceEquals(_workspace.Detail.Current, page)) DetailTitle.Text = page.Title;
+    }
+
+    private void OnDetailBackClick(object sender, RoutedEventArgs e) => _workspace.Detail.GoBack();
+    private void OnDetailForwardClick(object sender, RoutedEventArgs e) => _workspace.Detail.GoForward();
+    private void OnDetailCloseClick(object sender, RoutedEventArgs e) => _workspace.Detail.Close();
+
+    /// The mouse's back / forward buttons move through the detail pane's history
+    /// from anywhere in the window, as in a browser.
+    private void OnRootPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (ShellRoot.Visibility != Visibility.Visible) return;
+        switch (e.GetCurrentPoint(RootGrid).Properties.PointerUpdateKind)
+        {
+            case PointerUpdateKind.XButton1Pressed:
+                _workspace.Detail.GoBack();
+                e.Handled = true;
+                break;
+            case PointerUpdateKind.XButton2Pressed:
+                _workspace.Detail.GoForward();
+                e.Handled = true;
+                break;
+        }
+    }
 
     private void OnRootKeyDown(object sender, KeyRoutedEventArgs e)
     {

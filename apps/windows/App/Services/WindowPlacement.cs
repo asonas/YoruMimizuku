@@ -58,6 +58,18 @@ public static class WindowPlacement
         }
     }
 
+    /// Keep the window at least <paramref name="width"/> × <paramref name="height"/>
+    /// DIPs, converted to the physical pixels the presenter takes at the window's
+    /// current DPI.
+    public static void SetMinimumSize(Window window, int width, int height)
+    {
+        if (window.AppWindow.Presenter is not Microsoft.UI.Windowing.OverlappedPresenter presenter) return;
+        var dpi = GetDpiForWindow(WinRT.Interop.WindowNative.GetWindowHandle(window));
+        var scale = dpi == 0 ? 1.0 : dpi / 96.0;
+        presenter.PreferredMinimumWidth = (int)Math.Ceiling(width * scale);
+        presenter.PreferredMinimumHeight = (int)Math.Ceiling(height * scale);
+    }
+
     /// Apply a placement previously produced by <see cref="Capture"/>. Returns
     /// false (and leaves the window untouched) for malformed input or a
     /// degenerate rect, so callers fall back to the default window size.
@@ -129,4 +141,7 @@ public static class WindowPlacement
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
 }

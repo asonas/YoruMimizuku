@@ -6,7 +6,7 @@
 
     <ScrollViewer Padding="12">
         <StackPanel Spacing="10">
-            <!-- Ancestor (reply parent), tappable to re-anchor the conversation. -->
+            <!-- Ancestor (reply parent); a click opens its conversation as a new page. -->
             <Button x:Name="ParentButton" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                     Visibility="Collapsed" Click="OnParentClick">
                 <StackPanel Spacing="2">
@@ -31,6 +31,10 @@
                     </Grid>
                     <TextBlock x:Name="FocusedBody" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="24" Margin="0,3,0,0">
+                        <Button Click="OnFocusedReplyClick" Background="Transparent"
+                                BorderThickness="0" Padding="2" ToolTipService.ToolTip="返信">
+                            <FontIcon Glyph="&#xE97A;" FontSize="13" Foreground="{ThemeResource AppTertiaryTextBrush}" />
+                        </Button>
                         <Button x:Name="LikeButton" Click="OnFocusedLikeClick" Background="Transparent"
                                 BorderThickness="0" Padding="2" ToolTipService.ToolTip="いいね">
                             <StackPanel Orientation="Horizontal" Spacing="5">
