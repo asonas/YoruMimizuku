@@ -1,7 +1,8 @@
-# Build outputs and staged native artifacts (produced by dotnet build /
-# scripts/windows/stage-bridge.ps1).
+# Build outputs (produced by dotnet build).
 bin/
 obj/
+# Staged Swift bridge DLLs from before the C# core. Nothing writes native/ now,
+# but older checkouts still have one; it is safe to delete.
 native/
 .vs/
 *.user

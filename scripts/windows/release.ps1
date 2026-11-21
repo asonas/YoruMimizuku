@@ -3,11 +3,10 @@
     Produce a distributable Windows build (framework-dependent ZIP).
 
 .DESCRIPTION
-    Publishes the WinUI app framework-dependent for win-x64 -- the .NET 8 Desktop
+    Publishes the WinUI app framework-dependent for win-x64 -- the .NET 10 Desktop
     runtime and the Windows App SDK runtime are NOT bundled -- then lays out a
     small top-level YoruMimizuku.exe launcher plus an app/ payload directory
-    (holding the app, the YoruMimizukuBridge DLL, and the Swift runtime) and zips
-    it into build/. Dropping the two bundled runtimes keeps the ZIP near ~40 MB
+    (holding the app and its C# core) and zips it into build/. Dropping the two bundled runtimes keeps the ZIP near ~40 MB
     (versus ~90 MB self-contained), small enough to upload as a Tangled tag
     artifact (which is stored as an atproto blob, ~50 MB limit on a default PDS).
 
@@ -25,9 +24,6 @@
 
 .PARAMETER Version
     Version string used in the zip name. Defaults to today's date (yyyyMMdd).
-
-.PARAMETER StageBridge
-    Rebuild + stage the Swift bridge DLL (release) first. Use after changing core/.
 
 .PARAMETER Thumbprint
     SHA1 thumbprint of an Authenticode cert in the current user's store to sign with.
@@ -50,13 +46,12 @@
 
 .EXAMPLE
     scripts\windows\release.ps1
-    scripts\windows\release.ps1 -StageBridge -Version 0.4.0
+    scripts\windows\release.ps1 -Version 0.4.0
     scripts\windows\release.ps1 -Thumbprint ABCD... -Version 0.4.0
 #>
 
 param(
     [string]$Version = (Get-Date -Format "yyyyMMdd"),
-    [switch]$StageBridge,
     [string]$Thumbprint = "",
     [string]$CertPath = "",
     [string]$CertPassword = "",
@@ -314,10 +309,10 @@ $proj = Join-Path $repoRoot "apps\windows\App\YoruMimizuku.App.csproj"
 cmd /c "taskkill /F /IM YoruMimizuku.App.exe >nul 2>&1 & exit 0" | Out-Null
 Start-Sleep -Milliseconds 500
 
-if ($StageBridge) {
-    & (Join-Path $PSScriptRoot "stage-bridge.ps1") -Configuration release
-    if ($LASTEXITCODE -ne 0) { throw "stage-bridge failed" }
-}
+$releaseRoot = Join-Path $repoRoot "apps\windows\App\bin\x64\Release"
+# dotnet publish never removes files from an earlier publish, so a checkout that
+# once published with the Swift bridge would zip its DLLs again. Start clean.
+if (Test-Path $releaseRoot) { Remove-Item $releaseRoot -Recurse -Force }
 
 Write-Host "Publishing framework-dependent $rid (Release)..."
 # -p:Platform=x64 is required: invoking the project directly otherwise defaults to
@@ -330,7 +325,6 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
 # Resolve the publish dir without hardcoding the target framework (so a TFM bump
 # like net8.0 -> net10.0 doesn't silently zip a stale build): pick the most
 # recently written bin\x64\Release\net*-windows*\<rid>\publish that has the exe.
-$releaseRoot = Join-Path $repoRoot "apps\windows\App\bin\x64\Release"
 $publishDir = Get-ChildItem $releaseRoot -Directory -Filter "net*-windows*" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTime -Descending |
     ForEach-Object { Join-Path $_.FullName "$rid\publish" } |
@@ -366,7 +360,7 @@ Build-Launcher -SourcePath $launcherSource -OutputPath $launcherExe -IconPath $l
 # Optional Authenticode signing (no-op unless a cert is provided).
 if ($Thumbprint -or $CertPath) {
     $signtool = Find-SignTool
-    $targets = @($launcherExe, (Join-Path $appDir "YoruMimizuku.App.exe"), (Join-Path $appDir "YoruMimizukuBridge.dll")) |
+    $targets = @($launcherExe) + (@("YoruMimizuku.App.exe", "YoruMimizuku.Core.dll", "YoruMimizuku.App.Interop.dll") | ForEach-Object { Join-Path $appDir $_ }) |
         Where-Object { Test-Path $_ }
     $signArgs = @("sign", "/fd", "SHA256", "/tr", "http://timestamp.digicert.com", "/td", "SHA256")
     if ($Thumbprint) { $signArgs += @("/sha1", $Thumbprint) }
