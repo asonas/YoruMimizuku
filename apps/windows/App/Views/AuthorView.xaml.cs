@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
+using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.ViewModels;
 
 namespace YoruMimizuku.App.Views;
@@ -10,12 +11,14 @@ namespace YoruMimizuku.App.Views;
 public sealed partial class AuthorView : UserControl
 {
     private readonly AuthorViewModel _vm;
+    private readonly IAccountClient _account;
     private readonly WorkspaceViewModel _workspace;
     private FeedView? _feed;
 
-    public AuthorView(AuthorViewModel vm, WorkspaceViewModel workspace)
+    public AuthorView(AuthorViewModel vm, IAccountClient account, WorkspaceViewModel workspace)
     {
         _vm = vm;
+        _account = account;
         _workspace = workspace;
         InitializeComponent();
         RenderHeader();
@@ -23,9 +26,9 @@ public sealed partial class AuthorView : UserControl
 
     public async Task LoadAsync()
     {
-        _feed = new FeedView(_vm.Feed, _workspace);
+        _feed = new FeedView(_vm.FeedFor(_account), _workspace);
         FeedHost.Content = _feed;
-        await Task.WhenAll(_vm.LoadProfileAsync(), _feed.LoadAsync());
+        await Task.WhenAll(_vm.LoadProfileAsync(_account), _feed.LoadAsync());
         RenderHeader();
     }
 

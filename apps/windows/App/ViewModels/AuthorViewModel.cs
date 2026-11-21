@@ -10,7 +10,6 @@ public sealed class AuthorViewModel : ObservableObject
     public string Handle { get; }
     public string DisplayName { get; }
     public string? AvatarUrl { get; }
-    public TimelineViewModel Feed { get; }
 
     private ProfileDto? _profile;
     public ProfileDto? Profile { get => _profile; private set => SetProperty(ref _profile, value); }
@@ -26,14 +25,19 @@ public sealed class AuthorViewModel : ObservableObject
         Handle = handle;
         DisplayName = string.IsNullOrWhiteSpace(displayName) ? handle : displayName;
         AvatarUrl = avatarUrl;
-        Feed = new TimelineViewModel(cursor => BridgeClient.Shared.AuthorFeedLoadAsync(actor, cursor));
     }
 
-    public async Task LoadProfileAsync()
+    /// <summary>The author's posts, read as <paramref name="account"/>. The tab
+    /// outlives an account switch, so the feed is built for whichever account
+    /// the window shows when the tab is displayed.</summary>
+    public TimelineViewModel FeedFor(IAccountClient account) =>
+        new(account, cursor => account.AuthorFeedLoadAsync(Actor, cursor));
+
+    public async Task LoadProfileAsync(IAccountClient account)
     {
         try
         {
-            Profile = await BridgeClient.Shared.ProfileAsync(Actor);
+            Profile = await account.ProfileAsync(Actor);
             OnPropertyChanged(nameof(HeaderName));
             OnPropertyChanged(nameof(HeaderHandle));
             OnPropertyChanged(nameof(HeaderAvatarUrl));

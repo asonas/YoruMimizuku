@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.Storage;
 using Windows.Storage.Pickers;
+using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.ViewModels;
 
 namespace YoruMimizuku.App.Views;
@@ -14,9 +15,9 @@ public sealed partial class ComposerDialog : ContentDialog
     private readonly ComposerViewModel _vm;
     private bool _posted;
 
-    public ComposerDialog(string? replyParentUri = null, (string Uri, string Cid)? quote = null, string? quotePreview = null)
+    public ComposerDialog(IAccountClient account, string? replyParentUri = null, (string Uri, string Cid)? quote = null, string? quotePreview = null)
     {
-        _vm = new ComposerViewModel(replyParentUri, quote);
+        _vm = new ComposerViewModel(account, replyParentUri, quote);
         InitializeComponent();
         if (replyParentUri is not null) Title = "返信";
         else if (quote is not null) Title = "引用投稿";

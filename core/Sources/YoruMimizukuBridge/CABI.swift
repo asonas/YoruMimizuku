@@ -12,6 +12,9 @@ import YoruMimizukuKit
 //   { "ok": false, "error": "<message>" }
 
 // MARK: Request payloads
+//
+// Account-scoped requests carry an optional `did`: present, the call acts as
+// that stored account; absent, as the store's current account.
 
 private struct InitReq: Decodable, Sendable {
     let service: String
@@ -20,20 +23,22 @@ private struct InitReq: Decodable, Sendable {
     let scope: String
 }
 private struct EmptyReq: Decodable, Sendable {}
+private struct AccountReq: Decodable, Sendable { let did: String? }
 private struct HandleReq: Decodable, Sendable { let handle: String }
 private struct LoginCompleteReq: Decodable, Sendable { let pendingId: String; let callbackUrl: String }
 private struct DidReq: Decodable, Sendable { let did: String }
-private struct CursorReq: Decodable, Sendable { let cursor: String? }
-private struct ActorFeedReq: Decodable, Sendable { let actor: String; let cursor: String? }
-private struct ActorReq: Decodable, Sendable { let actor: String }
-private struct UriReq: Decodable, Sendable { let uri: String }
-private struct SearchReq: Decodable, Sendable { let filter: SavedFilter; let cursor: String? }
-private struct LikeReq: Decodable, Sendable { let uri: String; let cid: String }
-private struct RecordReq: Decodable, Sendable { let recordUri: String }
+private struct CursorReq: Decodable, Sendable { let did: String?; let cursor: String? }
+private struct ActorFeedReq: Decodable, Sendable { let did: String?; let actor: String; let cursor: String? }
+private struct ActorReq: Decodable, Sendable { let did: String?; let actor: String }
+private struct UriReq: Decodable, Sendable { let did: String?; let uri: String }
+private struct SearchReq: Decodable, Sendable { let did: String?; let filter: SavedFilter; let cursor: String? }
+private struct LikeReq: Decodable, Sendable { let did: String?; let uri: String; let cid: String }
+private struct RecordReq: Decodable, Sendable { let did: String?; let recordUri: String }
 private struct PermalinkReq: Decodable, Sendable { let id: String; let authorHandle: String }
 private struct ImageReq: Decodable, Sendable { let dataBase64: String; let mimeType: String; let alt: String }
 private struct QuoteReq: Decodable, Sendable { let uri: String; let cid: String }
 private struct DraftReq: Decodable, Sendable {
+    let did: String?
     let text: String
     let images: [ImageReq]?
     let replyParentURI: String?
@@ -221,62 +226,66 @@ public func yoru_login_complete(_ input: UnsafePointer<CChar>?) -> UnsafeMutable
 
 @_cdecl("yoru_timeline_load")
 public func yoru_timeline_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, CursorReq.self) { try await BridgeOps.timelineLoad(cursor: $0.cursor) }
+    handleAsync(input, CursorReq.self) { try await BridgeOps.timelineLoad(did: $0.did, cursor: $0.cursor) }
 }
 
 @_cdecl("yoru_author_feed_load")
 public func yoru_author_feed_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, ActorFeedReq.self) { try await BridgeOps.authorFeedLoad(actor: $0.actor, cursor: $0.cursor) }
+    handleAsync(input, ActorFeedReq.self) {
+        try await BridgeOps.authorFeedLoad(did: $0.did, actor: $0.actor, cursor: $0.cursor)
+    }
 }
 
 @_cdecl("yoru_thread_load")
 public func yoru_thread_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, UriReq.self) { try await BridgeOps.threadLoad(uri: $0.uri) }
+    handleAsync(input, UriReq.self) { try await BridgeOps.threadLoad(did: $0.did, uri: $0.uri) }
 }
 
 @_cdecl("yoru_notifications_load")
 public func yoru_notifications_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, EmptyReq.self) { _ in try await BridgeOps.notificationsLoad() }
+    handleAsync(input, AccountReq.self) { try await BridgeOps.notificationsLoad(did: $0.did) }
 }
 
 @_cdecl("yoru_search_load")
 public func yoru_search_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, SearchReq.self) { try await BridgeOps.searchLoad(filter: $0.filter, cursor: $0.cursor) }
+    handleAsync(input, SearchReq.self) {
+        try await BridgeOps.searchLoad(did: $0.did, filter: $0.filter, cursor: $0.cursor)
+    }
 }
 
 @_cdecl("yoru_post_create")
 public func yoru_post_create(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, DraftReq.self) { req in try await BridgeOps.postCreate(req.toDraft()) }
+    handleAsync(input, DraftReq.self) { req in try await BridgeOps.postCreate(did: req.did, req.toDraft()) }
 }
 
 @_cdecl("yoru_post_like")
 public func yoru_post_like(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, LikeReq.self) { try await BridgeOps.like(uri: $0.uri, cid: $0.cid) }
+    handleAsync(input, LikeReq.self) { try await BridgeOps.like(did: $0.did, uri: $0.uri, cid: $0.cid) }
 }
 
 @_cdecl("yoru_post_unlike")
 public func yoru_post_unlike(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, RecordReq.self) {
-        try await BridgeOps.removeRecord(recordUri: $0.recordUri, collection: "app.bsky.feed.like")
+        try await BridgeOps.removeRecord(did: $0.did, recordUri: $0.recordUri, collection: "app.bsky.feed.like")
     }
 }
 
 @_cdecl("yoru_post_repost")
 public func yoru_post_repost(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, LikeReq.self) { try await BridgeOps.repost(uri: $0.uri, cid: $0.cid) }
+    handleAsync(input, LikeReq.self) { try await BridgeOps.repost(did: $0.did, uri: $0.uri, cid: $0.cid) }
 }
 
 @_cdecl("yoru_post_unrepost")
 public func yoru_post_unrepost(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, RecordReq.self) {
-        try await BridgeOps.removeRecord(recordUri: $0.recordUri, collection: "app.bsky.feed.repost")
+        try await BridgeOps.removeRecord(did: $0.did, recordUri: $0.recordUri, collection: "app.bsky.feed.repost")
     }
 }
 
 @_cdecl("yoru_post_delete")
 public func yoru_post_delete(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     handleAsync(input, UriReq.self) {
-        try await BridgeOps.removeRecord(recordUri: $0.uri, collection: "app.bsky.feed.post")
+        try await BridgeOps.removeRecord(did: $0.did, recordUri: $0.uri, collection: "app.bsky.feed.post")
     }
 }
 
@@ -289,12 +298,12 @@ public func yoru_post_permalink(_ input: UnsafePointer<CChar>?) -> UnsafeMutable
 
 @_cdecl("yoru_profile_avatar")
 public func yoru_profile_avatar(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, EmptyReq.self) { _ in try await BridgeOps.avatar() }
+    handleAsync(input, AccountReq.self) { try await BridgeOps.avatar(did: $0.did) }
 }
 
 @_cdecl("yoru_profile_load")
 public func yoru_profile_load(_ input: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
-    handleAsync(input, ActorReq.self) { try await BridgeOps.profile(actor: $0.actor) }
+    handleAsync(input, ActorReq.self) { try await BridgeOps.profile(did: $0.did, actor: $0.actor) }
 }
 
 @_cdecl("yoru_ogp_load")

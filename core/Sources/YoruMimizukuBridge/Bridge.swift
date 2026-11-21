@@ -10,6 +10,7 @@ import PlatformWindows
 enum BridgeError: Error, CustomStringConvertible {
     case notInitialized
     case noCurrentAccount
+    case unknownAccount
     case invalidIssuer
     case unknownPendingLogin
     case message(String)
@@ -18,6 +19,7 @@ enum BridgeError: Error, CustomStringConvertible {
         switch self {
         case .notInitialized: return "bridge not initialized (call yoru_init first)"
         case .noCurrentAccount: return "no current account"
+        case .unknownAccount: return "no stored account for the requested DID"
         case .invalidIssuer: return "stored account has an invalid issuer URL"
         case .unknownPendingLogin: return "unknown or expired pending login"
         case let .message(text): return text
@@ -27,8 +29,10 @@ enum BridgeError: Error, CustomStringConvertible {
 
 // MARK: - Service context (mirrors the macOS LiveServiceContext)
 
-/// Per-request plumbing: restores the current account's DPoP key, builds the
-/// DPoP-bound sender + metadata resolver, and persists tokens refreshed mid-call.
+/// Per-request plumbing: restores the account's DPoP key, builds the
+/// DPoP-bound sender + metadata resolver, and persists tokens refreshed mid-call
+/// to that same account. `did` names the account (a window's own); nil means
+/// the store's current account.
 struct BridgeServiceContext {
     let account: PersistedAccount
     let issuer: URL
@@ -39,8 +43,15 @@ struct BridgeServiceContext {
     let refreshGate: RefreshGate
     private let accountManager: AccountManager
 
-    init(accountManager: AccountManager, config: OAuthClientConfig) throws {
-        guard let account = try accountManager.current() else { throw BridgeError.noCurrentAccount }
+    init(accountManager: AccountManager, config: OAuthClientConfig, did: String?) throws {
+        let account: PersistedAccount
+        if let did {
+            guard let found = try accountManager.account(did: did) else { throw BridgeError.unknownAccount }
+            account = found
+        } else {
+            guard let current = try accountManager.current() else { throw BridgeError.noCurrentAccount }
+            account = current
+        }
         guard let issuer = URL(string: account.issuer) else { throw BridgeError.invalidIssuer }
         let key = try P256.Signing.PrivateKey(rawRepresentation: account.dpopPrivateKeyRaw)
         let http = URLSessionHTTPClient()

@@ -24,13 +24,7 @@ internal static class NativeMethods
     internal static extern IntPtr yoru_account_current([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
-    internal static extern IntPtr yoru_account_list([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
-
-    [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_account_switch([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
-
-    [DllImport(Dll, CallingConvention = Conv)]
-    internal static extern IntPtr yoru_account_remove([MarshalAs(UnmanagedType.LPUTF8Str)] string input);
 
     [DllImport(Dll, CallingConvention = Conv)]
     internal static extern IntPtr yoru_account_summaries([MarshalAs(UnmanagedType.LPUTF8Str)] string input);

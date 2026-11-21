@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
 using YoruMimizuku.App.Services;
 
@@ -35,9 +36,12 @@ public sealed class WorkspaceViewModel : ObservableObject
 {
     public ObservableCollection<WorkspaceTab> Tabs { get; } = new();
 
-    /// <summary>The signed-in account's DID, used to gate own-post-only actions
-    /// (e.g. delete). Set when the shell is entered.</summary>
-    public string? AccountDid { get; set; }
+    /// <summary>This window's account. Every account-scoped call made from this
+    /// window goes through it, so another window's switch never redirects it.
+    /// Set when the shell is entered; null while signed out.</summary>
+    public IAccountClient? Account { get; set; }
+
+    public string? AccountDid => Account?.Did;
 
     /// <summary>Raised when tabs or the selection change so the shell can rebuild
     /// the navigation pane and show the selected tab's content.</summary>

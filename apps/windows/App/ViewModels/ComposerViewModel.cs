@@ -25,6 +25,7 @@ public sealed class ComposerViewModel : ObservableObject
     public const int MaxGraphemes = 300;
     public const int MaxImages = 4;
 
+    private readonly IAccountClient _account;
     private readonly string? _replyParentUri;
     private readonly (string Uri, string Cid)? _quote;
 
@@ -52,8 +53,9 @@ public sealed class ComposerViewModel : ObservableObject
 
     public event Action<PostResultDto>? Posted;
 
-    public ComposerViewModel(string? replyParentUri = null, (string Uri, string Cid)? quote = null)
+    public ComposerViewModel(IAccountClient account, string? replyParentUri = null, (string Uri, string Cid)? quote = null)
     {
+        _account = account;
         _replyParentUri = replyParentUri;
         _quote = quote;
     }
@@ -99,7 +101,7 @@ public sealed class ComposerViewModel : ObservableObject
                 replyParentURI = _replyParentUri,
                 quote = _quote is { } q ? new { uri = q.Uri, cid = q.Cid } : null
             };
-            var result = await BridgeClient.Shared.PostCreateAsync(draft);
+            var result = await _account.PostCreateAsync(draft);
             Posted?.Invoke(result);
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }

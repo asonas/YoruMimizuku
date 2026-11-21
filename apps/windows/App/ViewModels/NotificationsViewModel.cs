@@ -23,13 +23,21 @@ public sealed class NotificationsViewModel : ObservableObject
     private string? _lastSeenTopId;
     private bool _isActive;
 
+    // The window's workspace, not a fixed account: this view model lives as long
+    // as the window, across its account switches, so it reads the window's
+    // account on each load.
+    private readonly WorkspaceViewModel _workspace;
+
+    public NotificationsViewModel(WorkspaceViewModel workspace) { _workspace = workspace; }
+
     public async Task LoadAsync()
     {
+        if (_workspace.Account is not { } account) return;
         IsLoading = true;
         ErrorMessage = null;
         try
         {
-            var groups = await BridgeClient.Shared.NotificationsLoadAsync();
+            var groups = await account.NotificationsLoadAsync();
             Items.Clear();
             foreach (var g in groups) Items.Add(g);
             OnItemsChanged();

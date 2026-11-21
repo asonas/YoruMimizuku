@@ -17,6 +17,9 @@ public sealed class TimelineViewModel : ObservableObject
 {
     private readonly Func<string?, Task<TimelinePageDto>> _loadPage;
 
+    /// <summary>The account this feed reads as and acts as (like, repost, delete, compose).</summary>
+    public IAccountClient Account { get; }
+
     public ObservableCollection<PostItem> Posts { get; } = new();
 
     private bool _isLoading;
@@ -46,13 +49,14 @@ public sealed class TimelineViewModel : ObservableObject
     private string? _cursor;
     public bool CanLoadMore => _cursor is not null;
 
-    public TimelineViewModel(Func<string?, Task<TimelinePageDto>> loadPage)
+    public TimelineViewModel(IAccountClient account, Func<string?, Task<TimelinePageDto>> loadPage)
     {
+        Account = account;
         _loadPage = loadPage;
     }
 
     /// <summary>Home timeline feed.</summary>
-    public static TimelineViewModel Home() => new(cursor => BridgeClient.Shared.TimelineLoadAsync(cursor));
+    public static TimelineViewModel Home(IAccountClient account) => new(account, cursor => account.TimelineLoadAsync(cursor));
 
     public async Task LoadAsync()
     {
@@ -62,7 +66,7 @@ public sealed class TimelineViewModel : ObservableObject
         {
             var page = await _loadPage(null);
             Posts.Clear();
-            foreach (var dto in page.Posts) Posts.Add(new PostItem(dto));
+            foreach (var dto in page.Posts) Posts.Add(new PostItem(dto, Account));
             _cursor = page.Cursor;
             OnPropertyChanged(nameof(CanLoadMore));
             await ApplyThreadingAsync();
@@ -100,7 +104,7 @@ public sealed class TimelineViewModel : ObservableObject
             var page = await _loadPage(_cursor);
             foreach (var dto in page.Posts)
             {
-                if (!Contains(dto.Id)) Posts.Add(new PostItem(dto));
+                if (!Contains(dto.Id)) Posts.Add(new PostItem(dto, Account));
             }
             _cursor = page.Cursor;
             OnPropertyChanged(nameof(CanLoadMore));
@@ -119,7 +123,7 @@ public sealed class TimelineViewModel : ObservableObject
             foreach (var dto in page.Posts)
             {
                 if (Contains(dto.Id)) continue;
-                Posts.Insert(insertAt++, new PostItem(dto));
+                Posts.Insert(insertAt++, new PostItem(dto, Account));
             }
             await ApplyThreadingAsync();
         }
@@ -181,7 +185,7 @@ public sealed class TimelineViewModel : ObservableObject
         Posts.RemoveAt(index);
         try
         {
-            await BridgeClient.Shared.DeletePostAsync(id);
+            await Account.DeletePostAsync(id);
         }
         catch
         {

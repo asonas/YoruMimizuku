@@ -63,7 +63,7 @@ public sealed partial class FeedView : UserControl
         if (root.FindName("DeleteButton") is Button deleteButton)
         {
             deleteButton.Visibility =
-                post.AuthorDid is { } did && did == _workspace.AccountDid
+                post.AuthorDid is { } did && did == Vm.Account.Did
                     ? Visibility.Visible
                     : Visibility.Collapsed;
         }
@@ -670,14 +670,14 @@ public sealed partial class FeedView : UserControl
 
     private async void OpenComposer()
     {
-        var dialog = new ComposerDialog { XamlRoot = XamlRoot };
+        var dialog = new ComposerDialog(Vm.Account) { XamlRoot = XamlRoot };
         var posted = await dialog.ShowComposeAsync();
         if (posted) await Vm.RefreshAsync();
     }
 
     private async Task OpenReplyComposer(PostItem item)
     {
-        var dialog = new ComposerDialog(replyParentUri: item.Id) { XamlRoot = XamlRoot };
+        var dialog = new ComposerDialog(Vm.Account, replyParentUri: item.Id) { XamlRoot = XamlRoot };
         var posted = await dialog.ShowComposeAsync();
         if (posted) await Vm.RefreshAsync();
     }
@@ -685,7 +685,7 @@ public sealed partial class FeedView : UserControl
     private async Task OpenQuoteComposer(PostItem item)
     {
         var preview = $"{item.AuthorDisplayName}\n{item.Body}";
-        var dialog = new ComposerDialog(quote: (item.Id, item.Cid), quotePreview: preview) { XamlRoot = XamlRoot };
+        var dialog = new ComposerDialog(Vm.Account, quote: (item.Id, item.Cid), quotePreview: preview) { XamlRoot = XamlRoot };
         var posted = await dialog.ShowComposeAsync();
         if (posted) await Vm.RefreshAsync();
     }

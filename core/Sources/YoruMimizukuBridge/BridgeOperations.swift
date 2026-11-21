@@ -371,9 +371,9 @@ enum BridgeOps {
 
     // -- Feeds --
 
-    static func timelineLoad(cursor: String?) async throws -> TimelinePageDTO {
+    static func timelineLoad(did: String?, cursor: String?) async throws -> TimelinePageDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = TimelineService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.getTimeline(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -386,9 +386,9 @@ enum BridgeOps {
         )
     }
 
-    static func authorFeedLoad(actor: String, cursor: String?) async throws -> TimelinePageDTO {
+    static func authorFeedLoad(did: String?, actor: String, cursor: String?) async throws -> TimelinePageDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = AuthorFeedService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.getAuthorFeed(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -402,9 +402,9 @@ enum BridgeOps {
         )
     }
 
-    static func threadLoad(uri: String) async throws -> ConversationThreadDTO {
+    static func threadLoad(did: String?, uri: String) async throws -> ConversationThreadDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = ThreadService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.getPostThread(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -418,9 +418,9 @@ enum BridgeOps {
         )
     }
 
-    static func notificationsLoad() async throws -> [NotificationGroupDTO] {
+    static func notificationsLoad(did: String?) async throws -> [NotificationGroupDTO] {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = NotificationsService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.listNotifications(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -430,7 +430,7 @@ enum BridgeOps {
         let groups = NotificationGroup.group(result.response.notifications.map(NotificationDisplay.init))
         // Subject previews are an enhancement: a failed getPosts shows the rows
         // without them rather than failing the whole list, as on macOS.
-        let subjects = (try? await resolveSubjects(for: groups, runtime: rt)) ?? [:]
+        let subjects = (try? await resolveSubjects(for: groups, runtime: rt, did: did)) ?? [:]
         return groups.map { group -> NotificationGroupDTO in
             guard let uri = group.subjectURI, let post = subjects[uri] else { return NotificationGroupDTO(group) }
             let resolved = group.withSubject(
@@ -442,7 +442,7 @@ enum BridgeOps {
     }
 
     private static func resolveSubjects(
-        for groups: [NotificationGroup], runtime rt: BridgeRuntime
+        for groups: [NotificationGroup], runtime rt: BridgeRuntime, did: String?
     ) async throws -> [String: PostView] {
         let uris = groups.filter { $0.reason == .like || $0.reason == .repost }.compactMap(\.subjectURI)
         var unique: [String] = []
@@ -450,7 +450,7 @@ enum BridgeOps {
         for uri in uris where seen.insert(uri).inserted { unique.append(uri) }
         guard !unique.isEmpty else { return [:] }
 
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = PostsService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         var posts: [String: PostView] = [:]
         var accessToken = ctx.account.accessToken
@@ -472,9 +472,9 @@ enum BridgeOps {
 
     // -- Search / filters --
 
-    static func searchLoad(filter: SavedFilter, cursor: String?) async throws -> TimelinePageDTO {
+    static func searchLoad(did: String?, filter: SavedFilter, cursor: String?) async throws -> TimelinePageDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = SearchService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let queries = filter.subqueries
         guard !queries.isEmpty else { return TimelinePageDTO(posts: [], cursor: nil) }
@@ -526,9 +526,9 @@ enum BridgeOps {
 
     // -- Compose --
 
-    static func postCreate(_ draft: PostDraft) async throws -> PostResultDTO {
+    static func postCreate(did: String?, _ draft: PostDraft) async throws -> PostResultDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = PostService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let images = draft.images.map { (data: $0.data, mimeType: $0.mimeType, alt: $0.alt) }
         let result = try await service.createPost(
@@ -543,9 +543,9 @@ enum BridgeOps {
 
     // -- Interactions --
 
-    static func like(uri: String, cid: String) async throws -> RecordRefDTO {
+    static func like(did: String?, uri: String, cid: String) async throws -> RecordRefDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = PostService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.like(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -556,9 +556,9 @@ enum BridgeOps {
         return RecordRefDTO(recordUri: result.response.uri)
     }
 
-    static func repost(uri: String, cid: String) async throws -> RecordRefDTO {
+    static func repost(did: String?, uri: String, cid: String) async throws -> RecordRefDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = PostService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.repost(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -569,10 +569,10 @@ enum BridgeOps {
         return RecordRefDTO(recordUri: result.response.uri)
     }
 
-    static func removeRecord(recordUri: String, collection: String) async throws -> EmptyDTO {
+    static func removeRecord(did: String?, recordUri: String, collection: String) async throws -> EmptyDTO {
         guard let rkey = ATURI.rkey(recordUri) else { throw BridgeError.message("malformed record URI") }
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = PostService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let refreshed = try await service.deleteRecord(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -589,9 +589,9 @@ enum BridgeOps {
 
     // -- Profile --
 
-    static func avatar() async throws -> AvatarDTO {
+    static func avatar(did: String?) async throws -> AvatarDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = ProfileService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.getProfile(
             pds: ctx.account.pds, issuer: ctx.issuer,
@@ -601,9 +601,9 @@ enum BridgeOps {
         return AvatarDTO(avatarUrl: result.response.avatar)
     }
 
-    static func profile(actor: String) async throws -> ProfileDTO {
+    static func profile(did: String?, actor: String) async throws -> ProfileDTO {
         let rt = try BridgeRuntime.require()
-        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config)
+        let ctx = try BridgeServiceContext(accountManager: rt.accountManager, config: rt.config, did: did)
         let service = ProfileService(sender: ctx.sender, metadataResolver: ctx.metadataResolver, config: ctx.config, refreshGate: ctx.refreshGate)
         let result = try await service.getProfile(
             pds: ctx.account.pds, issuer: ctx.issuer,

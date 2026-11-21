@@ -42,14 +42,16 @@ public sealed class BridgeException : Exception
 /// runs the blocking native function on a background thread, parses the
 /// <c>{ ok, data }</c> envelope, and returns the strongly-typed payload.
 /// </summary>
-public sealed class BridgeClient
+public sealed class BridgeClient : ICoreClient
 {
-    public static BridgeClient Shared { get; } = new();
+    public static ICoreClient Shared { get; } = new BridgeClient();
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    private BridgeClient() { }
 
     // -- Lifecycle --
 
@@ -70,20 +72,12 @@ public sealed class BridgeClient
         return wrapper?.Account;
     }
 
-    public Task<List<string>> ListAccountsAsync() =>
-        CallAsync<List<string>>(NativeMethods.yoru_account_list, new { })!;
-
     public Task SwitchAccountAsync(string did) =>
         CallVoidAsync(NativeMethods.yoru_account_switch, new { did });
 
-    public Task RemoveAccountAsync(string did) =>
-        CallVoidAsync(NativeMethods.yoru_account_remove, new { did });
-
-    /// <summary>Token-free account list for the switcher menu (DID + handle).</summary>
     public Task<List<AccountSummaryDto>> AccountSummariesAsync() =>
         CallAsync<List<AccountSummaryDto>>(NativeMethods.yoru_account_summaries, new { })!;
 
-    /// <summary>Remove an account and advance to the next one; NextDid is null when none remain.</summary>
     public Task<NextAccountDto> RemoveAndAdvanceAsync(string did) =>
         CallAsync<NextAccountDto>(NativeMethods.yoru_account_remove_advance, new { did })!;
 
@@ -95,67 +89,71 @@ public sealed class BridgeClient
     public Task<AccountDto> LoginCompleteAsync(string pendingId, string callbackUrl) =>
         CallAsync<AccountDto>(NativeMethods.yoru_login_complete, new { pendingId, callbackUrl })!;
 
-    // -- Feeds --
-
-    public Task<TimelinePageDto> TimelineLoadAsync(string? cursor = null) =>
-        CallAsync<TimelinePageDto>(NativeMethods.yoru_timeline_load, new { cursor })!;
-
-    public Task<TimelinePageDto> AuthorFeedLoadAsync(string actor, string? cursor = null) =>
-        CallAsync<TimelinePageDto>(NativeMethods.yoru_author_feed_load, new { actor, cursor })!;
-
-    public Task<ConversationThreadDto> ThreadLoadAsync(string uri) =>
-        CallAsync<ConversationThreadDto>(NativeMethods.yoru_thread_load, new { uri })!;
-
-    public Task<List<NotificationGroupDto>> NotificationsLoadAsync() =>
-        CallAsync<List<NotificationGroupDto>>(NativeMethods.yoru_notifications_load, new { })!;
-
-    /// <summary>Run a saved filter. <paramref name="filter"/> is the SavedFilter JSON object.</summary>
-    public Task<TimelinePageDto> SearchLoadAsync(JsonObject filter, string? cursor = null) =>
-        CallAsync<TimelinePageDto>(NativeMethods.yoru_search_load, new { filter, cursor })!;
-
-    // -- Compose --
-
-    public Task<PostResultDto> PostCreateAsync(object draft) =>
-        CallAsync<PostResultDto>(NativeMethods.yoru_post_create, draft)!;
-
-    // -- Interactions --
-
-    public Task<RecordRefDto> LikeAsync(string uri, string cid) =>
-        CallAsync<RecordRefDto>(NativeMethods.yoru_post_like, new { uri, cid })!;
-
-    public Task UnlikeAsync(string recordUri) =>
-        CallVoidAsync(NativeMethods.yoru_post_unlike, new { recordUri });
-
-    public Task<RecordRefDto> RepostAsync(string uri, string cid) =>
-        CallAsync<RecordRefDto>(NativeMethods.yoru_post_repost, new { uri, cid })!;
-
-    public Task UnrepostAsync(string recordUri) =>
-        CallVoidAsync(NativeMethods.yoru_post_unrepost, new { recordUri });
+    // -- Account-free --
 
     public Task<PermalinkDto> PostPermalinkAsync(string id, string authorHandle) =>
         CallAsync<PermalinkDto>(NativeMethods.yoru_post_permalink, new { id, authorHandle })!;
 
-    /// <summary>Delete the viewer's own post record (app.bsky.feed.post). <paramref name="uri"/> is the post AT-URI.</summary>
-    public Task DeletePostAsync(string uri) =>
-        CallVoidAsync(NativeMethods.yoru_post_delete, new { uri });
-
-    // -- Profile --
-
-    public Task<AvatarDto> AvatarAsync() =>
-        CallAsync<AvatarDto>(NativeMethods.yoru_profile_avatar, new { })!;
-
-    public Task<ProfileDto> ProfileAsync(string actor) =>
-        CallAsync<ProfileDto>(NativeMethods.yoru_profile_load, new { actor })!;
-
-    // -- Link previews / feed grouping --
-
-    /// <summary>Fetch an OGP preview card for a bare URL; null when the page yields no usable metadata.</summary>
     public Task<LinkCardDto?> OgpLoadAsync(string url) =>
         CallAsync<LinkCardDto>(NativeMethods.yoru_ogp_load, new { url });
 
-    /// <summary>Group a feed page web-style. <paramref name="items"/> carries each post's id, createdAt, and replyParentId.</summary>
     public Task<List<ArrangeResultDto>> FeedArrangeAsync(object items) =>
         CallAsync<List<ArrangeResultDto>>(NativeMethods.yoru_feed_arrange, new { items })!;
+
+    public IAccountClient ForAccount(string did) => new AccountClient(did);
+
+    /// <summary>Adds <c>did</c> to every request, so the bridge acts as this
+    /// account instead of the store's current one.</summary>
+    private sealed class AccountClient(string did) : IAccountClient
+    {
+        public string Did { get; } = did;
+
+        public Task<TimelinePageDto> TimelineLoadAsync(string? cursor = null) =>
+            CallAsync<TimelinePageDto>(NativeMethods.yoru_timeline_load, Scoped(new { cursor }))!;
+
+        public Task<TimelinePageDto> AuthorFeedLoadAsync(string actor, string? cursor = null) =>
+            CallAsync<TimelinePageDto>(NativeMethods.yoru_author_feed_load, Scoped(new { actor, cursor }))!;
+
+        public Task<ConversationThreadDto> ThreadLoadAsync(string uri) =>
+            CallAsync<ConversationThreadDto>(NativeMethods.yoru_thread_load, Scoped(new { uri }))!;
+
+        public Task<List<NotificationGroupDto>> NotificationsLoadAsync() =>
+            CallAsync<List<NotificationGroupDto>>(NativeMethods.yoru_notifications_load, Scoped(new { }))!;
+
+        public Task<TimelinePageDto> SearchLoadAsync(JsonObject filter, string? cursor = null) =>
+            CallAsync<TimelinePageDto>(NativeMethods.yoru_search_load, Scoped(new { filter, cursor }))!;
+
+        public Task<PostResultDto> PostCreateAsync(object draft) =>
+            CallAsync<PostResultDto>(NativeMethods.yoru_post_create, Scoped(draft))!;
+
+        public Task<RecordRefDto> LikeAsync(string uri, string cid) =>
+            CallAsync<RecordRefDto>(NativeMethods.yoru_post_like, Scoped(new { uri, cid }))!;
+
+        public Task UnlikeAsync(string recordUri) =>
+            CallVoidAsync(NativeMethods.yoru_post_unlike, Scoped(new { recordUri }));
+
+        public Task<RecordRefDto> RepostAsync(string uri, string cid) =>
+            CallAsync<RecordRefDto>(NativeMethods.yoru_post_repost, Scoped(new { uri, cid }))!;
+
+        public Task UnrepostAsync(string recordUri) =>
+            CallVoidAsync(NativeMethods.yoru_post_unrepost, Scoped(new { recordUri }));
+
+        public Task DeletePostAsync(string uri) =>
+            CallVoidAsync(NativeMethods.yoru_post_delete, Scoped(new { uri }));
+
+        public Task<AvatarDto> AvatarAsync() =>
+            CallAsync<AvatarDto>(NativeMethods.yoru_profile_avatar, Scoped(new { }))!;
+
+        public Task<ProfileDto> ProfileAsync(string actor) =>
+            CallAsync<ProfileDto>(NativeMethods.yoru_profile_load, Scoped(new { actor }))!;
+
+        private JsonObject Scoped(object request)
+        {
+            var node = JsonSerializer.SerializeToNode(request, JsonOptions)!.AsObject();
+            node["did"] = Did;
+            return node;
+        }
+    }
 
     // -- Plumbing --
 

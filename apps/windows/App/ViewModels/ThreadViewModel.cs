@@ -27,7 +27,9 @@ public sealed class ThreadViewModel : ObservableObject
     private string? _errorMessage;
     public string? ErrorMessage { get => _errorMessage; private set => SetProperty(ref _errorMessage, value); }
 
-    public ThreadViewModel(string anchor) { Anchor = anchor; }
+    private readonly IAccountClient _account;
+
+    public ThreadViewModel(IAccountClient account, string anchor) { _account = account; Anchor = anchor; }
 
     public async Task LoadAsync()
     {
@@ -35,8 +37,8 @@ public sealed class ThreadViewModel : ObservableObject
         ErrorMessage = null;
         try
         {
-            var thread = await BridgeClient.Shared.ThreadLoadAsync(Anchor);
-            Focused = new PostItem(thread.Focus);
+            var thread = await _account.ThreadLoadAsync(Anchor);
+            Focused = new PostItem(thread.Focus, _account);
             ReplyTree = thread.Replies;
         }
         catch (Exception ex) { ErrorMessage = ex.Message; }

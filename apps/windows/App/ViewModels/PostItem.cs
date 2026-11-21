@@ -124,8 +124,11 @@ public sealed class PostItem : ObservableObject
     private string? _viewerRepostUri;
     public bool IsReposted { get => _viewerRepostUri is not null; }
 
-    public PostItem(PostDisplayDto dto)
+    private readonly IAccountClient _account;
+
+    public PostItem(PostDisplayDto dto, IAccountClient account)
     {
+        _account = account;
         Id = dto.Id;
         Cid = dto.Cid;
         AuthorDisplayName = dto.AuthorDisplayName;
@@ -154,12 +157,12 @@ public sealed class PostItem : ObservableObject
         {
             var record = _viewerLikeUri!;
             _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike();
-            if (record != "pending:like") { try { await BridgeClient.Shared.UnlikeAsync(record); } catch { } }
+            if (record != "pending:like") { try { await _account.UnlikeAsync(record); } catch { } }
         }
         else
         {
             _viewerLikeUri = "pending:like"; LikeCount += 1; NotifyLike();
-            try { var r = await BridgeClient.Shared.LikeAsync(Id, Cid); _viewerLikeUri = r.RecordUri; }
+            try { var r = await _account.LikeAsync(Id, Cid); _viewerLikeUri = r.RecordUri; }
             catch { _viewerLikeUri = null; LikeCount = System.Math.Max(0, LikeCount - 1); NotifyLike(); }
         }
     }
@@ -170,12 +173,12 @@ public sealed class PostItem : ObservableObject
         {
             var record = _viewerRepostUri!;
             _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost();
-            if (record != "pending:repost") { try { await BridgeClient.Shared.UnrepostAsync(record); } catch { } }
+            if (record != "pending:repost") { try { await _account.UnrepostAsync(record); } catch { } }
         }
         else
         {
             _viewerRepostUri = "pending:repost"; RepostCount += 1; NotifyRepost();
-            try { var r = await BridgeClient.Shared.RepostAsync(Id, Cid); _viewerRepostUri = r.RecordUri; }
+            try { var r = await _account.RepostAsync(Id, Cid); _viewerRepostUri = r.RecordUri; }
             catch { _viewerRepostUri = null; RepostCount = System.Math.Max(0, RepostCount - 1); NotifyRepost(); }
         }
     }
