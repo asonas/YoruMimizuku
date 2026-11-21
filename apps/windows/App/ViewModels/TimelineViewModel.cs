@@ -30,7 +30,7 @@ public sealed class TimelineViewModel : ObservableObject
     public bool IsLoadingMore { get => _isLoadingMore; private set => SetProperty(ref _isLoadingMore, value); }
 
     // Failed-state, classified through the shared LoadFailure (carried on the
-    // BridgeException) so the feed can show a tailored title + message + retry,
+    // CoreException) so the feed can show a tailored title + message + retry,
     // matching macOS FeedView.failedState.
     private string? _failureTitle;
     public string? FailureTitle { get => _failureTitle; private set => SetProperty(ref _failureTitle, value); }
@@ -86,12 +86,12 @@ public sealed class TimelineViewModel : ObservableObject
     public Task RetryAsync() => LoadAsync();
 
     /// <summary>Map a thrown error to a friendly title/message, preferring the shared
-    /// LoadFailure classification carried on a <see cref="BridgeException"/>.</summary>
+    /// LoadFailure classification carried on a <see cref="CoreException"/>.</summary>
     private static (string Title, string Message) DescribeFailure(Exception ex)
     {
-        if (ex is BridgeException { Title: { } t } be)
+        if (ex is CoreException { Title: { } t } ce)
         {
-            return (t, be.FriendlyMessage ?? be.Message);
+            return (t, ce.FriendlyMessage ?? ce.Message);
         }
         return ("読み込みに失敗しました", ex.Message);
     }

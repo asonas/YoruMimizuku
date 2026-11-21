@@ -16,9 +16,9 @@ public sealed class FilterTermModel
 }
 
 /// <summary>
-/// C# mirror of the Swift SavedFilter. Serialized to a SavedFilter JSON object
-/// the bridge decodes (the bridge computes the actual search subqueries), and
-/// persisted locally per account.
+/// C# mirror of the Swift SavedFilter. Sent to the core as a SavedFilter JSON
+/// object (the core computes the actual search subqueries), and persisted locally
+/// per account.
 /// </summary>
 public sealed class SavedFilterModel
 {
@@ -55,8 +55,8 @@ public sealed class SavedFilterModel
 
     private static string Strip(char ch, string s) => s.StartsWith(ch) ? s[1..] : s;
 
-    /// <summary>Build the SavedFilter JSON object the bridge's search endpoint expects.</summary>
-    public JsonObject ToBridgeJson()
+    /// <summary>Build the SavedFilter JSON object the core's search expects.</summary>
+    public JsonObject ToSearchJson()
     {
         var terms = new JsonArray();
         foreach (var t in Terms)
@@ -74,10 +74,7 @@ public sealed class SavedFilterModel
                 ["value"] = t.Value
             });
         }
-        // Note: createdAt is intentionally omitted. The Swift SavedFilter decoder
-        // (default JSONDecoder, .deferredToDate) would reject an ISO8601 string,
-        // failing the whole request; createdAt is irrelevant to search anyway, and
-        // SavedFilter tolerates its absence (decodeIfPresent).
+        // createdAt plays no part in a search, so it is not sent.
         return new JsonObject
         {
             ["id"] = Id.ToString(),

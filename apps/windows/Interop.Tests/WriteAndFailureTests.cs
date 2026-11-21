@@ -85,7 +85,7 @@ public class WriteAndFailureTests
     {
         var http = new StubHttp(_ => StubHttp.Json("""{"error":"InternalServerError"}""", HttpStatusCode.InternalServerError));
 
-        var error = await Assert.ThrowsAsync<BridgeException>(() => new CoreAccountClient(http.Xrpc()).TimelineLoadAsync());
+        var error = await Assert.ThrowsAsync<CoreException>(() => new CoreAccountClient(http.Xrpc()).TimelineLoadAsync());
 
         Assert.Equal("server", error.Kind);
         Assert.Equal("サーバーエラー", error.Title);
@@ -102,7 +102,7 @@ public class WriteAndFailureTests
         var http = new StubHttp(_ => throw new SessionGone());
         var client = new CoreAccountClient(http.Xrpc(), error => error is SessionGone);
 
-        var error = await Assert.ThrowsAsync<BridgeException>(() => client.LikeAsync("at://did:plc:a/app.bsky.feed.post/a", "c"));
+        var error = await Assert.ThrowsAsync<CoreException>(() => client.LikeAsync("at://did:plc:a/app.bsky.feed.post/a", "c"));
 
         Assert.True(error.SessionExpired);
         Assert.Equal("unknown", error.Kind);

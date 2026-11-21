@@ -11,12 +11,12 @@ namespace YoruMimizuku.App.Interop;
 /// <summary>
 /// <see cref="IAccountClient"/> over the C# core, acting as the account behind
 /// <paramref name="xrpc"/>. Results come back as the app's DTOs and failures as
-/// <see cref="BridgeException"/>.
+/// <see cref="CoreException"/>.
 /// </summary>
 /// <param name="isSessionExpired">
 /// Recognizes the auth layer's "the session is gone" failure (an invalid_grant on
 /// refresh) among the exceptions the account's HttpClient throws, and sets
-/// <see cref="BridgeException.SessionExpired"/> for it. Until OAuth lands nothing
+/// <see cref="CoreException.SessionExpired"/> for it. Until OAuth lands nothing
 /// signals it, so the default recognizes nothing.
 /// </param>
 public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? isSessionExpired = null) : IAccountClient
@@ -85,7 +85,7 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
         new(response.Feed.Select(item => CoreDtos.Post(PostDisplay.From(item))).ToList(), response.Cursor);
 
     /// <summary>
-    /// The SavedFilter object the app sends (<c>SavedFilterModel.ToBridgeJson</c>), read as
+    /// The SavedFilter object the app sends (<c>SavedFilterModel.ToSearchJson</c>), read as
     /// the Swift bridge decodes it: camelCase keys, lowercase raw values, the combinator
     /// defaulting to <c>and</c>. <c>createdAt</c> plays no part in a search and is ignored.
     /// </summary>
@@ -172,7 +172,7 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
     });
 
     /// <summary>The bridge's error envelope: the LoadFailure classification, its friendly text and the raw detail.</summary>
-    private BridgeException Failure(Exception error)
+    private CoreException Failure(Exception error)
     {
         var failure = LoadFailure.From(error);
         var kind = failure.Kind switch
@@ -182,6 +182,6 @@ public sealed class CoreAccountClient(XrpcClient xrpc, Func<Exception, bool>? is
             LoadFailureKind.Server => "server",
             _ => "unknown",
         };
-        return new BridgeException(failure.Detail, kind, failure.Title, failure.Message, isSessionExpired?.Invoke(error) ?? false);
+        return new CoreException(failure.Detail, kind, failure.Title, failure.Message, isSessionExpired?.Invoke(error) ?? false);
     }
 }

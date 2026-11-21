@@ -105,8 +105,8 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            AppLog.Write("Bridge init failed", ex);
-            ShowFatal($"ブリッジの初期化に失敗しました。\n{ex.Message}\n\nログ: {AppLog.Path}");
+            AppLog.Write("startup failed", ex);
+            ShowFatal($"起動に失敗しました。\n{ex.Message}\n\nログ: {AppLog.Path}");
         }
     }
 
@@ -185,7 +185,7 @@ public sealed partial class MainWindow : Window
                 AccountAvatar.ProfilePicture = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(url));
             }
         }
-        catch (BridgeException be) when (be.SessionExpired)
+        catch (CoreException ce) when (ce.SessionExpired)
         {
             // The stored refresh token is no longer valid — drop the dead session
             // and advance to the next account, or return to login when none remain
@@ -489,7 +489,7 @@ public sealed partial class MainWindow : Window
                 break;
             case WorkspaceTabKind.Filter when tab.Filter is { } filter:
                 var search = new FeedView(
-                    new TimelineViewModel(account, cursor => account.SearchLoadAsync(filter.ToBridgeJson(), cursor)),
+                    new TimelineViewModel(account, cursor => account.SearchLoadAsync(filter.ToSearchJson(), cursor)),
                     _workspace);
                 await search.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ContentHost.Content = search;

@@ -40,7 +40,7 @@ public class CoreClientTests
         _server.ExpireAccessTokens();
         _server.RevokeRefreshTokens();
 
-        var error = await Assert.ThrowsAsync<BridgeException>(() => _core.ForAccount(AliceDid).TimelineLoadAsync());
+        var error = await Assert.ThrowsAsync<CoreException>(() => _core.ForAccount(AliceDid).TimelineLoadAsync());
 
         Assert.True(error.SessionExpired);
     }

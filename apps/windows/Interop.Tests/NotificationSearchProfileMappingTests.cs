@@ -155,7 +155,7 @@ public class NotificationSearchProfileMappingTests
     }
     """;
 
-    /// The object SavedFilterModel.ToBridgeJson builds: camelCase, lowercase raw values, no createdAt.
+    /// The object SavedFilterModel.ToSearchJson builds: camelCase, lowercase raw values, no createdAt.
     private static JsonObject AppFilter() => JsonNode.Parse("""
         {
           "id": "22222222-2222-2222-2222-222222222222",

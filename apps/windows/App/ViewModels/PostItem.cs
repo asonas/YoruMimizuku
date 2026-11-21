@@ -65,7 +65,7 @@ public sealed class PostItem : ObservableObject
     public Visibility ReplyVisibility => IsReply && !ConnectsToPrevious ? Visibility.Visible : Visibility.Collapsed;
     public Visibility ImagesVisibility => HasImages ? Visibility.Visible : Visibility.Collapsed;
 
-    // -- Web-style thread grouping (see FeedThreading via yoru_feed_arrange) --
+    // -- Web-style thread grouping (see FeedThreading via FeedArrangeAsync) --
     private bool _connectsToPrevious;
     public bool ConnectsToPrevious
     {
