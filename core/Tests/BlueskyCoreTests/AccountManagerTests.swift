@@ -54,6 +54,80 @@ final class AccountManagerTests: XCTestCase {
         XCTAssertEqual(try manager.allDIDs(), [])
     }
 
+
+    private static func refreshed(_ access: String, _ refresh: String) -> TokenResponse {
+        let json = #"{"access_token":"\#(access)","token_type":"DPoP","refresh_token":"\#(refresh)","sub":"did:plc:a"}"#
+        // swiftlint:disable:next force_try
+        return try! JSONDecoder().decode(TokenResponse.self, from: Data(json.utf8))
+    }
+
+
+
+    // #16: a request that refreshed earlier reports its tokens after a later
+    // rotation; its refresh token was already used, and saving it would sign the
+    // account out at the next refresh.
+    func testUpdateTokensSkipsARefreshTokenAlreadyUsed() async throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x09]))
+        let first = try await manager.refreshGate.refresh(using: "rtk") { Self.refreshed("atk1", "rtk1") }
+        let second = try await manager.refreshGate.refresh(using: "rtk1") { Self.refreshed("atk2", "rtk2") }
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x09]), accessToken: second.accessToken, refreshToken: second.refreshToken, scope: nil)
+
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x09]), accessToken: first.accessToken, refreshToken: first.refreshToken, scope: nil)
+
+        XCTAssertEqual(try manager.current()?.refreshToken, "rtk2")
+        XCTAssertEqual(try manager.current()?.accessToken, "atk2")
+    }
+
+    // One request that refreshes twice (a video post: service auth, then the
+    // post) saves both rotations.
+    func testUpdateTokensSavesEachRotationOfOneRequest() async throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x09]))
+        let first = try await manager.refreshGate.refresh(using: "rtk") { Self.refreshed("atk1", "rtk1") }
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x09]), accessToken: first.accessToken, refreshToken: first.refreshToken, scope: nil)
+        let second = try await manager.refreshGate.refresh(using: "rtk1") { Self.refreshed("atk2", "rtk2") }
+
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x09]), accessToken: second.accessToken, refreshToken: second.refreshToken, scope: nil)
+
+        XCTAssertEqual(try manager.current()?.refreshToken, "rtk2")
+    }
+
+    // A renewal is saved when it happens, so a request that fails after it
+    // (and an app quit) does not leave only the used refresh token stored.
+    func testARenewalIsSavedWhenItHappens() async throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x09]))
+
+        _ = try await manager.refreshGate.refresh(using: "rtk") { Self.refreshed("atk1", "rtk1") }
+
+        XCTAssertEqual(try manager.current()?.refreshToken, "rtk1")
+        XCTAssertEqual(try manager.current()?.accessToken, "atk1")
+    }
+
+    // A request from before a re-login (another DPoP key) must not overwrite
+    // the new session's tokens.
+    func testUpdateTokensIgnoresAnEarlierSession() throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x09]))
+
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x01]), accessToken: "atk-old", refreshToken: "rtk-old", scope: nil)
+
+        XCTAssertEqual(try manager.current()?.refreshToken, "rtk")
+        XCTAssertEqual(try manager.current()?.accessToken, "atk-did:plc:a")
+    }
+
+    // A refresh that does not rotate the refresh token keeps the stored one.
+    func testUpdateTokensKeepsTheRefreshTokenWhenNoneIsIssued() throws {
+        let manager = makeManager()
+        _ = try manager.add(loginResult: loginResult(did: "did:plc:a"), handle: nil, dpopPrivateKeyRaw: Data([0x09]))
+
+        try manager.updateTokens(did: "did:plc:a", session: Data([0x09]), accessToken: "atk2", refreshToken: nil, scope: nil)
+
+        XCTAssertEqual(try manager.current()?.accessToken, "atk2")
+        XCTAssertEqual(try manager.current()?.refreshToken, "rtk")
+    }
+
     func testCurrentIsNilWhenNoAccounts() throws {
         XCTAssertNil(try makeManager().current())
     }
@@ -67,7 +141,7 @@ final class AccountManagerTests: XCTestCase {
         )
 
         let updated = try manager.updateTokens(
-            did: "did:plc:a", accessToken: "atk2", refreshToken: "rtk2", scope: "atproto"
+            did: "did:plc:a", session: Data([0x09]), accessToken: "atk2", refreshToken: "rtk2", scope: "atproto"
         )
 
         XCTAssertEqual(updated.accessToken, "atk2")
@@ -120,7 +194,7 @@ final class AccountManagerTests: XCTestCase {
     func testUpdateTokensThrowsForUnknownAccount() {
         let manager = makeManager()
         XCTAssertThrowsError(
-            try manager.updateTokens(did: "did:plc:missing", accessToken: "x", refreshToken: nil, scope: nil)
+            try manager.updateTokens(did: "did:plc:missing", session: Data(), accessToken: "x", refreshToken: nil, scope: nil)
         ) { error in
             XCTAssertEqual(error as? AccountError, .unknownAccount("did:plc:missing"))
         }

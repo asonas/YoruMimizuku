@@ -39,9 +39,10 @@ struct LiveServiceContext {
         guard let refreshed else { return }
         try accountManager.updateTokens(
             did: account.did,
+            session: account.dpopPrivateKeyRaw,
             accessToken: refreshed.accessToken,
-            refreshToken: refreshed.refreshToken ?? account.refreshToken,
-            scope: refreshed.scope ?? account.scope
+            refreshToken: refreshed.refreshToken,
+            scope: refreshed.scope
         )
     }
 }

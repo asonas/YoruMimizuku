@@ -84,4 +84,44 @@ final class RefreshGateTests: XCTestCase {
             XCTFail("second attempt should run after a failure: \(error)")
         }
     }
+
+    // #16: a caller that joined an in-flight renewal must see its token as used
+    // as soon as it gets the result, before the caller that started it resumes.
+    func testAJoiningCallerSeesTheTokenUsedWhenItGetsTheResult() async throws {
+        let gate = RefreshGate()
+        let started = Counter()
+        let release = AsyncStream<Void>.makeStream()
+        let first = Task {
+            try await gate.refresh(using: "rtk1") {
+                await started.increment()
+                for await _ in release.stream { break }
+                return Self.token(access: "atk2", refresh: "rtk2")
+            }
+        }
+        while await started.value == 0 { await Task.yield() }
+        let joining = Task { () -> Bool in
+            _ = try await gate.refresh(using: "rtk1") { XCTFail("must join the in-flight renewal"); throw CancellationError() }
+            return gate.hasUsed("rtk1")
+        }
+        release.continuation.yield()
+        let sawUsed = try await joining.value
+        _ = try await first.value
+        XCTAssertTrue(sawUsed)
+    }
+
+    func testReportsEachRenewalToItsObserver() async throws {
+        let reports = Reports()
+        let gate = RefreshGate(onRenewed: { used, tokens in reports.add(used, tokens.refreshToken) })
+        _ = try await gate.refresh(using: "rtk1") { Self.token(access: "atk2", refresh: "rtk2") }
+        _ = try await gate.refresh(using: "rtk1") { XCTFail("cached"); throw CancellationError() }
+
+        XCTAssertEqual(reports.all, ["rtk1->rtk2"], "reported once, when the renewal happened")
+    }
+
+    private final class Reports: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [String] = []
+        func add(_ used: String, _ issued: String?) { lock.lock(); items.append("\(used)->\(issued ?? "nil")"); lock.unlock() }
+        var all: [String] { lock.lock(); defer { lock.unlock() }; return items }
+    }
 }

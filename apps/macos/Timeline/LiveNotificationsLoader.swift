@@ -66,16 +66,20 @@ struct LiveNotificationsLoader: NotificationsLoading {
 
         var posts: [String: PostView] = [:]
         var accessToken = context.account.accessToken
+        var refreshToken = context.account.refreshToken
         for batch in unique.chunked(into: PostsService.maxURIsPerRequest) {
             let result = try await service.getPosts(
                 pds: context.account.pds,
                 issuer: context.issuer,
                 accessToken: accessToken,
-                refreshToken: context.account.refreshToken,
+                refreshToken: refreshToken,
                 uris: batch
             )
             try context.persist(result.refreshed)
-            if let refreshed = result.refreshed { accessToken = refreshed.accessToken }
+            if let refreshed = result.refreshed {
+                accessToken = refreshed.accessToken
+                refreshToken = refreshed.refreshToken ?? refreshToken
+            }
             for post in result.response.posts { posts[post.uri] = post }
         }
         return posts

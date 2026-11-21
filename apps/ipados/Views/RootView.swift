@@ -28,9 +28,14 @@ struct RootView: View {
     private let accountManager: AccountManager
     private let profileLoader: LiveProfileLoader
 
+    /// Every scene (window) shares one manager, so their requests coalesce token
+    /// refreshes and serialize account writes.
+    private static let sharedAccountManager = AccountManager(
+        store: AccountStore(storage: KeychainStorage(service: "as.ason.YoruMimizukuPad"))
+    )
+
     init() {
-        let storage = KeychainStorage(service: "as.ason.YoruMimizukuPad")
-        let manager = AccountManager(store: AccountStore(storage: storage))
+        let manager = Self.sharedAccountManager
         self.accountManager = manager
         self.profileLoader = LiveProfileLoader(accountManager: manager)
         _loginModel = StateObject(wrappedValue: LoginViewModel(performer: LiveLoginPerformer(accountManager: manager)))

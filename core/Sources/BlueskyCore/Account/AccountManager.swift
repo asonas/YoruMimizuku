@@ -8,10 +8,37 @@ public struct AccountManager: Sendable {
     /// Shared across every service so concurrent pollers coalesce their token
     /// refreshes instead of racing to consume the same single-use refresh token.
     public let refreshGate: RefreshGate
+    /// Serializes every write to stored accounts, so a token update's check and
+    /// save cannot interleave with another update, a re-login or a removal.
+    /// Recursive because `removeAndAdvance` calls `remove`.
+    private let writes: NSRecursiveLock
 
-    public init(store: AccountStore, refreshGate: RefreshGate = RefreshGate()) {
+    /// Without a `refreshGate`, the manager makes one that saves each renewal as
+    /// it happens, so the issued tokens are stored even if the request that
+    /// renewed fails afterwards.
+    public init(store: AccountStore, refreshGate: RefreshGate? = nil) {
+        let writes = NSRecursiveLock()
         self.store = store
-        self.refreshGate = refreshGate
+        self.writes = writes
+        self.refreshGate = refreshGate ?? RefreshGate(onRenewed: { used, issued in
+            Self.saveRenewal(store: store, writes: writes, used: used, issued: issued)
+        })
+    }
+
+    /// Store a renewal for the account whose refresh token is still `used`; an
+    /// account already past it (or none) is left alone.
+    private static func saveRenewal(store: AccountStore, writes: NSRecursiveLock, used: String, issued: TokenResponse) {
+        writes.lock()
+        defer { writes.unlock() }
+        guard let dids = try? store.index().dids else { return }
+        for did in dids {
+            guard var account = try? store.account(did: did), account.refreshToken == used else { continue }
+            account.accessToken = issued.accessToken
+            if let refreshToken = issued.refreshToken { account.refreshToken = refreshToken }
+            if let scope = issued.scope { account.scope = scope }
+            try? store.save(account)
+            return
+        }
     }
 
     /// Persist a login result (with its DPoP key) and make it the current account.
@@ -21,6 +48,8 @@ public struct AccountManager: Sendable {
         handle: String?,
         dpopPrivateKeyRaw: Data
     ) throws -> PersistedAccount {
+        writes.lock()
+        defer { writes.unlock() }
         let account = PersistedAccount(
             loginResult: loginResult, handle: handle, dpopPrivateKeyRaw: dpopPrivateKeyRaw
         )
@@ -29,22 +58,31 @@ public struct AccountManager: Sendable {
         return account
     }
 
-    /// Replace the stored tokens for an account (e.g. after a `refresh_token`
-    /// renewal), preserving everything else. Throws `unknownAccount` if the DID
-    /// is not stored.
+    /// Save tokens a renewal issued for `did` and return the stored account.
+    /// `session` is the DPoP key the renewing request signed with: tokens from a
+    /// session replaced by a later sign-in are dropped. A refresh token the
+    /// shared `refreshGate` has already used is dropped too, so a request that
+    /// renewed earlier but reports late cannot bring back a token the server has
+    /// invalidated. A nil `refreshToken` or `scope` keeps the stored one.
+    /// Throws `unknownAccount` if the DID is not stored.
     @discardableResult
     public func updateTokens(
         did: String,
+        session: Data,
         accessToken: String,
         refreshToken: String?,
         scope: String?
     ) throws -> PersistedAccount {
+        writes.lock()
+        defer { writes.unlock() }
         guard var account = try store.account(did: did) else {
             throw AccountError.unknownAccount(did)
         }
+        guard account.dpopPrivateKeyRaw == session else { return account }
+        if let refreshToken, refreshGate.hasUsed(refreshToken) { return account }
         account.accessToken = accessToken
-        account.refreshToken = refreshToken
-        account.scope = scope
+        if let refreshToken { account.refreshToken = refreshToken }
+        if let scope { account.scope = scope }
         try store.save(account)
         return account
     }
@@ -75,11 +113,15 @@ public struct AccountManager: Sendable {
 
     /// Switch the current account. Throws `unknownAccount` if the DID is unknown.
     public func switchTo(did: String) throws {
+        writes.lock()
+        defer { writes.unlock() }
         try store.setCurrent(did: did)
     }
 
     /// Remove an account; clears current if it pointed at the removed account.
     public func remove(did: String) throws {
+        writes.lock()
+        defer { writes.unlock() }
         try store.remove(did: did)
     }
 
@@ -89,6 +131,8 @@ public struct AccountManager: Sendable {
     /// handler share one implementation.
     @discardableResult
     public func removeAndAdvance(did: String) throws -> String? {
+        writes.lock()
+        defer { writes.unlock() }
         try remove(did: did)
         guard let next = try allDIDs().first else { return nil }
         try switchTo(did: next)
