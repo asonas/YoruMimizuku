@@ -33,7 +33,7 @@ The project uses **XcodeGen**; `YoruMimizuku.xcodeproj` and `apps/macos/Info.pli
 ```bash
 brew install xcodegen          # once
 xcodegen generate              # regenerate after editing project.yml
-cd core && swift test          # fast core tests — run most of the time
+mise run test:core             # fast core tests (with Xcode, not the Command Line Tools) — run most of the time
 mise run build:macos           # Debug build signed with Apple Development
 ```
 

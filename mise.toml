@@ -23,9 +23,10 @@ APPCAST_DEV = "build/appcast-dev.xml"
 [tasks."test:core"]
 description = "Test the core package with Xcode's toolchain, leaving Package.resolved as committed"
 dir = "core"
-# The Command Line Tools have no XCTest. Without the flag, swift test rewrites
-# Package.resolved down to the core's own dependencies.
-env = { DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer" }
+# The Command Line Tools have no XCTest, so this uses Xcode unless DEVELOPER_DIR
+# is already set. Without the flag, swift test rewrites Package.resolved down to
+# the core's own dependencies.
+env = { DEVELOPER_DIR = "{{ get_env(name='DEVELOPER_DIR', default='/Applications/Xcode.app/Contents/Developer') }}" }
 run = "swift test --only-use-versions-from-resolved-file"
 
 [tasks.generate]
