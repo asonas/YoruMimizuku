@@ -9,6 +9,11 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 audit (Windows platform differences)
+
+- updated: [[app-shell]], [[compose-post]], [[oauth-flow]], [[timeline-media-layout]], [[timeline-streaming]]
+- note: Checked every non-`full` Windows cell against "Platform differences". The twelve differences with no reason are now `bug:` notes linking GitHub issues #25-#36. Browser authorization and Jetstream gained the ADR citations behind their deliberate differences.
+
 ## 2026-11-21 restructure (design documents)
 
 - note: Moved the design specs to `docs/adr/` as ADRs 0002-0027 and deleted the landed plans. Re-pointed every page's `sources` to the ADRs; inline plan citations now name the plan in git history. Lint rejects a source under `docs/plans/`.

@@ -18,13 +18,13 @@ features:
     windows: none
     ios: full
     android: planned
-    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images from its own PostDisplayDTO unchanged ([[windows]], [[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/32. The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images from its own PostDisplayDTO unchanged ([[windows]], [[ipados]])."
   - name: Wide-column reflow (body left / media right at ≥ 680 pt)
     macos: full
     windows: none
     ios: full
     android: planned
-    note: "Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/33. Reflow is driven by the feed column width injected into PostRowView — on macOS via FeedView and on iPadOS via TimelineListView (scene-width onGeometryChange). Windows uses a fixed-width XAML column that does not yet adapt to window width ([[windows]], [[ipados]])."
 ---
 
 # Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)

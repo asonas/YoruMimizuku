@@ -36,13 +36,13 @@ features:
     windows: planned
     ios: full
     android: planned
-    note: "macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/29. macOS (fileImporter) and iPadOS (PhotosPicker) attach one video with a poster thumbnail and alt text; upload runs getServiceAuth → video service uploadVideo → getJobStatus poll → app.bsky.embed.video. Windows is specced for a follow-up ([[windows]])."
   - name: Draft discard confirmation
     macos: full
     windows: planned
     ios: full
     android: planned
-    note: "A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/30. A draft is unsaved content (non-blank text, images, or video) excluding reply or quote targets; discarding an unsaved draft shows a confirmation dialog. While a post is submitting, the cancel button is disabled and interactive dismissal is blocked ([[ipados]] swipe-down). In-flight post cancellation is not yet implemented; the app waits for submission to complete or fail."
 ---
 
 # Composing Posts

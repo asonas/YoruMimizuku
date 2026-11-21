@@ -50,7 +50,7 @@ features:
     windows: none
     ios: none
     android: planned
-    note: "Designed in the v1 spec but deferred by decision on 2026-06-11: interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]])."
+    note: "Designed in the v1 spec but deferred by decision on 2026-06-11 (`0002-overall-design.md` §14): interval polling is the permanent supported mode for v1.0.0 on macOS and Windows alike (the Windows 30s `RefreshAsync` top-merges like `TimelineViewModel.startPolling`). No WebSocket port, Jetstream decoder, or watchdog exists in core ([[macos]], [[windows]], [[ipados]])."
   - name: Rich text + image grid / lightbox rendering
     macos: full
     windows: full
@@ -113,19 +113,19 @@ features:
     windows: none
     ios: planned
     android: planned
-    note: "macOS's relative-time label in the author line is tappable and opens that post's conversation in the window's detail pane, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/34. macOS's relative-time label in the author line is tappable and opens that post's conversation in the window's detail pane, independent of the reply-count button and reply marker; documented as an iPadOS parity follow-up (whole-row tap already opens the thread there) and not yet addressed on Windows ([[ipados]])."
   - name: Copy-link toast confirmation
     macos: full
     windows: none
     ios: planned
     android: planned
-    note: "The shared YoruMimizukuKit ToastCenter backs a bottom-overlay pill reading 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink; only macOS renders it today. ToastCenter is core and reusable, but wiring it into iPadOS and Windows is a tracked follow-up ([[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/35. The shared YoruMimizukuKit ToastCenter backs a bottom-overlay pill reading 「リンクをコピーしました」 after FeedView/ConversationView copy a permalink; only macOS renders it today. ToastCenter is core and reusable, but wiring it into iPadOS and Windows is a tracked follow-up ([[ipados]])."
   - name: In-app author tab for body @mentions
     macos: full
     windows: none
     ios: planned
     android: planned
-    note: "macOS routes @mention taps in a post body to the in-app author page (opened in the window's detail pane) via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/36. macOS routes @mention taps in a post body to the in-app author page (opened in the window's detail pane) via RichText.mentionDID(from:); iPadOS's own openURL handler (RootView.swift) still only intercepts hashtags, so mentions there fall through to the browser, and Windows does not intercept the body's mention links at all ([[ipados]])."
 ---
 
 # Timeline Fetching and Streaming

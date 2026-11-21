@@ -53,25 +53,25 @@ features:
     windows: none
     ios: none
     android: planned
-    note: "macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/25. macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet."
   - name: Menu bar commands (⌘1…⌘9, 投稿 menu)
     macos: full
     windows: none
     ios: none
     android: planned
-    note: "macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/26. macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]])."
   - name: Toolbar search (transient results)
     macos: full
     windows: none
     ios: none
     android: planned
-    note: "macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/27. macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]])."
   - name: Add a person to a curated list (menu / drag)
     macos: full
     windows: none
     ios: none
     android: planned
-    note: "macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/28. macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account."
   - name: Multiple windows
     macos: full
     windows: full

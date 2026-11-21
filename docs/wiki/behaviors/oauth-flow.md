@@ -24,13 +24,13 @@ features:
     windows: differs
     ios: differs
     android: planned
-    note: "macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]])."
+    note: "macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows has no ASWebAuthenticationSession, so it embeds WebView2 for the two-step login (`0027-windows-csharp-core.md` §3) ([[ipados]], [[windows]])."
   - name: Token refresh & session recovery
     macos: full
     windows: differs
     ios: full
     android: planned
-    note: "On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]])."
+    note: "bug: https://github.com/asonas/YoruMimizuku/issues/31. On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]])."
 ---
 
 # Authentication (OAuth + DPoP)
