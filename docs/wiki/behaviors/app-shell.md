@@ -60,10 +60,10 @@ features:
     note: "iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]])."
   - name: Pinned feeds and lists in the sidebar
     macos: full
-    windows: full
+    windows: differs
     ios: none
     android: planned
-    note: "macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet."
+    note: "macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). Windows timelines have no header and its window title never names a tab, so a pin's description, creator and AT-URI are the sidebar row's tooltip instead of an ⓘ popover, and selecting a pin does not retitle the window (MainWindow.xaml.cs). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet."
   - name: Menu bar commands (⌘1…⌘9, 投稿 menu)
     macos: full
     windows: none

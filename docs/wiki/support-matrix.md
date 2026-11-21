@@ -25,7 +25,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | Three-pane window (sidebar / timeline / detail pane) | ○ | ○ | △ | − |
 | Tabbed single-column shell (sidebar / tabs) | ○ | ○ | △ | − |
-| Pinned feeds and lists in the sidebar | ○ | ○ | × | − |
+| Pinned feeds and lists in the sidebar | ○ | △ | × | − |
 | Menu bar commands (⌘1…⌘9, 投稿 menu) | ○ | × | × | − |
 | Toolbar search (transient results) | ○ | × | × | − |
 | Add a person to a curated list (menu / drag) | ○ | × | × | − |
@@ -115,7 +115,7 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 
 - **Three-pane window (sidebar / timeline / detail pane)** ([[app-shell]]): iPadOS keeps conversation and author tabs in its sidebar instead of a detail pane ([[ipados]]).
 - **Tabbed single-column shell (sidebar / tabs)** ([[app-shell]]): iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]]).
-- **Pinned feeds and lists in the sidebar** ([[app-shell]]): macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet.
+- **Pinned feeds and lists in the sidebar** ([[app-shell]]): macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). Windows timelines have no header and its window title never names a tab, so a pin's description, creator and AT-URI are the sidebar row's tooltip instead of an ⓘ popover, and selecting a pin does not retitle the window (MainWindow.xaml.cs). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet.
 - **Menu bar commands (⌘1…⌘9, 投稿 menu)** ([[app-shell]]): bug: https://github.com/asonas/YoruMimizuku/issues/26. macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]).
 - **Toolbar search (transient results)** ([[app-shell]]): bug: https://github.com/asonas/YoruMimizuku/issues/27. macOS shows search results in the timeline column without saving; the header's 'フィルターとして保存' turns them into a filter ([[filters]]).
 - **Add a person to a curated list (menu / drag)** ([[app-shell]]): bug: https://github.com/asonas/YoruMimizuku/issues/28. macOS post menu 'リストに追加' and dragging an avatar onto an own pinned curated list write app.bsky.graph.listitem records on the window account.
