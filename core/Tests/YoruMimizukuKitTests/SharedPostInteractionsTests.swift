@@ -29,12 +29,21 @@ final class SharedPostInteractionsTests: XCTestCase {
         private var waiting: [CheckedContinuation<String, Error>] = []
         private var calls: [String] = []
         var removeFails = false
+        /// Answer every like or repost after the first at once, so a request
+        /// that should not have been sent cannot hold a test.
+        var holdsOnlyFirst = false
 
         var pendingCount: Int { lock.withLock { waiting.count } }
         var callLog: [String] { lock.withLock { calls } }
 
         private func hold(_ call: String) async throws -> String {
-            try await withCheckedThrowingContinuation { continuation in
+            let answerNow = lock.withLock {
+                guard holdsOnlyFirst, !calls.isEmpty else { return false }
+                calls.append(call)
+                return true
+            }
+            if answerNow { return "at://me/unexpected" }
+            return try await withCheckedThrowingContinuation { continuation in
                 lock.withLock {
                     calls.append(call)
                     waiting.append(continuation)
@@ -140,16 +149,12 @@ final class SharedPostInteractionsTests: XCTestCase {
         let post = sample()
         let (timeline, thread) = await makePair(post, interactor: interactor)
 
+        interactor.holdsOnlyFirst = true
         let like = Task { await timeline.toggleLike(post) }
         try await waitUntil { interactor.pendingCount == 1 }
-        // In a task, so a second like being sent cannot hold the test.
-        let second = Task { await thread.toggleLike(post) }
-        try await Task.sleep(for: .milliseconds(20))
-        XCTAssertEqual(interactor.callLog, ["like"])
+        await thread.toggleLike(post)
         interactor.answer(with: .success("at://me/app.bsky.feed.like/new"))
-        interactor.answer(with: .success("at://me/app.bsky.feed.like/second"))
         await like.value
-        await second.value
 
         XCTAssertEqual(interactor.callLog, ["like"])
         XCTAssertEqual(thread.focus?.isLiked, true)

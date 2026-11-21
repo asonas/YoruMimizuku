@@ -96,11 +96,14 @@ public final class SharedPostInteractions {
 
     private struct Listener {
         weak var owner: AnyObject?
-        let id: ObjectIdentifier
+        /// Unique per registration: an object's address can be reused by a
+        /// view model created after it is gone.
+        let id: Int
         let update: Update
     }
 
     private var listeners: [Listener] = []
+    private var registrations = 0
 
     public init() {}
 
@@ -108,15 +111,16 @@ public final class SharedPostInteractions {
     /// returns whether any changed. It is dropped once `owner` is gone.
     func register(_ owner: AnyObject, update: @escaping Update) {
         listeners.removeAll { $0.owner == nil }
-        listeners.append(Listener(owner: owner, id: ObjectIdentifier(owner), update: update))
+        registrations += 1
+        listeners.append(Listener(owner: owner, id: registrations, update: update))
     }
 
     /// Apply `transform` to the copies of the post shown by the registered view
     /// models, or by `owners` only, and return the view models whose copy changed.
     @discardableResult
-    func apply(_ id: String, only owners: Set<ObjectIdentifier>? = nil, _ transform: (inout PostDisplay) -> Void) -> Set<ObjectIdentifier> {
+    func apply(_ id: String, only owners: Set<Int>? = nil, _ transform: (inout PostDisplay) -> Void) -> Set<Int> {
         listeners.removeAll { $0.owner == nil }
-        var changed: Set<ObjectIdentifier> = []
+        var changed: Set<Int> = []
         for listener in listeners where owners?.contains(listener.id) ?? true {
             if listener.update(id, transform) { changed.insert(listener.id) }
         }
@@ -236,7 +240,7 @@ struct PostInteractionController {
     /// whose copy it `changed`.
     private func remove(
         _ id: String, _ kind: PendingInteractions.Kind, recordURI: String?,
-        changed: Set<ObjectIdentifier>,
+        changed: Set<Int>,
         delete: (String) async throws -> Void,
         undo: (inout PostDisplay) -> Void
     ) async {
