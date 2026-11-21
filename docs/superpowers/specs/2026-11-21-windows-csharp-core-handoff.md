@@ -1,7 +1,7 @@
 # Windows: Replace the Swift Core with C# (Handoff)
 
 - Date: 2026-11-21
-- Status: Approved 2026-11-21 (approach B). One decision is still open (§8).
+- Status: Approved 2026-11-21 (approach B, OAuth ported by hand).
 - Audience: the agent developing YoruMimizuku on the Windows machine.
 - Target: `apps/windows` (WinUI 3 / C#), `scripts/windows`, and the Windows-only targets in `core/Package.swift` (`PlatformWindows`, `YoruMimizukuBridge`)
 - Builds on: `2026-06-05-windows-multiplatform-structure.md`
@@ -35,7 +35,7 @@ Coding agents now port well-specified logic quickly, and the Swift core has 96 t
 | D | A cross-platform UI (Avalonia, Uno, Flutter, Tauri) | Possibly one UI for more platforms | Rewrites the working WinUI UI; Tauri and Flutter work against the memory-efficient native goal; macOS stays SwiftUI |
 | E | Move the shared core to another language (Rust, Kotlin Multiplatform) | Still one core | Forces a macOS rewrite for a Windows problem |
 
-**Chosen: B.** Whether C replaces the hand-written OAuth is still open (§8). Display mapping, grouping and filters are this app's own logic and are ported to C#. For OAuth, the candidates are ATProtoNet (its package page claims DPoP, PAR and PKCE), FishyFlip (`OAuth2SessionManager` has DPoP settings) and idunno (its DPoP documentation targets ASP.NET). None has been checked against this app's needs: the native redirect `as.ason:/callback`, the two-step login through WebView2, a DPoP key restored from DPAPI, and refresh after a relaunch. D and E were not chosen.
+**Chosen: B, with OAuth ported by hand (not C).** Display mapping, grouping and filters are this app's own logic and are ported to C#. For OAuth, the candidates are ATProtoNet (its package page claims DPoP, PAR and PKCE), FishyFlip (`OAuth2SessionManager` has DPoP settings) and idunno (its DPoP documentation targets ASP.NET). None has been checked against this app's needs: the native redirect `as.ason:/callback`, the two-step login through WebView2, a DPoP key restored from DPAPI, and refresh after a relaunch. D and E were not chosen.
 
 ## 4. What stays shared when code is not
 
@@ -78,7 +78,7 @@ Each phase ends in a check on Windows before the next starts.
 
 Do not port what C# already does (relative time) or what the view models already own; apply the Swift regression cases (`TimelineViewModelTests`, `NotificationsViewModelTests`, `NotificationPipelineRegressionTests`) to the existing C# view models instead. `FeedThreading.arrange` groups a self-thread only when parent and child share an author, but the bridge sends no authors, so Windows groups other people's replies too; pass the author in the port and record the change. Check: `dotnet test`.
 
-**Phase 3. OAuth and accounts.** Unless the user has chosen otherwise in §8, port `BlueskyCore`'s OAuth (identity resolution, metadata discovery, PKCE, PAR, DPoP with ECDSA P-256 from `System.Security.Cryptography`, refresh) and its tests. Store accounts with DPAPI (`ProtectedData`). Tokens and the DPoP private key never go to logs or the repository (AGENTS.md, Publishing Policy). Check: the OAuth list, with the Debug setting pointing sign-in and account operations at the C# core.
+**Phase 3. OAuth and accounts.** Port `BlueskyCore`'s OAuth (identity resolution, metadata discovery, PKCE, PAR, DPoP with ECDSA P-256 from `System.Security.Cryptography`, refresh) and its tests. Store accounts with DPAPI (`ProtectedData`). Tokens and the DPoP private key never go to logs or the repository (AGENTS.md, Publishing Policy). Check: the OAuth list, with the Debug setting pointing sign-in and account operations at the C# core.
 
 **Phase 4. Existing accounts.** Existing users sign in again after the switch; the Swift store (`accounts.index` and `account.<did>` as DPAPI `.bin` files under Application Support `as.ason.YoruMimizuku/secure`) is not read. Use a different storage location so the old files are never misread, delete them on first launch, and tell the user once why they are signed out. Check on one Windows user: install the last shipped build, sign in, install the new build over it, see the message, sign in again, and confirm each account's saved filters come back (they are keyed by DID, so they should).
 
@@ -111,5 +111,4 @@ Made by the user on 2026-11-21:
 - Existing Windows users may be asked to sign in again (Phase 4).
 - The Swift core becomes Apple-only (Phase 6).
 - The prototype is read from Figma.
-
-Still open: whether a .NET AT Protocol library may replace the hand-written OAuth (approach C). The default is the hand port in Phase 3. If the user asks for the library route, run a spike before Phase 3: wire each candidate into a test project and check it against the OAuth list in §5, then report which passed and what adopting it would change (the dependency, its own token storage, how sign-in is customized) so the user can decide.
+- OAuth and accounts are ported by hand from `BlueskyCore` (Phase 3), not taken from a .NET AT Protocol library.
