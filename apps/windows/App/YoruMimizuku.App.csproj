@@ -18,7 +18,7 @@
     <WindowsPackageType>None</WindowsPackageType>
     <EnableMsixTooling>true</EnableMsixTooling>
     <!-- Framework-dependent: the .NET 10 Desktop runtime and the Windows App SDK
-         runtime are NOT bundled (keeps the release ZIP ~40 MB so it fits a Tangled
+         runtime are NOT bundled (keeps the release ZIP near 12 MB so it fits a Tangled
          tag artifact). The user installs both runtimes once; if either is missing
          the app prompts on first run. The .NET apphost shows a download dialog, and
          the OnNoMatch_ShowUI line below makes the Windows App SDK bootstrapper

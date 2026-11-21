@@ -26,9 +26,8 @@ This is a personal, experimental project with two motivations behind it.
 - **Bluesky (AT Protocol) is supported today.** Login (OAuth), timelines, posting,
   notifications, conversations, and image attachments work.
 - **macOS and Windows are both supported.** macOS is a SwiftUI app; Windows is a
-  WinUI 3 (C#/.NET 8) app that reuses the same Swift core through a C ABI DLL bridge
-  (see `apps/windows`). The Windows app builds, runs self-contained, and signs in via
-  OAuth end to end. iOS and Android are in view but not yet built.
+  WinUI 3 (C#/.NET 10) app with a C# port of the core (see `apps/windows`). The Windows
+  app builds, runs, and signs in via OAuth end to end. iOS and Android are in view but not yet built.
 
 This is early, evolving software. Expect rough edges.
 
@@ -45,9 +44,8 @@ The code is split into three layers so the core stays portable:
   `os.signpost` on Apple, DPAPI / `BCryptGenRandom` on Windows.
 - **`apps/macos`** — the macOS app: SwiftUI views and the Apple-specific wiring (Keychain,
   `ASWebAuthenticationSession`, and so on).
-- **`apps/windows`** — the Windows app: a WinUI 3 (C#/.NET 8) front end that calls the Swift
-  core through the `YoruMimizukuBridge` C ABI DLL via P/Invoke. OAuth uses an embedded
-  WebView2.
+- **`apps/windows`** — the Windows app: a WinUI 3 (C#/.NET 10) front end over a C# port of
+  the core (`apps/windows/Core`). OAuth uses an embedded WebView2.
 
 The same author's Ruby terminal client [tempest](https://github.com/asonas/tempest) served
 as the reference implementation; this is a fresh Swift implementation rather than a port.
@@ -71,20 +69,18 @@ Re-run `mise run generate` (or `xcodegen generate`) after editing `project.yml`.
 
 ### Windows
 
-The Windows app is built with the Swift toolchain for Windows plus the .NET 8 SDK and a
-Visual Studio C++ workload. Helper scripts live in `scripts/windows`:
+The Windows app is a WinUI 3 app with its own C# core, built with the .NET 10 SDK (the
+release launcher also needs a Visual Studio C++ workload). Helper scripts live in
+`scripts/windows`:
 
 ```powershell
-# Build the Swift core bridge DLL and stage it (+ Swift runtime) into the app
-scripts\windows\stage-bridge.ps1
-
 # Build the WinUI app (framework-dependent: needs the .NET 10 + Windows App SDK runtimes installed)
-dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
+dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug -p:Platform=x64
 # -> App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
 ```
 
 See [`apps/windows/README.md`](apps/windows/README.md) for details. `scripts\windows\ci.ps1`
-runs the full chain (core `swift build`/`swift test`, stage, then `dotnet build`).
+runs the full chain (`dotnet test` for the C# core, then `dotnet build`).
 
 ### Tests
 

@@ -1,69 +1,68 @@
 # YoruMimizuku for Windows (WinUI 3)
 
-A WinUI 3 (C#/.NET 8) front end for YoruMimizuku that reuses the shared Swift
-core (`BlueskyCore` + `YoruMimizukuKit`) through a C ABI DLL bridge
-(`YoruMimizukuBridge.dll`), called via P/Invoke with UTF-8 JSON.
+A WinUI 3 (C#/.NET 10) app for YoruMimizuku with its own C# core: a port of the
+Swift `BlueskyCore` and `YoruMimizukuKit` logic the macOS app uses
+(`docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`). Everything
+is managed code; no Swift toolchain or native bridge DLL is involved.
 
 ## Architecture
 
 ```
-apps/windows/App
-├── Interop/         P/Invoke (NativeMethods), JSON facade (BridgeClient), DTOs
-├── Mvvm/            ObservableObject + AsyncRelayCommand
-├── ViewModels/      Login / Timeline / Thread / Notifications / Composer / Workspace / SavedFilter
-├── Views/           XAML: Login (WebView2 OAuth), Feed, Notifications, Conversation, Composer, Settings
-├── Services/        AppSettings, ThemeService (randoma11y)
-├── App.xaml(.cs)    Initializes the bridge (yoru_init) at launch
-└── MainWindow       NavigationView shell, tab cycling (Ctrl+Shift+J/K), login gate
+apps/windows
+├── Core/            YoruMimizuku.Core: XRPC client and models, OAuth (PKCE + PAR + DPoP),
+│                    accounts (DPAPI storage, token refresh), feed / notification / search /
+│                    post / profile services, display mapping, FeedThreading, OGP
+├── Core.Tests/      xUnit tests for Core, translated from the Swift core's tests
+├── Interop/         YoruMimizuku.App.Interop: CoreClient (ICoreClient) and
+│                    CoreAccountClient (IAccountClient), mapping Core's models to the DTOs
+│                    the view models consume; CoreException for failures
+├── Interop.Tests/   xUnit tests for the client layer and the DTO mapping
+└── App/             The WinUI app
+    ├── Interop/         WinSparkle P/Invoke (WinSparkleNative)
+    ├── Mvvm/            ObservableObject + AsyncRelayCommand
+    ├── ViewModels/      Login / Timeline / Thread / Notifications / Composer / Workspace / SavedFilter
+    ├── Views/           XAML: Login (WebView2 OAuth), Feed, Notifications, Conversation, Composer, Settings
+    ├── Services/        AppSettings, ThemeService (randoma11y), UpdateService, ...
+    ├── App.xaml(.cs)    Creates the CoreClient every window shares
+    └── MainWindow       NavigationView shell, tab cycling (Ctrl+Shift+J/K), login gate
 ```
 
-The Swift core is platform-independent and already builds and tests on Windows.
-Windows OS touchpoints live in `core/Sources/PlatformWindows` (DPAPI secure
-storage, `BCryptGenRandom`). The bridge entry points are in
-`core/Sources/YoruMimizukuBridge`.
+Each window holds an `IAccountClient` for its own account, so its reads and writes
+never follow another window's account switch.
+
+Accounts are stored with DPAPI in `%LOCALAPPDATA%\YoruMimizuku\accounts`. Builds
+before the C# core kept accounts in `%LOCALAPPDATA%\as.ason.YoruMimizuku\secure`,
+which this app never reads: at launch it deletes that store if one is there, and
+when an account was signed in to it, tells the user once to sign in again.
 
 ## Prerequisites
 
-- Swift toolchain for Windows: `winget install --id Swift.Toolchain`
 - .NET 10 SDK: `winget install --id Microsoft.DotNet.SDK.10`
-- Visual Studio 2022 (or Build Tools) with the C++ workload and the
-  Windows App SDK / WinUI 3 component (`dotnet workload install` is handled by VS).
+- Visual Studio 2022 (or Build Tools) with the Windows App SDK / WinUI 3 component,
+  plus the C++ workload for `release.ps1`, which compiles the launcher with `cl.exe`.
 - Microsoft Edge WebView2 Runtime (preinstalled on current Windows 11).
+- For `release.ps1 -Installer` only: Inno Setup 6.
 
 ## Build & run
 
 ```powershell
-# 1. Build the Swift core bridge DLL and stage it (+ Swift runtime) into App/native
-scripts\windows\stage-bridge.ps1
-
-# 2. Build and run the WinUI app
-dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug
+dotnet build apps\windows\YoruMimizuku.Windows.sln -c Debug -p:Platform=x64
 # Framework-dependent output lands under a win-x64 subfolder:
-.\App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
+.\apps\windows\App\bin\x64\Debug\net10.0-windows10.0.19041.0\win-x64\YoruMimizuku.App.exe
 ```
 
-`scripts\windows\ci.ps1` runs the full chain (core build/test + stage + dotnet build).
+`scripts\windows\build-app.ps1` stops a running instance, builds, and prints the
+exe path.
 
-### Choosing the core (Debug builds only)
-
-The app is moving from the Swift core to a C# core (`apps/windows/Core`, see
-`docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`). The choice is
-made once at startup and logged to `app.log` (`Core: C#` or `Core: Swift bridge`):
-
-- **Release** builds always use the Swift bridge.
-- **Debug** builds use the C# core, which does not load the bridge DLL. To run a
-  Debug build on the Swift bridge, set `YORUMIMIZUKU_CORE=swift` before launching:
+## Test
 
 ```powershell
-$env:YORUMIMIZUKU_CORE = "swift"   # Swift bridge
-Remove-Item Env:YORUMIMIZUKU_CORE  # back to the C# core
+dotnet test apps\windows\Core.Tests\YoruMimizuku.Core.Tests.csproj
+dotnet test apps\windows\Interop.Tests\YoruMimizuku.App.Interop.Tests.csproj
 ```
 
-The two cores keep separate sign-ins. The C# core stores accounts in
-`%LOCALAPPDATA%\YoruMimizuku\accounts`. At each launch it deletes the Swift core's
-store (`%LOCALAPPDATA%\as.ason.YoruMimizuku\secure`) if one is there, and when an
-account was signed in to it, tells the user once to sign in again. So after a C#
-launch, a Swift-bridge launch starts signed out.
+`scripts\windows\test.ps1` runs both (extra arguments such as `--filter` go to
+each run), and `scripts\windows\ci.ps1` runs the tests and then the Debug build.
 
 The project targets **.NET 10** + **Windows App SDK 2.1.3** and is configured
 **framework-dependent** (`SelfContained=false` + `WindowsAppSDKSelfContained=false`):
@@ -80,14 +79,17 @@ Startup/runtime errors are written to `%LOCALAPPDATA%\YoruMimizuku\app.log`.
 `scripts\windows\release.ps1` produces a distributable **ZIP** under `build/`.
 It publishes the app framework-dependent (neither the .NET nor the Windows App
 SDK runtime is bundled), lays out a small top-level `YoruMimizuku.exe` launcher
-plus an `app/` payload directory (the app, the bridge DLL, the Swift runtime,
-and the remaining dependency DLLs), and zips it:
+plus an `app/` payload directory (`YoruMimizuku.App.exe`, `YoruMimizuku.Core.dll`,
+`YoruMimizuku.App.Interop.dll` and the remaining dependency DLLs), and zips it:
 
 ```powershell
 scripts\windows\release.ps1 -Version 0.5.0
-# add -StageBridge to rebuild the Swift bridge (release) first, after core/ changes
-# -> build\YoruMimizuku-win-x64-0.5.0.zip   (~40 MB)
+# -> build\YoruMimizuku-win-x64-0.5.0.zip   (~12 MB)
 ```
+
+It deletes `App\bin\x64\Release` before publishing, because `dotnet publish` keeps
+files from an earlier publish (for example the Swift DLLs of builds before the C#
+core).
 
 For WinSparkle auto-updates, build an installer EXE in addition to the ZIP:
 
@@ -107,9 +109,9 @@ The app contains WinSparkle wiring and an Update section in Settings. It remains
 disabled until the Windows EdDSA public key placeholder in `UpdateService` is
 replaced and a signed installer appcast is published.
 
-Dropping the two bundled runtimes shrinks the ZIP from ~90 MB (self-contained) to
-**~40 MB** — small enough to upload as a Tangled tag artifact, which is stored as
-an atproto blob (~50 MB limit on a default PDS). The release script also strips the
+Not bundling the two runtimes keeps the ZIP near **12 MB** — small enough to upload
+as a Tangled tag artifact, which is stored as an atproto blob (~50 MB limit on a
+default PDS). The release script also strips the
 Windows ML / AI stack that Windows App SDK 2.x bundles by default (`onnxruntime.dll`,
 `DirectML.dll`, the `AI.MachineLearning` projection — ~16 MB zipped) since this app
 uses no ML APIs and there is no supported project-level opt-out
@@ -132,17 +134,14 @@ cert.)
 
 ## OAuth
 
-Login uses the spec's WebView2 flow: `yoru_login_begin` returns the authorization
-URL, the app loads it in an embedded `WebView2`, intercepts the redirect to the
-`as.ason:` callback scheme, and calls `yoru_login_complete` to finish the token
-exchange. No custom protocol registration is required.
+Login uses the spec's WebView2 flow: `ICoreClient.LoginBeginAsync` returns the
+authorization URL, the app loads it in an embedded `WebView2`, intercepts the
+redirect to the `as.ason:` callback scheme, and calls `LoginCompleteAsync` to
+finish the token exchange. No custom protocol registration is required.
 
 ## Status / remaining work
 
-Implemented and verified (Swift side): the C ABI bridge, `PlatformWindows`
-adapters (unit-tested), and the core build/test on Windows.
-
-The WinUI front end is wired end-to-end (bridge -> view models -> XAML) for the
+The WinUI front end is wired end-to-end (C# core -> view models -> XAML) for the
 core surfaces: login, home timeline (infinite scroll, 30s refresh, j/k, like /
 repost, n-to-compose), conversation (ancestor + re-anchor), notifications,
 composer (text + images + reply/quote), saved-filter tabs, and settings

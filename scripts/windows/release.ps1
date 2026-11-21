@@ -6,8 +6,8 @@
     Publishes the WinUI app framework-dependent for win-x64 -- the .NET 10 Desktop
     runtime and the Windows App SDK runtime are NOT bundled -- then lays out a
     small top-level YoruMimizuku.exe launcher plus an app/ payload directory
-    (holding the app and its C# core) and zips it into build/. Dropping the two bundled runtimes keeps the ZIP near ~40 MB
-    (versus ~90 MB self-contained), small enough to upload as a Tangled tag
+    (holding the app and its C# core) and zips it into build/. Not bundling the
+    two runtimes keeps the ZIP near 12 MB, small enough to upload as a Tangled tag
     artifact (which is stored as an atproto blob, ~50 MB limit on a default PDS).
 
     The user installs the runtimes once. The app prompts and links to the download
