@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows three-pane window)
+
+- sources: docs/adr/0026-macos-three-pane.md, docs/adr/0027-windows-csharp-core.md, apps/windows/Core/DetailPaneModel.cs, apps/windows/App/MainWindow.xaml, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[author-tab]], [[windows]]
+- note: Phase 7's first unit. Windows now has the sidebar, the selected timeline and a detail pane; conversations and author pages open in the pane and the sidebar's conversation and author tabs are gone. New matrix row "Three-pane window": Windows `differs` because it keeps ADR 0026's back / forward (Alt+← / Alt+→, mouse buttons), which macOS dropped with ADR 0022.
+
 ## 2026-11-21 ingest (Windows single instance)
 
 - sources: apps/windows/App/Program.cs, apps/windows/App/App.xaml.cs, apps/windows/App/MainWindow.xaml.cs

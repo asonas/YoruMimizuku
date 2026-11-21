@@ -24,6 +24,8 @@ sources:
   - apps/windows/Core/TimelineLayout.cs
   - apps/windows/App/Views/ConversationView.xaml.cs
   - apps/windows/App/MainWindow.xaml.cs
+  - apps/windows/Core/DetailPaneModel.cs
+  - docs/adr/0026-macos-three-pane.md
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
   - apps/windows/App/Services/ImageProcessing.cs
@@ -79,10 +81,13 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
 - Views: WebView2 OAuth login, a feed (facet-aware rich text, image grid + lightbox,
   external link preview cards, web-style thread grouping, relative timestamps,
   like/repost/reply icons, infinite scroll, 30s refresh, j/k, n-to-compose,
-  per-post separators), conversation (ancestor + descendant reply tree + re-anchor),
-  notifications, composer, settings; a cmux-style `NavigationView` vertical-tab
-  shell with `Ctrl+Shift+J/K` cycling, `Ctrl+Shift+N` for a new window, closable
-  tabs, and an account footer.
+  per-post separators), conversation (ancestor + descendant reply tree),
+  notifications, composer, settings; a three-pane shell (ADR 0026): the
+  `NavigationView` sidebar of timelines with `Ctrl+Shift+J/K` cycling, closable
+  filter tabs and an account footer, the selected timeline, and a detail pane for
+  conversations and author pages with back / forward (Alt+← / Alt+→, the mouse's
+  back / forward buttons), whose history is the tested `Core/DetailPaneModel.cs`;
+  `Ctrl+Shift+N` opens a new window ([[app-shell]]).
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
   attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are
@@ -96,9 +101,9 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   per-account JSON persistence. OR filters page with the same `CompositeCursor`
   shape as macOS: the core carries one cursor per subquery, skips exhausted
   subqueries, and merges each page newest-first ([[filters]]).
-- Author tabs are implemented: avatar taps in feeds and conversations derive the
-  actor DID from the post AT-URI, notification actors open by handle, and
-  `AuthorView` renders a profile header over a reused feed loaded through
+- Author pages open in the detail pane: avatar taps in feeds and conversations
+  derive the actor DID from the post AT-URI, notification actors open by handle,
+  and `AuthorView` renders a profile header over a reused feed loaded through
   `AuthorFeedLoadAsync` / `ProfileAsync` ([[author-tab]]).
 - Timeline rows support the Windows parity shortcuts: j/k focus, n compose,
   f toggles like, o opens the focused post's bsky.app permalink, and the link
@@ -117,11 +122,13 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
 - The conversation view renders the focused post's descendant reply tree:
   `ThreadLoadAsync` returns the focus + tree from the core's
   `ThreadNode.ChildTree(maxDepth: 3)`, and each reply is indented by depth
-  with a left connector and is tappable to re-anchor ([[timeline-streaming]]).
+  with a left connector; the parent and each reply open as a new detail-pane
+  page, so back returns. The focused post has a reply button, since the feed's
+  reply count opens the conversation ([[timeline-streaming]], [[app-shell]]).
 - The shell is multi-window: `Ctrl+Shift+N` opens another independent workspace
   window, the analogue of a macOS `WindowGroup` window. Only the primary window
   owns the updater, notification polling and OS toasts; every window keeps its
-  own tabs and account client ([[app-shell]]).
+  own tabs, detail pane and account client ([[app-shell]]).
 - The app runs as a single process (issue #20). Every process shares the DPAPI
   account store, but refresh coalescing and compare-and-save hold only inside one
   process (`Core/Accounts/AccountState.cs`), so a second process could write back a
@@ -174,7 +181,7 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
 - **Copy-link toast and mention links**: copying a permalink shows a
   「リンクをコピーしました」 pill in that window only (`Services/ToastCenter.cs`
   tags each message with its `XamlRoot`, since the shell is multi-window), and a
-  feed body's `@mention` opens the account in an author tab; the conversation view
+  feed body's `@mention` opens the account in the detail pane; the conversation view
   still renders bodies as plain text ([[timeline-streaming]]).
 - **Video posts and draft protection**: the composer attaches one video
   (`.mp4` / `.m4v` / `.mov`, exclusive with images, with alt text), which the C#

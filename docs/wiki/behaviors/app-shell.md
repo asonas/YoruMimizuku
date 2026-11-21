@@ -39,9 +39,17 @@ sources:
   - core/Sources/YoruMimizukuKit/WorkspaceModel.swift
   - core/Sources/YoruMimizukuKit/WindowTitle.swift
   - apps/windows/App/MainWindow.xaml.cs
+  - apps/windows/App/MainWindow.xaml
+  - apps/windows/Core/DetailPaneModel.cs
   - apps/windows/App/Services/WindowPlacement.cs
   - apps/windows/App/Services/AppSettings.cs
 features:
+  - name: Three-pane window (sidebar / timeline / detail pane)
+    macos: full
+    windows: differs
+    ios: differs
+    android: planned
+    note: "Windows keeps ADR 0026's back / forward history (Alt+← / Alt+→, the mouse's back / forward buttons), which macOS dropped with ADR 0022; Windows takes 0022's one-page pane in a later Phase 7 unit (`docs/adr/0027-windows-csharp-core.md` §6). iPadOS keeps conversation and author tabs ([[ipados]])."
   - name: Tabbed single-column shell (sidebar / tabs)
     macos: full
     windows: full
@@ -125,9 +133,11 @@ A tab is one of the seven v1 sources (home / notifications / custom feed / list 
 
 Opening a post's conversation anchors the thread on that post: ancestors render above it and replies render below, but only the focused post is interactive — `ThreadViewModel.post(id:)` (`core/Sources/YoruMimizukuKit/ThreadViewModel.swift`) resolves a post only when its id matches the current focus, so like/repost/quote never reach anything else in the tree. Ancestor rows and reply rows are accordingly rendered with `PostRowView(interactiveActions: false)`, which turns their action bar into static labels, and each row is wrapped in a plain button that re-anchors the tab on that post when tapped; this also stands in for the timestamp tap that `interactiveActions: false` otherwise disables (`apps/macos/Views/ConversationView.swift`, `parentBlock` / `replyRow`). [[ipados]] already renders both ancestor and reply rows this way; on macOS the reply rows previously left the action bar live even though it had no effect, until the row was brought in line with the ancestor rows. Manual verification of this behavior on a real macOS session is pending — see [[manual-verification]] "P0-1".
 
-## Detail pane (macOS)
+## Detail pane
 
 On macOS a conversation or author page opens in the window's third column instead of replacing the timeline, so the timeline keeps its scroll position. The pane shows one page at a time, as in the desktop prototype (the back/forward history and ⌘[ / ⌘] of the first version were dropped on 2026-11-20): opening another page replaces it and close (×) empties it. Its 38pt bar has close, the title and, for a conversation, the スレッド / レコード switch. スレッド shows the ancestors as compact rows, the anchor at full size (media with alt text, a warn box for labeled media, link card, quote box, counts that also act) and the replies as a tree indented 20pt per level with fold controls; レコード shows Handle / DID / URI and the record as stored (`com.atproto.repo.getRecord`), also reachable with 投稿 > レコードを表示 (⌥⌘I). If the thread fails to load, the anchor stays and the replies area shows the error with 再試行. A reply field under the conversation (available as soon as the anchor shows) sends a short reply with return or opens the composer with what was typed (`docs/adr/0022-macos-prototype-detail-pane.md`). `DetailPaneModel` holds the shown page and reuses `ConversationTab` / `AuthorTab`; an author feed polls only while its page is shown. Conversation tabs and author tabs are no longer listed in the macOS sidebar or persisted. The plain-key shortcuts (j/k/l/o/n since 2026-11-20; f was like before) belong to the timeline column only, so the feed inside an author page does not register them and the conversation view binds none of them. [[ipados]] keeps the tabbed model unchanged (`docs/adr/0026-macos-three-pane.md`, `apps/macos/Views/DetailPaneView.swift`, `core/Sources/YoruMimizukuKit/DetailPaneModel.swift`).
+
+On [[windows]] the window has the same three panes (ADR 0026, Phase 7 of `docs/adr/0027-windows-csharp-core.md`): the `NavigationView` sidebar (210 wide), the selected timeline and the detail pane, split 2 : 3 as in the prototype's 400 : 628. The timeline column is 360 to 960 wide and the detail pane at least 320, and the window keeps at least 900 × 540. Clicking a post, its reply count, a reply marker or a quote opens the conversation in the pane; an avatar, author name or `@mention` opens the author page there; a hashtag still opens a filter in the timeline column. The sidebar no longer lists conversation or author tabs. Unlike macOS, the pane keeps ADR 0026's back / forward history: `DetailPaneModel` (`apps/windows/Core/DetailPaneModel.cs`, a port of the Swift model as of 410a31f) adds no history when the shown page is opened again, drops the pages ahead when one is opened after going back, and keeps the latest 30. The bar (39 high) has close, back and forward and the page's title; back / forward also answer Alt+← / Alt+→ (the browser convention, in place of ⌘[ / ⌘]), a keyboard's browser back / forward keys, and the mouse's back / forward buttons anywhere in the window. Each page keeps its view in the history, so going back shows it as it was left; an author feed polls only while its view is on screen and merges fresh posts on top when shown again. In a conversation the parent and each reply open as a new page (so back returns), and a reply button opens the composer, since the timeline's reply count now opens the conversation. Settings take the timeline and detail columns together. Switching accounts or signing in again empties the pane, whose pages were built on the previous account client. With nothing open the pane shows the prototype's faint two-lens mark. The plain-key shortcuts stay focus-scoped as before: they act on whichever pane has keyboard focus, so nothing needs to be unregistered as on macOS (`apps/windows/App/MainWindow.xaml`, `apps/windows/App/MainWindow.xaml.cs`).
 
 ## Post row action paths
 
