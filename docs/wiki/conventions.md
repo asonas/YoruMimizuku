@@ -16,7 +16,7 @@ The model is karpathy's "LLM wiki": an LLM-maintained, git-versioned knowledge l
 
 1. **Raw sources** — the code, which is the source of truth for how the app works, and the decision records in `docs/adr/`, which say why something was chosen. The wiki does not restate code structure; it cites the ADR (or the code) a behavior comes from.
 2. **The wiki** — `docs/wiki/`. Markdown the agent fully owns: `overview.md`, per-behavior pages under `behaviors/`, per-platform pages under `platforms/`, plus the generated `index.md` and the append-only `log.md`.
-3. **The schema** — this file, plus `AGENTS.md` / `CLAUDE.md`, which tell agents the conventions and when to run the workflow.
+3. **The schema** — this file, plus `AGENTS.md`, which tells agents the conventions and when to run the workflow.
 
 ## Design documents
 

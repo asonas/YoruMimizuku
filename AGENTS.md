@@ -124,3 +124,17 @@ Test targets: `BlueskyCoreTests` and `YoruMimizukuKitTests` (both under `core/Te
 - Abstract side effects (networking, Keychain, browser launch) behind protocols, and inject fakes in tests. Keep the `BlueskyCore` core logic free of direct Apple-framework dependencies.
 - The reference implementation is the same author's Ruby terminal client `tempest` (`/Users/asonas/ghq/github.com/asonas/tempest`), whose proven logic serves as the blueprint. This is a high-quality Swift reimplementation, not a port.
 - Layout spacing/radius values shared across platforms live in `DesignMetrics` (`core/Sources/YoruMimizukuKit/DesignMetrics.swift`); see `docs/wiki/design-system.md` for the vocabulary and the design catalog.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The canonical triage label names are used without overrides. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses the single-context layout. See `docs/agents/domain.md`.
