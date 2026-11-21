@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows session re-auth, #31)
+
+- sources: docs/adr/0018-session-reauth.md, apps/windows/Interop/CoreClient.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[oauth-flow]], [[accounts]], [[windows]]
+- note: Windows now keeps an expired account and prompts re-auth, as macOS does. Any account call that hits invalid_grant reaches the window, not only the avatar load. Token refresh & session recovery is back to `full` for Windows, and the #31 bug note is gone.
+
 ## 2026-11-21 ingest (Windows parity follow-ups on the C# core)
 
 - sources: apps/windows/Core/VideoUploadService.cs, apps/windows/Core/PostService.cs, apps/windows/Core/TimelineLayout.cs, apps/windows/App/Services/ToastCenter.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ComposerDialog.xaml.cs

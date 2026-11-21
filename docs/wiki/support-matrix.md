@@ -73,7 +73,7 @@ Legend: ○ supported (same behavior) · △ limited or OS-specific difference (
 |---|:--:|:--:|:--:|:--:|
 | OAuth login (PKCE + DPoP) | ○ | ○ | ○ | − |
 | Browser authorization | ○ | △ | △ | − |
-| Token refresh & session recovery | ○ | △ | ○ | − |
+| Token refresh & session recovery | ○ | ○ | ○ | − |
 
 ## [[sensitive-media]] — Sensitive Media Blur
 
@@ -128,7 +128,6 @@ Why a cell is limited (△), differs, unsupported (×), or unverified (?):
 - **OS banner + unread badge** ([[notifications]]): macOS supports the numeric Dock badge. Banners are pending. iPadOS has an in-app badge. Windows displays a toast and flashes the taskbar ([[macos]], [[ipados]], [[windows]]).
 - **In-app notification settings (interval / badges)** ([[notifications]]): macOS and Windows expose a 通知 settings section to choose the poll interval (15/30/60/300s) and toggle the unread badge, persisted under the same keys (Windows in AppSettings, applied live to the notifications timer and tab badge); iPadOS has no such settings UI yet ([[windows]], [[ipados]]).
 - **Browser authorization** ([[oauth-flow]]): macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows has no ASWebAuthenticationSession, so it embeds WebView2 for the two-step login (`0027-windows-csharp-core.md` §3) ([[ipados]], [[windows]]).
-- **Token refresh & session recovery** ([[oauth-flow]]): bug: https://github.com/asonas/YoruMimizuku/issues/31. On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]]).
 - **Sensitive media blur (content labels)** ([[sensitive-media]]): macOS and iPadOS blur media on posts carrying an adult (porn/sexual/nudity) or graphic (graphic-media/gore) label behind a tap-to-reveal curtain (the shared MediaWarning + a Gaussian blur in PostRowView). Windows gates the same media but covers it with an opaque tap-to-reveal curtain rather than a Gaussian blur, since WinUI has no cheap subtree blur — equivalent gating, different look ([[windows]], [[ipados]]).
 - **Tall-image crop (5:4 cap with top-anchor and "全体表示" hint)** ([[timeline-media-layout]]): The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit for macOS and iPadOS (PostRowView singleImage, tallCropHint overlay) and are ported to the Windows C# core (Core/TimelineLayout.cs), which FeedView uses with the image aspect ratio carried in PostImageDto ([[windows]], [[ipados]]).
 - **Wide-column reflow (body left / media right at ≥ 680 pt)** ([[timeline-media-layout]]): Reflow follows the width the row's content region gets: macOS decides inside the row's layout pass, iPadOS from TimelineListView's scene width, and Windows from the row grid's SizeChanged in FeedView ([[windows]], [[ipados]]).

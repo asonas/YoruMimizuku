@@ -12,11 +12,19 @@ public sealed partial class LoginView : UserControl
 
     public event Action<string>? Authenticated;
 
-    public LoginView()
+    /// <summary>Raised when the user backs out with キャンセル, shown only for <c>canCancel</c>.</summary>
+    public event Action? Cancelled;
+
+    /// <param name="handle">Pre-fills the handle, as when signing in again to an expired account.</param>
+    public LoginView(string? handle = null, bool canCancel = false)
     {
         InitializeComponent();
         _vm.Authenticated += did => Authenticated?.Invoke(did);
+        HandleBox.Text = handle ?? "";
+        CancelButton.Visibility = canCancel ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private void OnCancelClick(object sender, RoutedEventArgs e) => Cancelled?.Invoke();
 
     private async void OnSignInClick(object sender, RoutedEventArgs e)
     {

@@ -30,6 +30,8 @@ public sealed class CoreClient(ISecureStorage storage, HttpMessageHandler transp
     private readonly ConcurrentDictionary<string, PendingLogin> pendingLogins = new();
     private readonly ConcurrentDictionary<string, IAccountClient> accountClients = new();
 
+    public event Action<string>? SessionExpired;
+
     public Task<AccountDto?> CurrentAccountAsync() =>
         Task.Run(() => accounts.CurrentAccount() is { } account ? new AccountDto(account.Did, account.Handle) : null);
 
@@ -77,6 +79,11 @@ public sealed class CoreClient(ISecureStorage storage, HttpMessageHandler transp
     public IAccountClient ForAccount(string did) =>
         accountClients.GetOrAdd(did, d => new CoreAccountClient(
             new XrpcClient(d, accounts.GetPds(d), new HttpClient(new AccountHandler(accounts, d) { InnerHandler = transport })),
-            error => error is OAuthException { IsSessionExpired: true },
+            error =>
+            {
+                if (error is not OAuthException { IsSessionExpired: true }) return false;
+                SessionExpired?.Invoke(d);
+                return true;
+            },
             videos));
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -35,6 +36,13 @@ public interface ICoreClient
     /// <summary>A client whose every request acts as <paramref name="did"/>,
     /// whichever account the store marks current.</summary>
     IAccountClient ForAccount(string did);
+
+    /// <summary>
+    /// Raised with the account's DID when one of its calls finds the refresh token dead
+    /// (invalid_grant), on whichever thread the call ran. The account stays stored, so
+    /// signing in to it again replaces its tokens in place.
+    /// </summary>
+    event Action<string>? SessionExpired;
 }
 
 /// <summary>

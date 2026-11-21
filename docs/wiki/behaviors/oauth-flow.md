@@ -13,6 +13,7 @@ sources:
   - core/Sources/BlueskyCore/OAuth/SessionRefresher.swift
   - core/Sources/YoruMimizukuKit/SessionReauth.swift
   - apps/windows/App/MainWindow.xaml.cs
+  - apps/windows/Interop/CoreClient.cs
 features:
   - name: OAuth login (PKCE + DPoP)
     macos: full
@@ -27,10 +28,9 @@ features:
     note: "macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows has no ASWebAuthenticationSession, so it embeds WebView2 for the two-step login (`0027-windows-csharp-core.md` §3) ([[ipados]], [[windows]])."
   - name: Token refresh & session recovery
     macos: full
-    windows: differs
+    windows: full
     ios: full
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/31. On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]])."
 ---
 
 # Authentication (OAuth + DPoP)
@@ -68,6 +68,10 @@ Two pieces address this:
 - **`RefreshGate` (coalescing).** A shared actor (`core/Sources/BlueskyCore/OAuth/RefreshGate.swift`) keyed by the refresh-token value. Concurrent renewals for the same token collapse into a single network call, and a straggler still holding the now-consumed token reuses the cached result instead of replaying the dead one. One shared instance lives on `AccountManager.refreshGate` and is threaded through every XRPC service (via `LiveServiceContext`), so all tabs coalesce. Failures are not cached, so a genuinely dead token still surfaces its error. Covered by `RefreshGateTests`.
 - **Saving renewed tokens (#16).** The account manager's gate saves each renewal the moment it completes, before any waiting request retries, so a request that fails afterwards cannot leave only the used refresh token stored. The gate records every refresh token it has used, and `AccountManager.updateTokens(did:session:…)` drops a refresh token already used and tokens signed with another DPoP key than the stored session's (a re-login replaced it), so a request that renewed earlier but reports late cannot bring back an invalidated token. Account adds, removals and token writes share one lock; iPad windows share one manager.
 - **`SessionExpiry` (recovery).** When a refresh fails irrecoverably (`tokenRequestFailed` with `invalid_grant`; see the parsed OAuth error body in `OAuthError`), `SessionExpiry.reportIfExpired` posts a notification. The view models call it from their error paths (load / refresh / scroll / compose). On both macOS and iPad, `RootView` now **keeps** the account instead of dropping it: the pure helper `SessionReauth.onExpiry(currentDID:currentHandle:isPending:)` (`core/Sources/YoruMimizukuKit/SessionReauth.swift`) turns the event into a `ReauthRequest?` (nil if there is no current account, or if a re-auth is already pending — the idempotency guard against repeated poll-driven notifications). `RootView` sets its in-memory re-auth state from that request and auto-presents the existing `LoginView` in a sheet, bound to a dedicated re-auth `LoginViewModel` pre-filled with the expired account's handle, while the stale authenticated UI stays mounted behind the sheet. If the user cancels, the sheet closes but the re-auth state is not cleared, so a persistent `SessionReauthBanner` ("セッションが期限切れです" / "再ログイン") sits above the still-visible timeline as the fallback to re-open the sheet. On success, `AccountManager.add` replaces the same DID's tokens and DPoP key in place, the re-auth state clears, and the authenticated subtree's id (`"\(did)#\(reauthGeneration)"`) changes to force a fresh mount that reloads with the new tokens. Switching accounts or explicit logout also clears the re-auth state; only logout still deletes the account via `removeAndAdvance` (§ [[accounts]]). Retrying a dead session is futile, so the app routes to re-authentication instead of requiring a from-scratch re-add (`0018-session-reauth.md` §5).
+
+### Session expiry on Windows
+
+[[windows]] keeps the same contract over the C# core. Every account-scoped call goes through `CoreClient.ForAccount(did)`, so a timeline, notification, thread, author-page, post or like call can each find the session dead. When the refresh grant answers `invalid_grant` (`OAuthException.IsSessionExpired`), the call fails with `CoreException.SessionExpired` and `ICoreClient.SessionExpired` is raised with the DID (`apps/windows/Interop/CoreClient.cs`). Each `MainWindow` showing that DID keeps the account, logs `Session expired; prompting re-auth for <did>` (the DID only, never token material), and shows the login view pre-filled with the handle over its shell, which stays loaded. While a re-auth is pending, later expiries are ignored. キャンセル returns to the shell, where an `InfoBar` (「セッションが期限切れです」 / 「再ログイン」) re-opens the login view. A successful sign-in replaces the DID's tokens and DPoP key in place (`AccountManager.CompleteLoginAsync`, which also drops the account's in-memory refresh state) and re-enters the shell, which takes a fresh client and reloads the selected tab. Signing in as a different account instead adds that account and makes it current. The expired account stays stored and prompts again the next time it is used (`0018-session-reauth.md` §5.4). Windows has no wake hook. After sleep the first poll's 401 drives the refresh, coalesced per account, and an `invalid_grant` there takes the same path (`apps/windows/App/MainWindow.xaml.cs`).
 
 ### Proactive refresh on wake
 

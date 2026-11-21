@@ -67,8 +67,8 @@ writes do not follow another window's account switch.
 **Difference: one-time sign-in again.** The C# core stores accounts with DPAPI under
 `%LOCALAPPDATA%\YoruMimizuku\accounts` and never reads the Swift core's old store;
 the first launch after the switch deletes it and tells the user once to sign in
-again ([[accounts]]). On an expired session Windows signs the account out and
-advances, where macOS keeps it and re-authenticates ([[oauth-flow]]).
+again ([[accounts]]). On an expired session Windows keeps the account and asks
+the user to sign in to it again, as macOS does ([[oauth-flow]]).
 
 ## apps/windows (WinUI 3)
 

@@ -76,10 +76,10 @@ so the menu never touches secrets. Switching calls `SwitchAccountAsync` and
 re-enters the shell for the new account (rebuilding tabs/filters under its
 per-DID `SavedFilterStore`); "add account" shows the login view while keeping the
 current account stored, and a successful login adds + makes the new account
-current; "ログアウト" and the session-expiry fallback both go through
-`RemoveAndAdvanceAsync`, advancing to the
-next stored account or returning to login when none remain
-(`apps/windows/App/MainWindow.xaml.cs`).
+current; "ログアウト" goes through `RemoveAndAdvanceAsync`, advancing to the
+next stored account or returning to login when none remain. Session expiry keeps
+the account and routes to re-authentication instead, as on macOS (see
+[[oauth-flow]], `apps/windows/App/MainWindow.xaml.cs`).
 
 Windows stores accounts with DPAPI under `%LOCALAPPDATA%\YoruMimizuku\accounts`, not in
 the Keychain. **Difference: one-time sign-in again.** Builds before the C# core kept

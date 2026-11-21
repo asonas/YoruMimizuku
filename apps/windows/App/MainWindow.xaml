@@ -11,8 +11,22 @@
         <ContentControl x:Name="LoginHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
 
         <Grid x:Name="ShellRoot" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Open while this window's account waits to sign in again (ADR 0018). -->
+            <muxc:InfoBar x:Name="ReauthBar" Grid.Row="0" Severity="Warning" IsClosable="False"
+                          Title="セッションが期限切れです">
+                <muxc:InfoBar.ActionButton>
+                    <Button Content="再ログイン" Click="OnReauthClick" />
+                </muxc:InfoBar.ActionButton>
+            </muxc:InfoBar>
+
             <muxc:NavigationView
                 x:Name="Nav"
+                Grid.Row="1"
                 PaneDisplayMode="Left"
                 OpenPaneLength="220"
                 IsBackButtonVisible="Collapsed"

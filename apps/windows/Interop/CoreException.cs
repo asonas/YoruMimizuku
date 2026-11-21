@@ -11,7 +11,7 @@ public sealed class CoreException : Exception
     public string? Title { get; }
     public string? FriendlyMessage { get; }
     /// <summary>True when the stored session is no longer valid (invalid_grant on a
-    /// refresh) and the app should drop it and return to login.</summary>
+    /// refresh) and the account has to sign in again.</summary>
     public bool SessionExpired { get; }
 
     public CoreException(string message, string? kind = null, string? title = null,

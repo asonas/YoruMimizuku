@@ -40,6 +40,10 @@ public sealed partial class MainWindow : Window
     // Cached token-free account list for the footer switcher menu, refreshed when
     // the shell is entered / switched so the menu builds synchronously on open.
     private System.Collections.Generic.List<AccountSummaryDto> _accountSummaries = new();
+    // The account this window's shell shows, and the same account while its session has
+    // expired and waits to sign in again (ADR 0018). Entering the shell clears _reauth.
+    private AccountDto? _account;
+    private AccountDto? _reauth;
 
     public MainWindow() : this(true) { }
 
@@ -58,6 +62,7 @@ public sealed partial class MainWindow : Window
         {
             OpenWindows.Remove(this);
             AppSettings.Shared.NotificationSettingsChanged -= OnNotificationSettingsChanged;
+            App.Client.SessionExpired -= OnSessionExpired;
             if (!_isPrimary) return;
             // Persist where the user left the primary window so it relaunches at the
             // same place/size (including the maximized state).
@@ -82,6 +87,7 @@ public sealed partial class MainWindow : Window
         _notificationsTimer.Interval = TimeSpan.FromSeconds(AppSettings.Shared.NotificationPollIntervalSeconds);
         _notificationsTimer.Tick += async (_, _) => await _notifications.RefreshAsync();
         AppSettings.Shared.NotificationSettingsChanged += OnNotificationSettingsChanged;
+        App.Client.SessionExpired += OnSessionExpired;
         RootGrid.KeyDown += OnRootKeyDown;
         _ = InitializeAsync();
     }
@@ -110,13 +116,39 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void ShowLogin()
+    /// Show the login view over the shell. With <paramref name="reauth"/> it signs in again to
+    /// that expired account: pre-filled with its handle, and キャンセル returns to the shell,
+    /// which stays loaded behind it.
+    private void ShowLogin(AccountDto? reauth = null)
     {
-        var login = new LoginView();
+        var login = new LoginView(reauth?.Handle ?? reauth?.Did, canCancel: reauth is not null);
         login.Authenticated += OnAuthenticated;
+        login.Cancelled += () =>
+        {
+            LoginHost.Content = null;
+            LoginHost.Visibility = Visibility.Collapsed;
+            ShellRoot.Visibility = Visibility.Visible;
+        };
         LoginHost.Content = login;
         LoginHost.Visibility = Visibility.Visible;
         ShellRoot.Visibility = Visibility.Collapsed;
+    }
+
+    /// A call made as some account found its refresh token dead. If it is this window's
+    /// account and no sign-in again is pending, keep the account and ask the user to sign
+    /// in to it again (ADR 0018 §5.1). Raised on any thread.
+    private void OnSessionExpired(string did) => DispatcherQueue.TryEnqueue(() =>
+    {
+        if (_account is not { } account || account.Did != did || _reauth is not null) return;
+        AppLog.Write($"Session expired; prompting re-auth for {did}");
+        _reauth = account;
+        ReauthBar.IsOpen = true;
+        ShowLogin(account);
+    });
+
+    private void OnReauthClick(object sender, RoutedEventArgs e)
+    {
+        if (_reauth is { } account) ShowLogin(account);
     }
 
     /// Restore the persisted window placement (position, size, maximized state)
@@ -142,8 +174,13 @@ public sealed partial class MainWindow : Window
         EnterShell(account);
     }
 
+    /// Build the shell for <paramref name="account"/>. Signing in again lands here too, so a
+    /// fresh client and freshly loaded tabs replace the expired ones.
     private void EnterShell(AccountDto? account)
     {
+        _account = account;
+        _reauth = null;
+        ReauthBar.IsOpen = false;
         _workspace.Account = account is null ? null : App.Client.ForAccount(account.Did);
         _filterStore = account is null ? null : new SavedFilterStore(account.Did);
         _workspace.LoadFilters(_filterStore?.Load() ?? Array.Empty<SavedFilterModel>());
@@ -184,14 +221,6 @@ public sealed partial class MainWindow : Window
             {
                 AccountAvatar.ProfilePicture = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(url));
             }
-        }
-        catch (CoreException ce) when (ce.SessionExpired)
-        {
-            // The stored refresh token is no longer valid — drop the dead session
-            // and advance to the next account, or return to login when none remain
-            // (the Windows counterpart to macOS SessionExpiry).
-            AppLog.Write("session expired restoring account; logging out");
-            await LogOutAndAdvanceAsync();
         }
         catch (Exception ex) { AppLog.Write("avatar load failed", ex); }
     }
@@ -260,9 +289,8 @@ public sealed partial class MainWindow : Window
     }
 
     /// Log out the current account and advance to the next stored one (re-entering
-    /// the shell for it), or fall back to the login screen when none remain. Shared
-    /// by the menu's ログアウト and the session-expiry handler (mirrors macOS
-    /// AccountManager.removeAndAdvance).
+    /// the shell for it), or fall back to the login screen when none remain. The
+    /// menu's ログアウト (mirrors macOS AccountManager.removeAndAdvance).
     private async Task LogOutAndAdvanceAsync()
     {
         try
@@ -280,6 +308,9 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex) { AppLog.Write("log out failed", ex); }
         _notificationsTimer.Stop();
+        _account = null;
+        _reauth = null;
+        ReauthBar.IsOpen = false;
         _workspace.Account = null;
         _accountSummaries = new();
         AccountFooter.Visibility = Visibility.Collapsed;
