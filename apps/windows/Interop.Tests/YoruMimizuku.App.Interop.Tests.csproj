@@ -18,9 +18,14 @@
     <ProjectReference Include="..\Interop\YoruMimizuku.App.Interop.csproj" />
   </ItemGroup>
 
-  <!-- The core tests' HTTP stub, so these tests reach the XRPC boundary the same way. -->
+  <!-- The core tests' HTTP stub and fake AT Protocol servers, so these tests reach the
+       XRPC and OAuth boundaries the same way. -->
   <ItemGroup>
     <Compile Include="..\Core.Tests\StubHttp.cs" Link="StubHttp.cs" />
+    <Compile Include="..\Core.Tests\OAuth\FakeAtproto.cs" Link="FakeAtproto.cs" />
+    <Compile Include="..\Core.Tests\OAuth\ScriptedHandler.cs" Link="ScriptedHandler.cs" />
+    <Compile Include="..\Core.Tests\OAuth\DecodedProof.cs" Link="DecodedProof.cs" />
+    <Compile Include="..\Core.Tests\Accounts\AccountTestSupport.cs" Link="AccountTestSupport.cs" />
   </ItemGroup>
 
   <ItemGroup>
