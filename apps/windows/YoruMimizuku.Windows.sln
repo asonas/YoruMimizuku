@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.Core.Tests", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.App.Interop", "Interop\YoruMimizuku.App.Interop.csproj", "{270C6B8F-533C-4854-BB1F-6C87069785C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.App.Interop.Tests", "Interop.Tests\YoruMimizuku.App.Interop.Tests.csproj", "{A244F893-BB9E-4F44-9DCD-07B5291BD5B4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -32,6 +34,10 @@ Global
 		{270C6B8F-533C-4854-BB1F-6C87069785C0}.Debug|x64.Build.0 = Debug|Any CPU
 		{270C6B8F-533C-4854-BB1F-6C87069785C0}.Release|x64.ActiveCfg = Release|Any CPU
 		{270C6B8F-533C-4854-BB1F-6C87069785C0}.Release|x64.Build.0 = Release|Any CPU
+		{A244F893-BB9E-4F44-9DCD-07B5291BD5B4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A244F893-BB9E-4F44-9DCD-07B5291BD5B4}.Debug|x64.Build.0 = Debug|Any CPU
+		{A244F893-BB9E-4F44-9DCD-07B5291BD5B4}.Release|x64.ActiveCfg = Release|Any CPU
+		{A244F893-BB9E-4F44-9DCD-07B5291BD5B4}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

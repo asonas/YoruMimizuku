@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace YoruMimizuku.App.Interop;
 
@@ -94,6 +95,7 @@ public sealed record NotificationGroupDto(
     string LatestCreatedAt,
     bool IsRead)
 {
+    [JsonIgnore]
     public NotificationActorDto? LeadActor => Actors.FirstOrDefault();
 }
 
