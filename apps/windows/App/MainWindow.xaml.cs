@@ -55,7 +55,13 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Title = "YoruMimizuku";
         Views.MainWindowAccessor.Current = this;
-        Activated += (_, _) => Views.MainWindowAccessor.Current = this;
+        Activated += (_, args) =>
+        {
+            Views.MainWindowAccessor.Current = this;
+            // Pins are managed on the server, so re-read them whenever the window comes
+            // forward, as macOS does when the app becomes active.
+            if (args.WindowActivationState != WindowActivationState.Deactivated) _ = _workspace.ReloadSavedFeedsAsync();
+        };
         AppIcon.TrySetWindowIcon(this);
         if (isPrimary) NotificationAlerts.Shared.Register();
         Closed += (_, _) =>
@@ -75,6 +81,7 @@ public sealed partial class MainWindow : Window
         WindowPlacement.SetMinimumSize(this, 900, 540);
         _workspace.Changed += OnWorkspaceChanged;
         _workspace.FiltersChanged += SaveFilters;
+        _workspace.SavedFeedsChanged += BuildTabs;
         _workspace.Detail.Changed += ShowDetail;
         _notifications.PropertyChanged += (_, e) =>
         {
@@ -188,6 +195,9 @@ public sealed partial class MainWindow : Window
         // Detail pages were built on the previous client, so they go with it.
         _workspace.Detail.Close();
         _workspace.Account = account is null ? null : App.Client.ForAccount(account.Did);
+        // Pins belong to the account, so the previous account's go, and the new one's load.
+        _workspace.ClearSavedFeeds();
+        _ = _workspace.ReloadSavedFeedsAsync();
         _filterStore = account is null ? null : new SavedFilterStore(account.Did);
         _workspace.LoadFilters(_filterStore?.Load() ?? Array.Empty<SavedFilterModel>());
         LoginHost.Visibility = Visibility.Collapsed;
@@ -319,6 +329,7 @@ public sealed partial class MainWindow : Window
         ReauthBar.IsOpen = false;
         _workspace.Detail.Close();
         _workspace.Account = null;
+        _workspace.ClearSavedFeeds();
         _accountSummaries = new();
         AccountFooter.Visibility = Visibility.Collapsed;
         ShowLogin();
@@ -334,10 +345,15 @@ public sealed partial class MainWindow : Window
     {
         _syncing = true;
         Nav.MenuItems.Clear();
+        // The macOS sidebar's groups: home, notifications and pinned feeds; then リスト
+        // (pinned lists, hidden with none); then the filters, led by フィルターを追加.
+        var lastBeforeFilters = _workspace.Tabs.LastOrDefault(t => t.Kind != WorkspaceTabKind.Filter);
+        var firstList = _workspace.Tabs.FirstOrDefault(t => t.SavedFeed?.Kind == Core.SavedFeedKind.List);
         foreach (var tab in _workspace.Tabs)
         {
+            if (ReferenceEquals(tab, firstList)) Nav.MenuItems.Add(new NavigationViewItemHeader { Content = "リスト" });
             Nav.MenuItems.Add(MakeNavItem(tab));
-            if (tab.Kind == WorkspaceTabKind.Notifications)
+            if (ReferenceEquals(tab, lastBeforeFilters))
             {
                 Nav.MenuItems.Add(MakeAddFilterItem());
             }
@@ -351,7 +367,21 @@ public sealed partial class MainWindow : Window
 
     private NavigationViewItem MakeNavItem(WorkspaceTab tab)
     {
-        var item = new NavigationViewItem { Tag = tab, Icon = IconFor(tab.Kind) };
+        var item = new NavigationViewItem { Tag = tab, Icon = IconFor(tab) };
+        if (tab.SavedFeed is { } pin)
+        {
+            // Pins are managed in Bluesky, so the row has no edit or close button. Its
+            // tooltip carries what the macOS header's info popover shows.
+            item.Content = new TextBlock { Text = pin.Title, TextTrimming = TextTrimming.CharacterEllipsis };
+            ToolTipService.SetToolTip(item, string.Join("\n", new[]
+            {
+                pin.Title,
+                pin.Description,
+                pin.CreatorHandle is { Length: > 0 } handle ? "@" + handle : null,
+                pin.Id,
+            }.Where(line => !string.IsNullOrWhiteSpace(line))));
+            return item;
+        }
         if (tab.Kind != WorkspaceTabKind.Filter)
         {
             item.Content = tab.Kind == WorkspaceTabKind.Notifications
@@ -432,12 +462,14 @@ public sealed partial class MainWindow : Window
         return grid;
     }
 
-    private static IconElement IconFor(WorkspaceTabKind kind) => new FontIcon
+    private static IconElement IconFor(WorkspaceTab tab) => new FontIcon
     {
-        Glyph = kind switch
+        Glyph = tab.Kind switch
         {
             WorkspaceTabKind.Home => "\uE80F",            // Home
             WorkspaceTabKind.Notifications => "\uEA8F",   // Ringer
+            WorkspaceTabKind.SavedFeed when tab.SavedFeed?.Kind == Core.SavedFeedKind.List => "\uE8FD", // BulletedList
+            WorkspaceTabKind.SavedFeed => "\uE909",       // World: a feed from the network
             WorkspaceTabKind.Filter => "\uE71C",          // Filter
             _ => "\uE80F"
         }
@@ -511,6 +543,14 @@ public sealed partial class MainWindow : Window
                 var notifications = new NotificationsView(_workspace, _notifications);
                 await notifications.LoadAsync();
                 if (IsCurrentContentRequest(request, tab)) ShowTimeline(notifications);
+                break;
+            case WorkspaceTabKind.SavedFeed when tab.SavedFeed is { } pin:
+                // A new view per selection, and FeedView polls only while on screen, so
+                // only the selected pin polls, as on macOS.
+                var pinned = new FeedView(
+                    new TimelineViewModel(account, cursor => account.SavedFeedLoadAsync(pin, cursor)), _workspace);
+                await pinned.LoadAsync();
+                if (IsCurrentContentRequest(request, tab)) ShowTimeline(pinned);
                 break;
             case WorkspaceTabKind.Filter when tab.Filter is { } filter:
                 var search = new FeedView(

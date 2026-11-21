@@ -58,6 +58,12 @@ public interface IAccountClient
     Task<ConversationThreadDto> ThreadLoadAsync(string uri);
     Task<List<NotificationGroupDto>> NotificationsLoadAsync();
 
+    /// <summary>The feeds and lists the account pinned (savedFeedsPrefV2), in pin order.</summary>
+    Task<List<SavedFeedDto>> PinnedFeedsLoadAsync();
+
+    /// <summary>A page of a pinned feed's or list's timeline.</summary>
+    Task<TimelinePageDto> SavedFeedLoadAsync(SavedFeedDto source, string? cursor = null);
+
     /// <summary>Run a saved filter. <paramref name="filter"/> is the SavedFilter JSON object.</summary>
     Task<TimelinePageDto> SearchLoadAsync(JsonObject filter, string? cursor = null);
 

@@ -18,6 +18,8 @@ sources:
   - docs/adr/0024-macos-saved-feeds-sidebar.md
   - core/Sources/YoruMimizukuKit/SavedFeedsModel.swift
   - apps/macos/Timeline/LiveSavedFeedsLoaders.swift
+  - apps/windows/Core/SavedFeedsService.cs
+  - apps/windows/Core/SavedFeedsModel.cs
   - apps/macos/Views/SavedFeedInfoButton.swift
   - docs/adr/0026-macos-three-pane.md
   - apps/macos/Views/DetailPaneView.swift
@@ -58,10 +60,10 @@ features:
     note: "iPadOS uses a dedicated touch-first `NavigationSplitView` shell under `apps/ipados`, not the macOS AppKit-chrome view ([[ipados]])."
   - name: Pinned feeds and lists in the sidebar
     macos: full
-    windows: none
+    windows: full
     ios: none
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/25. macOS lists the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad and Windows apps do not show pins yet."
+    note: "macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet."
   - name: Menu bar commands (⌘1…⌘9, 投稿 menu)
     macos: full
     windows: none
@@ -157,9 +159,11 @@ A post's right-click menu offers "リストに追加": the window account's cura
 
 ## Sidebar / tab UI
 
-### Pinned feeds and lists (macOS)
+### Pinned feeds and lists (macOS, Windows)
 
 The macOS sidebar follows the desktop prototype: groups フィード (フォロー中 — the home timeline, renamed via `WorkspaceModel.homeTitle` — then 通知, then pinned feeds), リスト and フィルター; rows are one line with an accent icon, a dim fill and semibold text when selected, and plain unread counts; filter rows show only their name, with the query as tooltip and 編集… / 削除 on right-click. フィード and リスト list the feeds and lists the account pinned in Bluesky (`app.bsky.actor.getPreferences`, `savedFeedsPrefV2`), in pin order; a section with no pins is hidden, and the pinned following timeline is the home row rather than a second entry. Selecting one shows its timeline (`app.bsky.feed.getFeed` / `app.bsky.feed.getListFeed`) in the middle column, titles the window, and gives the header an ⓘ popover with the description, the creator's handle and the AT-URI. Pins are read-only in the app and are re-read whenever the app becomes active: a reload replaces them, a feed unpinned elsewhere stops polling, and if it was selected the window falls back to home. Only the selected pinned feed polls and pinned feeds carry no unread badge. Deleted feeds and unresolvable lists are skipped (`docs/adr/0024-macos-saved-feeds-sidebar.md`, `core/Sources/YoruMimizukuKit/SavedFeedsModel.swift`, `apps/macos/Timeline/LiveSavedFeedsLoaders.swift`, `apps/macos/Views/SavedFeedInfoButton.swift`).
+
+Windows shows the same pins in the same order in its `NavigationView` sidebar: pinned feeds after 通知, then a リスト header over the pinned lists (absent with none), then the filters. It reads them with the same calls and skips the same items (`apps/windows/Core/SavedFeedsService.cs`, `apps/windows/Core/SavedFeedsModel.cs`), re-reads them whenever the window comes forward and when its account changes, falls back to home when the selected pin is gone, and opens a pin's timeline in the timeline column; only the selected pin polls, because a feed view polls only while it is on screen. Two details differ on purpose because Windows timelines have no header and the window title never names a tab: the description, creator handle and AT-URI are the sidebar row's tooltip instead of an ⓘ popover, and selecting a pin does not retitle the window (`apps/windows/App/MainWindow.xaml.cs`).
 
 The vertical-tab sidebar (home / notifications / filters; on macOS also pinned feeds and lists; on iPadOS also conversations and authors) keeps its tab state in `WorkspaceModel` (`@MainActor ObservableObject`), rendered by the `NavigationSplitView` in `MainWindowView`. The `SidebarRow` component is display-only and receives theme colors from `ThemeStore`. Its look and density follow the reference app cmux (plan `2026-06-05-yorumimizuku-cmux-sidebar` (git history)):
 

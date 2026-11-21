@@ -108,3 +108,17 @@ public sealed record AvatarDto(string? AvatarUrl);
 public sealed record RecordRefDto(string RecordUri);
 
 public sealed record PermalinkDto(string? Url);
+
+/// <summary>
+/// A feed or list the account pinned, as the sidebar shows it: <paramref name="Id"/> is
+/// its AT-URI, and <paramref name="IsCuratedList"/> marks a list of people chosen by hand.
+/// </summary>
+public sealed record SavedFeedDto(
+    string Id,
+    YoruMimizuku.Core.SavedFeedKind Kind,
+    string Title,
+    string? Description,
+    string? CreatorHandle,
+    string? AvatarUrl,
+    string? CreatorDid,
+    bool IsCuratedList);

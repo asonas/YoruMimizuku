@@ -25,6 +25,8 @@ sources:
   - apps/windows/App/Views/ConversationView.xaml.cs
   - apps/windows/App/MainWindow.xaml.cs
   - apps/windows/Core/DetailPaneModel.cs
+  - apps/windows/Core/SavedFeedsService.cs
+  - apps/windows/Core/SavedFeedsModel.cs
   - docs/adr/0026-macos-three-pane.md
   - scripts/windows/build-app.ps1
   - scripts/windows/release.ps1
@@ -87,6 +89,15 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   filter tabs and an account footer, the selected timeline, and a detail pane that
   shows one conversation or author page at a time, as on macOS (the tested
   `Core/DetailPaneModel.cs`); `Ctrl+Shift+N` opens a new window ([[app-shell]]).
+- The sidebar lists the account's pinned feeds and lists (`savedFeedsPrefV2`)
+  read-only, as on macOS: `Core/SavedFeedsService.cs` reads the pins and names them
+  (`getPreferences`, one `getFeedGenerators`, `getList` per list, skipping a list the
+  appview answers InvalidRequest for), and a pin's timeline pages through
+  `getFeed` / `getListFeed` (`IAccountClient.PinnedFeedsLoadAsync` /
+  `SavedFeedLoadAsync`). `Core/SavedFeedsModel.cs` keeps the rows shown when a reload
+  fails and drops a load that a newer one or an account change overtook. Pins reload
+  when the window comes forward and when its account changes; the row tooltip carries
+  the description, creator and AT-URI that macOS shows in an ⓘ popover ([[app-shell]]).
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
   attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are

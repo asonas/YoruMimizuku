@@ -33,6 +33,7 @@ public sealed class CoreAccountClient(
     private readonly SearchService search = new(xrpc);
     private readonly PostService posts = new(xrpc, videos: videos);
     private readonly ProfileService profiles = new(xrpc);
+    private readonly SavedFeedsService savedFeeds = new(xrpc);
 
     public string Did => xrpc.Did;
 
@@ -53,6 +54,13 @@ public sealed class CoreAccountClient(
 
     public Task<List<NotificationGroupDto>> NotificationsLoadAsync() =>
         Run(async () => (await notifications.LoadGroupsAsync()).Select(CoreDtos.NotificationGroup).ToList());
+
+    public Task<List<SavedFeedDto>> PinnedFeedsLoadAsync() =>
+        Run(async () => (await savedFeeds.LoadPinnedAsync()).Select(s => new SavedFeedDto(
+            s.Id, s.Kind, s.Title, s.Description, s.CreatorHandle, s.AvatarUrl, s.CreatorDid, s.IsCuratedList)).ToList());
+
+    public Task<TimelinePageDto> SavedFeedLoadAsync(SavedFeedDto source, string? cursor = null) =>
+        Run(async () => Page(await savedFeeds.GetPageAsync(source.Kind, source.Id, cursor)));
 
     public Task<TimelinePageDto> SearchLoadAsync(JsonObject filter, string? cursor = null) =>
         Run(async () =>

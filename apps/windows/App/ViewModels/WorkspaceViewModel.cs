@@ -2,13 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
 using YoruMimizuku.App.Services;
 
 namespace YoruMimizuku.App.ViewModels;
 
-public enum WorkspaceTabKind { Home, Notifications, Filter }
+public enum WorkspaceTabKind { Home, Notifications, SavedFeed, Filter }
 
 public sealed class WorkspaceTab : ObservableObject
 {
@@ -17,11 +18,13 @@ public sealed class WorkspaceTab : ObservableObject
     public string Title { get; }
     public string? Subtitle { get; }
     public SavedFilterModel? Filter { get; }
+    /// <summary>The pinned feed or list a SavedFeed tab shows.</summary>
+    public SavedFeedDto? SavedFeed { get; }
 
     public WorkspaceTab(WorkspaceTabKind kind, string id, string title, string? subtitle = null,
-        SavedFilterModel? filter = null)
+        SavedFilterModel? filter = null, SavedFeedDto? savedFeed = null)
     {
-        Kind = kind; Id = id; Title = title; Subtitle = subtitle; Filter = filter;
+        Kind = kind; Id = id; Title = title; Subtitle = subtitle; Filter = filter; SavedFeed = savedFeed;
     }
 }
 
@@ -46,8 +49,8 @@ public sealed class AuthorPage(AuthorViewModel author) : DetailPage
 }
 
 /// <summary>
-/// The window's workspace: the sidebar's timelines (Home, Notifications and saved
-/// filters, cycled with Ctrl+Shift+J/K) and the detail pane where conversations and
+/// The window's workspace: the sidebar's timelines (Home, Notifications, the account's
+/// pinned feeds and lists, and saved filters, cycled with Ctrl+Shift+J/K) and the detail pane where conversations and
 /// author pages open beside the selected timeline (ADR 0026). Mirrors the Swift
 /// WorkspaceModel (filter CRUD, openHashtagFilter) and DetailPaneModel.
 /// </summary>
@@ -80,6 +83,13 @@ public sealed class WorkspaceViewModel : ObservableObject
     public WorkspaceTab HomeTab { get; }
     public WorkspaceTab NotificationsTab { get; }
 
+    /// <summary>The account's pinned feeds and lists (savedFeedsPrefV2), read-only here.</summary>
+    private readonly Core.SavedFeedsModel<SavedFeedDto> _savedFeeds = new();
+
+    /// <summary>Raised when the pinned feeds' rows change while the selection stays, so
+    /// the shell rebuilds the sidebar without reloading the shown timeline.</summary>
+    public event Action? SavedFeedsChanged;
+
     public WorkspaceViewModel()
     {
         HomeTab = new WorkspaceTab(WorkspaceTabKind.Home, "home", "ホーム");
@@ -87,6 +97,53 @@ public sealed class WorkspaceViewModel : ObservableObject
         Tabs.Add(HomeTab);
         Tabs.Add(NotificationsTab);
         _selected = HomeTab;
+        _savedFeeds.Changed += ApplySavedFeeds;
+    }
+
+    /// <summary>Re-read the window account's pins. A failure keeps the rows shown.</summary>
+    public async Task ReloadSavedFeedsAsync()
+    {
+        if (Account is not { } account) return;
+        await _savedFeeds.LoadAsync(async () =>
+        {
+            try
+            {
+                return await account.PinnedFeedsLoadAsync();
+            }
+            catch (Exception ex)
+            {
+                AppLog.Write("pinned feeds load failed", ex);
+                throw;
+            }
+        });
+    }
+
+    /// <summary>Drop the pins, and any load still running, when the window's account changes.</summary>
+    public void ClearSavedFeeds() => _savedFeeds.Clear();
+
+    /// <summary>
+    /// Put the pins after 通知 — feeds, then lists, each in pin order, as in the macOS
+    /// sidebar — reusing the tab of a pin that did not change. A selected pin that is no
+    /// longer pinned falls back to home, which also stops its timeline polling.
+    /// </summary>
+    private void ApplySavedFeeds()
+    {
+        var existing = Tabs.Where(t => t.Kind == WorkspaceTabKind.SavedFeed).ToList();
+        var pins = _savedFeeds.Sources
+            .OrderBy(s => s.Kind)
+            .Select(s => existing.FirstOrDefault(t => t.SavedFeed == s)
+                ?? new WorkspaceTab(WorkspaceTabKind.SavedFeed, s.Id, s.Title, s.Description, savedFeed: s))
+            .ToList();
+        foreach (var tab in existing) Tabs.Remove(tab);
+        var index = Tabs.IndexOf(NotificationsTab) + 1;
+        foreach (var tab in pins) Tabs.Insert(index++, tab);
+        if (Selected.Kind == WorkspaceTabKind.SavedFeed && !pins.Contains(Selected))
+        {
+            // A pin renamed elsewhere stays selected under its new row.
+            Selected = pins.FirstOrDefault(t => t.Id == Selected.Id) ?? HomeTab;
+            return;
+        }
+        SavedFeedsChanged?.Invoke();
     }
 
     public IReadOnlyList<SavedFilterModel> Filters => Tabs

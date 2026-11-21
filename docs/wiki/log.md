@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows pinned feeds and lists)
+
+- sources: apps/windows/Core/SavedFeedsService.cs, apps/windows/Core/SavedFeedsModel.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[app-shell]], [[windows]]
+- note: closes issue #25. The Windows sidebar lists the account's pinned feeds and lists and opens a pin's timeline; "Pinned feeds and lists in the sidebar" is `full` for Windows. The info popover becomes the row tooltip and the window title stays fixed, because Windows timelines have no header and never retitle the window.
+
 ## 2026-11-21 ingest (Windows refresh locked across processes)
 
 - sources: apps/windows/Core/Accounts/AccountState.cs, apps/windows/Core/Accounts/DpapiFileStorage.cs
