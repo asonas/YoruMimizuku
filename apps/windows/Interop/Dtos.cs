@@ -4,17 +4,13 @@ using System.Text.Json.Serialization;
 
 namespace YoruMimizuku.App.Interop;
 
-// C# mirrors of the bridge's JSON DTOs (see core/Sources/YoruMimizukuBridge).
-// Property names match the Swift encoder output; deserialization is configured
-// case-insensitive in BridgeClient.
+// The records the core hands the view models; CoreDtos maps the core's models to them.
 
 public sealed record AccountDto(string Did, string? Handle);
 
 public sealed record AccountSummaryDto(string Did, string? Handle);
 
 public sealed record NextAccountDto(string? NextDid);
-
-public sealed record OptionalAccountDto(AccountDto? Account);
 
 public sealed record RichSegmentDto(string Kind, string Text, string? Url);
 

@@ -10,8 +10,8 @@ namespace YoruMimizuku.App.Interop;
 
 /// <summary>
 /// <see cref="IAccountClient"/> over the C# core, acting as the account behind
-/// <paramref name="xrpc"/>. Results come back as the bridge's DTOs and failures as
-/// <see cref="BridgeException"/>, so a view cannot tell it from <c>BridgeClient</c>.
+/// <paramref name="xrpc"/>. Results come back as the app's DTOs and failures as
+/// <see cref="BridgeException"/>.
 /// </summary>
 /// <param name="isSessionExpired">
 /// Recognizes the auth layer's "the session is gone" failure (an invalid_grant on

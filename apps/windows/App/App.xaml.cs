@@ -11,13 +11,6 @@ namespace YoruMimizuku.App;
 
 public partial class App : Application
 {
-    // Must stay in sync with the published client-metadata.json and the macOS
-    // OAuthClientConfig.yoruMimizuku values.
-    public const string Service = "as.ason.YoruMimizuku";
-    public const string ClientId = "https://ason.as/yorumimizuku/client-metadata.json";
-    public const string RedirectUri = "as.ason:/callback";
-    public const string Scope = "atproto transition:generic";
-
     /// <summary>The core every window talks to.</summary>
     public static ICoreClient Client { get; } = new CoreClient(
         new DpapiFileStorage(DpapiFileStorage.DefaultDirectory()), new SocketsHttpHandler(), OAuthClientConfig.YoruMimizuku);

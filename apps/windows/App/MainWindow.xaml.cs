@@ -33,8 +33,7 @@ public sealed partial class MainWindow : Window
     // not re-toast. Starts at 0; the first load anchors unread to 0 (see
     // NotificationsViewModel), so only genuinely new activity raises it.
     private int _lastNotifiedUnread;
-    // Only the primary window owns the app-wide singletons: bridge init, the
-    // updater, notification polling, and OS toasts. Secondary windows (Ctrl+Shift+N)
+    // Only the primary window owns the app-wide singletons: the updater, notification polling, and OS toasts. Secondary windows (Ctrl+Shift+N)
     // are independent workspaces over the same session, mirroring macOS WindowGroup.
     private readonly bool _isPrimary;
     private static readonly System.Collections.Generic.List<MainWindow> OpenWindows = new();
@@ -92,13 +91,6 @@ public sealed partial class MainWindow : Window
         try
         {
             ThemeService.Shared.ApplySaved();
-            // The bridge runtime is a process-wide singleton; only the primary
-            // window initializes it. Secondary windows reuse the live session.
-            if (_isPrimary)
-            {
-                await App.Client.InitializeAsync(App.Service, App.ClientId, App.RedirectUri, App.Scope);
-            }
-
             // Restore the persisted session (DPAPI): skip the login screen if an
             // account is already stored.
             var account = await App.Client.CurrentAccountAsync();

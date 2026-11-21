@@ -41,13 +41,7 @@
     <ProjectReference Include="..\Interop\YoruMimizuku.App.Interop.csproj" />
   </ItemGroup>
 
-  <!-- The Swift C ABI bridge DLL plus the Swift runtime DLLs are staged into
-       native/ by scripts/windows/stage-bridge.ps1 and copied next to the app. -->
   <ItemGroup>
-    <Content Include="native\**\*.dll" Condition="Exists('native')">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Link>%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Content>
     <!-- App icon staged into the output so AppWindow.SetIcon can load it. -->
     <Content Include="Assets\AppIcon.ico" Condition="Exists('Assets\AppIcon.ico')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

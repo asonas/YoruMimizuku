@@ -27,9 +27,6 @@ public sealed class CoreClient(ISecureStorage storage, HttpMessageHandler transp
     private readonly ConcurrentDictionary<string, PendingLogin> pendingLogins = new();
     private readonly ConcurrentDictionary<string, IAccountClient> accountClients = new();
 
-    /// <summary>The configuration came in at construction, so there is nothing to start.</summary>
-    public Task InitializeAsync(string service, string clientId, string redirectUri, string scope) => Task.CompletedTask;
-
     public Task<AccountDto?> CurrentAccountAsync() =>
         Task.Run(() => accounts.CurrentAccount() is { } account ? new AccountDto(account.Did, account.Handle) : null);
 

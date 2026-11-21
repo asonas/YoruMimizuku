@@ -1,11 +1,10 @@
 using System;
-using System.Text.Json.Nodes;
 
 namespace YoruMimizuku.App.Interop;
 
-/// <summary>Thrown when the bridge returns <c>{ "ok": false, "error": ... }</c>.
-/// Carries the shared LoadFailure classification (kind) and friendly title/message
-/// when present, so a view can show a tailored failed state with a retry.</summary>
+/// <summary>Thrown when a core operation fails. Carries the shared LoadFailure
+/// classification (kind) and friendly title/message when present, so a view can
+/// show a tailored failed state with a retry.</summary>
 public sealed class BridgeException : Exception
 {
     public string? Kind { get; }
@@ -24,12 +23,4 @@ public sealed class BridgeException : Exception
         FriendlyMessage = friendlyMessage;
         SessionExpired = sessionExpired;
     }
-
-    public static BridgeException FromEnvelope(JsonObject node) =>
-        new(
-            node["error"]?.GetValue<string>() ?? "unknown bridge error",
-            node["kind"]?.GetValue<string>(),
-            node["title"]?.GetValue<string>(),
-            node["message"]?.GetValue<string>(),
-            node["sessionExpired"]?.GetValue<bool>() ?? false);
 }

@@ -10,8 +10,6 @@ namespace YoruMimizuku.App.Interop;
 /// </summary>
 public interface ICoreClient
 {
-    Task InitializeAsync(string service, string clientId, string redirectUri, string scope);
-
     /// <summary>The store's current account: the one a new window or a relaunch opens.</summary>
     Task<AccountDto?> CurrentAccountAsync();
 
