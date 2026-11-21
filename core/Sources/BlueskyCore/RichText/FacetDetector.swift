@@ -43,7 +43,8 @@ public enum FacetDetector {
             var uri = ns.substring(with: match.range)
             // Strip trailing punctuation; keep a closing paren only if the URL has a matching open paren.
             while let last = uri.unicodeScalars.last, linkTrailing.contains(last) {
-                if last == ")" && uri.filter({ $0 == "(" }).count > uri.filter({ $0 == ")" }).count { break }
+                // The count of ")" includes this one, so equal counts mean it closes a "(" in the URL.
+                if last == ")" && uri.filter({ $0 == "(" }).count >= uri.filter({ $0 == ")" }).count { break }
                 uri = String(uri.dropLast())
             }
             guard !uri.isEmpty else { continue }

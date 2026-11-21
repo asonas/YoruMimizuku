@@ -18,6 +18,17 @@ final class FacetDetectorTests: XCTestCase {
         XCTAssertEqual(facets.count, 1)
         XCTAssertEqual(facets[0].feature, .link(uri: "https://example.com/path"))
     }
+
+    // #9: a closing paren that matches one inside the URL is part of it.
+    func testKeepsABalancedClosingParenInLink() {
+        let facets = FacetDetector.detect(text: "https://en.wikipedia.org/wiki/Foo_(bar) and more")
+        XCTAssertEqual(facets.first?.feature, .link(uri: "https://en.wikipedia.org/wiki/Foo_(bar)"))
+    }
+
+    func testDropsOnlyTheUnmatchedClosingParen() {
+        let facets = FacetDetector.detect(text: "(see https://en.wikipedia.org/wiki/Foo_(bar))")
+        XCTAssertEqual(facets.first?.feature, .link(uri: "https://en.wikipedia.org/wiki/Foo_(bar)"))
+    }
 }
 
 extension FacetDetectorTests {
