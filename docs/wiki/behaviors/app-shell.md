@@ -76,7 +76,7 @@ features:
     windows: differs
     ios: none
     android: planned
-    note: "macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]). Windows has no menu bar, so the same commands are keys with Ctrl for ⌘ (Ctrl+1…9, Ctrl+R, Ctrl+Enter, Ctrl+Shift+R/C, L) and the post's right-click menu, which selects its post and shows the keys; with no menu to disable, the keys do nothing until a post is selected, and they act in whichever pane has focus (MainWindow.xaml.cs, FeedView.xaml). レコードを表示 and この人をミュート are not on Windows, which has no record view or mute yet."
+    note: "macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]). Windows has no menu bar, so the same commands are keys with Ctrl for ⌘ (Ctrl+1…9, Ctrl+R, Ctrl+Enter, Ctrl+Shift+R/C, L) and the post's right-click menu, which selects its post and shows the keys; with no menu to disable, the keys do nothing until a post is selected, and they act in whichever pane has focus (MainWindow.xaml.cs, FeedView.xaml). レコードを表示 and この人をミュート are not on Windows yet, bug: https://github.com/asonas/YoruMimizuku/issues/38."
   - name: Toolbar search (transient results)
     macos: full
     windows: differs
