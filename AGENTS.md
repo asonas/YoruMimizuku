@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file guides AI agents (Cursor, Claude Code, and others) working in this repository. When you start a new session, read this file first before beginning any task.
+This file guides AI agents (Claude Code and others) working in this repository. When you start a new session, read this file first before beginning any task.
 
 ## Project Overview
 
@@ -10,12 +10,12 @@ For the full design, read `docs/adr/0002-overall-design.md`. Design decisions ar
 
 ## Documentation (LLM-wiki) — read this first
 
-This repository keeps a git-versioned LLM-wiki at `docs/wiki/` that describes how the app behaves and is built. It is the **cross-machine source of context**: because it lives in git, every agent (Claude / Cursor on macOS, the build agent on Windows) reconstructs the same picture by pulling the repo.
+This repository keeps a git-versioned LLM-wiki at `docs/wiki/` that describes how the app behaves and is built. It is the **cross-machine source of context**: because it lives in git, every agent (on macOS or Windows) reconstructs the same picture by pulling the repo.
 
 - Start at `docs/wiki/index.md`, then open only the pages you need. Do not assume the whole wiki is in context.
 - `docs/wiki/overview.md` is the high-level map; behaviors are under `docs/wiki/behaviors/`, platform differences under `docs/wiki/platforms/`. Cross-cutting `concept` and `reference` pages (e.g. `architecture.md`, `glossary.md`) live at the top level of `docs/wiki/`. Pages are classified by frontmatter `type` (`overview` / `concept` / `behavior` / `platform` / `reference` / `meta`), defined in `docs/wiki/conventions.md`.
 - Code is the source of truth for how the app works. The wiki records behavior contracts and deliberate macOS/Windows differences, and cites the ADRs in `docs/adr/` for why.
-- When an ADR is added or changed, or app behavior changes, **update the wiki**: run the `wiki-update` skill (Claude) or `/wiki-update` command (Cursor) — both follow `docs/wiki/conventions.md`.
+- When an ADR is added or changed, or app behavior changes, **update the wiki**: run the `wiki-update` skill, which follows `docs/wiki/conventions.md`.
 - macOS and Windows share no core code, so the wiki is where their behavior is kept in step. When you change behavior on one platform, check the other: a difference is either **deliberate** (recorded in the wiki with its reason) or a bug (filed as an issue). See "Platform differences" in `docs/wiki/conventions.md`.
 - Bookkeeping is deterministic and tooled: `mise run wiki:lint` validates, `mise run wiki:index` regenerates `docs/wiki/index.md` (never hand-edit it). Install the pre-commit hook once with `mise run wiki:install-hooks`. Lint also warns (non-fatally) about ADRs no page cites and about pages with no inbound `[[link]]` — treat those as a prompt to ingest or cross-link.
 

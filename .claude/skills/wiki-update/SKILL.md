@@ -5,9 +5,9 @@ description: Maintain the LLM-wiki under docs/wiki (ingest ADRs and behavior cha
 
 # wiki-update
 
-Maintain the git-versioned LLM-wiki at `docs/wiki/`. This is the cross-machine knowledge layer: it lives in git so Claude / Cursor on macOS and the build agent on Windows all see the same context.
+Maintain the git-versioned LLM-wiki at `docs/wiki/`. This is the cross-machine knowledge layer: it lives in git so the agents on macOS and Windows all see the same context.
 
-**The canonical procedure and schema live in `docs/wiki/conventions.md`. Read it first, then follow it.** This skill is a thin entry point so the same workflow is invoked identically from Claude and Cursor (Cursor uses `.cursor/commands/wiki-update.md`, which points to the same file).
+**The canonical procedure and schema live in `docs/wiki/conventions.md`. Read it first, then follow it.** This skill is a thin entry point to it.
 
 ## Ingest (write prose — your job)
 

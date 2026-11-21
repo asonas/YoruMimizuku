@@ -8,9 +8,9 @@ sources:
 
 # Wiki Conventions
 
-This is the single source of truth for how `docs/wiki/` is maintained. The Claude Code skill (`.claude/skills/wiki-update/`) and the Cursor command (`.cursor/commands/wiki-update.md`) are thin pointers to this file, so both agents follow the exact same procedure. Read this before editing the wiki.
+This is the single source of truth for how `docs/wiki/` is maintained. The `wiki-update` skill (`.claude/skills/wiki-update/`) is a thin pointer to this file. Read this before editing the wiki.
 
-The model is karpathy's "LLM wiki": an LLM-maintained, git-versioned knowledge layer. Because it lives in git, every agent — Claude / Cursor on macOS, the build agent on Windows — reconstructs the same context by pulling the repo. That cross-machine sync is the whole reason this wiki exists.
+The model is karpathy's "LLM wiki": an LLM-maintained, git-versioned knowledge layer. Because it lives in git, every agent, on macOS or Windows, reconstructs the same context by pulling the repo. That cross-machine sync is the whole reason this wiki exists.
 
 ## Three layers
 
