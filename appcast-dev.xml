@@ -3,12 +3,12 @@
     <channel>
         <title>YoruMimizuku</title>
         <item>
-            <title>2.0.0-dev.1</title>
-            <pubDate>Fri, 20 Nov 2026 22:35:17 +0900</pubDate>
-            <sparkle:version>33</sparkle:version>
-            <sparkle:shortVersionString>2.0.0-dev.1</sparkle:shortVersionString>
+            <title>2.0.0-dev.2</title>
+            <pubDate>Sat, 21 Nov 2026 10:44:01 +0900</pubDate>
+            <sparkle:version>34</sparkle:version>
+            <sparkle:shortVersionString>2.0.0-dev.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/asonas/YoruMimizuku/releases/download/v2.0.0-dev.1/YoruMimizuku-2.0.0-dev.1.zip" length="4262911" type="application/octet-stream" sparkle:edSignature="Z+AKAIKGdn2D6d5SAmBDMw0HyYpfSFOFUZa0hfGweljCdamqPMJtyahwL43w5Uu+RnOfB2mbrdmYi0JRCDxDCA=="/>
+            <enclosure url="https://github.com/asonas/YoruMimizuku/releases/download/v2.0.0-dev.2/YoruMimizuku-2.0.0-dev.2.zip" length="4286648" type="application/octet-stream" sparkle:edSignature="z3ybCiLwVzQWPWtfEQx2z/Ay38c3P23GZ5tNbu34AaPVEuLotGHKxGfKy6QT8rAnJf89Id3UzKrgww7nKfA4Bg=="/>
         </item>
     </channel>
 </rss>
