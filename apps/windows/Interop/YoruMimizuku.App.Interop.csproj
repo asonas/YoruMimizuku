@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The app's core-facing surface without WinUI: the client interfaces, the DTOs the
+       views consume, and the C# core's mapping onto them, so a plain test project can
+       pin that mapping. The namespace stays YoruMimizuku.App.Interop. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>YoruMimizuku.App.Interop</RootNamespace>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\YoruMimizuku.Core.csproj" />
+  </ItemGroup>
+
+</Project>

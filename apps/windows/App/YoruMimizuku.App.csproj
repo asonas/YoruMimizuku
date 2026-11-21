@@ -36,6 +36,11 @@
          separate Microsoft.Web.WebView2 package (it would clash as CS0433). -->
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Core\YoruMimizuku.Core.csproj" />
+    <ProjectReference Include="..\Interop\YoruMimizuku.App.Interop.csproj" />
+  </ItemGroup>
+
   <!-- The Swift C ABI bridge DLL plus the Swift runtime DLLs are staged into
        native/ by scripts/windows/stage-bridge.ps1 and copied next to the app. -->
   <ItemGroup>
