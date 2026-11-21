@@ -89,10 +89,12 @@ public sealed class XrpcClient(string did, Uri pds, HttpClient http)
     internal static HttpRequestException Failure(string nsid, HttpStatusCode status, byte[] body)
     {
         var message = $"{nsid} failed with HTTP {(int)status}";
+        string? error = null;
         try
         {
             using var document = JsonDocument.Parse(body);
-            if (document.RootElement.OptionalString("error") is { } error)
+            error = document.RootElement.OptionalString("error");
+            if (error is not null)
             {
                 message += $": {error}";
                 if (document.RootElement.OptionalString("message") is { } detail) message += $" ({detail})";
@@ -102,6 +104,13 @@ public sealed class XrpcClient(string did, Uri pds, HttpClient http)
         {
             // Not an XRPC error body; the status alone describes the failure.
         }
-        return new HttpRequestException(message, null, status);
+        var failure = new HttpRequestException(message, null, status);
+        if (error is not null) failure.Data[ErrorKey] = error;
+        return failure;
     }
+
+    private const string ErrorKey = "xrpc.error";
+
+    /// <summary>The XRPC error name (<c>InvalidRequest</c>, ...) a failed call's body carried, if any.</summary>
+    internal static string? ErrorName(HttpRequestException failure) => failure.Data[ErrorKey] as string;
 }
