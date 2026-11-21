@@ -1,94 +1,112 @@
 # Windows: Replace the Swift Core with C# (Handoff)
 
 - Date: 2026-11-21
-- Status: Proposed. The approach in §3 is the recommendation; the user confirms it (and the open decisions in §7) before Phase 2 starts.
+- Status: Proposed. The user confirms the approach (§3) and the decisions in §8 before Phase 1 starts.
 - Audience: the agent developing YoruMimizuku on the Windows machine.
 - Target: `apps/windows` (WinUI 3 / C#), `scripts/windows`, and the Windows-only targets in `core/Package.swift` (`PlatformWindows`, `YoruMimizukuBridge`)
 - Builds on: `2026-06-05-windows-multiplatform-structure.md`
 
 ## 1. Where things stand
 
-Windows users have a working client: OAuth sign-in in WebView2, home timeline, author pages, threads, notifications with toasts, saved filters, composing with images, multi-window, and WinSparkle updates (`docs/wiki/platforms/windows.md` describes all of it as built).
+Windows users have a working client: OAuth sign-in in WebView2, home timeline, author pages, threads, notifications with toasts, saved filters, composing with images, and multi-window. `docs/wiki/platforms/windows.md` describes it as built.
 
-It runs on the Swift core. `BlueskyCore` (about 4,300 lines) and `YoruMimizukuKit` (about 4,400) are compiled for Windows. `YoruMimizukuBridge` (about 1,100 lines, 26 `@_cdecl` functions) exposes them to C# as UTF-8 JSON in, JSON out. `PlatformWindows` supplies DPAPI storage and `BCryptGenRandom`. The WinUI app (about 5,000 lines of C# and XAML) talks only to `apps/windows/App/Interop/BridgeClient.cs`.
+It runs on the Swift core. `BlueskyCore` (4,256 lines) and `YoruMimizukuKit` (4,435) are compiled for Windows; `YoruMimizukuBridge` (1,132 lines, 26 `@_cdecl` functions) exposes them to C# as UTF-8 JSON in, JSON out; `PlatformWindows` supplies DPAPI storage and `BCryptGenRandom`. The WinUI app (5,048 lines of C# and XAML) reaches the core only through `apps/windows/App/Interop/BridgeClient.cs`. Some logic is already C#: relative time (`Services/RelativeTime.cs`) and the view models' state handling.
 
-Nothing under `apps/windows` or the bridge has changed since 2026-06-23 (`Bump app version to 1.0.0-dev.12`). Since then macOS was redesigned (the 2026-11-20 specs listed in §5, Phase 5), so Windows now trails macOS in features and looks.
+Nothing under `apps/windows` or the bridge has changed since 2026-06-23 (`ac3ade5`), while the shared core and macOS kept changing (the 2026-11-20 redesign, §6 Phase 7). The last shipped Windows build and a build of today's `main` may therefore behave differently.
 
 ## 2. Why reconsider the Swift core
 
-The bridge made sense when the goal was to write the protocol logic once. In practice every feature crosses three layers: Swift logic in the core, a bridge endpoint with hand-written DTOs, and a C# DTO plus view model. The costs that showed up:
+Every feature crosses three layers: Swift logic, a bridge endpoint with hand-written DTOs, and a C# DTO plus view model. The costs that showed up:
 
-- Each new macOS feature that lives in `YoruMimizukuKit` (saved feeds, list membership, the detail pane) needs a new bridge endpoint before Windows can use it.
-- The JSON boundary has its own bugs. Request dates must not be ISO8601 strings because the bridge decodes them with `deferredToDate`; this once made saved-filter searches return nothing silently.
-- Async Swift is turned synchronous with a semaphore per call, and C# wraps each call in `Task.Run`.
-- Building needs the Swift toolchain for Windows alongside .NET (`scripts/windows/Enter-SwiftEnv.ps1`, `stage-bridge.ps1`), and a failure can sit in either runtime.
+- Each macOS feature in `YoruMimizukuKit` (saved feeds, list membership, the detail pane) needs a bridge endpoint before Windows can use it.
+- The JSON boundary has its own bugs: request dates must not be ISO8601 strings because the bridge decodes them with `deferredToDate`, which once made saved-filter searches return nothing silently.
+- Async Swift is made synchronous with a semaphore per call, and C# wraps each call in `Task.Run`.
+- Building needs the Swift toolchain for Windows alongside .NET (`Enter-SwiftEnv.ps1`, `stage-bridge.ps1`), and a failure can sit in either runtime.
 
-Coding agents now port well-specified logic between languages quickly, and the Swift core comes with about 90 test files that state its behavior. Writing the core twice is cheaper than it was, while the bridge's cost stays.
+Coding agents now port well-specified logic quickly, and the Swift core has 96 test files that state its behavior, so writing the core twice costs less than it did, while the bridge's cost stays.
 
 ## 3. Approaches
 
 | | Approach | For | Against |
 |---|---|---|---|
-| A | Keep the Swift core and the bridge | Logic is written once; already works | Every feature crosses three layers; two toolchains; the JSON boundary bugs; Windows keeps trailing |
-| **B** | **Port the core to C# by hand, keep the WinUI app** (recommended) | One language and toolchain on Windows; idiomatic `async`; one debugger; the Swift tests become the port's spec | Two implementations of the core to keep in step; OAuth/DPoP must be re-done correctly |
-| C | C# core on a third-party .NET AT Protocol library | Less code to write | Maturity unverified. Of the libraries found (ATProtoNet, idunno.AtProto, FishyFlip), ATProtoNet's NuGet page claims OAuth with DPoP, PAR and PKCE; the others' DPoP support could not be confirmed by search. The app's mapping logic (display models, grouping, filters) still has to be ported. |
-| D | A cross-platform UI (Avalonia, Uno, Flutter, Tauri) | Possibly one UI for more platforms | Rewrites the working WinUI UI; Tauri and Flutter work against the project's memory-efficient native goal; macOS stays SwiftUI anyway |
+| A | Keep the Swift core and the bridge | Logic written once; already works | Every feature crosses three layers; two toolchains; the JSON boundary bugs; Windows keeps trailing |
+| **B** | **A C# core behind the existing `BridgeClient` surface, keeping the WinUI app** (recommended) | One language and toolchain on Windows; idiomatic `async`; one debugger | Two cores to keep in step; OAuth and DPoP must be right again |
+| C | B, with OAuth/DPoP from a .NET AT Protocol library | Less security code to own | Unproven for this app (below) |
+| D | A cross-platform UI (Avalonia, Uno, Flutter, Tauri) | Possibly one UI for more platforms | Rewrites the working WinUI UI; Tauri and Flutter work against the memory-efficient native goal; macOS stays SwiftUI |
 | E | Move the shared core to another language (Rust, Kotlin Multiplatform) | Still one core | Forces a macOS rewrite for a Windows problem |
 
-**Recommendation: B.** Keep the WinUI app, view models and XAML as they are, put an interface where `BridgeClient` is, and implement it in a C# class library ported from the Swift core. Use C as a fallback only if a library is found, on the Windows machine, to pass the OAuth tests in Phase 3 unchanged; owning the OAuth code keeps it testable against the Swift tests. A and the remaining options are not recommended.
+**Recommendation: B, with C decided by experiment for OAuth only.** Display mapping, grouping and filters are this app's own logic and are ported to C#. For OAuth, the candidates are ATProtoNet (its package page claims DPoP, PAR and PKCE), FishyFlip (`OAuth2SessionManager` has DPoP settings) and idunno (its DPoP documentation targets ASP.NET). None has been checked against this app's needs: the native redirect `as.ason:/callback`, the two-step login through WebView2, a DPoP key restored from DPAPI, and refresh after a relaunch. Phase 3 settles it against the acceptance list in §5. D and E are not recommended.
 
 ## 4. What stays shared when code is not
 
-With two cores, consistency comes from shared specifications and data instead of shared code:
+- **Behavior:** the wiki (`docs/wiki/behaviors/`, and the platform differences in `docs/wiki/support-matrix.md`) and the specs in `docs/superpowers/specs/`. Update the wiki when Windows behavior changes, as AGENTS.md requires.
+- **Visual design:** the desktop prototype (Lenses) is the visual source of truth for both platforms. It is in Figma file `LzPa70A5H3MKkdPrsAnjKu`; its HTML is not in this repository. The macOS app implements it. Color tokens: `core/Sources/YoruMimizukuKit/DesignTokens.swift`; spacing: `DesignMetrics.swift`; icons: `design/icons` (SVG; ship `LICENSE-lucide.txt` with the app).
+- **OAuth client:** the public client metadata in `docs/client-metadata.json` (`client_id` `https://ason.as/yorumimizuku/client-metadata.json`, redirect `as.ason:/callback`).
+- **Settings keys:** `AppSettings` uses the macOS keys; keep them.
 
-- **Behavior:** the wiki (`docs/wiki/behaviors/`) and the specs under `docs/superpowers/specs/` describe what each feature does. Port from these and from the Swift tests, and update the wiki when Windows behavior changes, as AGENTS.md requires.
-- **Visual design:** the desktop prototype (Lenses) is the visual source of truth for both platforms. It is in Figma file `LzPa70A5H3MKkdPrsAnjKu`; its HTML is not in this repository. The macOS app (`apps/macos`) implements it and is the next best reference. The color tokens are in `core/Sources/YoruMimizukuKit/DesignTokens.swift`, the spacing in `DesignMetrics.swift`, and the icons in `design/icons` (SVG, with Lucide's license in `LICENSE-lucide.txt`, which must ship with the Windows app too).
-- **OAuth client:** the same public client metadata (`docs/client-metadata.json`, `client_id` `https://ason.as/yorumimizuku/client-metadata.json`, redirect `as.ason:/callback`).
-- **Settings keys:** `AppSettings` already uses the macOS keys; keep them.
+## 5. Acceptance lists
 
-## 5. Plan
+**Parity cases.** Record each on the last shipped Windows build and on a build of current `main` in Phase 0; the C# core must match (or a deliberate difference is noted):
+
+- Home timeline first page and the next page; author page; a thread with ancestors and a reply-to-a-reply.
+- Like and repost notifications show the subject post's text and thumbnail (the core deduplicates subject URIs and batches `getPosts` after grouping).
+- Posting: a reply (the conversation root comes from the parent record), a quote, images with alt text, a mention (resolved to a DID) and Japanese text with links (facet byte offsets).
+- A labelled sensitive image starts covered.
+- An OR filter loads its next page (one cursor per subquery).
+- With two windows on two accounts, switching accounts in one window, a post or like from the other window still goes to that window's account.
+
+**OAuth and accounts** (for the hand port and for any library alike):
+
+- The callback's `state` and `iss` match the request and the issuer; the token response's `sub` equals the DID resolved at login start; a token without the `atproto` scope is rejected. The Swift core does not check `iss`, `sub` or the scope today: add these to the C# port and report them to the user so macOS gets the same fix.
+- DPoP proofs with nonce retry; refresh happens once per account even when, say, the home timeline and notifications get 401 at the same time across services; the rotated token is saved before the retried request (as `XRPCQueryService` does), and a late, older response never overwrites it.
+- Sign in, relaunch and stay signed in, switch accounts, sign out.
+
+## 6. Plan
 
 Each phase ends in a check on Windows before the next starts.
 
-**Phase 0. Baseline.** Build and run the current app with the existing scripts (`apps/windows/README.md`). Sign in, load the timeline, open a thread. Note anything already broken, so it is not blamed on the port later.
+**Phase 0. Baseline.** Build the current app (`apps/windows/README.md`), run it, and record the parity cases on the last shipped build and on `main`. Note what is already broken, so it is not blamed on the port.
 
-**Phase 1. Seam.** Extract an interface from `BridgeClient` with the same methods and DTOs (account, login begin/complete, timeline, author feed, thread, notifications, search, post create/delete, like/repost, permalink, avatar, profile, OGP, feed arrange). Make `BridgeClient` implement it and have the app depend on the interface. No behavior change. Check: the app runs as in Phase 0.
+**Phase 1. Seam.** Put an interface where `BridgeClient` is, keeping its DTOs, but scope it to an account: a window gets a client for its own DID, or each operation takes the DID. Today `ComposerViewModel` calls `BridgeClient.Shared.PostCreateAsync` and the bridge uses whichever account is current, which breaks the two-window parity case. `BridgeClient` implements the interface, the app depends on it, and a setting available only in Debug builds chooses the implementation until Phase 5. Check: the parity cases as in Phase 0, plus the two-window case fixed.
 
-**Phase 2. C# core library.** A new class library (for example `apps/windows/Core`) with an xUnit test project. Port in this order, each with its Swift tests translated alongside (test names in `core/Tests/BlueskyCoreTests` and `core/Tests/YoruMimizukuKitTests` map one to one):
+**Phase 2. C# core library.** A class library (for example `apps/windows/Core`) with an xUnit project. Port in this order, translating the Swift tests that cover each part (same names under `core/Tests/BlueskyCoreTests` and `YoruMimizukuKitTests`):
 
-1. XRPC models and decoding (`*ResponseTests`), `ATURI`, `PostText`, `RichText` segments and facet detection.
-2. Display mapping: `PostDisplay`, notification grouping, `ThreadNode` child tree, `FeedThreading.arrange`, `LoadFailure` classification, relative time.
-3. Filters: `SavedFilter`, the search merge and the per-subquery composite cursor.
-4. Services over an `HttpClient`: timeline, author feed, thread, notifications, search, posts (create, delete, like, repost, image upload), profile, OGP.
+1. XRPC models and decoding (`*ResponseTests`), `ATURI`, `PostText`, rich text segments and facet detection.
+2. Display mapping: `PostDisplay`, notification grouping and subject hydration, the `ThreadNode` child tree, `FeedThreading.arrange`, `LoadFailure`.
+3. Filters: `SavedFilter`, the search merge and the composite cursor.
+4. Services over one `HttpClient` per account: timeline, author feed, thread, notifications, search, posts (create with reply root and mention resolution, delete, like, repost, image upload), profile, OGP.
 
-Check: the ported tests pass with `dotnet test`.
+Do not port what C# already does (relative time) or what the view models already own; apply the Swift regression cases (`TimelineViewModelTests`, `NotificationsViewModelTests`, `NotificationPipelineRegressionTests`) to the existing C# view models instead. `FeedThreading.arrange` groups a self-thread only when parent and child share an author, but the bridge sends no authors, so Windows groups other people's replies too; pass the author in the port and record the change. Check: `dotnet test`.
 
-**Phase 3. OAuth and accounts.** Identity resolution (handle to DID to PDS), server metadata discovery, PKCE, PAR, DPoP proofs with ECDSA P-256 (`System.Security.Cryptography`), the DPoP nonce retry, token refresh guarded so concurrent requests refresh once (`RefreshGateTests`, `SessionRefresherTests`), and account storage with DPAPI (`ProtectedData`). This is the security-sensitive part. Port `OAuthClientTests`, `DPoP*Tests`, `PKCETests`, `AccountManagerTests` and `PersistedAccountTests` first and make them pass before wiring the UI. Tokens and the DPoP private key never go to logs or the repository (AGENTS.md, Publishing Policy). Check: sign in, relaunch and stay signed in, switch accounts, sign out.
+**Phase 3. OAuth and accounts.** Start with a short spike: try each library candidate against the OAuth list in §5 and adopt one only if it passes all of it; otherwise port `BlueskyCore`'s OAuth (identity resolution, metadata discovery, PKCE, PAR, DPoP with ECDSA P-256 from `System.Security.Cryptography`, refresh) and its tests. Store accounts with DPAPI (`ProtectedData`). Tokens and the DPoP private key never go to logs or the repository (AGENTS.md, Publishing Policy). Check: the OAuth list, with the Debug setting pointing sign-in and account operations at the C# core.
 
-**Phase 4. Switch and remove the bridge.** Implement the Phase 1 interface with the C# core and switch the app to it in one step. Once every screen from Phase 0 works, delete `BridgeClient`'s native path (`Interop/NativeMethods`), the bridge staging and Swift environment scripts, the Swift parts of `scripts/windows/*.ps1` and `release.ps1`, and the `PlatformWindows` and `YoruMimizukuBridge` targets from `core/Package.swift` with their tests. Confirm the macOS build and `swift test` in `core` still pass after the target removal (ask the user to run them on the Mac if needed). Update the wiki (`docs/wiki/platforms/windows.md`, `architecture.md`, `overview.md`). Check: a release build from `release.ps1` installs and runs on a clean user account.
+**Phase 4. Existing accounts.** Per §8 decision 3, either read the Swift store or ask users to sign in again. The Swift store keeps `accounts.index` and one `account.<did>` entry, each encrypted with DPAPI as a `.bin` file named by the hex UTF-8 key, under Application Support `as.ason.YoruMimizuku/secure` (`core/Sources/BlueskyCore/Account/AccountStore.swift`, `core/Sources/PlatformWindows/DPAPISecureStorage.swift`). If carried over, check on one Windows user: install the last shipped build, add two accounts, install the new build over it, and confirm the selected account, signed requests from both, and a token refresh. Either way, confirm each account's saved filters come back.
 
-**Phase 5. Catch up with macOS.** Bring the 2026-11-20 redesign to Windows natively, using these specs and the prototype (§4):
+**Phase 5. Switch.** Point the app at the C# core, feature group by feature group, each checked against its parity cases. When all pass, remove the Debug setting, the native path (`Interop/NativeMethods.cs`), the Swift scripts (`Enter-SwiftEnv.ps1`, `stage-bridge.ps1` and the Swift steps in the other `scripts/windows/*.ps1`), and the `native\**\*.dll` content item in `YoruMimizuku.App.csproj`. Check: the ZIP from `release.ps1` and the `-Installer` EXE both run for a clean Windows user, the installer updates an existing installation, and neither contains a Swift DLL.
+
+**Phase 6. Remove the Windows targets from the Swift core** (§8 decision 4): delete `PlatformWindows`, `YoruMimizukuBridge` and their tests from `core/Package.swift`, and ask the user to run `swift test` in `core` and the macOS build on the Mac. Update the wiki (`docs/wiki/platforms/windows.md`, `architecture.md`, `overview.md`).
+
+**Phase 7. Catch up with macOS.** Bring the 2026-11-20 redesign to Windows with these specs and the prototype, one spec at a time; each is done when its behavior page in the wiki holds on Windows and the screen matches the prototype:
 
 - `2026-11-20-macos-three-pane-design.md` (sidebar, timeline, detail pane)
 - `2026-11-20-macos-saved-feeds-sidebar-design.md` (pinned feeds and lists)
 - `2026-11-20-macos-commands-and-lists-design.md` (search, shortcuts, list membership, drag to add)
 - `2026-11-20-macos-prototype-colors-design.md` (light and dark tokens)
 - `2026-11-20-macos-prototype-chrome-design.md`, `-rows-design.md`, `-detail-pane-design.md`
-- `2026-11-20-macos-svg-icons-design.md` (the shared icon set)
+- `2026-11-20-macos-svg-icons-design.md` (the shared icons)
 
-The macOS specs name platform conventions (menu bar, ⌘ shortcuts); map them to Windows conventions (Ctrl, the window's command bar) rather than copying them.
+Map macOS conventions (menu bar, ⌘ shortcuts) to Windows ones (Ctrl, the window's command bar) rather than copying them.
 
-## 6. Things to know
+## 7. Things to know
 
-- **Fixes already made in Swift.** The Swift core and view models carry fixes for races found in review: stale responses overwriting newer loads, list membership writes racing reads, the new-arrivals count, notification refresh ordering, muting during an in-flight fetch, and requests using the window's account rather than the active one. The corresponding Swift tests (`TimelineViewModelTests`, `ListMembershipModelTests`, `NotificationsViewModelTests`, `NotificationPipelineRegressionTests`) are the spec; port them, not just the happy paths.
-- **Known gaps in the Swift core, not to copy.** An old 401 response can roll back a refresh token, and the timeline cursor is not escaped for `+`. Fix them in the C# port and tell the user, so macOS gets the same fix.
-- **Existing Windows sign-ins.** Accounts are stored by the Swift `AccountManager` as JSON encrypted with DPAPI under Application Support (`core/Sources/PlatformWindows/DPAPISecureStorage.swift`). Reading that blob in C# keeps users signed in across the switch; otherwise they sign in once more (§7).
-- **Workflow.** Follow AGENTS.md: a worktree per piece of work, TDD one step at a time, English commit messages, the wiki updated with `wiki-update`. YoruMimizuku has no pull requests; after the user confirms, fast-forward `main` and push.
+- **Updates.** WinSparkle is wired but off: `UpdateService` returns early while its public key is a placeholder. Turning it on (a key pair and a Windows appcast) is a separate decision, not part of this work.
+- **Known Swift core gaps, not to copy.** An old 401 response can roll back a refresh token, and the timeline cursor is not escaped for `+`. Fix them in C# and tell the user.
+- **Workflow.** Follow AGENTS.md: a worktree per piece of work, TDD one step at a time, English commit messages, the wiki updated with `wiki-update`. YoruMimizuku has no pull requests: when a phase's work is done, report it and fast-forward `main` and push only after the user approves that merge.
 
-## 7. Decisions for the user
+## 8. Decisions for the user
 
-1. Adopt approach B (port the core to C#), or stay with A.
-2. If a third-party .NET AT Protocol library turns out to pass the OAuth tests, may it replace the hand port (approach C)?
+1. Adopt approach B (C# core, OAuth by spike), or stay with A.
+2. After the Phase 3 spike, may a library that passes the OAuth list replace the hand port?
 3. On the switch, may existing Windows users be asked to sign in again, or must their stored accounts carry over?
-4. May Phase 4 remove `PlatformWindows` and `YoruMimizukuBridge` from `core/Package.swift`, leaving the Swift core Apple-only?
+4. May Phase 6 remove `PlatformWindows` and `YoruMimizukuBridge` from `core/Package.swift`, leaving the Swift core Apple-only?
 5. How does the Windows agent see the prototype: Figma access on that machine, or the Lenses HTML committed to the repository?
