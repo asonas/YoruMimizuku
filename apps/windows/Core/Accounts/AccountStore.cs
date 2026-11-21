@@ -78,6 +78,13 @@ internal sealed class AccountStore(ISecureStorage storage)
         }
     }
 
+    /// <summary>
+    /// Locks the account against every other process on this storage, so only one at a
+    /// time reads the stored tokens and refreshes them.
+    /// </summary>
+    public Task<IAsyncDisposable> LockAccountAsync(string did, CancellationToken cancellationToken) =>
+        storage.LockAsync(AccountKey(did), cancellationToken);
+
     private static string AccountKey(string did) => "account." + did;
 
     private StoredAccount? Read(string did) =>

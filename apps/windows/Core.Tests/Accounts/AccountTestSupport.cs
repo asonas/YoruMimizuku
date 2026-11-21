@@ -7,10 +7,27 @@ namespace YoruMimizuku.Core.Tests;
 internal sealed class InMemorySecureStorage : ISecureStorage
 {
     private readonly ConcurrentDictionary<string, byte[]> _items = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
 
     public byte[]? Read(string key) => _items.TryGetValue(key, out var value) ? value : null;
     public void Write(string key, byte[] value) => _items[key] = value;
     public void Delete(string key) => _items.TryRemove(key, out _);
+
+    public async Task<IAsyncDisposable> LockAsync(string key, CancellationToken cancellationToken)
+    {
+        var gate = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        return new Release(gate);
+    }
+
+    private sealed class Release(SemaphoreSlim gate) : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            gate.Release();
+            return ValueTask.CompletedTask;
+        }
+    }
 }
 
 internal static class AccountTestSupport

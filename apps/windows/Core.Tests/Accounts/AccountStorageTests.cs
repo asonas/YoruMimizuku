@@ -31,6 +31,24 @@ public sealed class AccountStorageTests : IDisposable
     }
 
     [Fact]
+    public async Task ALockedKeyWaitsForItsHolderOnAnotherStorageOfTheDirectory()
+    {
+        if (!OperatingSystem.IsWindows()) return;
+        // Two storages on one directory, as two app processes open it.
+        var first = new DpapiFileStorage(_directory);
+        var second = new DpapiFileStorage(_directory);
+
+        var held = await first.LockAsync("account.did:plc:alice", CancellationToken.None);
+        var waiting = second.LockAsync("account.did:plc:alice", CancellationToken.None);
+        await using (await second.LockAsync("account.did:plc:bob", CancellationToken.None)) { }
+        await Task.Delay(200);
+        Assert.False(waiting.IsCompleted);
+
+        await held.DisposeAsync();
+        await using var taken = await waiting.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public void TheCSharpStoreNeverSharesTheSwiftStoresDirectory()
     {
         if (!OperatingSystem.IsWindows()) return;

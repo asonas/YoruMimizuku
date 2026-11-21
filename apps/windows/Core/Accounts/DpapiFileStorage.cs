@@ -34,6 +34,29 @@ public sealed class DpapiFileStorage(string directory) : ISecureStorage
 
     public void Delete(string key) => File.Delete(PathFor(key));
 
+    /// <summary>
+    /// Holds the key's ".lock" file open with no sharing. Windows releases it when the
+    /// holder disposes it or its process ends, so a crashed app never leaves it locked.
+    /// </summary>
+    public async Task<IAsyncDisposable> LockAsync(string key, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(directory);
+        var path = PathFor(key) + ".lock";
+        while (true)
+        {
+            try
+            {
+                return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException) when (File.Exists(path))
+            {
+                await Task.Delay(LockRetryDelay, cancellationToken);
+            }
+        }
+    }
+
+    private static readonly TimeSpan LockRetryDelay = TimeSpan.FromMilliseconds(50);
+
     private string PathFor(string key) => Path.Combine(directory, Convert.ToHexStringLower(Encoding.UTF8.GetBytes(key)) + ".bin");
 }
 

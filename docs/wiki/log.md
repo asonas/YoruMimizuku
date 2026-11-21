@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows refresh locked across processes)
+
+- sources: apps/windows/Core/Accounts/AccountState.cs, apps/windows/Core/Accounts/DpapiFileStorage.cs
+- updated: platforms/windows.md
+- note: closes issue #20 for copies at other exe paths. A refresh locks the account through the storage (a `.lock` file for DPAPI) and adopts tokens another process already rotated instead of replaying a spent refresh token.
+
 ## 2026-11-21 ingest (Windows conversation view links and timestamps)
 
 - sources: apps/windows/App/Views/PostBody.cs, apps/windows/App/Views/ConversationView.xaml.cs, apps/windows/App/Views/FeedView.xaml.cs

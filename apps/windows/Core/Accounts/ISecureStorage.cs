@@ -14,4 +14,10 @@ public interface ISecureStorage
 
     /// <summary>Removes the value under <paramref name="key"/>; nothing happens when there is none.</summary>
     void Delete(string key);
+
+    /// <summary>
+    /// Waits until no other holder, in this process or another one on the same storage,
+    /// has <paramref name="key"/> locked, and locks it until the result is disposed.
+    /// </summary>
+    Task<IAsyncDisposable> LockAsync(string key, CancellationToken cancellationToken);
 }

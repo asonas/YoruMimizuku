@@ -191,6 +191,42 @@ public class AccountHandlerTests
     }
 
     [Fact]
+    public async Task ARefreshByAnotherProcessIsAdoptedInsteadOfSpendingTheOldToken()
+    {
+        await _accounts.SignInAsync(_server);
+        var client = Client(AliceDid);
+        await ActingDidAsync(client);
+        // A second app process on the same store, as when two copies of the app run.
+        var other = AccountTestSupport.Manager(_server, _storage);
+        _server.ExpireAccessTokens();
+        Assert.Equal(AliceDid, await ActingDidAsync(Client(AliceDid, other)));
+
+        // This process still holds the refresh token the other one has spent.
+        Assert.Equal(AliceDid, await ActingDidAsync(client));
+
+        Assert.Equal(1, _server.RefreshCount);
+    }
+
+    [Fact]
+    public async Task TwoProcessesRefusedTogetherSpendTheRefreshTokenOnce()
+    {
+        await _accounts.SignInAsync(_server);
+        var other = AccountTestSupport.Manager(_server, _storage);
+        var mine = Client(AliceDid);
+        var theirs = Client(AliceDid, other);
+        await ActingDidAsync(mine);
+        await ActingDidAsync(theirs);
+        _server.ExpireAccessTokens();
+        // Hold the first refresh until both processes have been refused, so both want one.
+        _server.BeforeRefresh = () => UntilAsync(() => _server.RejectedTokens >= 2);
+
+        var acting = await Task.WhenAll(ActingDidAsync(mine), ActingDidAsync(theirs));
+
+        Assert.Equal([AliceDid, AliceDid], acting);
+        Assert.Equal(1, _server.RefreshCount);
+    }
+
+    [Fact]
     public async Task ARelaunchedAppSignsWithTheKeyRestoredFromDpapi()
     {
         if (!OperatingSystem.IsWindows()) return;

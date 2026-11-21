@@ -57,7 +57,10 @@ internal sealed class AccountState
     /// <summary>
     /// Refreshes <paramref name="used"/> and saves the rotated tokens before any caller
     /// retries, since the old refresh token is spent once the server answers. The save
-    /// is skipped when the store no longer holds <paramref name="used"/>.
+    /// is skipped when the store no longer holds <paramref name="used"/>. The account is
+    /// locked against other app processes throughout; when the store already holds other
+    /// tokens, one of them refreshed first, and those are taken as they are, since
+    /// refreshing <paramref name="used"/> would replay a spent token.
     /// </summary>
     private async Task<OAuthTokens> RefreshOnceAsync(OAuthTokens used)
     {
@@ -66,6 +69,9 @@ internal sealed class AccountState
         try
         {
             using var timeout = new CancellationTokenSource(AccountManager.NetworkTimeout);
+            await using var locked = await _store.LockAccountAsync(Did, timeout.Token);
+            if (_store.Find(Did) is { } stored && stored.Tokens != used) return next = stored.Tokens;
+
             var server = await OAuthDiscovery.FetchAuthorizationServerAsync(_http, _issuer, timeout.Token);
             var issued = await TokenEndpoint.RefreshAsync(_http, Key, Nonces, server, _config, used.RefreshToken!, Did, timeout.Token);
             next = issued with { RefreshToken = issued.RefreshToken ?? used.RefreshToken };
