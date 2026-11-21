@@ -12,7 +12,9 @@ import PlatformApple
 /// login in this same launch and account switches.
 struct RootView: View {
     @State private var currentDID: String?
-    @State private var accountAvatarURL: URL?
+    /// The sidebar avatar, with the account it belongs to, so a switch never
+    /// shows the previous account's picture.
+    @State private var accountAvatar: AccountAvatar?
     /// True while the "add account" login sheet is presented over the signed-in UI.
     @State private var isAddingAccount = false
     @StateObject private var loginModel: LoginViewModel
@@ -66,7 +68,7 @@ struct RootView: View {
                         accountManager: accountManager,
                         did: did,
                         accountHandle: currentHandle,
-                        accountAvatarURL: accountAvatarURL,
+                        accountAvatarURL: accountAvatar?.did == did ? accountAvatar?.url : nil,
                         accounts: accounts,
                         onSwitchAccount: { switchAccount(to: $0) },
                         onAddAccount: { startAddAccount() },
@@ -124,7 +126,7 @@ struct RootView: View {
                 reauth = nil
                 isReauthSheetShown = false
                 reauthGeneration += 1
-                accountAvatarURL = nil
+                accountAvatar = nil
                 currentDID = did
             }
             .environmentObject(themeStore)
@@ -210,8 +212,16 @@ struct RootView: View {
     }
 
     private func loadAvatar() async {
-        guard let did = currentDID else { accountAvatarURL = nil; return }
-        accountAvatarURL = try? await profileLoader.loadAvatar(of: did)
+        guard let did = currentDID else { accountAvatar = nil; return }
+        let url = try? await profileLoader.loadAvatar(of: did)
+        // A switch while this was loading leaves it to the newer task.
+        guard currentDID == did else { return }
+        accountAvatar = AccountAvatar(did: did, url: url)
+    }
+
+    private struct AccountAvatar: Equatable {
+        let did: String
+        let url: URL?
     }
 }
 

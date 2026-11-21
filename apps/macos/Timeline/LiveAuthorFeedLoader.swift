@@ -12,10 +12,10 @@ struct LiveAuthorFeedLoader: TimelineLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
     let actor: String
-    /// The account to read as. Nil uses the current account.
-    let accountDID: String?
+    /// The window's account, which this reads and writes as.
+    let accountDID: String
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, actor: String, accountDID: String? = nil) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, actor: String, accountDID: String) {
         self.accountManager = accountManager
         self.config = config
         self.actor = actor

@@ -11,10 +11,10 @@ import PlatformApple
 struct LiveTimelineLoader: TimelineLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
-    /// The account to read as. Nil uses the current account.
-    let accountDID: String?
+    /// The window's account, which this reads and writes as.
+    let accountDID: String
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, accountDID: String? = nil) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, accountDID: String) {
         self.accountManager = accountManager
         self.config = config
         self.accountDID = accountDID
