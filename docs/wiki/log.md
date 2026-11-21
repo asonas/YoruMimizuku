@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows single instance)
+
+- sources: apps/windows/App/Program.cs, apps/windows/App/App.xaml.cs, apps/windows/App/MainWindow.xaml.cs
+- updated: [[windows]]
+- note: fixes issue #20. A second launch of the Windows app redirects to the running instance through `AppInstance`, which brings its window to the front, so only one process uses the account store. The key is scoped to the exe's path, so a copy at another path still runs on its own.
+
 ## 2026-11-21 ingest (Windows session re-auth, #31)
 
 - sources: docs/adr/0018-session-reauth.md, apps/windows/Interop/CoreClient.cs, apps/windows/App/MainWindow.xaml.cs

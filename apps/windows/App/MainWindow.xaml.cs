@@ -571,6 +571,13 @@ public sealed partial class MainWindow : Window
         window.Activate();
     }
 
+    /// Bring the last active window to the front when the app is launched again.
+    public static void BringToFront()
+    {
+        var window = OpenWindows.Find(w => w == MainWindowAccessor.Current) ?? OpenWindows.FirstOrDefault();
+        window?.Activate();
+    }
+
     private static bool IsCtrlShiftDown() =>
         InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down) &&
         InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);

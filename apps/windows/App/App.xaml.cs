@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Http;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Services;
@@ -16,6 +17,7 @@ public partial class App : Application
         new DpapiFileStorage(DpapiFileStorage.DefaultDirectory()), new SocketsHttpHandler(), OAuthClientConfig.YoruMimizuku);
 
     private Window? _window;
+    private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
 
     public App()
     {
@@ -45,6 +47,13 @@ public partial class App : Application
         mainWindow.RestoreSavedWindowPlacement();
         if (swiftAccountsRemoved) mainWindow.ShowSignInAgainNotice();
         UpdateService.Shared.Initialize();
+    }
+
+    /// <summary>A second launch handed its activation here, on a background thread.</summary>
+    public void OnRedirectedLaunch()
+    {
+        AppLog.Write("second launch redirected");
+        _dispatcher.TryEnqueue(MainWindow.BringToFront);
     }
 
     /// <summary>

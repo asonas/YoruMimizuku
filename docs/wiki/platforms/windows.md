@@ -33,6 +33,7 @@ sources:
   - apps/windows/Interop/CoreClients.cs
   - apps/windows/Core/Accounts/LegacySwiftAccountStore.cs
   - apps/windows/App/App.xaml.cs
+  - apps/windows/App/Program.cs
   - scripts/windows/test.ps1
   - scripts/windows/ci.ps1
   - scripts/windows/installer.iss
@@ -121,6 +122,19 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   window, the analogue of a macOS `WindowGroup` window. Only the primary window
   owns the updater, notification polling and OS toasts; every window keeps its
   own tabs and account client ([[app-shell]]).
+- The app runs as a single process (issue #20). Every process shares the DPAPI
+  account store, but refresh coalescing and compare-and-save hold only inside one
+  process (`Core/Accounts/AccountState.cs`), so a second process could write back a
+  used refresh token and the next refresh would fail with `invalid_grant`.
+  `App/Program.cs` replaces the XAML-generated `Main` (`DISABLE_XAML_GENERATED_MAIN`)
+  and registers the Windows App SDK `AppInstance` key `main`. A second launch,
+  direct or through the `YoruMimizuku.exe` launcher, redirects its activation to the
+  running instance and exits before it touches the store; the running instance
+  brings its last active window to the front, restoring it if minimized
+  (`MainWindow.BringToFront`). `Ctrl+Shift+N` windows stay in the one process. The
+  Windows App SDK scopes the key to the exe's path in the user's session, so a copy
+  at another path (a second unzipped build, or a Debug build beside the installed
+  app) still starts its own process and can race on the store.
 - v1 embed parity in feed rows (the core's `PostDisplay` maps these into
   `PostDisplayDTO`): a **quote card** for
   `app.bsky.embed.record` / `recordWithMedia` (author line, body, thumbnails /
