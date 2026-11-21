@@ -383,6 +383,8 @@ public sealed partial class MainWindow : Window
                 pin.CreatorHandle is { Length: > 0 } handle ? "@" + handle : null,
                 pin.Id,
             }.Where(line => !string.IsNullOrWhiteSpace(line))));
+            // Only the window account's own curated lists take people.
+            if (pin.IsCuratedList && pin.CreatorDid == _workspace.AccountDid) AcceptAuthorDrops(item, pin);
             return item;
         }
         if (tab.Kind != WorkspaceTabKind.Filter)
@@ -428,6 +430,34 @@ public sealed partial class MainWindow : Window
         grid.Children.Add(close);
         item.Content = grid;
         return item;
+    }
+
+    /// <summary>
+    /// A post's avatar dropped on the row adds its author to the list; the row is
+    /// outlined while a drag hovers over it (the macOS sidebar's AuthorDropTarget).
+    /// </summary>
+    private void AcceptAuthorDrops(NavigationViewItem item, SavedFeedDto list)
+    {
+        item.AllowDrop = true;
+        void Outline(bool on)
+        {
+            item.BorderBrush = on ? (Brush)Application.Current.Resources["AppAccentBrush"] : null;
+            item.BorderThickness = new Thickness(on ? 2 : 0);
+        }
+        item.DragOver += (_, e) =>
+        {
+            if (!DraggedAuthor.IsIn(e.DataView)) return;
+            e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+            e.DragUIOverride.Caption = $"「{list.Title}」に追加";
+            Outline(true);
+        };
+        item.DragLeave += (_, _) => Outline(false);
+        item.Drop += async (_, e) =>
+        {
+            Outline(false);
+            if (_workspace.Account is not { } account || await DraggedAuthor.ReadAsync(e.DataView) is not { } author) return;
+            await ListMembershipMenu.AddDroppedAsync(item.XamlRoot, account.ListMembership, author, list.Id, list.Title);
+        };
     }
 
     private static NavigationViewItem MakeAddFilterItem() => new()

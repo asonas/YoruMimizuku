@@ -64,6 +64,13 @@ public interface IAccountClient
     /// <summary>A page of a pinned feed's or list's timeline.</summary>
     Task<TimelinePageDto> SavedFeedLoadAsync(SavedFeedDto source, string? cursor = null);
 
+    /// <summary>
+    /// The account's curated lists and who is on them, for "リストに追加" and for
+    /// dropping an avatar on a pinned list. One per account, so the account's windows
+    /// share its cache and take turns writing. Use it from the UI thread.
+    /// </summary>
+    YoruMimizuku.Core.ListMembershipModel ListMembership { get; }
+
     /// <summary>Run a saved filter. <paramref name="filter"/> is the SavedFilter JSON object.</summary>
     Task<TimelinePageDto> SearchLoadAsync(JsonObject filter, string? cursor = null);
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 using YoruMimizuku.Core;
 
@@ -23,7 +24,7 @@ namespace YoruMimizuku.App.Interop;
 public sealed class CoreAccountClient(
     XrpcClient xrpc,
     Func<Exception, bool>? isSessionExpired = null,
-    VideoUploadService? videos = null) : IAccountClient
+    VideoUploadService? videos = null) : IAccountClient, IListMembershipEditor
 {
     /// <summary>What the bridge's thread endpoint builds: depths 0 to 3 below the focus.</summary>
     private const int ThreadReplyDepth = 3;
@@ -34,8 +35,23 @@ public sealed class CoreAccountClient(
     private readonly PostService posts = new(xrpc, videos: videos);
     private readonly ProfileService profiles = new(xrpc);
     private readonly SavedFeedsService savedFeeds = new(xrpc);
+    private readonly ListMembershipService lists = new(xrpc);
+    private ListMembershipModel? listMembership;
 
     public string Did => xrpc.Did;
+
+    /// <summary>Reads and writes through this client, so failures arrive as <see cref="CoreException"/>.</summary>
+    public ListMembershipModel ListMembership => listMembership ??= new ListMembershipModel(this);
+
+    Task<IReadOnlyList<CuratedListMembership>> IListMembershipEditor.ListsWithMembershipAsync(
+        string actorDid, CancellationToken cancellationToken) =>
+        Run(() => lists.ListsWithMembershipAsync(actorDid, cancellationToken));
+
+    Task<string> IListMembershipEditor.AddAsync(string actorDid, string listUri, CancellationToken cancellationToken) =>
+        Run(() => lists.AddAsync(actorDid, listUri, cancellationToken));
+
+    Task IListMembershipEditor.RemoveAsync(string itemUri, CancellationToken cancellationToken) =>
+        Run(() => lists.RemoveAsync(itemUri, cancellationToken));
 
     public Task<TimelinePageDto> TimelineLoadAsync(string? cursor = null) =>
         Run(async () => Page(await feeds.GetTimelineAsync(cursor)));

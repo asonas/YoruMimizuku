@@ -629,6 +629,36 @@ public sealed partial class FeedView : UserControl
         }
     }
 
+    /// The row's right-click menu: "リストに追加" for the post's author, on the
+    /// timeline's account. A post whose URI names no repo has no author to add.
+    private void OnPostMenuOpening(object sender, object e)
+    {
+        if (sender is not MenuFlyout flyout ||
+            flyout.Items.OfType<MenuFlyoutSubItem>().FirstOrDefault() is not { Tag: PostItem post } menu)
+        {
+            return;
+        }
+        if (post.AuthorDid is not { } did)
+        {
+            flyout.Hide();
+            return;
+        }
+        ListMembershipMenu.Attach(flyout, menu, Vm.Account.ListMembership, did, post.AuthorHandle);
+    }
+
+    /// The avatar drags its post's author onto a sidebar list.
+    private void OnAvatarDragStarting(UIElement sender, DragStartingEventArgs args)
+    {
+        if (sender is FrameworkElement { Tag: PostItem { AuthorDid: { } did } post })
+        {
+            new DraggedAuthor(did, post.AuthorHandle).WriteTo(args.Data);
+        }
+        else
+        {
+            args.Cancel = true;
+        }
+    }
+
     private void OnAvatarTapped(object sender, TappedRoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: PostItem item })

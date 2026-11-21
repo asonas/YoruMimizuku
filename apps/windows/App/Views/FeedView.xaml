@@ -34,7 +34,19 @@
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="vm:PostItem">
                     <Border BorderBrush="{ThemeResource AppHairlineBrush}"
-                            BorderThickness="{x:Bind RowBorderThickness, Mode=OneWay}" Padding="16,11">
+                            BorderThickness="{x:Bind RowBorderThickness, Mode=OneWay}" Padding="16,11"
+                            Background="Transparent">
+                        <!-- Transparent, not null, so a right-click anywhere on the row
+                             reaches this menu (the selectable body keeps its text menu). -->
+                        <Border.ContextFlyout>
+                            <MenuFlyout Opening="OnPostMenuOpening">
+                                <MenuFlyoutSubItem Text="リストに追加" Tag="{x:Bind}">
+                                    <MenuFlyoutSubItem.Icon>
+                                        <FontIcon Glyph="&#xE8FD;" />
+                                    </MenuFlyoutSubItem.Icon>
+                                </MenuFlyoutSubItem>
+                            </MenuFlyout>
+                        </Border.ContextFlyout>
                         <StackPanel Spacing="3">
                             <!-- Repost / context header -->
                             <StackPanel Orientation="Horizontal" Spacing="6" Margin="53,0,0,0"
@@ -64,7 +76,8 @@
                                                Visibility="{x:Bind ConnectorBottomVisibility, Mode=OneWay}" />
                                     <PersonPicture Width="42" Height="42" VerticalAlignment="Top"
                                                    ProfilePicture="{x:Bind Avatar}" Tag="{x:Bind}"
-                                                   Tapped="OnAvatarTapped" />
+                                                   Tapped="OnAvatarTapped"
+                                                   CanDrag="True" DragStarting="OnAvatarDragStarting" />
                                 </Grid>
 
                                 <StackPanel Grid.Column="1" Spacing="4">
