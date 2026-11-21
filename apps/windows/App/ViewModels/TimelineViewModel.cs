@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.Mvvm;
+using YoruMimizuku.App.Services;
 
 namespace YoruMimizuku.App.ViewModels;
 
@@ -136,17 +137,17 @@ public sealed class TimelineViewModel : ObservableObject
         return false;
     }
 
-    /// Regroup the current posts web-style: send each post's id, createdAt, and
-    /// reply-parent id to the tested core (FeedThreading via yoru_feed_arrange),
-    /// then reorder the collection in place with Move (preserving item containers
-    /// and scroll) and stamp each row's connector flags.
+    /// Regroup the current posts web-style: send each post's id, author DID (the repo
+    /// of its AT-URI), createdAt, and reply-parent id to the tested core
+    /// (FeedThreading), then reorder the collection in place with Move (preserving
+    /// item containers and scroll) and stamp each row's connector flags.
     private async Task ApplyThreadingAsync()
     {
         if (Posts.Count == 0) return;
-        var items = new List<object>(Posts.Count);
+        var items = new List<ArrangeItemDto>(Posts.Count);
         foreach (var p in Posts)
         {
-            items.Add(new { id = p.Id, createdAt = p.CreatedAt, replyParentId = p.ReplyParent?.Id });
+            items.Add(new ArrangeItemDto(p.Id, AtUri.Repo(p.Id) ?? "", p.CreatedAt, p.ReplyParent?.Id));
         }
 
         List<ArrangeResultDto> arranged;

@@ -31,8 +31,8 @@ public interface ICoreClient
     /// <summary>Fetch an OGP preview card for a bare URL; null when the page yields no usable metadata.</summary>
     Task<LinkCardDto?> OgpLoadAsync(string url);
 
-    /// <summary>Group a feed page web-style. <paramref name="items"/> carries each post's id, createdAt, and replyParentId.</summary>
-    Task<List<ArrangeResultDto>> FeedArrangeAsync(object items);
+    /// <summary>Group a newest-first feed page web-style.</summary>
+    Task<List<ArrangeResultDto>> FeedArrangeAsync(IReadOnlyList<ArrangeItemDto> items);
 
     /// <summary>A client whose every request acts as <paramref name="did"/>,
     /// whichever account the store marks current.</summary>

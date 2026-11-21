@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -66,8 +67,12 @@ public sealed class BridgeClient : ICoreClient
     public Task<LinkCardDto?> OgpLoadAsync(string url) =>
         CallAsync<LinkCardDto>(NativeMethods.yoru_ogp_load, new { url });
 
-    public Task<List<ArrangeResultDto>> FeedArrangeAsync(object items) =>
-        CallAsync<List<ArrangeResultDto>>(NativeMethods.yoru_feed_arrange, new { items })!;
+    /// <summary>The bridge reads no author, so it groups other people's replies too.</summary>
+    public Task<List<ArrangeResultDto>> FeedArrangeAsync(IReadOnlyList<ArrangeItemDto> items) =>
+        CallAsync<List<ArrangeResultDto>>(NativeMethods.yoru_feed_arrange, new
+        {
+            items = items.Select(item => new { id = item.Id, createdAt = item.CreatedAt, replyParentId = item.ReplyParentId })
+        })!;
 
     public IAccountClient ForAccount(string did) => new AccountClient(did);
 
