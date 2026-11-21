@@ -14,6 +14,9 @@ sources:
   - apps/macos/Views/RootView.swift
   - apps/ipados/Views/RootView.swift
   - apps/windows/App/MainWindow.xaml.cs
+  - apps/windows/App/App.xaml.cs
+  - apps/windows/Core/Accounts/LegacySwiftAccountStore.cs
+  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
 features:
   - name: Multi-account persistence & switching
     macos: full
@@ -70,12 +73,20 @@ re-authentication instead, mirroring macOS (`apps/ipados/Views/RootView.swift`, 
 Windows mirrors the macOS switcher in the NavigationView pane footer: the account
 button opens a `MenuFlyout` listing every stored account (the active one prefixed
 with a check), then **「アカウントを追加…」** and **「ログアウト」**. It is fed by the
-token-free `yoru_account_summaries` bridge endpoint (`AccountManager.summaries()`),
-so the menu never touches secrets. Switching calls `yoru_account_switch` and
+token-free `ICoreClient.AccountSummariesAsync` (DID + handle only),
+so the menu never touches secrets. Switching calls `SwitchAccountAsync` and
 re-enters the shell for the new account (rebuilding tabs/filters under its
 per-DID `SavedFilterStore`); "add account" shows the login view while keeping the
 current account stored, and a successful login adds + makes the new account
 current; "ログアウト" and the session-expiry fallback both go through
-`yoru_account_remove_advance` (`AccountManager.removeAndAdvance`), advancing to the
+`RemoveAndAdvanceAsync`, advancing to the
 next stored account or returning to login when none remain
 (`apps/windows/App/MainWindow.xaml.cs`).
+
+Windows stores accounts with DPAPI under `%LOCALAPPDATA%\YoruMimizuku\accounts`, not in
+the Keychain. **Difference: one-time sign-in again.** Builds before the C# core kept
+accounts in the Swift core's store (`%LOCALAPPDATA%\as.ason.YoruMimizuku\secure`), which
+the C# core never reads. On launch the app deletes that store, and when it held a
+signed-in account, tells the user once to sign in again; saved filters are keyed by
+DID, so they come back (`2026-11-21-windows-csharp-core-handoff.md` §6 Phase 4,
+`apps/windows/Core/Accounts/LegacySwiftAccountStore.cs`, `apps/windows/App/App.xaml.cs`).

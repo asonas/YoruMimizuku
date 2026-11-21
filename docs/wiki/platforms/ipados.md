@@ -1,7 +1,7 @@
 ---
 title: Platform — iPadOS
 type: platform
-updated: 2026-07-25
+updated: 2026-11-21
 sources:
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-24-yorumimizuku-ipados-parity-design.md
@@ -52,8 +52,7 @@ xcodebuild build -scheme YoruMimizukuPad -project YoruMimizuku.xcodeproj -destin
 
 ## Architecture
 
-The iPadOS app attaches directly to the Swift packages, matching the macOS shape
-rather than the Windows C ABI bridge. `RootView` builds the shared `AccountManager`
+The iPadOS app attaches directly to the Swift packages, matching the macOS shape. `RootView` builds the shared `AccountManager`
 over `KeychainStorage`, wires `LoginViewModel` to an iPadOS
 `ASWebAuthenticationSession`, and creates scene-local `TimelineViewModel`,
 `NotificationsViewModel`, and `WorkspaceModel` instances. Each iPad scene owns its

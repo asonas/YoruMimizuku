@@ -26,98 +26,49 @@ sources:
   - apps/windows/App/Services/NotificationAlerts.cs
   - apps/windows/App/Services/WindowPlacement.cs
   - apps/windows/App/Services/AppSettings.cs
-  - core/Sources/YoruMimizukuBridge/BridgeOperations.swift
-  - core/Sources/YoruMimizukuBridge/BridgeLinkPreview.swift
-  - core/Sources/YoruMimizukuKit/PostText.swift
+  - apps/windows/Interop/CoreClients.cs
+  - apps/windows/Core/Accounts/LegacySwiftAccountStore.cs
+  - apps/windows/App/App.xaml.cs
+  - scripts/windows/test.ps1
+  - scripts/windows/ci.ps1
+  - scripts/windows/installer.iss
   - README.md
 ---
 
 # Platform — Windows
 
-Status: **implemented and running**. The Swift core builds and tests on Windows,
-a C ABI bridge (`YoruMimizukuBridge.dll`) exposes it, and a WinUI 3 (C#/.NET 8)
-app drives the UI. The app runs self-contained and signs in via OAuth end to end
-(`2026-06-05-windows-multiplatform-structure.md`, `apps/windows/README.md`).
+Status: **implemented and running**. A WinUI 3 (C#/.NET 10) app with its own C#
+core under `apps/windows`; no Swift toolchain, bridge DLL or P/Invoke into a core
+(`2026-11-21-windows-csharp-core-handoff.md`, `apps/windows/README.md`).
 
 This page matters for cross-machine context: the Windows build runs on a
 different machine / agent, so it reconstructs the same picture from this wiki.
 
-**Direction (approved 2026-11-21):** replace the Swift core and the C ABI bridge
-with a C# core inside `apps/windows`, keep the WinUI app, then bring the
-2026-11-20 macOS redesign to Windows. The comparison of approaches, the phased
-plan and the decisions are in `docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`; until
-the port lands, this page describes the current build.
+The C# core replaced the earlier Swift core + C ABI bridge (`YoruMimizukuBridge`,
+`PlatformWindows`) in Phases 0-6 of the handoff spec; those Swift targets are
+deleted. Phase 7, bringing the 2026-11-20 macOS redesign to Windows, is next.
 
-## Architecture (as built)
-
-Swift core shared across platforms, with a **C#/WinUI 3 frontend calling the Swift
-core through a C ABI (cdecl) DLL** via P/Invoke. The pure logic and all mapping
-(`PostDisplay`, `NotificationGroup`, `RichText`, filter subqueries) stay in
-`BlueskyCore` / `YoruMimizukuKit`; C# is a thin MVVM + XAML layer ([[overview]]).
+## Architecture
 
 ```
-core/Sources/
-├── PlatformWindows/       # DPAPI SecureStorage + BCryptGenRandom, #if canImport(WinSDK)
-└── YoruMimizukuBridge/    # C ABI (@_cdecl) surface, built as a dynamic library (DLL)
-apps/windows/App
-├── Interop/         P/Invoke (NativeMethods), JSON facade (BridgeClient), DTOs
-├── Mvvm/            ObservableObject + AsyncRelayCommand
-├── ViewModels/      Login / Timeline / Thread / Notifications / Composer / Workspace / SavedFilter
-├── Views/           XAML: Login (WebView2 OAuth), Feed, Notifications, Conversation, Composer, Settings
-├── Services/        AppSettings, ThemeService (randoma11y), RelativeTime, AppIcon
-└── MainWindow       NavigationView shell, tab cycling (Ctrl+Shift+J/K), login gate
+apps/windows
+├── Core/ (+ Core.Tests/)        C# port of the BlueskyCore / YoruMimizukuKit logic
+├── Interop/ (+ Interop.Tests/)  ICoreClient / IAccountClient over Core, DTOs, CoreException
+└── App/                         WinUI views, view models, services
 ```
 
-## PlatformWindows (OS adapters)
+Each window holds an `IAccountClient` for its own account (DID), so its reads and
+writes do not follow another window's account switch.
 
-The Apple-only ports get Windows equivalents under `core/Sources/PlatformWindows`
-(gated `#if canImport(WinSDK)`), covered by a `PlatformWindowsTests` target:
-
-- **Secure storage**: `DPAPISecureStorage` — `CryptProtectData` / `CryptUnprotectData`
-  (per-user) persisting each value as an encrypted file under Application Support.
-  DPAPI rather than Credential Manager because the account blob (OAuth tokens + the
-  DPoP key) exceeds the Credential Manager per-item size limit. This is what makes
-  login survive a relaunch ([[oauth-flow]]).
-- **Random bytes**: `BCryptRandomBytesGenerator` — `BCryptGenRandom`.
-- Linked Win32 libs: `bcrypt`, `crypt32` (see `core/Package.swift`).
-
-Crypto and HTTP need no OS split: `CryptoKitDPoPProvider` uses `import Crypto`
-(swift-crypto, `from: 3.0.0` in `core/Package.swift`, with an `@unchecked Sendable`
-wrapper since swift-crypto's P256 key is not `Sendable` off Apple), and
-`URLSessionHTTPClient` carries the `#if canImport(FoundationNetworking)` guard.
-Both concretes live in `BlueskyCore/Adapters`.
-
-## YoruMimizukuBridge (C ABI)
-
-A dynamic-library target (`Bridge.swift`, `BridgeOperations.swift`, `CABI.swift`)
-whose `@_cdecl("yoru_…")` functions are the P/Invoke boundary, all guarded
-`#if canImport(WinSDK)` (macOS bypasses the bridge). `unsafe` pointer / C-string
-lifetime handling is confined here.
-
-- Every entry point takes one UTF-8 JSON request string and returns a newly
-  allocated UTF-8 JSON response (`{ "ok": true, "data": … }` or
-  `{ "ok": false, "error": … }`) the caller frees with `yoru_free`.
-- Async work is bridged to a synchronous return with a semaphore; the C# side
-  calls each function on a background thread (`Task.Run`), so the UI never blocks.
-- **Date convention (gotcha):** request JSON is decoded with the default
-  `JSONDecoder` (`deferredToDate`), while response DTOs serialize dates as ISO8601
-  strings by hand. So the C# side must **not** send ISO8601 `Date` fields in a
-  request — they fail to decode and error the whole call. (This was the cause of
-  saved-filter searches silently returning nothing: C# was sending `createdAt`;
-  it now omits it.)
-- `yoru_init` builds the session (PlatformWindows adapters + `URLSessionHTTPClient`
-  + swift-crypto DPoP + `AccountManager`). Endpoints mirror the macOS `Live*`
-  layer: `yoru_login_begin` / `yoru_login_complete` (split for WebView2),
-  `yoru_account_current/list/switch/remove`, `yoru_timeline_load`,
-  `yoru_author_feed_load`, `yoru_thread_load`, `yoru_notifications_load`,
-  `yoru_search_load`, `yoru_post_create`, `yoru_post_like/unlike/repost/unrepost`,
-  `yoru_post_permalink`, `yoru_profile_avatar`, `yoru_profile_load`.
+**Difference: one-time sign-in again.** The C# core stores accounts with DPAPI under
+`%LOCALAPPDATA%\YoruMimizuku\accounts` and never reads the Swift core's old store;
+the first launch after the switch deletes it and tells the user once to sign in
+again ([[accounts]]). On an expired session Windows signs the account out and
+advances, where macOS keeps it and re-authenticates ([[oauth-flow]]).
 
 ## apps/windows (WinUI 3)
 
-- `Interop/`: `NativeMethods` (`DllImport`), `BridgeClient` (JSON facade + Task
-  wrappers), and DTOs mirroring the bridge payloads. The rest of the app only
-  touches `Interop`.
+- The app reaches the core only through `ICoreClient` / `IAccountClient`.
 - C# MVVM view models mirror `YoruMimizukuKit`: Timeline / Thread / Notifications /
   Login / Composer / Workspace / SavedFilter (+ `PostItem` with optimistic like/repost).
 - Views: WebView2 OAuth login, a feed (facet-aware rich text, image grid + lightbox,
@@ -128,22 +79,22 @@ lifetime handling is confined here.
   shell with `Ctrl+Shift+J/K` cycling, `Ctrl+Shift+N` for a new window, closable
   tabs, and an account footer.
 - The composer can post text, replies, quotes, and up to 4 PNG/JPEG image
-  attachments through `yoru_post_create`. Each attachment now shows a thumbnail
+  attachments through `PostCreateAsync`. Each attachment now shows a thumbnail
   with a per-image alt-text editor and a remove button, and oversized images are
   scaled to a 2000px longest edge and re-encoded as JPEG via WIC before upload
-  (`Services/ImageProcessing.cs`). `yoru_post_create` also trims trailing blank
-  lines via the shared `PostText` helper, matching the macOS submission boundary
+  (`Services/ImageProcessing.cs`). The core also trims trailing blank
+  lines via its `PostText` helper, matching the macOS submission boundary
   ([[compose-post]]).
-- Saved-filter tabs call `yoru_search_load` with the structured
+- Saved-filter tabs call `SearchLoadAsync` with the structured
   `terms` + `combinator` JSON shape used by the Swift core. The WinUI shell has
   a multi-row AND/OR editor, edit/remove affordances, hashtag-link creation, and
   per-account JSON persistence. OR filters page with the same `CompositeCursor`
-  shape as macOS: the bridge carries one cursor per subquery, skips exhausted
+  shape as macOS: the core carries one cursor per subquery, skips exhausted
   subqueries, and merges each page newest-first ([[filters]]).
 - Author tabs are implemented: avatar taps in feeds and conversations derive the
   actor DID from the post AT-URI, notification actors open by handle, and
   `AuthorView` renders a profile header over a reused feed loaded through
-  `yoru_author_feed_load` / `yoru_profile_load` ([[author-tab]]).
+  `AuthorFeedLoadAsync` / `ProfileAsync` ([[author-tab]]).
 - Timeline rows support the Windows parity shortcuts: j/k focus, n compose,
   f toggles like, o opens the focused post's bsky.app permalink, and the link
   action copies that permalink to the clipboard. Conversation focus rows support
@@ -151,34 +102,32 @@ lifetime handling is confined here.
 - Feed rows render external link preview cards in the X-style large layout (hero
   image, bold title, grey description, host line). A post's own
   `app.bsky.embed.external` card comes through `PostDisplayDTO.linkCard`; a bare
-  link in a text-only post resolves its OGP preview lazily via the `yoru_ogp_load`
-  bridge endpoint (a Windows `HTMLFetching` over the shared `LinkPreviewLoader` /
-  `OGP` core), cached per URL ([[timeline-streaming]]).
+  link in a text-only post resolves its OGP preview lazily via `OgpLoadAsync`
+  (the core's `LinkPreviewLoader` / `Ogp`), cached per URL ([[timeline-streaming]]).
 - The feed groups same-thread posts web-style: after each load the timeline sends
-  every post's id / createdAt / reply-parent id to `yoru_feed_arrange` (a thin
-  wrapper over the tested `FeedThreading.arrange`) and reorders the rows in place
+  every post's id / author DID / createdAt / reply-parent id to `FeedArrangeAsync`
+  (the core's `FeedThreading.Arrange`) and reorders the rows in place
   with `Move`, drawing a connector under the avatar, hiding the in-block reply
   marker, and dropping the in-block divider ([[timeline-streaming]]).
 - The conversation view renders the focused post's descendant reply tree:
-  `yoru_thread_load` now returns a `ConversationThread` (focus + tree from the
-  tested `ThreadNode.childTree(maxDepth: 3)`), and each reply is indented by depth
+  `ThreadLoadAsync` returns the focus + tree from the core's
+  `ThreadNode.ChildTree(maxDepth: 3)`, and each reply is indented by depth
   with a left connector and is tappable to re-anchor ([[timeline-streaming]]).
 - The shell is multi-window: `Ctrl+Shift+N` opens another independent workspace
-  window over the same session, the analogue of a macOS `WindowGroup` window. Only
-  the primary window owns the process-wide singletons (bridge init, updater,
-  notification polling, OS toasts); secondary windows reuse the live session and
-  keep their own tabs ([[app-shell]]).
-- v1 embed parity in feed rows (the merged core `PostDisplay` maps these; the
-  bridge `PostDisplayDTO` now carries them): a **quote card** for
+  window, the analogue of a macOS `WindowGroup` window. Only the primary window
+  owns the updater, notification polling and OS toasts; every window keeps its
+  own tabs and account client ([[app-shell]]).
+- v1 embed parity in feed rows (the core's `PostDisplay` maps these into
+  `PostDisplayDTO`): a **quote card** for
   `app.bsky.embed.record` / `recordWithMedia` (author line, body, thumbnails /
   video poster) that opens the quoted conversation; a **video poster** with a
   play badge that opens the post in the browser; and a **sensitive-media curtain**
   that covers (not blurs — no cheap WinUI subtree blur) labelled adult/graphic
   media until tapped ([[timeline-streaming]], [[sensitive-media]]).
 - **Delete own post**: rows whose post AT-URI repo DID equals the account DID show
-  a 削除 action that confirms, optimistically prunes, and calls `yoru_post_delete`
+  a 削除 action that confirms, optimistically prunes, and calls `DeletePostAsync`
   (restoring on failure) ([[timeline-streaming]]).
-- **Classified load failures**: the bridge error envelope carries the shared
+- **Classified load failures**: `CoreException` carries the core's
   `LoadFailure` kind + friendly title/message, so a failed first load shows a
   titled offline / rate-limited / server / unknown message with a 再試行 button
   ([[timeline-streaming]]).
@@ -205,9 +154,9 @@ lifetime handling is confined here.
   `(uri, cid)` as the quote target plus a read-only preview, matching the macOS
   repost/quote popover ([[compose-post]]).
 - **OAuth via WebView2** (the Windows counterpart to macOS's
-  `ASWebAuthenticationSession`, [[oauth-flow]]): `yoru_login_begin` returns the
+  `ASWebAuthenticationSession`, [[oauth-flow]]): `LoginBeginAsync` returns the
   authorize URL, the app loads it in an embedded `WebView2`, intercepts the
-  `as.ason:` redirect, and calls `yoru_login_complete` to finish the token
+  `as.ason:` redirect, and calls `LoginCompleteAsync` to finish the token
   exchange — no custom URI-scheme registration needed.
 - **Relative timestamps** are formatted by `Services/RelativeTime.cs`, deliberately
   mirroring the Swift `RelativeTimeFormatter` ("now" / "30s" / "2m" / "3h" / "2d")
@@ -237,35 +186,30 @@ lifetime handling is confined here.
 
 ## Build (Windows)
 
-Swift toolchain for Windows (`winget install --id Swift.Toolchain`) + .NET 10 SDK +
-a Visual Studio C++ workload. Helpers under `scripts/windows/` (`apps/windows/README.md`):
+.NET 10 SDK + Visual Studio with the Windows App SDK / WinUI 3 component (the C++
+workload only for `release.ps1`'s launcher). Helpers under `scripts/windows/`
+(`apps/windows/README.md`):
 
 ```powershell
-scripts\windows\build.ps1            # swift build (core)
-scripts\windows\test.ps1             # swift test  (core)
-scripts\windows\stage-bridge.ps1     # build the bridge DLL + stage it (+ Swift runtime)
 scripts\windows\build-app.ps1        # stop running instance, build framework-dependent x64, print the exe
-                                     #   add -StageBridge to rebuild the Swift bridge first (after core/ changes)
+scripts\windows\test.ps1             # dotnet test Core.Tests and Interop.Tests
 scripts\windows\make-appicon.ps1     # regenerate App/Assets/AppIcon.ico from the shared macOS owl PNG
-scripts\windows\ci.ps1               # full chain: core build/test -> stage -> dotnet build
+scripts\windows\ci.ps1               # test.ps1, then dotnet build
 ```
-
-A `@MainActor` XCTest caveat: swift-corelibs-xctest on Windows cannot invoke a
-synchronous `@MainActor` test method, so such tests are marked `async`.
 
 ## Distribution
 
 `scripts\windows\release.ps1` publishes the app (**.NET 10** + **Windows App SDK
 2.1.3**) **framework-dependent** for `win-x64` (neither the .NET 10 Desktop runtime
 nor the Windows App SDK runtime is bundled), lays out a small top-level
-`YoruMimizuku.exe` launcher plus an `app/` payload directory (the app, the bridge
-DLL, the Swift runtime, and the remaining dependency DLLs), and zips it into
+`YoruMimizuku.exe` launcher plus an `app/` payload directory (the app, `YoruMimizuku.Core.dll`,
+`YoruMimizuku.App.Interop.dll`, and the remaining dependency DLLs), and zips it into
 `build/`. It also strips the Windows ML / AI stack that Windows App SDK 2.x bundles
 by default (`onnxruntime.dll`, `DirectML.dll`, the `AI.MachineLearning` projection —
 ~16 MB zipped) since the app uses no ML APIs and there is no supported opt-out
-(microsoft/WindowsAppSDK#5969). Dropping the two bundled runtimes plus the ML stack
-shrinks the ZIP from ~90 MB (self-contained) to **~40 MB** — chosen specifically so
-it fits as a Tangled tag artifact, which is stored as an atproto blob (default PDS
+(microsoft/WindowsAppSDK#5969). Dropping the two bundled runtimes, the ML stack and the
+former Swift runtime brings the ZIP to **~12 MB** (`release.ps1`), so it fits as a
+Tangled tag artifact, which is stored as an atproto blob (default PDS
 blob limit ~50 MB; a 60 MB self-contained build was rejected). The trade-off is that
 the user installs the **.NET 10 Desktop Runtime** and the **Windows App Runtime 2.1**
 once (plus the Edge WebView2 runtime for OAuth); the app prompts and links to the
@@ -278,15 +222,9 @@ free notarization equivalent to macOS — a trusted signature needs a paid (or
 free-for-OSS) Authenticode cert, deferred for now. For auto-updates, the same
 script can additionally build and sign an installer EXE (`-Installer`) and emit a
 WinSparkle appcast (`-WinSparklePrivateKey`, `-Channel stable|development`) whose
-enclosure URL targets GitHub Releases.
+enclosure URL targets GitHub Releases. The installer removes the Swift DLLs that
+builds up to 0.8.x installed (`scripts/windows/installer.iss`).
 
 ## Resolved / open questions
 
-- **URLSession on Windows**: resolved — the app makes real HTTPS calls to bsky.social
-  at runtime (login + timeline work), so the WinHTTP/libcurl fallback is not needed.
-- **Async surface over the C ABI**: settled on synchronous-blocking entry points
-  invoked on a C# background thread (callback pointers were the alternative).
-- The single-SPM-package decision held: platform adapters are targets under
-  `core/Sources/`, gated `#if os(...)` / `#if canImport(WinSDK)`, and BlueskyCore
-  purity is enforced by the target dependency graph.
 - **MSIX packaging** for distribution remains future work; development runs unpackaged.

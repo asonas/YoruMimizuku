@@ -13,6 +13,7 @@ sources:
   - apps/windows/App/ViewModels/WorkspaceViewModel.cs
   - apps/windows/App/Views/FilterEditorDialog.xaml.cs
   - apps/windows/App/Services/SavedFilterStore.cs
+  - apps/windows/Core/FilterSearch.cs
   - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: Saved-search filters (structured terms, AND/OR)
@@ -48,7 +49,7 @@ The filter was later normalized into **multiple typed condition rows + an AND/OR
 
 The pure functions (`SavedFilter.subqueries`, the OR merge, and the `CompositeCursor` codec) live in `YoruMimizukuKit` and are unit-tested; the real network is handled by the app-side `LiveSearchLoader`. `SearchService.searchPosts` gained a backward-compatible `sort` argument.
 
-On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and serializes it to the bridge JSON consumed by `yoru_search_load`; the Swift side computes the subqueries. The WinUI shell has `FilterEditorDialog` for arbitrary multi-row keyword/user/hashtag/mention terms, AND/OR selection, editing existing filters, hashtag-tap creation, and per-account JSON persistence under LocalAppData. OR pagination now uses the same `CompositeCursor` shape as macOS: the bridge decodes per-subquery cursors, skips exhausted subqueries on follow-up pages, merges new pages newest-first, and returns the next encoded cursor (`apps/windows/App/Views/FilterEditorDialog.xaml.cs`, `apps/windows/App/Services/SavedFilterStore.cs`, `core/Sources/YoruMimizukuBridge/BridgeOperations.swift`).
+On [[windows]], `SavedFilterModel` mirrors this structured shape (`terms` plus `combinator`) and passes it as JSON to `IAccountClient.SearchLoadAsync`; the C# core's `SavedFilter` / `FilterSearch` compute and run the subqueries. The WinUI shell has `FilterEditorDialog` for arbitrary multi-row keyword/user/hashtag/mention terms, AND/OR selection, editing existing filters, hashtag-tap creation, and per-account JSON persistence under LocalAppData. OR pagination uses the same composite-cursor shape as macOS: the core decodes per-subquery cursors, skips exhausted subqueries on follow-up pages, merges new pages newest-first, and returns the next encoded cursor (`apps/windows/App/Views/FilterEditorDialog.xaml.cs`, `apps/windows/App/Services/SavedFilterStore.cs`, `apps/windows/Core/FilterSearch.cs`).
 
 On [[ipados]], saved-search tabs use the same `SavedFilterStore`,
 `TimelineViewModel`, and `LiveSearchLoader`, but the first touch UI only creates a

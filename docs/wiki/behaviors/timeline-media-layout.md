@@ -1,7 +1,7 @@
 ---
 title: Timeline Media Layout (Tall-Image Crop and Wide-Column Reflow)
 type: behavior
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
   - docs/superpowers/specs/2026-11-20-macos-prototype-rows-design.md
   - apps/macos/Views/TimelineRowView.swift
@@ -20,7 +20,7 @@ features:
     windows: none
     ios: full
     android: planned
-    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images via the bridge DTO unchanged ([[windows]], [[ipados]])."
+    note: "The 5:4 crop and TimelineLayout helpers live in YoruMimizukuKit (platform-neutral); the SwiftUI view (PostRowView singleImage, tallCropHint overlay) is now implemented on both macOS and iPadOS. Windows renders images from its own PostDisplayDTO unchanged ([[windows]], [[ipados]])."
   - name: Wide-column reflow (body left / media right at ≥ 680 pt)
     macos: full
     windows: none

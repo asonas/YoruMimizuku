@@ -1,10 +1,11 @@
 ---
 title: Platform — macOS
 type: platform
-updated: 2026-11-20
+updated: 2026-11-21
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-05-windows-multiplatform-structure.md
+  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-sparkle-auto-update-design.md
   - docs/superpowers/specs/2026-06-04-yorumimizuku-app-icon-design.md
@@ -23,7 +24,7 @@ sources:
 
 # Platform — macOS
 
-macOS is the first target (SwiftUI / Swift 6). Windows is implemented as a C#/WinUI 3 app over a C ABI bridge ([[windows]]), and iPadOS is implemented as a separate SwiftUI target over the same Swift core ([[ipados]]). The macOS app depends on `YoruMimizukuKit` directly and does not use the bridge (an intentionally asymmetric setup).
+macOS is the first target (SwiftUI / Swift 6). Windows is implemented as a C#/WinUI 3 app with its own C# core ([[windows]]), and iPadOS is implemented as a separate SwiftUI target over the same Swift core ([[ipados]]). The macOS app depends on `YoruMimizukuKit` directly.
 
 ## Build
 
@@ -122,8 +123,7 @@ DMG/ZIP artifacts, and `appcast.xml`. Details live in [[auto-updates]]
 
 ## Windows / iPadOS / Android
 
-- The macOS target deliberately bypasses `YoruMimizukuBridge`.
-- The iPadOS target also bypasses `YoruMimizukuBridge`; it has its own touch-first
+- The iPadOS target has its own touch-first
   SwiftUI views under `apps/ipados` while sharing `BlueskyCore`,
   `YoruMimizukuKit`, and `PlatformApple` ([[ipados]]).
 - The earlier purity leak (`YoruMimizukuKit` importing `os`) is resolved: the

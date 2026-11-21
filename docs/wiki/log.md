@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows C# core, Phases 0-6)
+
+- sources: docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md, apps/windows/README.md, scripts/windows
+- updated: [[windows]], [[architecture]], [[overview]], [[macos]], [[ipados]], [[accounts]], [[oauth-flow]], [[filters]], [[author-tab]], [[timeline-streaming]], [[compose-post]], [[sensitive-media]], [[timeline-media-layout]], [[app-shell]]
+- note: Windows runs its own C# core; removed the claims that it uses the Swift bridge, PlatformWindows or the Swift toolchain. Recorded the remaining differences: the one-time sign-in again after the switch, and session expiry signing the account out on Windows (Token refresh row now differs).
+
 ## 2026-11-21 ingest (macOS window accounts, #19)
 
 - sources: apps/macos/Timeline/LiveServiceContext.swift

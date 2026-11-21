@@ -20,6 +20,7 @@ sources:
   - core/Sources/BlueskyCore/OAuth/SessionExpiry.swift
   - core/Sources/BlueskyCore/OAuth/SessionRefresher.swift
   - core/Sources/YoruMimizukuKit/SessionReauth.swift
+  - apps/windows/App/MainWindow.xaml.cs
 features:
   - name: OAuth login (PKCE + DPoP)
     macos: full
@@ -34,9 +35,10 @@ features:
     note: "macOS and iPadOS both use ASWebAuthenticationSession, but iPadOS anchors presentation to a foreground UIWindowScene; Windows embeds WebView2 ([[ipados]], [[windows]])."
   - name: Token refresh & session recovery
     macos: full
-    windows: full
+    windows: differs
     ios: full
     android: planned
+    note: "On an expired session (invalid_grant on refresh) macOS and iPadOS keep the account and re-authenticate; Windows signs the account out and advances to the next one ([[accounts]], [[windows]])."
 ---
 
 # Authentication (OAuth + DPoP)

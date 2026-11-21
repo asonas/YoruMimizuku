@@ -49,8 +49,8 @@ Windows gates the same labelled media but, lacking a cheap XAML subtree blur,
 instead of blurring it. The curtain shows the same 閲覧注意 text
 (センシティブ for `.adult`, 過激なメディア for `.graphic`) with a タップで表示 hint and
 reveals on tap; it re-covers when the row container is recycled to another post.
-The warning rides the bridge `PostDisplayDTO.mediaWarning` ("adult"/"graphic"),
-mapped from the same shared `MediaWarning.from(labels:)`
+The warning rides `PostDisplayDTO.mediaWarning` ("adult"/"graphic"),
+mapped by the C# core's `PostDisplay` from the same labels as `MediaWarning.from(labels:)`
 (`apps/windows/App/Views/FeedView.xaml.cs`, `PopulateCurtain`). The privacy
 outcome matches macOS (media hidden until reveal); only the visual differs
 (cover vs blur). A true blur would need a Composition/Win2D effect, deferred.

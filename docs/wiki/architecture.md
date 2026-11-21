@@ -1,10 +1,11 @@
 ---
 title: Architecture (Ports & Adapters)
 type: concept
-updated: 2026-07-12
+updated: 2026-11-21
 sources:
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
+  - docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md
   - docs/superpowers/plans/2026-06-04-yorumimizuku-core-foundation.md
   - core/Sources/YoruMimizukuKit/RichText.swift
   - core/Sources/YoruMimizukuKit/WebURL.swift
@@ -43,7 +44,7 @@ Networking, streams, and stores are `actor`-based for thread safety. Each tab's 
 
 ## How the platforms attach
 
-The ports are realized per platform: `PlatformApple` provides the Apple adapters used by macOS and iPadOS, and on Windows `PlatformWindows` provides DPAPI / `BCryptGenRandom` adapters, reached from a C# WinUI app through a C ABI bridge DLL. Those platform specifics are in [[macos]], [[ipados]], and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in secure storage (`2026-06-04-yorumimizuku-design.md` §10, `2026-06-08-yorumimizuku-ipados-design.md` §4).
+The ports are realized per platform: `PlatformApple` provides the Apple adapters used by macOS and iPadOS, and the Swift core is Apple-only. Windows does not use it: the WinUI app has its own C# core that ports the same logic (`2026-11-21-windows-csharp-core-handoff.md`). Those platform specifics are in [[macos]], [[ipados]], and [[windows]]. Persistence avoids SwiftData precisely to keep this portability: settings are Codable files, secrets are in secure storage (`2026-06-04-yorumimizuku-design.md` §10, `2026-06-08-yorumimizuku-ipados-design.md` §4).
 
 ## Image loading & caching (macOS app layer)
 
