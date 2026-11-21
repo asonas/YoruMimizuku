@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using Microsoft.UI.Xaml;
 using YoruMimizuku.App.Interop;
@@ -55,6 +56,7 @@ public partial class App : Application
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         AppLog.Write("OnLaunched");
+        var swiftAccountsRemoved = Client is CoreClient && RemoveSwiftAccounts();
         // Create and show the window first; the bridge is initialized inside it so
         // any failure is shown in the UI (and logged) rather than crashing before
         // a window exists.
@@ -65,6 +67,25 @@ public partial class App : Application
         // size, so applying the saved placement before it gets overwritten (which is
         // why the earlier width-only restore never stuck).
         mainWindow.RestoreSavedWindowPlacement();
+        if (swiftAccountsRemoved) mainWindow.ShowSignInAgainNotice();
         UpdateService.Shared.Initialize();
+    }
+
+    /// <summary>
+    /// The C# core never reads the Swift core's store, so its first launch deletes it.
+    /// True when an account was signed in there; the next launch finds nothing, so the
+    /// notice is shown once. A failure is logged and retried at the next launch.
+    /// </summary>
+    private static bool RemoveSwiftAccounts()
+    {
+        try
+        {
+            return LegacySwiftAccountStore.DeleteIfPresent(LegacySwiftAccountStore.DefaultDirectory());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Write("removing the Swift account store failed", ex);
+            return false;
+        }
     }
 }

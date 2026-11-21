@@ -60,7 +60,10 @@ Remove-Item Env:YORUMIMIZUKU_CORE  # back to the C# core
 ```
 
 The two cores keep separate sign-ins. The C# core stores accounts in
-`%LOCALAPPDATA%\YoruMimizuku\accounts`.
+`%LOCALAPPDATA%\YoruMimizuku\accounts`. At each launch it deletes the Swift core's
+store (`%LOCALAPPDATA%\as.ason.YoruMimizuku\secure`) if one is there, and when an
+account was signed in to it, tells the user once to sign in again. So after a C#
+launch, a Swift-bridge launch starts signed out.
 
 The project targets **.NET 10** + **Windows App SDK 2.1.3** and is configured
 **framework-dependent** (`SelfContained=false` + `WindowsAppSDKSelfContained=false`):

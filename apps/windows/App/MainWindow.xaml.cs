@@ -552,6 +552,32 @@ public sealed partial class MainWindow : Window
         InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(CoreVirtualKeyStates.Down) &&
         InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(CoreVirtualKeyStates.Down);
 
+    /// Tell the user, once, why the switch to the C# core signed them out (Phase 4).
+    /// It runs after the window's content has loaded, since a dialog needs its XamlRoot.
+    public async void ShowSignInAgainNotice()
+    {
+        try
+        {
+            if (!RootGrid.IsLoaded)
+            {
+                var loaded = new TaskCompletionSource();
+                RoutedEventHandler? onLoaded = null;
+                onLoaded = (_, _) => { RootGrid.Loaded -= onLoaded; loaded.TrySetResult(); };
+                RootGrid.Loaded += onLoaded;
+                await loaded.Task;
+            }
+            await new ContentDialog
+            {
+                XamlRoot = RootGrid.XamlRoot,
+                Title = "もう一度サインインしてください",
+                Content = "サインイン情報の保存方法が変わったため、以前のサインイン情報は使えなくなりました。お手数ですが、もう一度サインインしてください。",
+                CloseButtonText = "OK",
+                DefaultButton = ContentDialogButton.Close
+            }.ShowAsync();
+        }
+        catch (Exception ex) { AppLog.Write("sign-in notice failed", ex); }
+    }
+
     private void ShowFatal(string message)
     {
         LoginHost.Content = new TextBlock
