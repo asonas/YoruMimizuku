@@ -71,16 +71,16 @@ public struct OAuthClient: Sendable {
         let callbackURL = try await browser.authenticate(
             url: authorizationURL, callbackScheme: config.callbackScheme
         )
-        let callback = try OAuthCallback.parse(url: callbackURL)
-        guard callback.state == state else {
-            throw OAuthError.stateMismatch
-        }
+        let callback = try OAuthCallback.verified(
+            url: callbackURL, expectedState: state, expectedIssuer: discovered.authorizationServerIssuer
+        )
 
         let tokens = try await tokenRequester.requestToken(
             metadata: discovered.metadata,
             config: config,
             grant: .authorizationCode(code: callback.code, codeVerifier: verifier)
         )
+        try tokens.verifyLogin(expectedDID: discovered.did)
         return OAuthLoginResult(
             did: tokens.sub,
             pds: discovered.pds,

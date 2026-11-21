@@ -16,6 +16,13 @@ public enum OAuthError: Error, Equatable {
     case authorizationDenied(error: String, description: String?)
     case missingAuthorizationCode
     case stateMismatch
+    /// The callback's `iss` is not the authorization server the login started
+    /// with (or is missing), so the response may come from another server.
+    case issuerMismatch(expected: String, actual: String?)
+    /// The tokens were issued for another account than the one resolved at login.
+    case subjectMismatch(expected: String, actual: String)
+    /// The token response does not grant the `atproto` scope.
+    case missingAtprotoScope
 }
 
 extension OAuthError: CustomStringConvertible {
@@ -44,6 +51,12 @@ extension OAuthError: CustomStringConvertible {
             return "missing authorization code"
         case .stateMismatch:
             return "OAuth state mismatch"
+        case let .issuerMismatch(expected, actual):
+            return "OAuth issuer mismatch: expected \(expected), got \(actual ?? "none")"
+        case let .subjectMismatch(expected, actual):
+            return "OAuth tokens are for \(actual), not \(expected)"
+        case .missingAtprotoScope:
+            return "OAuth tokens lack the atproto scope"
         }
     }
 }

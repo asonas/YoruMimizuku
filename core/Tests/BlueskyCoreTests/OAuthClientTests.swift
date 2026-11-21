@@ -24,11 +24,15 @@ final class OAuthClientTests: XCTestCase {
         )
     }
 
-    private func tokenResponse() -> TokenResponse {
-        let json = ##"{"access_token":"atk","token_type":"DPoP","refresh_token":"rtk","sub":"did:plc:abc"}"##
+    private func tokenResponse(sub: String = "did:plc:abc", scope: String? = "atproto transition:generic") -> TokenResponse {
+        let scopeField = scope.map { #","scope":"\#($0)""# } ?? ""
+        let json = #"{"access_token":"atk","token_type":"DPoP","refresh_token":"rtk","sub":"\#(sub)"\#(scopeField)}"#
         // swiftlint:disable:next force_try
         return try! JSONDecoder().decode(TokenResponse.self, from: Data(json.utf8))
     }
+
+    /// The issuer `discovery()` found, as the authorization server puts it in the redirect.
+    private static let encodedIssuer = "https%3A%2F%2Fbsky.social"
 
     /// The state the deterministic StubRandomBytesGenerator produces (16 bytes of 0xAB).
     private var expectedState: String { Base64URL.encode(Data(repeating: 0xAB, count: 16)) }
@@ -57,7 +61,7 @@ final class OAuthClientTests: XCTestCase {
         // Realistic browser: the authorization server returns state in the redirect.
         let state = expectedState
         let browser = StubBrowserAuthorizationSession { _, scheme in
-            URL(string: "\(scheme):/callback?code=THE_CODE&state=\(state)")!
+            URL(string: "\(scheme):/callback?code=THE_CODE&state=\(state)&iss=\(Self.encodedIssuer)")!
         }
         let client = makeClient(token: token, browser: browser)
 
@@ -91,7 +95,7 @@ final class OAuthClientTests: XCTestCase {
     func testLoginThrowsStateMismatchWhenCallbackStateDiffers() async {
         let token = RecordingTokenRequesting(response: tokenResponse())
         let browser = StubBrowserAuthorizationSession { _, scheme in
-            URL(string: "\(scheme):/callback?code=THE_CODE&state=WRONG")!
+            URL(string: "\(scheme):/callback?code=THE_CODE&state=WRONG&iss=\(Self.encodedIssuer)")!
         }
         let client = makeClient(token: token, browser: browser)
 
@@ -105,5 +109,63 @@ final class OAuthClientTests: XCTestCase {
         }
         // Token exchange must not happen on a state mismatch.
         XCTAssertNil(token.lastGrant)
+    }
+
+    // #15: the callback must come from the authorization server the login started
+    // with (mix-up defense), and the tokens must be for the account that was
+    // resolved, with the atproto scope.
+    private func loginError(callbackQuery: String, tokens: TokenResponse? = nil) async -> (OAuthError?, RecordingTokenRequesting) {
+        let token = RecordingTokenRequesting(response: tokens ?? tokenResponse())
+        let state = expectedState
+        let browser = StubBrowserAuthorizationSession { _, scheme in
+            URL(string: "\(scheme):/callback?code=THE_CODE&state=\(state)\(callbackQuery)")!
+        }
+        do {
+            _ = try await makeClient(token: token, browser: browser).login(account: "alice.bsky.social")
+            return (nil, token)
+        } catch {
+            return (error as? OAuthError, token)
+        }
+    }
+
+    func testLoginRejectsACallbackFromAnotherIssuer() async {
+        let (error, token) = await loginError(callbackQuery: "&iss=https%3A%2F%2Fevil.example")
+        XCTAssertEqual(error, .issuerMismatch(expected: "https://bsky.social", actual: "https://evil.example"))
+        XCTAssertNil(token.lastGrant, "no token exchange with an unverified issuer")
+    }
+
+    func testLoginRejectsACallbackWithoutIssuer() async {
+        let (error, token) = await loginError(callbackQuery: "")
+        XCTAssertEqual(error, .issuerMismatch(expected: "https://bsky.social", actual: nil))
+        XCTAssertNil(token.lastGrant)
+    }
+
+    // RFC 9207: an error response is trusted only from the expected server too.
+    func testLoginChecksTheIssuerBeforeReportingADenial() async {
+        let (error, _) = await loginError(callbackQuery: "&iss=https%3A%2F%2Fevil.example&error=access_denied")
+        XCTAssertEqual(error, .issuerMismatch(expected: "https://bsky.social", actual: "https://evil.example"))
+        let (denied, _) = await loginError(callbackQuery: "&iss=\(Self.encodedIssuer)&error=access_denied")
+        XCTAssertEqual(denied, .authorizationDenied(error: "access_denied", description: nil))
+    }
+
+    // Only one iss and one state may be present; a second could smuggle another value.
+    func testLoginRejectsARepeatedIssuer() async {
+        let (error, token) = await loginError(callbackQuery: "&iss=\(Self.encodedIssuer)&iss=https%3A%2F%2Fevil.example")
+        XCTAssertEqual(error, .issuerMismatch(expected: "https://bsky.social", actual: nil))
+        XCTAssertNil(token.lastGrant)
+    }
+
+    func testLoginRejectsTokensForAnotherAccount() async {
+        let (error, _) = await loginError(
+            callbackQuery: "&iss=\(Self.encodedIssuer)", tokens: tokenResponse(sub: "did:plc:someone-else")
+        )
+        XCTAssertEqual(error, .subjectMismatch(expected: "did:plc:abc", actual: "did:plc:someone-else"))
+    }
+
+    func testLoginRejectsTokensWithoutTheAtprotoScope() async {
+        let (error, _) = await loginError(callbackQuery: "&iss=\(Self.encodedIssuer)", tokens: tokenResponse(scope: "transition:generic"))
+        XCTAssertEqual(error, .missingAtprotoScope)
+        let (missing, _) = await loginError(callbackQuery: "&iss=\(Self.encodedIssuer)", tokens: tokenResponse(scope: nil))
+        XCTAssertEqual(missing, .missingAtprotoScope)
     }
 }
