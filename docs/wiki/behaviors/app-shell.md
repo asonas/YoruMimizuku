@@ -21,6 +21,8 @@ sources:
   - apps/windows/Core/ListMembershipModel.cs
   - apps/windows/Core/ListMembershipService.cs
   - apps/windows/App/Views/ListMembershipMenu.cs
+  - apps/windows/App/Views/FeedView.xaml
+  - apps/windows/App/Views/FeedView.xaml.cs
   - apps/windows/Core/SavedFeedsService.cs
   - apps/windows/Core/SavedFeedsModel.cs
   - apps/macos/Views/SavedFeedInfoButton.swift
@@ -71,10 +73,10 @@ features:
     note: "macOS and Windows list the account's pinned feeds and lists (`savedFeedsPrefV2`) read-only; only the selected one polls ([[macos]], [[windows]]). Windows timelines have no header and its window title never names a tab, so a pin's description, creator and AT-URI are the sidebar row's tooltip instead of an ⓘ popover, and selecting a pin does not retitle the window (MainWindow.xaml.cs). The shared `WorkspaceTab.savedFeed` exists, but the iPad app does not show pins yet."
   - name: Menu bar commands (⌘1…⌘9, 投稿 menu)
     macos: full
-    windows: none
+    windows: differs
     ios: none
     android: planned
-    note: "bug: https://github.com/asonas/YoruMimizuku/issues/26. macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]])."
+    note: "macOS View menu ⌘1…⌘9 select the first nine sidebar rows; the 投稿 menu acts on the focused timeline post ([[macos]]). Windows has no menu bar, so the same commands are keys with Ctrl for ⌘ (Ctrl+1…9, Ctrl+R, Ctrl+Enter, Ctrl+Shift+R/C, L) and the post's right-click menu, which selects its post and shows the keys; with no menu to disable, the keys do nothing until a post is selected, and they act in whichever pane has focus (MainWindow.xaml.cs, FeedView.xaml). レコードを表示 and この人をミュート are not on Windows, which has no record view or mute yet."
   - name: Toolbar search (transient results)
     macos: full
     windows: differs
@@ -157,6 +159,8 @@ Timeline lists use the prototype's compact row (`TimelineRowView`): why-line (re
 ## Commands, search and lists (macOS)
 
 The View menu's ⌘1…⌘9 select the first nine sidebar rows of the key window, in the order ⌘⇧J/K cycles (`WorkspaceModel.shortcutTabs`). A 投稿 menu acts on the post focused in the timeline column: reply ⌘↩, repost ⇧⌘R, 引用して投稿, like (the plain L key), copy link ⇧⌘C and リストに追加, following the desktop prototype; it is disabled until a post is focused, and the plain keys j/k/l/o/n stay with the timeline column. The View menu also has 新着を読み込む ⌘R, and the Edit menu 検索 ⌘F, which focuses the toolbar search (`apps/macos/Views/WorkspaceCommands.swift`).
+
+[[windows]] has no menu bar, so the same commands are keys, with Ctrl for ⌘, and a timeline post's right-click menu. Ctrl+1…Ctrl+9 select the first nine sidebar rows in the order Ctrl+Shift+J/K cycles (home, 通知, pinned feeds, pinned lists, filters; the フィルターを追加 row is not counted), and Ctrl+R reloads the shown timeline as its 更新 button does (`apps/windows/App/MainWindow.xaml.cs`). The right-click menu reads 返信 (Ctrl+Enter), リポスト or リポストを取り消す (Ctrl+Shift+R), 引用して投稿, いいね or いいねを取り消す (L), リンクをコピー (Ctrl+Shift+C) and リストに追加, and opening it selects the post, as the macOS row menu does. The keys act on the post j/k or the menu last selected and do nothing before one is: there is no menu to show as disabled. 返信 opens the reply composer, as ⌘↩ does, while the row's reply count still opens the conversation. Like moved from f to l on Windows too, in the timeline and in the conversation pane. The keys are focus-scoped like the plain keys, so they also act on an author page's feed in the detail pane when it has focus; the plain keys now ignore Ctrl and Alt, which leaves Ctrl+Shift+J/K and Ctrl+Shift+N to the window while a timeline has focus. The commands reuse the action bar's handlers (`apps/windows/App/Views/FeedView.xaml`, `apps/windows/App/Views/FeedView.xaml.cs`). レコードを表示 and この人をミュート are not offered, since Windows has no record view or mute yet.
 
 The toolbar has a search field and the compose button. A submitted search shows its results in the timeline column as `WorkspaceTab.search` without saving anything; the header's "フィルターとして保存" keeps it as a filter, and choosing any sidebar row discards it ([[filters]]).
 

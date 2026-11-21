@@ -136,9 +136,15 @@ the user to sign in to it again, as macOS does ([[oauth-flow]]).
   and `AuthorView` renders a profile header over a reused feed loaded through
   `AuthorFeedLoadAsync` / `ProfileAsync` ([[author-tab]]).
 - Timeline rows support the Windows parity shortcuts: j/k focus, n compose,
-  f toggles like, o opens the focused post's bsky.app permalink, and the link
+  l toggles like, o opens the focused post's bsky.app permalink, and the link
   action copies that permalink to the clipboard. Conversation focus rows support
-  f/o/copy too ([[timeline-streaming]]).
+  l/o/copy too ([[timeline-streaming]]).
+- The macOS menu bar commands are keys and the post's right-click menu, with Ctrl
+  for ⌘: Ctrl+1…Ctrl+9 select the first nine sidebar rows, Ctrl+R reloads the
+  timeline, and on the selected post Ctrl+Enter replies, Ctrl+Shift+R reposts and
+  Ctrl+Shift+C copies its link. The right-click menu selects its post and lists
+  返信, リポスト, 引用して投稿, いいね, リンクをコピー and リストに追加 with their
+  keys (`App/MainWindow.xaml.cs`, `App/Views/FeedView.xaml`) ([[app-shell]]).
 - Feed rows render external link preview cards in the X-style large layout (hero
   image, bold title, grey description, host line). A post's own
   `app.bsky.embed.external` card comes through `PostDisplayDTO.linkCard`; a bare

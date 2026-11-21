@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (Windows commands)
+
+- sources: apps/windows/App/MainWindow.xaml.cs, apps/windows/App/Views/FeedView.xaml, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/Views/ConversationView.xaml.cs
+- updated: [[app-shell]], [[timeline-streaming]], [[windows]]
+- note: closes issue #26. Windows selects the first nine sidebar rows with Ctrl+1…Ctrl+9, reloads with Ctrl+R, and acts on the selected post with Ctrl+Enter, Ctrl+Shift+R, Ctrl+Shift+C and L; the post's right-click menu carries the same commands. "Menu bar commands" is `differs` for Windows: there is no menu bar, so nothing shows a disabled state and the keys do nothing until a post is selected. Like moved from f to l, as on macOS.
+
 ## 2026-11-21 ingest (Windows list membership)
 
 - sources: apps/windows/Core/ListMembershipModel.cs, apps/windows/Core/ListMembershipService.cs, apps/windows/App/Views/ListMembershipMenu.cs, apps/windows/App/Views/FeedView.xaml.cs, apps/windows/App/MainWindow.xaml.cs
