@@ -51,7 +51,7 @@ public struct AuthorizationRequestService: Sendable {
                 "invalid authorization_endpoint: \(metadata.authorizationEndpoint)"
             )
         }
-        components.queryItems = [
+        components.escapedQueryItems = [
             URLQueryItem(name: "client_id", value: config.clientID),
             URLQueryItem(name: "request_uri", value: requestURI)
         ]

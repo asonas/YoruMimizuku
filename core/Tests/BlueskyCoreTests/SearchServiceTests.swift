@@ -76,6 +76,24 @@ final class SearchServiceTests: XCTestCase {
         XCTAssertEqual(sent.url.query?.contains("cursor=page-2"), true)
     }
 
+    // #10: servers read a bare "+" in a query as a space.
+    func testSearchEscapesPlusInTheQueryAndCursor() async throws {
+        let http = FakeHTTPClient(response: HTTPResponse(statusCode: 200, body: Self.searchBody))
+        let service = makeService(http: http)
+
+        _ = try await service.searchPosts(
+            pds: pds, issuer: issuer, accessToken: "atk", refreshToken: nil,
+            query: "c++", limit: 25, cursor: "a+b"
+        )
+
+        let query = try XCTUnwrap(http.sentRequests.last?.url.query)
+        XCTAssertTrue(query.contains("q=c%2B%2B"), query)
+        XCTAssertTrue(query.contains("cursor=a%2Bb"), query)
+        let items = URLComponents(string: "https://x.example/?" + query)?.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "q" }?.value, "c++")
+        XCTAssertEqual(items.first { $0.name == "cursor" }?.value, "a+b")
+    }
+
     func testSearchRefreshesOnUnauthorizedAndRetries() async throws {
         let unauthorized = HTTPResponse(statusCode: 401, body: Data(##"{"error":"invalid_token"}"##.utf8))
         let metadata = HTTPResponse(statusCode: 200, body: Data(##"""

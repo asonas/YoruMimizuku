@@ -75,7 +75,7 @@ public struct ProfileService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL("app.bsky.actor.getProfile")
         }
-        components.queryItems = [URLQueryItem(name: "actor", value: actor)]
+        components.escapedQueryItems = [URLQueryItem(name: "actor", value: actor)]
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.actor.getProfile")
         }

@@ -27,7 +27,7 @@ public struct IdentityResolver: Sendable {
             url: directory.appendingPathComponent("xrpc/com.atproto.identity.resolveHandle"),
             resolvingAgainstBaseURL: false
         )!
-        components.queryItems = [URLQueryItem(name: "handle", value: handleOrDID)]
+        components.escapedQueryItems = [URLQueryItem(name: "handle", value: handleOrDID)]
         let response: ResolveHandleResponse = try await getDiscoveryJSON(components.url!, http: http)
         return response.did
     }

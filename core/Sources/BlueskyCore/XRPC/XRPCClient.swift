@@ -24,7 +24,7 @@ public struct XRPCClient: Sendable {
             throw XRPCError.invalidURL(nsid)
         }
         if !parameters.isEmpty {
-            components.queryItems = parameters
+            components.escapedQueryItems = parameters
                 .sorted { $0.key < $1.key }
                 .map { URLQueryItem(name: $0.key, value: $0.value) }
         }

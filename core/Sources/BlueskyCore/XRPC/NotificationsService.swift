@@ -110,7 +110,7 @@ public struct NotificationsService: Sendable {
         // asks for the full stream.
         items.append(URLQueryItem(name: "priority", value: "false"))
         if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
-        components.queryItems = items
+        components.escapedQueryItems = items
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.notification.listNotifications")
         }

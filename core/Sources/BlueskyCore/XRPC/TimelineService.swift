@@ -74,7 +74,7 @@ public struct TimelineService: Sendable {
         }
         var items = [URLQueryItem(name: "limit", value: String(limit))]
         if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
-        components.queryItems = items
+        components.escapedQueryItems = items
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.feed.getTimeline")
         }

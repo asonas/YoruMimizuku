@@ -76,7 +76,7 @@ public struct ThreadService: Sendable {
         // post AND renders a few levels of descendants below it, so request both:
         // the lexicon's default ancestor height and a descendant depth deep enough
         // to feed the rendered child tree (3 levels) plus its "さらに表示" cue.
-        components.queryItems = [
+        components.escapedQueryItems = [
             URLQueryItem(name: "uri", value: uri),
             URLQueryItem(name: "depth", value: "6"),
             URLQueryItem(name: "parentHeight", value: "80")

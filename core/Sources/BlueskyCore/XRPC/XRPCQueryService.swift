@@ -76,10 +76,7 @@ public struct XRPCQueryService: Sendable {
             throw XRPCError.invalidURL(nsid)
         }
         if !parameters.isEmpty {
-            components.queryItems = parameters.map { URLQueryItem(name: $0.0, value: $0.1) }
-            // URLComponents leaves `+` as is, but servers read it as a space.
-            components.percentEncodedQuery = components.percentEncodedQuery?
-                .replacingOccurrences(of: "+", with: "%2B")
+            components.escapedQueryItems = parameters.map { URLQueryItem(name: $0.0, value: $0.1) }
         }
         guard let url = components.url else { throw XRPCError.invalidURL(nsid) }
         return url

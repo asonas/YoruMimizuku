@@ -80,7 +80,7 @@ public struct SearchService: Sendable {
         ]
         if let cursor { items.append(URLQueryItem(name: "cursor", value: cursor)) }
         if let sort { items.append(URLQueryItem(name: "sort", value: sort)) }
-        components.queryItems = items
+        components.escapedQueryItems = items
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.feed.searchPosts")
         }

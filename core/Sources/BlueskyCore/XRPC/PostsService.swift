@@ -79,7 +79,7 @@ public struct PostsService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL("app.bsky.feed.getPosts")
         }
-        components.queryItems = uris.map { URLQueryItem(name: "uris", value: $0) }
+        components.escapedQueryItems = uris.map { URLQueryItem(name: "uris", value: $0) }
         guard let url = components.url else {
             throw XRPCError.invalidURL("app.bsky.feed.getPosts")
         }

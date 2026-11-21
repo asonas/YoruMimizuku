@@ -46,7 +46,7 @@ public struct PostService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL(endpoint.absoluteString)
         }
-        components.queryItems = [
+        components.escapedQueryItems = [
             URLQueryItem(name: "aud", value: audience),
             URLQueryItem(name: "lxm", value: lxm),
             URLQueryItem(name: "exp", value: String(Int(now.timeIntervalSince1970) + expiresInSeconds)),
@@ -181,7 +181,7 @@ public struct PostService: Sendable {
             guard var components = URLComponents(
                 url: pds.appendingPathComponent("xrpc/app.bsky.actor.getProfile"), resolvingAgainstBaseURL: false
             ) else { return nil }
-            components.queryItems = [URLQueryItem(name: "actor", value: handle)]
+            components.escapedQueryItems = [URLQueryItem(name: "actor", value: handle)]
             guard let url = components.url else { return nil }
             let response = try await authed(.get, url, ["Accept": "application/json"], nil)
             guard (200..<300).contains(response.statusCode) else { return nil }
@@ -196,7 +196,7 @@ public struct PostService: Sendable {
             guard var components = URLComponents(
                 url: pds.appendingPathComponent("xrpc/com.atproto.repo.getRecord"), resolvingAgainstBaseURL: false
             ) else { throw XRPCError.invalidURL(parentURI) }
-            components.queryItems = [
+            components.escapedQueryItems = [
                 URLQueryItem(name: "repo", value: String(parts[0])),
                 URLQueryItem(name: "collection", value: String(parts[1])),
                 URLQueryItem(name: "rkey", value: String(parts[2])),

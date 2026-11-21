@@ -58,7 +58,7 @@ public struct VideoUploadService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL(endpoint.absoluteString)
         }
-        components.queryItems = [
+        components.escapedQueryItems = [
             URLQueryItem(name: "did", value: did),
             URLQueryItem(name: "name", value: name),
         ]
@@ -81,7 +81,7 @@ public struct VideoUploadService: Sendable {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw XRPCError.invalidURL(endpoint.absoluteString)
         }
-        components.queryItems = [URLQueryItem(name: "jobId", value: jobId)]
+        components.escapedQueryItems = [URLQueryItem(name: "jobId", value: jobId)]
         guard let url = components.url else { throw XRPCError.invalidURL(endpoint.absoluteString) }
         let response = try await http.send(HTTPRequest(
             url: url, method: .get,
