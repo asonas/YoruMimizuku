@@ -195,6 +195,7 @@ public sealed partial class ConversationView : UserControl
         var data = new DataPackage();
         data.SetText(url);
         Clipboard.SetContent(data);
+        Services.ToastCenter.Shared.Show(XamlRoot, "リンクをコピーしました");
     }
 
     private async Task OpenPermalinkAsync(PostItem post)

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="YoruMimizuku.App.Views.ToastView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Bottom-centered pill; tapping it dismisses early. -->
+    <Border
+        x:Name="ToastBorder"
+        Background="{ThemeResource AppRowHoverBrush}"
+        BorderBrush="{ThemeResource AppHairlineBrush}"
+        BorderThickness="1"
+        CornerRadius="16"
+        Padding="16,8"
+        Tapped="OnToastTapped"
+        Visibility="Collapsed">
+        <TextBlock
+            x:Name="MessageText"
+            Foreground="{ThemeResource AppTextBrush}"
+            FontWeight="SemiBold" />
+    </Border>
+</UserControl>

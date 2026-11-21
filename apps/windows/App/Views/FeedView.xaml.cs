@@ -12,6 +12,8 @@ using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using YoruMimizuku.App.Interop;
 using YoruMimizuku.App.ViewModels;
+using TimelineLayout = YoruMimizuku.Core.TimelineLayout;
+using TimelineMediaPlacement = YoruMimizuku.Core.TimelineMediaPlacement;
 
 namespace YoruMimizuku.App.Views;
 
@@ -55,7 +57,7 @@ public sealed partial class FeedView : UserControl
         if (args.InRecycleQueue || args.Item is not PostItem post) return;
         if (args.ItemContainer?.ContentTemplateRoot is not FrameworkElement root) return;
         if (root.FindName("BodyRich") is RichTextBlock rich) PopulateRich(rich, post);
-        if (root.FindName("ImagesHost") is Grid host) PopulateImages(host, post);
+        if (root.FindName("ContentLayout") is Grid layout) UpdateContentLayout(layout, post, layout.ActualWidth);
         if (root.FindName("VideoHost") is Border videoHost) PopulateVideo(videoHost, post);
         if (root.FindName("MediaCurtain") is Border curtain) PopulateCurtain(curtain, post);
         if (root.FindName("LinkCardHost") is Border cardHost) PopulateLinkCard(cardHost, post);
@@ -89,6 +91,15 @@ public sealed partial class FeedView : UserControl
                     tagLink.Click += (_, _) => _workspace.OpenHashtagFilter(tag);
                     paragraph.Inlines.Add(tagLink);
                     break;
+                case "mention" when TryUri(seg.Url, out var profileUri)
+                                    && Core.RichText.MentionDid(profileUri) is { Length: > 0 } actor:
+                    // Opens the mentioned account in an author tab, as on macOS.
+                    var mentionLink = new Hyperlink();
+                    mentionLink.Inlines.Add(new Run { Text = seg.Text });
+                    var handle = seg.Text.TrimStart('@');
+                    mentionLink.Click += (_, _) => _workspace.OpenAuthor(actor, handle, "", null);
+                    paragraph.Inlines.Add(mentionLink);
+                    break;
                 case "mention":
                     paragraph.Inlines.Add(new Run
                     {
@@ -104,7 +115,44 @@ public sealed partial class FeedView : UserControl
         rich.Blocks.Add(paragraph);
     }
 
-    private void PopulateImages(Grid host, PostItem post)
+    private void OnContentLayoutSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is Grid { Tag: PostItem post } layout && e.NewSize.Width != e.PreviousSize.Width)
+            UpdateContentLayout(layout, post, e.NewSize.Width);
+    }
+
+    /// Mirrors macOS MediaReflowLayout: a row whose body-and-media region is at
+    /// least TimelineLayout.ReflowThreshold wide puts the media column (images,
+    /// video, link card) in a fixed rail on the right; otherwise it stacks under
+    /// the body, up to 440 wide. Images are rebuilt only when the post or the media
+    /// width changes, since a single image's height follows its width.
+    private void UpdateContentLayout(Grid layout, PostItem post, double regionWidth)
+    {
+        if (layout.FindName("MediaColumn") is not StackPanel column ||
+            layout.FindName("MediaHost") is not Grid media ||
+            layout.FindName("ImagesHost") is not Grid images)
+        {
+            return;
+        }
+
+        var measured = regionWidth > 0;
+        var wide = measured && post.HasReflowMedia &&
+                   TimelineLayout.Placement(regionWidth) == TimelineMediaPlacement.Reflow;
+        layout.ColumnSpacing = wide ? TimelineLayout.ColumnGap : 0;
+        layout.ColumnDefinitions[1].Width = new GridLength(wide ? TimelineLayout.MediaRailWidth : 0);
+        Grid.SetRow(column, wide ? 0 : 1);
+        Grid.SetColumn(column, wide ? 1 : 0);
+
+        var mediaWidth = wide ? TimelineLayout.MediaRailWidth : Math.Min(NarrowMediaMaxWidth, measured ? regionWidth : NarrowMediaMaxWidth);
+        media.Width = post.HasImages ? mediaWidth : double.NaN;
+        if (images.Tag is (string id, double width) && id == post.Id && Math.Abs(width - mediaWidth) < 0.5) return;
+        images.Tag = (post.Id, mediaWidth);
+        PopulateImages(images, post, mediaWidth);
+    }
+
+    private const double NarrowMediaMaxWidth = 440;
+
+    private void PopulateImages(Grid host, PostItem post, double mediaWidth)
     {
         host.Children.Clear();
         host.ColumnDefinitions.Clear();
@@ -128,12 +176,26 @@ public sealed partial class FeedView : UserControl
                 CornerRadius = new CornerRadius(10),
                 BorderBrush = (Brush)Application.Current.Resources["AppHairlineBrush"],
                 BorderThickness = new Thickness(1),
-                Height = single ? 240 : 140,
+                Height = single ? TimelineLayout.SingleImageHeight(mediaWidth, image.AspectRatio) : 140,
                 Background = (Brush)Application.Current.Resources["AppRowHoverBrush"]
             };
             if (TryUri(image.ThumbUrl, out var thumbUri))
             {
-                border.Child = new Image { Source = new BitmapImage(thumbUri), Stretch = Stretch.UniformToFill };
+                // Top-anchored fill, so a tall image cropped to 5:4 keeps its top.
+                var tile = new Grid
+                {
+                    Background = new ImageBrush
+                    {
+                        ImageSource = new BitmapImage(thumbUri),
+                        Stretch = Stretch.UniformToFill,
+                        AlignmentY = AlignmentY.Top
+                    }
+                };
+                if (single && image.AspectRatio is { } ratio && TimelineLayout.IsTallCropped(ratio))
+                {
+                    tile.Children.Add(TallCropHint());
+                }
+                border.Child = tile;
             }
             var index = i;
             border.Tapped += (_, e) => { e.Handled = true; OpenLightbox(fullsizeUrls, index); };
@@ -141,6 +203,34 @@ public sealed partial class FeedView : UserControl
             Grid.SetRow(border, i / columns);
             host.Children.Add(border);
         }
+    }
+
+    /// The "全体表示" badge on a single image cut to 5:4: the lightbox shows all of it.
+    private static FrameworkElement TallCropHint()
+    {
+        var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        label.Children.Add(new FontIcon
+        {
+            Glyph = "",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White)
+        });
+        label.Children.Add(new TextBlock
+        {
+            Text = "全体表示",
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Microsoft.UI.Colors.White)
+        });
+        return new Border
+        {
+            Background = new SolidColorBrush(Microsoft.UI.ColorHelper.FromArgb(150, 0, 0, 0)),
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(7, 3, 7, 3),
+            Margin = new Thickness(6),
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Child = label
+        };
     }
 
     // -- External link preview card --
@@ -707,6 +797,7 @@ public sealed partial class FeedView : UserControl
         var data = new DataPackage();
         data.SetText(url);
         Clipboard.SetContent(data);
+        Services.ToastCenter.Shared.Show(XamlRoot, "リンクをコピーしました");
     }
 
     private async Task OpenPermalinkAsync(PostItem post)

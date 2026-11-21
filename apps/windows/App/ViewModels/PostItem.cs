@@ -43,6 +43,11 @@ public sealed class PostItem : ObservableObject
     public bool IsReply => ReplyParent is not null;
     public bool HasVideo => Video?.ThumbUrl is { Length: > 0 };
     public bool HasQuote => Quote is not null;
+    /// <summary>
+    /// Whether a wide row has anything to move into the media rail: images, a video,
+    /// or a link card (its own, or the OGP preview FeedView fetches for a bare link).
+    /// </summary>
+    public bool HasReflowMedia => HasImages || HasVideo || LinkCard is not null || (!HasImages && FirstLinkUrl is not null);
     /// <summary>Whether this post's media is gated behind a sensitive-content blur.</summary>
     public bool IsSensitive => !string.IsNullOrEmpty(MediaWarning);
 
