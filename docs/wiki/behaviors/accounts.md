@@ -1,8 +1,9 @@
 ---
 title: Accounts (Multi-Account Persistence)
 type: behavior
-updated: 2026-07-13
+updated: 2026-11-21
 sources:
+  - apps/macos/Timeline/LiveServiceContext.swift
   - docs/superpowers/specs/2026-06-04-yorumimizuku-design.md
   - docs/superpowers/specs/2026-06-08-yorumimizuku-ipados-design.md
   - docs/superpowers/specs/2026-07-13-session-reauth-design.md
@@ -43,7 +44,7 @@ Three pieces, from low to high level (`2026-06-04-yorumimizuku-account-persisten
 
 ## Per-window active account
 
-The account model is per-window, not global. A window holds one active account, and its tabs operate under that account; the switcher changes the window's account. Opening a second window with a different account lets you read two accounts side by side. Because every account's session is already cached in the Keychain, switching is immediate (`2026-06-04-yorumimizuku-design.md` §8). The window/tab frame that surfaces the switcher is in [[app-shell]]. The design follows tempest's per-DID / accounts-index approach.
+The account model is per-window, not global. A window holds one active account, and its tabs operate under that account; the switcher changes the window's account. Opening a second window with a different account lets you read two accounts side by side. On macOS every request a window makes (home timeline, notifications, filters and searches, author pages, conversations, likes and reposts, the account avatar, the wake-time session refresh) carries that window's DID through `LiveServiceContext(accountDID:)`, so switching accounts in one window never changes what another window reads or posts as (#19). Because every account's session is already cached in the Keychain, switching is immediate (`2026-06-04-yorumimizuku-design.md` §8). The window/tab frame that surfaces the switcher is in [[app-shell]]. The design follows tempest's per-DID / accounts-index approach.
 
 ## Account switcher menu (macOS)
 

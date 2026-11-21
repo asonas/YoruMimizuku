@@ -12,15 +12,18 @@ struct LiveAuthorFeedLoader: TimelineLoading {
     let accountManager: AccountManager
     let config: OAuthClientConfig
     let actor: String
+    /// The account to read as. Nil uses the current account.
+    let accountDID: String?
 
-    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, actor: String) {
+    init(accountManager: AccountManager, config: OAuthClientConfig = .yoruMimizuku, actor: String, accountDID: String? = nil) {
         self.accountManager = accountManager
         self.config = config
         self.actor = actor
+        self.accountDID = accountDID
     }
 
     func loadPage(cursor: String?) async throws -> TimelinePage {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: accountDID)
         let service = AuthorFeedService(
             sender: context.sender, metadataResolver: context.metadataResolver,
             config: context.config, refreshGate: context.refreshGate

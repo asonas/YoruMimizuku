@@ -139,11 +139,11 @@ struct RootView: View {
     /// above. Other errors (e.g. the network not yet up on wake) are left for the
     /// next request's reactive refresh to retry. Never logs token material.
     private func refreshSessionOnWake() {
-        guard currentDID != nil else { return }
+        guard let did = currentDID else { return }
         let manager = accountManager
         Task {
             do {
-                let context = try LiveServiceContext(accountManager: manager, config: .yoruMimizuku)
+                let context = try LiveServiceContext(accountManager: manager, config: .yoruMimizuku, accountDID: did)
                 try await context.refreshSession()
                 Self.log.info("Proactive session refresh on wake succeeded")
             } catch {
@@ -210,7 +210,8 @@ struct RootView: View {
     }
 
     private func loadAvatar() async {
-        accountAvatarURL = try? await profileLoader.loadCurrentAvatar()
+        guard let did = currentDID else { accountAvatarURL = nil; return }
+        accountAvatarURL = try? await profileLoader.loadAvatar(of: did)
     }
 }
 
@@ -251,8 +252,8 @@ private struct AuthenticatedRootView: View {
     ) {
         _timelineModel = StateObject(
             wrappedValue: TimelineViewModel(
-                loader: LiveTimelineLoader(accountManager: accountManager),
-                interactor: LivePostInteractor(accountManager: accountManager),
+                loader: LiveTimelineLoader(accountManager: accountManager, accountDID: did),
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did),
                 tracer: OSSignpostTracing.timeline
             )
         )
@@ -271,13 +272,13 @@ private struct AuthenticatedRootView: View {
         }
         let makeAuthorModel: @MainActor (String) -> TimelineViewModel = { authorDID in
             TimelineViewModel(
-                loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID),
-                interactor: LivePostInteractor(accountManager: accountManager)
+                loader: LiveAuthorFeedLoader(accountManager: accountManager, actor: authorDID, accountDID: did),
+                interactor: LivePostInteractor(accountManager: accountManager, accountDID: did)
             )
         }
         let makeAuthorHeader: @MainActor (String, AuthorProfile?) -> ProfileHeaderViewModel = { authorDID, initial in
             ProfileHeaderViewModel(
-                loader: LiveAuthorProfileLoader(accountManager: accountManager),
+                loader: LiveAuthorProfileLoader(accountManager: accountManager, accountDID: did),
                 actor: authorDID,
                 initial: initial
             )

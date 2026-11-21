@@ -13,10 +13,11 @@ struct LiveProfileLoader {
         self.config = config
     }
 
-    /// Resolve the current account's avatar URL, or nil when there is no account,
-    /// the profile has no avatar, or the URL cannot be parsed.
-    func loadCurrentAvatar() async throws -> URL? {
-        let context = try LiveServiceContext(accountManager: accountManager, config: config)
+    /// Resolve the avatar URL of the account `did` (a window's account), or nil
+    /// when the account is gone, the profile has no avatar, or the URL cannot be
+    /// parsed.
+    func loadAvatar(of did: String) async throws -> URL? {
+        let context = try LiveServiceContext(accountManager: accountManager, config: config, accountDID: did)
         let service = ProfileService(
             sender: context.sender, metadataResolver: context.metadataResolver, config: context.config, refreshGate: context.refreshGate
         )

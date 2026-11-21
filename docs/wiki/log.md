@@ -9,6 +9,12 @@ Each entry is a `## YYYY-MM-DD <op>` heading followed by a short bullet body
 (`sources` / `updated` / `created` / `note` as appropriate).
 Recent activity: `grep "^## " log.md | head -5`.
 
+## 2026-11-21 ingest (macOS window accounts, #19)
+
+- sources: apps/macos/Timeline/LiveServiceContext.swift
+- updated: [[accounts]]
+- note: the home timeline, author pages, the account avatar and the wake refresh now read and write as the window's account, like the rest.
+
 ## 2026-11-21 ingest (Swift core fixes from the Windows port, #9 to #16)
 
 - sources: core/Sources/BlueskyCore/OAuth/OAuthCallback.swift, core/Sources/BlueskyCore/Account/AccountManager.swift
