@@ -34,4 +34,36 @@ final class FilterSearchMergeTests: XCTestCase {
     func testCompositeCursorDecodeNilStringIsNil() {
         XCTAssertNil(CompositeCursor.decode(nil))
     }
+
+    // #11: which subqueries a page fetches, and from which cursor.
+    func testFirstPageFetchesEverySubqueryFromTheStart() {
+        XCTAssertEqual(CompositeCursor.pageFetches(cursor: nil, subqueryCount: 2), [.fetch(cursor: nil), .fetch(cursor: nil)])
+    }
+
+    func testLaterPageSkipsExhaustedSubqueries() {
+        let cursor = CompositeCursor(cursors: ["a", nil]).encoded()
+        XCTAssertEqual(CompositeCursor.pageFetches(cursor: cursor, subqueryCount: 2), [.fetch(cursor: "a"), .exhausted])
+    }
+
+    func testCursorFromADifferentFilterStartsOver() {
+        let cursor = CompositeCursor(cursors: ["a", "b"]).encoded()
+        XCTAssertEqual(
+            CompositeCursor.pageFetches(cursor: cursor, subqueryCount: 3),
+            [.fetch(cursor: nil), .fetch(cursor: nil), .fetch(cursor: nil)]
+        )
+    }
+
+    // A filter edited down to one term gets back a cursor from when it had several.
+    func testSingleQueryDropsACursorFromSeveralTerms() {
+        let composite = CompositeCursor(cursors: ["a", "b"]).encoded()
+        XCTAssertNil(CompositeCursor.singleQueryCursor(composite))
+        XCTAssertEqual(CompositeCursor.singleQueryCursor("25"), "25")
+        XCTAssertNil(CompositeCursor.singleQueryCursor(nil))
+    }
+
+    // A server cursor that happens to look like our JSON is still the server's.
+    func testSingleQueryKeepsAServerCursorThatLooksLikeJSON() {
+        let serverCursor = #"{"cursors":["next"]}"#
+        XCTAssertEqual(CompositeCursor.singleQueryCursor(serverCursor), serverCursor)
+    }
 }

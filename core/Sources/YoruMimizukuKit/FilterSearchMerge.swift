@@ -11,18 +11,47 @@ public struct CompositeCursor: Codable, Equatable, Sendable {
         self.cursors = cursors
     }
 
-    /// JSON-encode to one opaque cursor string, or nil when every sub-cursor is
+    /// Marks our own encoding, so a server's cursor is never read as one.
+    private static let prefix = "yoru-or:"
+
+    /// Encode to one opaque cursor string, or nil when every sub-cursor is
     /// nil (nothing more to load anywhere).
     public func encoded() -> String? {
         guard cursors.contains(where: { $0 != nil }) else { return nil }
-        guard let data = try? JSONEncoder().encode(self) else { return nil }
-        return String(data: data, encoding: .utf8)
+        guard let data = try? JSONEncoder().encode(self), let json = String(data: data, encoding: .utf8) else { return nil }
+        return Self.prefix + json
     }
 
-    /// Decode from an opaque cursor string; a nil string (first page) yields nil.
+    /// Decode from an opaque cursor string; a nil string (first page) or one we
+    /// did not encode yields nil.
     public static func decode(_ string: String?) -> CompositeCursor? {
-        guard let string, let data = string.data(using: .utf8) else { return nil }
+        guard let string, string.hasPrefix(prefix),
+              let data = string.dropFirst(prefix.count).data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(CompositeCursor.self, from: data)
+    }
+
+    /// The cursor to send for a single-term filter: the server's cursor as is,
+    /// or nil (start over) for a composite cursor left from when the filter had
+    /// several terms.
+    public static func singleQueryCursor(_ cursor: String?) -> String? {
+        decode(cursor) == nil ? cursor : nil
+    }
+
+    /// What one subquery does for a page.
+    public enum Fetch: Equatable, Sendable {
+        case fetch(cursor: String?)
+        /// An earlier page reached its end; nothing more to load.
+        case exhausted
+    }
+
+    /// The fetch for each of `subqueryCount` subqueries, in order, given the
+    /// page's cursor. No cursor, or one that does not match the subqueries (the
+    /// filter was edited since), starts every subquery from the beginning.
+    public static func pageFetches(cursor: String?, subqueryCount: Int) -> [Fetch] {
+        guard let decoded = decode(cursor), decoded.cursors.count == subqueryCount else {
+            return Array(repeating: .fetch(cursor: nil), count: subqueryCount)
+        }
+        return decoded.cursors.map { $0.map { .fetch(cursor: $0) } ?? .exhausted }
     }
 }
 

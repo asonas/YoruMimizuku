@@ -30,7 +30,7 @@ struct LiveSearchLoader: TimelineLoading {
         case 0:
             return TimelinePage(posts: [], cursor: nil)
         case 1:
-            let page = try await runQuery(subqueries[0], cursor: cursor)
+            let page = try await runQuery(subqueries[0], cursor: CompositeCursor.singleQueryCursor(cursor))
             return TimelinePage(posts: page.posts, cursor: page.cursor)
         default:
             return try await loadComposite(cursor: cursor)
@@ -62,21 +62,13 @@ struct LiveSearchLoader: TimelineLoading {
     /// unchanged, so a retry re-runs the same fetches). On a follow-up page a nil
     /// sub-cursor unambiguously means that subquery is exhausted and is skipped.
     private func loadComposite(cursor: String?) async throws -> TimelinePage {
-        let decoded = CompositeCursor.decode(cursor)
-        let isFirstPage = decoded == nil
-        let composite = decoded ?? CompositeCursor(cursors: Array(repeating: nil, count: subqueries.count))
-        // Defend against a cursor that no longer matches the subquery count (e.g.
-        // the filter was edited): treat a mismatch as a fresh first page.
-        let cursors = composite.cursors.count == subqueries.count
-            ? composite.cursors
-            : Array(repeating: nil, count: subqueries.count)
+        let fetches = CompositeCursor.pageFetches(cursor: cursor, subqueryCount: subqueries.count)
 
         var pages: [[PostDisplay]] = []
         var nextCursors: [String?] = []
-        for (index, query) in subqueries.enumerated() {
-            let sub = cursors[index]
-            if !isFirstPage && sub == nil {
-                pages.append([])      // exhausted: nothing more from this subquery
+        for (query, fetch) in zip(subqueries, fetches) {
+            guard case let .fetch(sub) = fetch else {
+                pages.append([])
                 nextCursors.append(nil)
                 continue
             }
