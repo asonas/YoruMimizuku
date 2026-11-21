@@ -4,6 +4,10 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.App", "App\YoruMimizuku.App.csproj", "{2C9A1E10-0001-4F00-9A00-000000000001}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.Core", "Core\YoruMimizuku.Core.csproj", "{B30C45FA-E257-44A1-AE8C-0DFA5FDBECED}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YoruMimizuku.Core.Tests", "Core.Tests\YoruMimizuku.Core.Tests.csproj", "{27540964-CCF5-497B-8EB4-FE47C8A187EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -14,6 +18,14 @@ Global
 		{2C9A1E10-0001-4F00-9A00-000000000001}.Debug|x64.Build.0 = Debug|x64
 		{2C9A1E10-0001-4F00-9A00-000000000001}.Release|x64.ActiveCfg = Release|x64
 		{2C9A1E10-0001-4F00-9A00-000000000001}.Release|x64.Build.0 = Release|x64
+		{B30C45FA-E257-44A1-AE8C-0DFA5FDBECED}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B30C45FA-E257-44A1-AE8C-0DFA5FDBECED}.Debug|x64.Build.0 = Debug|Any CPU
+		{B30C45FA-E257-44A1-AE8C-0DFA5FDBECED}.Release|x64.ActiveCfg = Release|Any CPU
+		{B30C45FA-E257-44A1-AE8C-0DFA5FDBECED}.Release|x64.Build.0 = Release|Any CPU
+		{27540964-CCF5-497B-8EB4-FE47C8A187EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{27540964-CCF5-497B-8EB4-FE47C8A187EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{27540964-CCF5-497B-8EB4-FE47C8A187EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{27540964-CCF5-497B-8EB4-FE47C8A187EB}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
