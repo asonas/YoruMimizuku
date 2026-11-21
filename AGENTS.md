@@ -32,18 +32,20 @@ This repository will be **published publicly on [tangled.org](https://tangled.or
 ```
 yorumimizuku/
 ├── project.yml                 # XcodeGen project definition (the single source of truth)
-├── core/                       # single SPM package (platform-independent core + adapters)
+├── core/                       # single SPM package: the Swift core for Apple platforms
 │   ├── Package.swift
 │   └── Sources/
 │       ├── BlueskyCore/        #   OAuth(PKCE+DPoP) / DPoP / XRPC / Models / Account / RichText
 │       │   └── Ports/          #     protocols for side effects (SecureStorage, HTTPClient, ...)
 │       ├── YoruMimizukuKit/     #   View models and display logic (depends on BlueskyCore)
-│       ├── PlatformApple/      #   Apple-only impls (Keychain / os logger, #if os(macOS))
-│       ├── PlatformWindows/    #   Windows-only impls (DPAPI / BCryptGenRandom, #if canImport(WinSDK))
-│       └── YoruMimizukuBridge/ #   C ABI (@_cdecl) DLL surface for the WinUI app
+│       └── PlatformApple/      #   Apple-only impls (Keychain / os logger, #if os(macOS))
 ├── apps/
 │   ├── macos/                  # macOS app (SwiftUI): Auth / Workspace / Compose / Views / Timeline ...
-│   └── windows/                # Windows app (WinUI 3 / C#): Interop (P/Invoke) + MVVM + XAML
+│   └── windows/                # Windows app (WinUI 3 / C# / .NET 10)
+│       ├── Core/               #   C# port of the core (XRPC, display logic, OAuth, DPAPI accounts)
+│       ├── Interop/            #   client interfaces + DTOs the views consume, mapped from Core
+│       ├── App/                #   WinUI 3: MVVM + XAML
+│       └── Core.Tests/, Interop.Tests/  # xUnit
 ├── tools/wiki/                 # SPM CLI that lints and rebuilds the docs/wiki index
 ├── docs/
 │   ├── client-metadata.json    #   OAuth client metadata (public)
@@ -53,17 +55,15 @@ yorumimizuku/
 └── design/icons/               # UI icons (Lucide SVGs with Lucide's license; `mise run icons:lint`)
 ```
 
-> Windows support has landed. The Windows targets (`PlatformWindows`, `YoruMimizukuBridge`, `apps/windows`) are implemented and the WinUI 3 app runs. For the architecture (Swift core + C ABI bridge DLL + WinUI 3 frontend) and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
+> The Windows app has its own C# core (`apps/windows/Core`) and does not use the Swift package; the two cores are kept in step through the wiki and specs, not shared code (`docs/superpowers/specs/2026-11-21-windows-csharp-core-handoff.md`). For the architecture and the build steps, see `docs/wiki/platforms/windows.md` and `apps/windows/README.md`.
 
 ### Module Split
 
-- `BlueskyCore` (SPM library): platform-independent logic — networking, OAuth, XRPC, token refresh. Shared across macOS and Windows.
+- `BlueskyCore` (SPM library): networking, OAuth, XRPC, token refresh, with no direct Apple-framework dependencies.
 - `YoruMimizukuKit` (SPM library): view models and display logic. Depends on `BlueskyCore`.
 - `PlatformApple` (SPM library): Apple-framework concrete implementations of the core ports (Keychain, logger), gated `#if os(macOS)`.
-- `PlatformWindows` (SPM library): Windows concrete implementations of the core ports (DPAPI secure storage, `BCryptGenRandom`), gated `#if os(Windows)`.
-- `YoruMimizukuBridge` (SPM dynamic library): C ABI (`@_cdecl`) surface built into `YoruMimizukuBridge.dll`, called from the Windows app via P/Invoke with UTF-8 JSON.
 - `apps/macos` (macOS app target): SwiftUI views and the wiring of Apple-specific pieces such as ASWebAuthenticationSession.
-- `apps/windows` (WinUI 3 / C# / .NET 8 app): calls the Swift core through the bridge DLL; OAuth runs in WebView2.
+- `apps/windows` (WinUI 3 / C# / .NET 10 app): a C# core (`Core`), the DTO layer the views consume (`Interop`), and the WinUI app (`App`); OAuth runs in WebView2 and accounts are stored with DPAPI.
 
 ## Setup and Build
 

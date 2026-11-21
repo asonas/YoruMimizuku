@@ -6,7 +6,7 @@ namespace YoruMimizuku.App.Interop.Tests;
 /// <summary>
 /// Feed and thread pages as the views receive them. The XRPC bodies are the core tests'
 /// fixtures (TimelineResponseTests, ThreadResponseTests); each expected value is the JSON
-/// BridgeOperations.swift encodes for that body.
+/// the former Swift bridge encoded for that body.
 /// </summary>
 public class FeedMappingTests
 {

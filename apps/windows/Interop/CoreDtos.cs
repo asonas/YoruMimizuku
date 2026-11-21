@@ -6,8 +6,8 @@ using YoruMimizuku.Core;
 namespace YoruMimizuku.App.Interop;
 
 /// <summary>
-/// The C# core's models as the DTOs the views consume, field for field as
-/// core/Sources/YoruMimizukuBridge/BridgeOperations.swift encodes them. URLs pass
+/// The C# core's models as the DTOs the views consume, field for field as the
+/// former Swift bridge encoded them (Interop.Tests pins that shape). URLs pass
 /// through as the server wrote them; times are UTC ISO 8601 with milliseconds.
 /// </summary>
 internal static class CoreDtos

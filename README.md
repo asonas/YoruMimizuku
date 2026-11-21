@@ -39,9 +39,8 @@ The code is split into three layers so the core stays portable:
   token management. No direct Apple-framework dependencies, so it can be reused on other
   platforms.
 - **`YoruMimizukuKit`** — view models and display logic, depending on `BlueskyCore`.
-- **`PlatformApple` / `PlatformWindows`** — the OS-specific adapters (secure storage,
-  random bytes, logging) behind the core's port protocols: Keychain / `SecRandom` /
-  `os.signpost` on Apple, DPAPI / `BCryptGenRandom` on Windows.
+- **`PlatformApple`** — the Apple adapters (Keychain, `SecRandom`, `os.signpost`) behind
+  the core's port protocols.
 - **`apps/macos`** — the macOS app: SwiftUI views and the Apple-specific wiring (Keychain,
   `ASWebAuthenticationSession`, and so on).
 - **`apps/windows`** — the Windows app: a WinUI 3 (C#/.NET 10) front end over a C# port of
